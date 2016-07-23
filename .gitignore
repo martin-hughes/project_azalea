@@ -1,0 +1,8 @@
+.cproject
+.project
+.pydevproject
+.sconsign.dblite
+.settings/
+Debug/
+docs/
+output/
