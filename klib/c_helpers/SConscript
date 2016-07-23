@@ -1,0 +1,5 @@
+# Klib C-environment helpers library.
+
+Import('env')
+obj = env.Library("klib-c-helpers", [ "buffers.cpp" ])
+Return ("obj") 

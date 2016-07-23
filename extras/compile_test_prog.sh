@@ -1,0 +1,1 @@
+nasm -f bin -o simple_prog simple_um_prog.asm 

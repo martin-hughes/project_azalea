@@ -1,0 +1,5 @@
+# Kernel entry point.
+
+Import('env')
+obj = env.Library("kernel-entry", [ "entry.cpp", "x64/entry-x64.asm" ])
+Return ("obj") 

@@ -1,0 +1,24 @@
+#ifndef _KLIB_SYNCH_K_LOCKS
+#define _KLIB_SYNCH_K_LOCKS
+
+typedef unsigned long kernel_spinlock;
+
+void klib_synch_spinlock_init(kernel_spinlock &lock);
+void klib_synch_spinlock_lock(kernel_spinlock &lock);
+void klib_synch_spinlock_unlock(kernel_spinlock &lock);
+
+extern "C" void asm_klib_synch_spinlock_lock(kernel_spinlock *lock);
+
+#define KLOCK_NUM_LOCKS 2
+
+#define KLOCK_TASK_MANAGER 0
+#define KLOCK_MEM_MANAGER 1
+
+
+enum SYNC_ACQ_RESULT
+{
+  SYNC_ACQ_ACQUIRED,
+  SYNC_ACQ_TIMEOUT,
+};
+
+#endif

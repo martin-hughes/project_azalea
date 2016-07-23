@@ -1,0 +1,5 @@
+# Klib Miscellany library.
+
+Import('env')
+obj = env.Library("klib-misc", [ "boot_info.cpp", "math_hacks.cpp", ])
+Return ("obj") 

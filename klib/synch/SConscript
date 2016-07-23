@@ -1,0 +1,9 @@
+# Klib Synchronisation library.
+
+Import('env')
+obj = env.Library("klib-synch", 
+                  [ "kernel_locks.cpp",
+                    "kernel_mutexes.cpp",
+                    "kernel_semaphores.cpp",
+                    "asm_kernel_locks.asm", ])
+Return ("obj") 

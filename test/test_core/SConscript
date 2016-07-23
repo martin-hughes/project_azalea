@@ -1,0 +1,5 @@
+# Core test library.
+
+Import('env')
+obj = env.Library("test-core", [ "test.cpp" ])
+Return ("obj")

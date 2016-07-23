@@ -1,0 +1,5 @@
+# ACPI library. Incorporates necessary parts of ACPICA
+
+Import('env')
+obj = env.Library("acpi", [ "acpi.cpp", ])
+Return ("obj") 

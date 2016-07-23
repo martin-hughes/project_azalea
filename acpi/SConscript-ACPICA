@@ -1,0 +1,6 @@
+# ACPI library. Incorporates necessary parts of ACPICA
+
+Import('env')
+env.AppendENVPath('CPATH', "#/acpi/acpica/source/include")
+obj = env.Library("acpica", [ "acpica/source/components/tables/tbxfload.c", ])
+Return ("obj") 

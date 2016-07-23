@@ -1,0 +1,8 @@
+# Kernel system call library.
+
+Import('env')
+files = ["syscall-kernel.cpp",
+         "x64/syscall-x64-kernel.cpp",
+         "x64/syscall-x64-kernel-low.asm"]
+obj = env.Library("syscall", files)
+Return ("obj") 
