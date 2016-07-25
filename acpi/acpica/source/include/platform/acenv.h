@@ -222,6 +222,9 @@
 #elif defined(__QNX__)
 #include "acqnx.h"
 
+#elif defined(__MY_KERN)
+#include "ac64bit.h"
+
 #else
 
 /* Unknown environment */
