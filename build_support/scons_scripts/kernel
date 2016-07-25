@@ -6,9 +6,10 @@ import defaults
 # Setup environment.
 env = Environment()
 defaults.setup_default_env(env)
-env['CPPFLAGS'] = '-mno-red-zone -nostdlib -nostartfiles -nodefaultlibs -mcmodel=large -fno-exceptions -fno-rtti'
+env['CXXFLAGS'] = '-mno-red-zone -nostdlib -nostartfiles -nodefaultlibs -mcmodel=large -fno-exceptions -fno-rtti'
+env['CFLAGS'] = '-mno-red-zone -nostdlib -nostartfiles -nodefaultlibs -mcmodel=large -fno-exceptions'
 env['LINKFLAGS'] = "-T build_support/kernel_stage.ld"
-env['LINK'] = 'ld -Map /tmp/kernel_map.map'
+env['LINK'] = 'ld -Map /tmp/kernel_map.map --no-demangle'
 
 # List of required components.
 dependencies_in = ['#entry/SConscript',
@@ -22,8 +23,8 @@ dependencies_in = ['#entry/SConscript',
                    '#klib/tracing/SConscript',
                    '#klib/synch/SConscript',
                    '#syscall/SConscript',
-                   '#acpi/SConscript-ACPICA',
                    '#acpi/SConscript',
+                   '#acpi/SConscript-ACPICA',
                   ]
                    
 # Build components.

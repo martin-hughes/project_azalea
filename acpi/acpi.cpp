@@ -2,7 +2,11 @@
 
 #include "acpi/acpi.h"
 #include "klib/klib.h"
+
+extern "C"
+{
 #include "acpi/acpica/source/include/acpi.h"
+}
 
 void acpi_init_table_system()
 {
