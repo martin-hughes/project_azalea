@@ -337,52 +337,6 @@ ACPI_STATUS AcpiOsGetPhysicalAddress(void *LogicalAddress, ACPI_PHYSICAL_ADDRESS
 }
 
 /*
- * Memory/Object Cache. These shouldn't be used by ACPICA, as there's a flag set in ac64bit.h telling it to use it's
- * own cache.
- */
-/*
-ACPI_STATUS AcpiOsCreateCache(char *CacheName, UINT16 ObjectSize, UINT16 MaxDepth,
-                              ACPI_CACHE_T **ReturnCache)
-{
-  KL_TRC_ENTRY;
-  panic("ACPI attempted to create cache");
-  KL_TRC_EXIT;
-  return AE_NOT_IMPLEMENTED;
-}
-
-ACPI_STATUS AcpiOsDeleteCache(ACPI_CACHE_T *Cache)
-{
-  KL_TRC_ENTRY;
-  panic("ACPI attempted to delete cache");
-  KL_TRC_EXIT;
-  return AE_NOT_IMPLEMENTED;
-}
-
-ACPI_STATUS AcpiOsPurgeCache(ACPI_CACHE_T *Cache)
-{
-  KL_TRC_ENTRY;
-  panic("ACPI attempted to purge cache");
-  KL_TRC_EXIT;
-  return AE_NOT_IMPLEMENTED;
-}
-
-void *AcpiOsAcquireObject(ACPI_CACHE_T *Cache)
-{
-  KL_TRC_ENTRY;
-  panic("ACPI attempted to acquire object");
-  KL_TRC_EXIT;
-  return NULL;
-}
-
-ACPI_STATUS AcpiOsReleaseObject(ACPI_CACHE_T *Cache, void *Object)
-{
-  KL_TRC_ENTRY;
-  panic("ACPI attempted to release object");
-  KL_TRC_EXIT;
-  return AE_NOT_IMPLEMENTED;
-}*/
-
-/*
  * Interrupt handlers
  */
 // TODO: We don't need these just yet.
