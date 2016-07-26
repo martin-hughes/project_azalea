@@ -16,6 +16,7 @@
 #include "memory/memory.h"
 #include "misc/boot_info.h"
 #include "misc/math_hacks.h"
+#include "misc/vargs.h"
 #include "tracing/tracing.h"
 #include "synch/kernel_locks.h"
 #include "synch/kernel_mutexes.h"
