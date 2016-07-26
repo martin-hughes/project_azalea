@@ -42,8 +42,11 @@
  * POSSIBILITY OF SUCH DAMAGES.
  */
 
-#ifndef __ACLINUX_H__
-#define __ACLINUX_H__
+#ifndef __AC64BIT_H__
+#define __AC64BIT_H__
+
+/* Use the library's own caching system. */
+#define ACPI_USE_LOCAL_CACHE
 
 #ifdef __KERNEL__
 
@@ -111,8 +114,6 @@
 #define ACPI_EXPORT_SYMBOL(symbol)  EXPORT_SYMBOL(symbol);
 #define strtoul                     simple_strtoul
 
-/* Use the library's own caching system. */
-#define ACPI_USE_LOCAL_CACHE        1
 #define ACPI_CACHE_T                struct kmem_cache
 #define ACPI_SPINLOCK               spinlock_t *
 #define ACPI_CPU_FLAGS              unsigned long

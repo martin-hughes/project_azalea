@@ -7,7 +7,7 @@
 #include "mem/mem.h"
 #include "syscall/syscall-kernel.h"
 #include "klib/klib.h"
-#include "acpi/acpi.h"
+#include "acpi/acpi_if.h"
 
 // Rough boot steps:
 //
