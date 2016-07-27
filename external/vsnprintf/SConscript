@@ -1,0 +1,6 @@
+# External vsnprintf build script.
+
+Import('env')
+obj = env.Library("ext-vsnprintf", [ "vsnprintf.cpp",
+                                    ])
+Return ("obj") 
