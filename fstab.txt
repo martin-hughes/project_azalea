@@ -1,2 +1,0 @@
-in fstab:
-(kernel_disc_image.vdi) ..dir vfat loop,noauto,users,rw,offset=40448 0 0

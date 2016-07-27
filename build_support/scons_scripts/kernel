@@ -25,6 +25,7 @@ dependencies_in = ['#entry/SConscript',
                    '#syscall/SConscript',
                    '#acpi/SConscript',
                    '#acpi/SConscript-ACPICA',
+                   '#external/vsnprintf/Sconscript',
                   ]
                    
 # Build components.

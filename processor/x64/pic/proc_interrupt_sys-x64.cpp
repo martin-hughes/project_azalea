@@ -59,7 +59,7 @@ void proc_conf_int_controller()
 
   // For the time being, always use the legacy PIC.
   // TODO: Remove this (MT)
-  KL_TRC_TRACE((TRC_LVL_IMPORTANT, "FORCING LEGACY PIC MODE."));
+  KL_TRC_TRACE((TRC_LVL_IMPORTANT, "FORCING LEGACY PIC MODE.\n"));
   selected_pic_mode = LEGACY_PIC;
 
   switch (selected_pic_mode)
@@ -122,7 +122,7 @@ APIC_TYPES proc_x64_detect_pic_type()
 // Detects the presence of an IO APIC in the system.
 bool proc_x64_detect_io_apic()
 {
-  INCOMPLETE_CODE(proc_x64_detect_io_apic);
+  //INCOMPLETE_CODE(proc_x64_detect_io_apic);
   return false;
 }
 

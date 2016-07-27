@@ -7,3 +7,5 @@ Debug/
 docs/
 output/
 *.pyc
+kernel_disc_image_nonlive.vdi
+kernel_disc_image.vdi

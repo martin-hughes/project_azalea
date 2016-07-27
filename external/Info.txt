@@ -1,0 +1,4 @@
+This folder contains libraries and source code imported from other projects, with the exception of ACPICA, which sits
+within the acpi folder.
+
+In all cases the licences are compatible with 64bit's.
