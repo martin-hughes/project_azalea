@@ -4,19 +4,23 @@
 // day. Many of these functions are not supported, so they would just cause the kernel to panic. They shouldn't be
 // needed!
 
-#define ENABLE_TRACING
-
 extern "C"
 {
 #include "acpi/acpica/source/include/acpi.h"
 }
 #include "klib/klib.h"
 
+char *exception_message_buf;
+const unsigned int em_buf_len = 1000;
+
 
 // There are no actions needed to initialize the OSL, so just return.
 ACPI_STATUS AcpiOsInitialize(void)
 {
   KL_TRC_ENTRY;
+
+  exception_message_buf = new char[em_buf_len];
+
   KL_TRC_EXIT;
   return AE_OK ;
 }
@@ -504,16 +508,22 @@ ACPI_STATUS AcpiOsSignal(UINT32 Function, void *Info)
 void AcpiOsPrintf(const char *Format, ...)
 {
   KL_TRC_ENTRY;
-  KL_TRC_TRACE((TRC_LVL_IMPORTANT, Format));
-  KL_TRC_TRACE((TRC_LVL_IMPORTANT, "\n"));
-  panic("ACPI attempted printf");
+  va_list args;
+
+  va_start(args, Format);
+  AcpiOsVprintf(Format, args);
+  va_end(args);
+
   KL_TRC_EXIT;
 }
 
 void AcpiOsVprintf(const char *Format, va_list Args)
 {
   KL_TRC_ENTRY;
-  panic("ACPI attempted vprintf");
+
+  klib_vsnprintf(exception_message_buf, em_buf_len, Format, Args);
+
+  panic(exception_message_buf);
   KL_TRC_EXIT;
 }
 

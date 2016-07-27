@@ -48,6 +48,9 @@
 /* Use the library's own caching system. */
 #define ACPI_USE_LOCAL_CACHE
 
+/* Use our own definition of the va_ functions. */
+#include "klib/misc/vargs.h"
+
 #ifdef __KERNEL__
 
 /* ACPICA external files should not include ACPICA headers directly. */

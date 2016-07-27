@@ -10,7 +10,6 @@ int klib_snprintf(char *out_str, int max_out_len, const char *fmt, ...)
   int retval;
   va_list args;
 
-  __builtin_va_start(args, fmt);
   va_start(args, fmt);
 
   retval = klib_vsnprintf(out_str, max_out_len, fmt, args);
