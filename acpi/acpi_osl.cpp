@@ -9,6 +9,7 @@ extern "C"
 #include "acpi/acpica/source/include/acpi.h"
 }
 #include "klib/klib.h"
+#include "processor/timing/timing.h"
 
 char *exception_message_buf;
 const unsigned int em_buf_len = 1000;
@@ -365,8 +366,17 @@ ACPI_STATUS AcpiOsRemoveInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLE
  */
 ACPI_THREAD_ID AcpiOsGetThreadId(void)
 {
+  unsigned long thread_id;
   KL_TRC_ENTRY;
-  return (ACPI_THREAD_ID)task_get_cur_thread();
+  thread_id = (unsigned long)task_get_cur_thread();
+
+  // If task_get_cur_thread returns NULL then we're still single threaded, in which case it's acceptable to send any
+  // positive integer back to ACPICA.
+  if (thread_id == 0)
+  {
+    thread_id = 1;
+  }
+  return thread_id;
   KL_TRC_EXIT;
 }
 
@@ -389,14 +399,22 @@ void AcpiOsWaitEventsComplete(void)
 void AcpiOsSleep(UINT64 Milliseconds)
 {
   KL_TRC_ENTRY;
-  panic("ACPI attempted sleep");
+
+  unsigned long wait_in_ns = Milliseconds * 1000000;
+
+  KL_TRC_DATA("ACPI requests sleep (ns)", wait_in_ns);
+  time_sleep_process(wait_in_ns);
   KL_TRC_EXIT;
 }
 
 void AcpiOsStall(UINT32 Microseconds)
 {
   KL_TRC_ENTRY;
-  panic("ACPI attempted stall");
+  unsigned long wait_in_ns = Microseconds * 1000;
+
+  KL_TRC_DATA("ACPI requests stall (ns)", wait_in_ns);
+  time_stall_process(wait_in_ns);
+
   KL_TRC_EXIT;
 }
 

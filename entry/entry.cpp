@@ -4,6 +4,7 @@
 #define ENABLE_TRACING
 
 #include "processor/processor.h"
+#include "processor/timing/timing.h"
 #include "mem/mem.h"
 #include "syscall/syscall-kernel.h"
 #include "klib/klib.h"
@@ -46,6 +47,8 @@ int main()
 
   KL_TRC_TRACE((TRC_LVL_IMPORTANT, "Welcome to the OS!\n"));
 
+  acpi_init_table_system();
+  time_gen_init();
   task_gen_init(kernel_start);
 
   // If the kernel gets back to here, just run in a loop. The task manager will soon kick in.
@@ -67,8 +70,6 @@ void kernel_start()
   KL_TRC_TRACE((TRC_LVL_FLOW, "Entered kernel start\n"));
 
   //task_create_new_process(dummy_proc, false);
-
-  acpi_init_table_system();
 
   // Create a new user mode process.
   fn_ptr user_proc = (fn_ptr)0x200000;

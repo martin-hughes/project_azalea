@@ -19,7 +19,7 @@ asm_proc_configure_irqs:
     push rax
     push rcx
     push rdx
-    ; PIC initialisation
+    ; PIC initialisation. Configures the IRQs to be from int 32 to 47, inclusive.
     OUTB 0x20, 0x11
     OUTB 0xA0, 0x11
     OUTB 0x21, 0x20

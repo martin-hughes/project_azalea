@@ -6,7 +6,6 @@
 #include "klib/klib.h"
 
 #include "processor/x64/processor-x64-int.h"
-#include "processor/x64/timing/pit.h"
 #include "processor/x64/pic/pic.h"
 #include "mem/x64/mem_internal_x64.h"
 
@@ -30,9 +29,6 @@ void proc_gen_init()
 	// so they do not overlap the exceptions reserved by Intel.
 	proc_conf_int_controller();
 	proc_configure_idt();
-
-	// Start the CPU timer
-	asm_proc_init_pit();
 
 	// All set up. It should now be safe to enable interrupts.
 	asm_proc_start_interrupts();

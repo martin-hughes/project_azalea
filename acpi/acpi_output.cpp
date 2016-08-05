@@ -29,17 +29,19 @@ extern "C"
 
 void ACPI_INTERNAL_VAR_XFACE AcpiError(const char *ModuleName, UINT32 LineNumber, const char *Format, ...)
 {
+  KL_TRC_ENTRY;
   va_list ArgList;
+  char format_buf[128];
+  char msg_buf[256];
 
-  ACPI_MSG_REDIRECT_BEGIN;
-  AcpiOsPrintf(ACPI_MSG_ERROR);
+  klib_snprintf(format_buf, 127, "%s %s", ACPI_MSG_ERROR, Format);
 
   va_start(ArgList, Format);
-  AcpiOsVprintf(Format, ArgList);
-  ACPI_MSG_SUFFIX;
+  klib_vsnprintf(msg_buf, 255, format_buf, ArgList);
+  panic(msg_buf);
   va_end(ArgList);
 
-  ACPI_MSG_REDIRECT_END;
+  KL_TRC_EXIT;
 }
 
 ACPI_EXPORT_SYMBOL(AcpiError)
@@ -62,6 +64,7 @@ ACPI_EXPORT_SYMBOL(AcpiError)
 
 void ACPI_INTERNAL_VAR_XFACE AcpiException(const char *ModuleName, UINT32 LineNumber, ACPI_STATUS Status, const char *Format, ...)
 {
+  KL_TRC_ENTRY;
   va_list ArgList;
 
   ACPI_MSG_REDIRECT_BEGIN;
@@ -84,6 +87,7 @@ void ACPI_INTERNAL_VAR_XFACE AcpiException(const char *ModuleName, UINT32 LineNu
   va_end(ArgList);
 
   ACPI_MSG_REDIRECT_END;
+  KL_TRC_EXIT;
 }
 
 ACPI_EXPORT_SYMBOL(AcpiException)
@@ -104,6 +108,7 @@ ACPI_EXPORT_SYMBOL(AcpiException)
 
 void ACPI_INTERNAL_VAR_XFACE AcpiWarning(const char *ModuleName, UINT32 LineNumber, const char *Format, ...)
 {
+  KL_TRC_ENTRY;
   va_list ArgList;
 
   ACPI_MSG_REDIRECT_BEGIN;
@@ -115,6 +120,7 @@ void ACPI_INTERNAL_VAR_XFACE AcpiWarning(const char *ModuleName, UINT32 LineNumb
   va_end(ArgList);
 
   ACPI_MSG_REDIRECT_END;
+  KL_TRC_EXIT;
 }
 
 ACPI_EXPORT_SYMBOL(AcpiWarning)
@@ -138,6 +144,7 @@ ACPI_EXPORT_SYMBOL(AcpiWarning)
 
 void ACPI_INTERNAL_VAR_XFACE AcpiInfo(const char *Format, ...)
 {
+  KL_TRC_ENTRY;
   va_list ArgList;
   char msg_buf[256];
 
@@ -149,7 +156,7 @@ void ACPI_INTERNAL_VAR_XFACE AcpiInfo(const char *Format, ...)
   KL_TRC_TRACE((TRC_LVL_FLOW, "\n"));
   va_end(ArgList);
 
-  ACPI_MSG_REDIRECT_END;
+  KL_TRC_EXIT;
 }
 
 ACPI_EXPORT_SYMBOL(AcpiInfo)
@@ -171,9 +178,9 @@ ACPI_EXPORT_SYMBOL(AcpiInfo)
 
 void ACPI_INTERNAL_VAR_XFACE AcpiBiosError(const char *ModuleName, UINT32 LineNumber, const char *Format, ...)
 {
+  KL_TRC_ENTRY;
   va_list ArgList;
 
-  ACPI_MSG_REDIRECT_BEGIN;
   AcpiOsPrintf(ACPI_MSG_BIOS_ERROR);
 
   va_start(ArgList, Format);
@@ -181,7 +188,7 @@ void ACPI_INTERNAL_VAR_XFACE AcpiBiosError(const char *ModuleName, UINT32 LineNu
   ACPI_MSG_SUFFIX;
   va_end(ArgList);
 
-  ACPI_MSG_REDIRECT_END;
+  KL_TRC_EXIT;
 }
 
 ACPI_EXPORT_SYMBOL(AcpiBiosError)

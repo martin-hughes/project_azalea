@@ -2,17 +2,14 @@
 
 #define ENABLE_TRACING
 
-#include "acpi_if.h"
 #include "klib/klib.h"
-
-extern "C"
-{
-#include "acpi/acpica/source/include/acpi.h"
-}
+#include "acpi_if.h"
 
 void acpi_init_table_system()
 {
   KL_TRC_ENTRY;
+
+  COMPILER_ASSERT(sizeof(unsigned int) == 4);
 
   if (AcpiInitializeSubsystem() != AE_OK)
   {
