@@ -60,11 +60,10 @@ void panic_print(const char *message, unsigned int line)
 		return;
 	}
 
-	// Iterate printing characters until we reach the end of the message or the
-	// end of the line.
-	while((*message != 0) && (count < screen_cols))
+	// Iterate printing characters until we reach the end of the message.
+	while(*message != 0)
 	{
-		if (*message == '\n')
+		if ((*message == '\n') || (count == screen_cols))
 		{
 			count = 0;
 			line = line + 1;
