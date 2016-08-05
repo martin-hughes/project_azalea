@@ -136,3 +136,36 @@ void proc_stop_interrupts()
 {
 	asm_proc_stop_interrupts();
 }
+
+unsigned long proc_read_port(const unsigned long port_id, const unsigned char width)
+{
+  KL_TRC_ENTRY;
+
+  unsigned long retval;
+
+  KL_TRC_DATA("Port", port_id);
+  KL_TRC_DATA("Width", width);
+
+  ASSERT((width == 8) || (width == 16) || (width == 32));
+
+  retval = asm_proc_read_port(port_id, width);
+
+  KL_TRC_DATA("Returned value", retval);
+  KL_TRC_EXIT;
+
+  return retval;
+}
+
+void proc_write_port(const unsigned long port_id, const unsigned long value, const unsigned char width)
+{
+  KL_TRC_ENTRY;
+  KL_TRC_DATA("Port", port_id);
+  KL_TRC_DATA("Value", value);
+  KL_TRC_DATA("Width", width);
+
+  ASSERT((width == 8) || (width == 16) || (width == 32));
+
+  asm_proc_write_port(port_id, value, width);
+
+  KL_TRC_EXIT;
+}

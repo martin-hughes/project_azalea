@@ -53,9 +53,9 @@ asm_proc_disable_local_apic:
     mov rcx, 0x1B ; TODO: Magic constant
     rdmsr
 
-    mov rdx, 0x0800 ; TODO: And another!
-    not rdx
-    and rax, rdx
+    mov r8, 0x0800 ; TODO: And another!
+    not r8
+    and rax, r8
 
     wrmsr
 

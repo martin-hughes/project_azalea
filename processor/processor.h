@@ -115,4 +115,7 @@ void task_yield();
 void task_continue_this_thread();
 void task_resume_scheduling();
 
+unsigned long proc_read_port(const unsigned long port_id, const unsigned char width);
+void proc_write_port(const unsigned long port_id, const unsigned long value, const unsigned char width);
+
 #endif /* PROCESSOR_H_ */

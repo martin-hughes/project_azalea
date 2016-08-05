@@ -107,7 +107,6 @@ void time_hpet_init()
   KL_TRC_DATA("Timer 0 config field after", hpet_config->timer_cfg[0].cfg_and_caps);
 
   // Configure timer 1 as a stopped 1-shot timer that calls IRQ 8.
-  ASSERT(time_hpet_get_flag(hpet_config->timer_cfg[1].cfg_and_caps, hpet_tmr_64_bit_cap));
   //ASSERT((HPET_TMR_INT_RTE_CAP(hpet_config->timer_cfg[1].cfg_and_caps) & 0x100) != 0);
 
   //HPET_TMR_SET_INT_RTE(hpet_config->timer_cfg[1].cfg_and_caps, 8);

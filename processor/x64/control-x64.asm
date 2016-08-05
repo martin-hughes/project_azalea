@@ -25,3 +25,62 @@ asm_proc_write_msr:
   mov rcx, rdi
   wrmsr
   ret
+
+; Read the specified processor port.
+; Parameter 1 (RDI): port ID
+; Parameter 2 (RSI): bits of width to use. It is assumed that the value is 8, 16 or 32. Undefined results otherwise.
+GLOBAL asm_proc_read_port
+asm_proc_read_port:
+  mov rax, 0
+  mov dx, di
+
+  cmp rsi, 8
+  jne aprp_try_16
+    in al, dx
+    jmp apwp_done
+
+  aprp_try_16:
+  cmp rsi, 16
+  jne apwp_try_32
+    in ax, dx
+    jmp apwp_done
+
+  aprp_try_32:
+  cmp rsi, 32
+  jne apwp_done
+    in eax, dx
+
+  aprp_done:
+  ret
+
+
+; Write to the specified processor port
+; Parameter 1 (RDI) Port ID
+; Parameter 2 (RSI) Value to write
+; Parameter 3 (RDX) bits of width to use. It is assumed that the value is 8, 16 or 32. Undefined results otherwise.
+GLOBAL asm_proc_write_port
+asm_proc_write_port:
+  ; Swap parameters into useable registers. RAX is the value being written. RDX will be the port to write to.
+  mov r8, rdx
+  mov rdx, 0
+  mov dx, di
+  mov rax, rsi
+
+  cmp r8, 8
+  jne apwp_try_16
+    out dx, al
+    jmp apwp_done
+
+  apwp_try_16:
+  cmp r8, 16
+  jne apwp_try_32
+    out dx, ax
+    jmp apwp_done
+
+  apwp_try_32:
+  cmp r8, 32
+  jne apwp_done
+    out dx, eax
+
+  apwp_done:
+  ret

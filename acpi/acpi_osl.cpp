@@ -424,7 +424,18 @@ void AcpiOsStall(UINT32 Microseconds)
 ACPI_STATUS AcpiOsReadPort(ACPI_IO_ADDRESS Address, UINT32 *Value, UINT32 Width)
 {
   KL_TRC_ENTRY;
-  panic("ACPI OS Read Port not implemented");
+
+  KL_TRC_DATA("Address", Address);
+  KL_TRC_DATA("Output address", (unsigned long)Value);
+  KL_TRC_DATA("Width", Width);
+
+  ASSERT(Value != (UINT32 *)NULL);
+  ASSERT((Width == 8) || (Width == 16) || (Width == 32));
+
+  *Value = proc_read_port(Address, Width);
+
+  KL_TRC_DATA("Value returned", *Value);
+
   KL_TRC_EXIT;
   return AE_OK;
 }
@@ -432,7 +443,15 @@ ACPI_STATUS AcpiOsReadPort(ACPI_IO_ADDRESS Address, UINT32 *Value, UINT32 Width)
 ACPI_STATUS AcpiOsWritePort(ACPI_IO_ADDRESS Address, UINT32 Value, UINT32 Width)
 {
   KL_TRC_ENTRY;
-  panic("ACPI OS Write Port not implemented");
+
+  KL_TRC_DATA("Address", Address);
+  KL_TRC_DATA("Value", Value);
+  KL_TRC_DATA("Width", Width);
+
+  ASSERT((Width == 8) || (Width == 16) || (Width == 32));
+
+  proc_write_port(Address, Value, Width);
+
   KL_TRC_EXIT;
   return AE_OK;
 }

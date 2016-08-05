@@ -8,6 +8,8 @@ extern "C" void asm_proc_read_cpuid(unsigned long eax_value,
                                     unsigned long *edx_ecx);
 extern "C" unsigned long asm_proc_read_msr(unsigned long msr);
 extern "C" void asm_proc_write_msr(unsigned long msr, unsigned long value);
+extern "C" unsigned long asm_proc_read_port(const unsigned long port_id, const unsigned char width);
+extern "C" void asm_proc_write_port(const unsigned long port_id, const unsigned long value, const unsigned char width);
 
 // GDT Control
 #define TSS_DESC_LEN 16
