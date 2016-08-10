@@ -1,9 +1,5 @@
 #pragma once
 
-#ifndef KL_TRC_TRACE
-#define KL_TRC_TRACE(x)
-#endif
-
 // Basic assertions.
 #define COMPILER_ASSERT(X) switch(1) { case 0: break; case X: break; }
 #define STRIZE_2(X) # X
