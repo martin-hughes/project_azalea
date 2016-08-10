@@ -1,7 +1,7 @@
 // Overrides for ACPICA's output functions. The default output functions simply dump everything to printf, which we
 // don't want.
 
-#define ENABLE_TRACING
+//#define ENABLE_TRACING
 
 #define EXPORT_ACPI_INTERFACES
 

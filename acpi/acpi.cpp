@@ -1,6 +1,6 @@
 // 64bit's ACPI interface. Primarily bumps stuff back and forth to ACPICA.
 
-#define ENABLE_TRACING
+//#define ENABLE_TRACING
 
 #include "klib/klib.h"
 #include "acpi_if.h"
