@@ -1,6 +1,6 @@
 // Interface to the HPET.
 
-#define ENABLE_TRACING
+//#define ENABLE_TRACING
 
 #include "klib/klib.h"
 #include "processor/timing/timing.h"

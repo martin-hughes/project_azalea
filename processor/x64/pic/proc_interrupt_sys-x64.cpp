@@ -1,4 +1,4 @@
-#define ENABLE_TRACING
+//#define ENABLE_TRACING
 
 #include "processor/x64/pic/pic.h"
 #include "processor/x64/processor-x64-int.h"

@@ -1,7 +1,7 @@
 // Exception handlers for the kernel.
 // Page faults are handled in interrupts-x64.cpp
 
-#define ENABLE_TRACING
+//#define ENABLE_TRACING
 
 #include "processor/x64/processor-x64-int.h"
 #include "klib/klib.h"
