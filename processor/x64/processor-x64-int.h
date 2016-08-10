@@ -78,3 +78,22 @@ extern "C" void asm_proc_virt_except_fault_handler(); // 20
 extern "C" void proc_virt_except_fault_handler();
 extern "C" void asm_proc_security_fault_handler(); // 30
 extern "C" void proc_security_fault_handler(unsigned long err_code);
+
+namespace PROC_X64_MSRS
+{
+  const unsigned long IA32_MTRRCAP = 0xfe;
+  const unsigned long IA32_MTRR_PHYSBASE0 = 0x200;
+  const unsigned long IA32_MTRR_PHYSMASK0 = 0x201;
+  const unsigned long IA32_MTRR_FIX64K_00000 = 0x250;
+  const unsigned long IA32_MTRR_FIX16K_80000 = 0x258;
+  const unsigned long IA32_MTRR_FIX16K_A0000 = 0x259;
+  const unsigned long IA32_MTRR_FIX4K_C0000 = 0x268;
+  const unsigned long IA32_MTRR_FIX4K_C8000 = 0x269;
+  const unsigned long IA32_MTRR_FIX4K_D0000 = 0x26A;
+  const unsigned long IA32_MTRR_FIX4K_D8000 = 0x26B;
+  const unsigned long IA32_MTRR_FIX4K_E0000 = 0x26C;
+  const unsigned long IA32_MTRR_FIX4K_E8000 = 0x26D;
+  const unsigned long IA32_MTRR_FIX4K_F0000 = 0x26E;
+  const unsigned long IA32_MTRR_FIX4K_F8000 = 0x26F;
+  const unsigned long IA32_MTRR_DEF_TYPE = 0x2FF;
+};
