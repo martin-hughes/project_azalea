@@ -56,6 +56,9 @@ void mem_gen_init()
   // specific code later.
   mem_init_gen_phys_sys();
 
+  // Configure the x64 PAT system, so that caching works as expected.
+  mem_x64_pat_init();
+
   // Prepare the virtual memory subsystem. Start with some fairly simple
   // Initialisation.
   task0_x64_entry.pml4_phys_addr = (unsigned long)&pml4_table;
@@ -195,7 +198,7 @@ void mem_map_virtual_page(unsigned long virt_addr, unsigned long phys_addr, task
   {
     // Get the physical address of the next table.
     KL_TRC_TRACE((TRC_LVL_FLOW, "PML4 entry marked present\n"));
-    table_phys_addr = (void *)PHYS_ADDR_FROM_PTE(*encoded_entry);
+    table_phys_addr = (void *)mem_x64_phys_addr_from_pte(*encoded_entry);
   }
   else
   {
@@ -207,6 +210,7 @@ void mem_map_virtual_page(unsigned long virt_addr, unsigned long phys_addr, task
     new_entry.writable = true;
     new_entry.user_mode = !is_kernel_allocation;
     new_entry.end_of_tree = false;
+    new_entry.cache_type = MEM_X64_CACHE_TYPES::WRITE_BACK;
 
     *encoded_entry = mem_encode_page_table_entry(new_entry);
 
@@ -242,7 +246,7 @@ void mem_map_virtual_page(unsigned long virt_addr, unsigned long phys_addr, task
   if (PT_MARKED_PRESENT(*encoded_entry))
   {
     KL_TRC_TRACE((TRC_LVL_FLOW, "PDPT entry marked present\n"));
-    table_phys_addr = (void *)PHYS_ADDR_FROM_PTE(*encoded_entry);
+    table_phys_addr = (void *)mem_x64_phys_addr_from_pte(*encoded_entry);
   }
   else
   {
@@ -255,6 +259,7 @@ void mem_map_virtual_page(unsigned long virt_addr, unsigned long phys_addr, task
     new_entry.writable = true;
     new_entry.user_mode = !is_kernel_allocation;
     new_entry.end_of_tree = false;
+    new_entry.cache_type = MEM_X64_CACHE_TYPES::WRITE_BACK;
 
     *encoded_entry = mem_encode_page_table_entry(new_entry);
     KL_TRC_DATA("New entry", *encoded_entry);
@@ -277,6 +282,7 @@ void mem_map_virtual_page(unsigned long virt_addr, unsigned long phys_addr, task
   new_entry.writable = true;
   new_entry.user_mode = !is_kernel_allocation;
   new_entry.end_of_tree = true;
+  new_entry.cache_type = MEM_X64_CACHE_TYPES::WRITE_BACK;
   *encoded_entry = mem_encode_page_table_entry(new_entry);
 
   KL_TRC_DATA("Encoded entry", (unsigned long)*encoded_entry);
@@ -308,7 +314,7 @@ void mem_unmap_virtual_page(unsigned long virt_addr)
   if (PT_MARKED_PRESENT(*encoded_entry))
   {
     // Get the physical address of the next table.
-    table_phys_addr = (void *)PHYS_ADDR_FROM_PTE(*encoded_entry);
+    table_phys_addr = (void *)mem_x64_phys_addr_from_pte(*encoded_entry);
   }
   else
   {
@@ -323,7 +329,7 @@ void mem_unmap_virtual_page(unsigned long virt_addr)
   encoded_entry = table_addr + page_dir_ptr_entry_idx;
   if (PT_MARKED_PRESENT(*encoded_entry))
   {
-    table_phys_addr = (void *)PHYS_ADDR_FROM_PTE(*encoded_entry);
+    table_phys_addr = (void *)mem_x64_phys_addr_from_pte(*encoded_entry);
   }
   else
   {
@@ -404,6 +410,7 @@ void mem_set_working_page_dir(unsigned long phys_page_addr)
   new_entry.writable = true;
   new_entry.user_mode = false;
   new_entry.end_of_tree = true;
+  new_entry.cache_type = MEM_X64_CACHE_TYPES::WRITE_BACK;
 
   KL_TRC_DATA("working_table_va_entry_addr", (unsigned long)working_table_va_entry_addr);
   KL_TRC_DATA("*working_table_va_entry_addr", (unsigned long)(*working_table_va_entry_addr));
@@ -425,12 +432,31 @@ unsigned long mem_encode_page_table_entry(page_table_entry &pte)
 {
   KL_TRC_ENTRY;
 
+  unsigned char pat_value;
+
   unsigned long masked_addr = pte.target_addr & 0x0007FFFFFFFFF000;
   unsigned long result = masked_addr |
       (pte.end_of_tree ? 0x80 : 0x00) |
       (pte.present ? 0x01 : 0x00) |
       (pte.writable ? 0x02 : 0x00) |
       (pte.user_mode ? 0x04 : 0x00);
+
+  pat_value = mem_x64_pat_get_val(pte.cache_type, !pte.end_of_tree);
+  ASSERT((!pte.end_of_tree) | (pat_value < 4));
+  ASSERT((!pte.end_of_tree) | ((pte.target_addr & 0x00000000000FF000) == 0));
+
+  // Encode the cache type into PAT (bit 12), PCD (bit 4) and PWT (bit 3), per the Intel System Programming Guide,
+  // section 4.9.2.
+  //
+  // Entries in the tree that reference another part of the tree (i.e. they don't point at the translated address) do
+  // not have a PAT field, which is why their PAT index must be less than 4.
+  //
+  // We can get away with assuming the PAT to be in bit 12, because we never allocate pages less than 2MB.
+  result = result | ((pat_value & 0x03) << 3);
+  if ((pte.end_of_tree) && ((pat_value & 0x04) != 0))
+  {
+    result = result | 0x1000;
+  }
 
   KL_TRC_EXIT;
 
@@ -443,12 +469,35 @@ page_table_entry mem_decode_page_table_entry(unsigned long encoded)
   KL_TRC_ENTRY;
 
   page_table_entry decode;
+  unsigned char pat_val;
 
-  decode.target_addr = encoded & 0x0007FFFFFFFFF000;
   decode.end_of_tree = ((encoded & 0x80) != 0);
   decode.present = ((encoded & 0x01) != 0);
   decode.writable = ((encoded & 0x02) != 0);
   decode.user_mode = ((encoded & 0x04) != 0);
+
+  pat_val = (encoded & 0x18) >> 3;
+  if (decode.end_of_tree)
+  {
+    if ((encoded & 0x1000) != 0)
+    {
+      pat_val = pat_val | 0x04;
+    }
+  }
+
+  decode.cache_type = mem_x64_pat_decode(pat_val);
+
+  // The number of bits allocated to the memory address changes depending on whether this is at the end of the
+  // translation tree or not. Assuming all but the bottom 12 bits are part of the address doesn't take into account the
+  // PAT bit that sits at bit 12.
+  if (decode.end_of_tree)
+  {
+    decode.target_addr = encoded & 0x0007FFFFFFF00000;
+  }
+  else
+  {
+    decode.target_addr = encoded & 0x0007FFFFFFFFF000;
+  }
 
   KL_TRC_EXIT;
 
@@ -480,14 +529,14 @@ void *mem_get_phys_addr(void *virtual_addr)
   // getting the physical address of the next table.
   encoded_entry = table_addr + pml4_entry_idx;
   ASSERT(PT_MARKED_PRESENT(*encoded_entry));
-  table_phys_addr = (void *)PHYS_ADDR_FROM_PTE(*encoded_entry);
+  table_phys_addr = (void *)mem_x64_phys_addr_from_pte(*encoded_entry);
 
   // Now look at the page directory pointer table.
   mem_set_working_page_dir((unsigned long)table_phys_addr);
   table_addr = (unsigned long *)working_table_virtual_addr;
   encoded_entry = table_addr + page_dir_ptr_entry_idx;
   ASSERT(PT_MARKED_PRESENT(*encoded_entry));
-  table_phys_addr = (void *)PHYS_ADDR_FROM_PTE(*encoded_entry);
+  table_phys_addr = (void *)mem_x64_phys_addr_from_pte(*encoded_entry);
 
   // Having worked through all the page directories, grab the address out.
   mem_set_working_page_dir((unsigned long)table_phys_addr);
@@ -496,7 +545,7 @@ void *mem_get_phys_addr(void *virtual_addr)
 
   KL_TRC_EXIT;
 
-  return (void *)PHYS_ADDR_FROM_PTE(*encoded_entry);
+  return (void *)mem_x64_phys_addr_from_pte(*encoded_entry);
 }
 
 // Fill in a process memory information struct, which is provided back to the task manager, for it to live with all the
@@ -579,4 +628,15 @@ unsigned long *get_pml4_table_addr(task_process *context)
 
   KL_TRC_EXIT;
   return table_addr;
+}
+
+unsigned long mem_x64_phys_addr_from_pte(unsigned long encoded)
+{
+  KL_TRC_ENTRY;
+
+  page_table_entry decoded = mem_decode_page_table_entry(encoded);
+
+  KL_TRC_EXIT;
+
+  return decoded.target_addr;
 }

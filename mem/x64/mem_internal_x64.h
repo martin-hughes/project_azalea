@@ -15,6 +15,7 @@ struct page_table_entry
   bool writable;
   bool user_mode;
   bool end_of_tree;
+  unsigned char cache_type;
 };
 
 struct process_x64_data
@@ -34,8 +35,8 @@ page_table_entry mem_decode_page_table_entry(unsigned long encoded);
 void mem_set_working_page_dir(unsigned long phys_page_addr);
 extern "C" void mem_invalidate_page_table(unsigned long virt_addr);
 void *mem_get_phys_addr(void *virtual_addr);
+unsigned long mem_x64_phys_addr_from_pte(unsigned long encoded);
 
-#define PHYS_ADDR_FROM_PTE(x) ((x) & (0x0003FFFFFFFFF000))
 #define PT_MARKED_PRESENT(x) ((x) & 1)
 
 void mem_x64_pml4_init_sys(process_x64_data &task0_data);
@@ -45,5 +46,20 @@ void mem_x64_pml4_synchronize(void *updated_pml4_table);
 unsigned long *get_pml4_table_addr(task_process *context = (task_process *)NULL);
 
 extern void *mem_x64_kernel_stack_ptr;
+
+// x64 Cache control declarations
+
+namespace MEM_X64_CACHE_TYPES
+{
+  const unsigned char UNCACHEABLE = 0;
+  const unsigned char WRITE_COMBINING = 1;
+  const unsigned char WRITE_THROUGH = 4;
+  const unsigned char WRITE_PROTECTED = 5;
+  const unsigned char WRITE_BACK = 6;
+}
+
+void mem_x64_pat_init();
+unsigned char mem_x64_pat_get_val(const unsigned char cache_type, bool first_half);
+unsigned char mem_x64_pat_decode(const unsigned char pat_idx);
 
 #endif

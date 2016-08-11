@@ -95,5 +95,6 @@ namespace PROC_X64_MSRS
   const unsigned long IA32_MTRR_FIX4K_E8000 = 0x26D;
   const unsigned long IA32_MTRR_FIX4K_F0000 = 0x26E;
   const unsigned long IA32_MTRR_FIX4K_F8000 = 0x26F;
+  const unsigned long IA32_PAT = 0x277;
   const unsigned long IA32_MTRR_DEF_TYPE = 0x2FF;
 };
