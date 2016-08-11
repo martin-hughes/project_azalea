@@ -18,6 +18,17 @@ struct mem_process_info
     void *arch_specific_data;
 };
 
+// Selectable caching modes for users of the memory system. Yes, these are very similar to the constants in
+// MEM_X64_CACHE_TYPES - it saves having an extra translation while only the x64 architecture is supported.
+enum MEM_CACHE_MODES
+{
+  MEM_UNCACHEABLE = 0,
+  MEM_WRITE_COMBINING = 1,
+  MEM_WRITE_THROUGH = 4,
+  MEM_WRITE_PROTECTED = 5,
+  MEM_WRITE_BACK = 6,
+};
+
 struct task_process;
 
 // In theory, no other part of the kernel should define NULL, however because we
@@ -31,7 +42,11 @@ struct task_process;
 // TODO: Consider how these interact with multiple possible process spaces. (MT)
 void *mem_allocate_physical_pages(unsigned int num_pages);
 void *mem_allocate_virtual_range(unsigned int num_pages);
-void mem_map_range(void *physical_start, void* virtual_start, unsigned int len, task_process *context = (task_process *)NULL);
+void mem_map_range(void *physical_start,
+                   void* virtual_start,
+                   unsigned int len,
+                   task_process *context = (task_process *)NULL,
+                   MEM_CACHE_MODES cache_mode = MEM_WRITE_BACK);
 void *mem_allocate_pages(unsigned int num_pages);
 
 void mem_deallocate_physical_pages(void *start, unsigned int num_pages);

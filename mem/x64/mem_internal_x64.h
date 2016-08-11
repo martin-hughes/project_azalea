@@ -49,6 +49,8 @@ extern void *mem_x64_kernel_stack_ptr;
 
 // x64 Cache control declarations
 
+// Note the mapping between these and MEM_CACHE_MODES - the latter is meant to be platform independent, but at the
+// moment (while only x64 is supported) they have a 1:1 mapping.
 namespace MEM_X64_CACHE_TYPES
 {
   const unsigned char UNCACHEABLE = 0;

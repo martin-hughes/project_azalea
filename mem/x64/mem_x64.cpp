@@ -152,7 +152,10 @@ void mem_gen_phys_pages_bitmap(unsigned long *bitmap_loc,
 // Map a 2MB virtual page to a provided physical page.
 // TODO: There's a simple assumption that anything above half-way is a kernel allocation, otherwise it's user-mode
 // TODO: Confirm that this is reasonable. (STAB)
-void mem_map_virtual_page(unsigned long virt_addr, unsigned long phys_addr, task_process *context)
+void mem_map_virtual_page(unsigned long virt_addr,
+                          unsigned long phys_addr,
+                          task_process *context,
+                          MEM_CACHE_MODES cache_mode)
 {
   KL_TRC_ENTRY;
 
@@ -282,7 +285,7 @@ void mem_map_virtual_page(unsigned long virt_addr, unsigned long phys_addr, task
   new_entry.writable = true;
   new_entry.user_mode = !is_kernel_allocation;
   new_entry.end_of_tree = true;
-  new_entry.cache_type = MEM_X64_CACHE_TYPES::WRITE_BACK;
+  new_entry.cache_type = (unsigned char)cache_mode;
   *encoded_entry = mem_encode_page_table_entry(new_entry);
 
   KL_TRC_DATA("Encoded entry", (unsigned long)*encoded_entry);

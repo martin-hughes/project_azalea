@@ -49,7 +49,7 @@ void mem_deallocate_pages(void *virtual_start, unsigned int num_pages)
 
 // Map a range of virtual addresses to an equally long range of physical
 // addresses.
-void mem_map_range(void *physical_start, void* virtual_start, unsigned int len, task_process *context)
+void mem_map_range(void *physical_start, void* virtual_start, unsigned int len, task_process *context, MEM_CACHE_MODES cache_mode)
 {
   KL_TRC_ENTRY;
 
@@ -70,7 +70,8 @@ void mem_map_range(void *physical_start, void* virtual_start, unsigned int len, 
   {
     mem_map_virtual_page((unsigned long)cur_virt_addr,
                          (unsigned long)cur_phys_addr,
-                         context);
+                         context,
+                         cache_mode);
     cur_virt_addr += MEM_PAGE_SIZE;
     cur_phys_addr += MEM_PAGE_SIZE;
   }
