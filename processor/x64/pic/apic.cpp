@@ -24,6 +24,8 @@ void proc_x64_configure_apic_mode()
   asm_proc_disable_legacy_pic();
   proc_x64_configure_local_apic();
 
+  end_of_irq_ack_fn = (void *)proc_x64_apic_irq_ack;
+
   KL_TRC_EXIT;
 }
 
