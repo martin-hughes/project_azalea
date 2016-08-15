@@ -40,7 +40,8 @@ void proc_init_tss()
 
   unsigned long tss_seg_ulong;
 
-  COMPILER_ASSERT(TSS_SEG_LENGTH < 255);  // We make the assumption below that the length fits into one byte of the limit field.
+  // We make the assumption below that the length fits into one byte of the limit field.
+  static_assert(TSS_SEG_LENGTH < 255, "The TSS segment size can't be described to the CPU");
 
   // Allocate a new TSS segment.
   tss_segment = new unsigned char[TSS_SEG_LENGTH];

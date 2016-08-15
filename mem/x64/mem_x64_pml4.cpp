@@ -44,7 +44,7 @@ void mem_x64_pml4_allocate(process_x64_data &new_proc_data)
   new_proc_data.pml4_list_item.item = (void *)&new_proc_data;
   klib_list_add_tail(&pml4_table_list, &new_proc_data.pml4_list_item);
 
-  COMPILER_ASSERT(sizeof(char) == 1)
+  static_assert(sizeof(char) == 1, "Only single byte characters supported right now");
 
   // Simply allocate a 4096 byte table. KLIB will make sure this is in the kernel's address space automatically.
   // The Virtual address is easy.

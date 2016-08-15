@@ -9,7 +9,7 @@ void acpi_init_table_system()
 {
   KL_TRC_ENTRY;
 
-  COMPILER_ASSERT(sizeof(unsigned int) == 4);
+  static_assert(sizeof(unsigned int) == 4, "Unsigned long assumed to be length 4");
 
   if (AcpiInitializeSubsystem() != AE_OK)
   {

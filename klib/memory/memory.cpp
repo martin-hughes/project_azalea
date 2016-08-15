@@ -316,9 +316,12 @@ void init_allocator_system()
   ASSERT(!allocator_initialized);
   ASSERT(!allocator_initializing);
 
-  COMPILER_ASSERT(sizeof(CHUNK_SIZES) == sizeof(NUM_CHUNKS_PER_SLAB));
-  COMPILER_ASSERT(sizeof(CHUNK_SIZES) == sizeof(FIRST_OFFSET_IN_SLAB));
-  COMPILER_ASSERT(sizeof(slab_header) <= FIRST_BITMAP_ENTRY_OFFSET);
+  static_assert(sizeof(CHUNK_SIZES) == sizeof(NUM_CHUNKS_PER_SLAB),
+                "MMGR mismatch - CHUNK_SIZES and NUM_CHUNKS_PER_SLAB arrays don't correspond.");
+  static_assert(sizeof(CHUNK_SIZES) == sizeof(FIRST_OFFSET_IN_SLAB),
+                "MMGR mismatch - CHUNK_SIZES and FIRST_OFFSET_IN_SLAB arrays don't correspond.");
+  static_assert(sizeof(slab_header) <= FIRST_BITMAP_ENTRY_OFFSET,
+                "MMGR mismatch - The slab header would scribble the first allocatable area.");
 
   allocator_initializing = true;
 
@@ -389,6 +392,8 @@ void *allocate_new_slab(unsigned int chunk_size_idx)
   return new_slab;
 }
 
+static_assert(sizeof(unsigned long) == 8, "Unsigned long must be 8 bytes");
+
 // Using a slab, and given the chunk size of the slab, allocate a new chunk and
 // mark that chunk as in use.
 void *allocate_chunk_from_slab(void *slab, unsigned int chunk_size_idx)
@@ -404,7 +409,7 @@ void *allocate_chunk_from_slab(void *slab, unsigned int chunk_size_idx)
   unsigned int first_free_idx = 0;
   unsigned long chunk_offset;
 
-  COMPILER_ASSERT(sizeof(unsigned long) == 8);
+
   ASSERT(slab != NULL);
   ASSERT(chunk_size_idx < NUM_SLAB_LISTS);
 

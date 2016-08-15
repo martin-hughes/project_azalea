@@ -32,9 +32,9 @@ void proc_panic_interrupt_handler()
 //------------------------------------------------------------------------------
 void proc_configure_idt()
 {
-  COMPILER_ASSERT(sizeof(long) == 8);
-  COMPILER_ASSERT(sizeof(int) == 4);
-  COMPILER_ASSERT(sizeof(short) == 2);
+  static_assert(sizeof(long) == 8, "Type length check failed");
+  static_assert(sizeof(int) == 4, "Type length check failed");
+  static_assert(sizeof(short) == 2, "Type length check failed");
 
   // Start by zero-ing out everything.
   kl_memset(interrupt_descriptor_table,

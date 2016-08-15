@@ -97,7 +97,7 @@ void mem_gen_phys_pages_bitmap(unsigned long *bitmap_loc,
   unsigned long end_addr;
   unsigned long number_of_pages;
 
-  COMPILER_ASSERT(sizeof(e820_record) == 24);
+  static_assert(sizeof(e820_record) == 24, "E820 record struct has been wrongly edited");
 
   // Set the bitmap to 0 - i.e. unallocated.
   kl_memset(bitmap_loc, 0, max_num_pages / 8);

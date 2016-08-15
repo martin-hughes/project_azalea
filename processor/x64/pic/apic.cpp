@@ -19,7 +19,7 @@ void proc_x64_configure_apic_mode()
 {
   KL_TRC_ENTRY;
 
-  COMPILER_ASSERT(sizeof(apic_registers) == 1024);
+  static_assert(sizeof(apic_registers) == 1024, "APIC register struct must be 1KB in size");
 
   asm_proc_disable_legacy_pic();
   proc_x64_configure_local_apic();
