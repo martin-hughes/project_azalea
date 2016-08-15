@@ -138,7 +138,7 @@ asm_proc_def_interrupt_handler:
 
 GLOBAL asm_proc_def_irq_handler
 asm_proc_def_irq_handler:
-    DEF_INT_HANDLER end_of_irq_ack_fn_wrapper
+  DEF_INT_HANDLER end_of_irq_ack_fn_wrapper
 
 ; If this interrupt handler is called, panic.
 GLOBAL asm_proc_panic_interrupt_handler

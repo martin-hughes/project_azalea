@@ -155,7 +155,6 @@ void proc_x64_ioapic_set_redir_tab(ioapic_data *ioapic, unsigned char num_in, un
 
   // This rather odd mask preserves all known RO fields.
   vector_data_low = vector_data_low & 0xFFFE5000;
-  vector_data_low |= (1 << 16); // Mask bit set to enabled.
   vector_data_low |= vector_out;
 
   *ioapic->reg_select = INP_ZERO_REG + 2 * num_in;

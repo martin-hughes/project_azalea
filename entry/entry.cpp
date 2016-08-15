@@ -55,13 +55,11 @@ int main()
   task_gen_init(kernel_start);
 
   // If the kernel gets back to here, just run in a loop. The task manager will soon kick in.
-  KL_TRC_TRACE((TRC_LVL_IMPORTANT, "Back to main(), spinning.\n"));
-  while (1)
-  {
-    // Just keep spinning...
-  }
+  // It takes too long, then assume something has gone wrong and abort.
+  KL_TRC_TRACE((TRC_LVL_IMPORTANT, "Back to main(), waiting for start.\n"));
+  time_stall_process(1000000000);
 
-  panic("Welcome to your 64-bit OS written in C (Thanks to Pure64!).");
+  panic("System failed to start - main timer hasn't hit.");
 
   proc_stop_all_procs();
   return (0);
