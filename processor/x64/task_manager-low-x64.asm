@@ -2,8 +2,8 @@
 SEGMENT .text
 
 EXTERN task_int_swap_task
-EXTERN asm_proc_irq_ack
 GLOBAL asm_task_switch_interrupt
+extern end_of_irq_ack_fn
 asm_task_switch_interrupt:
     cli
     pushf
@@ -38,7 +38,8 @@ asm_task_switch_interrupt:
 	sub rdx, 16
     mov rsp, [rdx]
 
-    call asm_proc_irq_ack
+    mov rax, end_of_irq_ack_fn
+    call [rax]
 
     pop r15
     pop r14

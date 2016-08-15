@@ -58,9 +58,11 @@ struct task_thread
     bool running;
 };
 
-// Initialise the first processor and any data structures needed to manage all
-// processors in the system.
+// Initialise the first processor and some of the data structures needed to manage all processors in the system.
 void proc_gen_init();
+
+// Continue initialization such that the other processors can be started, but leave them idle for now.
+void proc_mp_init();
 
 // Stop all processors other than the one this function is called on.
 void proc_stop_other_procs();

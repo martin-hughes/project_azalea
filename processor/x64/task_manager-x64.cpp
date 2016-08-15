@@ -132,7 +132,8 @@ void task_install_task_switcher()
 {
   KL_TRC_ENTRY;
 
-  proc_configure_idt_entry(32, 0, (void *)asm_task_switch_interrupt);
+  // TODO: Do a more sensible redirection than this!
+  proc_configure_idt_entry(34, 0, (void *)asm_task_switch_interrupt);
   asm_proc_install_idt();
 
   KL_TRC_EXIT;

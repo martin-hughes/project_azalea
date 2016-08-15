@@ -10,4 +10,7 @@ extern "C"
 
 void acpi_init_table_system();
 
+acpi_subtable_header *acpi_init_subtable_ptr(void *start_of_table, unsigned long offset);
+acpi_subtable_header *acpi_advance_subtable_ptr(acpi_subtable_header *header);
+
 #endif

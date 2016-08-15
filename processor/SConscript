@@ -14,9 +14,12 @@ files = ["task_manager.cpp",
          "x64/task_manager-x64.cpp",
          "x64/proc_exceptions-x64.cpp",
          "x64/cpuid-x64.asm",
+         "x64/multi_processor-x64.cpp",
          "x64/pic/proc_interrupt_sys-x64.cpp",
          "x64/pic/pic-x64.asm",
          "x64/pic/apic-x64.asm",
+         "x64/pic/apic.cpp",
+         "x64/pic/ioapic-x64.cpp",
         ]
 obj = env.Library("processor", files)
 Return ("obj") 

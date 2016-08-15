@@ -1,6 +1,8 @@
 //#define ENABLE_TRACING
 
 #include "processor/x64/pic/pic.h"
+#include "processor/x64/pic/apic.h"
+#include "processor/x64/pic/ioapic-x64.h"
 #include "processor/x64/processor-x64-int.h"
 #include "klib/klib.h"
 
@@ -13,19 +15,17 @@ const unsigned long X2_APIC_PRESENT = 0x0000000000200000;
 APIC_TYPES selected_pic_mode = LEGACY_PIC;
 
 APIC_TYPES proc_x64_detect_pic_type();
-bool proc_x64_detect_io_apic();
-void proc_x64_configure_apic_mode();
-void proc_x64_configure_local_apic();
-void proc_x64_io_apic_map_irq_range();
-void proc_x64_io_apic_map_irq(unsigned short irq_num, unsigned short vector_num);
-void proc_x64_disable_legacy_pic();
 
 // See what kind of interrupt controller (PIC, APIC, etc.) this system uses. Then configure it as appropriate.
 // TODO: Consider multiple processors here. (MT)
 // TODO: Enable x2APIC mode.
 // TODO: Consider the possibility of multiple IOAPICs. (We use just one now) (STAB)?
 // For now, just configure it on the local processor.
-void proc_conf_int_controller()
+
+
+// Configure the interrupt controller attached to this processor. Each processor will start their own (A)PIC.
+// The system's IO-APICs are initialized separately, by the main OS startup code.
+void proc_conf_local_int_controller()
 {
   KL_TRC_ENTRY;
 
@@ -41,26 +41,12 @@ void proc_conf_int_controller()
     case APIC:
     case X2APIC:
       KL_TRC_TRACE((TRC_LVL_FLOW, "Attempting to use APIC mode\n"));
-      if(proc_x64_detect_io_apic())
-      {
-        KL_TRC_TRACE((TRC_LVL_FLOW, "IO APIC detected, using APIC mode\n"));
-        selected_pic_mode = APIC;
-      }
-      else
-      {
-        KL_TRC_TRACE((TRC_LVL_FLOW, "No IO APIC, fall back to legacy mode\n"));
-        selected_pic_mode = LEGACY_PIC;
-      }
+      selected_pic_mode = APIC;
       break;
 
     default:
       panic("Unsupported PIC type detected!");
   }
-
-  // For the time being, always use the legacy PIC.
-  // TODO: Remove this (MT)
-  KL_TRC_TRACE((TRC_LVL_IMPORTANT, "FORCING LEGACY PIC MODE.\n"));
-  selected_pic_mode = LEGACY_PIC;
 
   switch (selected_pic_mode)
   {
@@ -75,6 +61,33 @@ void proc_conf_int_controller()
     default:
       panic("Unsupported PIC type");
   }
+
+  KL_TRC_EXIT;
+}
+
+// Configure any interrupt controllers that are not local to a specific processor. That's only expected to be the
+// IO-APICs.
+void proc_configure_global_int_ctrlrs()
+{
+  KL_TRC_ENTRY;
+
+  unsigned char bsp_apic_id = proc_x64_apic_get_local_id();
+
+  proc_x64_ioapic_load_data();
+
+  if (selected_pic_mode != LEGACY_PIC)
+  {
+    // If there's no legacy PIC, then there must be both an APIC and IO-APIC. The IO-APIC, being a system-wide (global)
+    // interrupt controller, still needs its interrupts remapping. If we're in legacy PIC mode, this has been done
+    // already (since the PIC is attached to the processor)
+    ASSERT(proc_x64_ioapic_get_count() > 0);
+
+    // Remap what would have been called IRQ 0-15 into interrupts 32-47. Point them all towards the BSP for now.
+    // TODO: The timer interrupt will definitely need to go to all processors (MT)
+    proc_x64_ioapic_remap_interrupts(0, 32, bsp_apic_id);
+  }
+
+  // Some more stuff too, but I don't know what yet.
 
   KL_TRC_EXIT;
 }
@@ -117,62 +130,4 @@ APIC_TYPES proc_x64_detect_pic_type()
   KL_TRC_EXIT;
 
   return detected_pic;
-}
-
-// Detects the presence of an IO APIC in the system.
-bool proc_x64_detect_io_apic()
-{
-  //INCOMPLETE_CODE(proc_x64_detect_io_apic);
-  return false;
-}
-
-// Configures the system to use the APIC and IO APIC.
-void proc_x64_configure_apic_mode()
-{
-  KL_TRC_ENTRY;
-  INCOMPLETE_CODE(proc_x64_configure_apic_mode);
-
-  proc_x64_io_apic_map_irq_range();
-  proc_x64_disable_legacy_pic();
-  proc_x64_configure_local_apic();
-
-  KL_TRC_EXIT;
-}
-
-// Configures the processor's local APIC.
-void proc_x64_configure_local_apic()
-{
-  INCOMPLETE_CODE(proc_x64_configure_local_apic);
-}
-
-// Maps the IRQ range of 0-15 to interrupts 32-48.
-// Note: If this range changes, it may be necessary to update the mapping in pic-x64.asm, and in interrupts-x64.cpp.
-void proc_x64_io_apic_map_irq_range()
-{
-  KL_TRC_ENTRY;
-
-  for (int i = 0; i < 16; i++)
-  {
-    proc_x64_io_apic_map_irq(i, i + 32);
-  }
-
-  KL_TRC_EXIT;
-}
-
-void proc_x64_io_apic_map_irq(unsigned short irq_num, unsigned short vector_num)
-{
-  KL_TRC_ENTRY;
-
-  INCOMPLETE_CODE(proc_x64_io_apic_map_irq);
-
-  KL_TRC_EXIT;
-}
-
-void proc_x64_disable_legacy_pic()
-{
-  KL_TRC_ENTRY;
-
-  INCOMPLETE_CODE(proc_x64_diable_legacy_pic);
-
-  KL_TRC_EXIT;
 }

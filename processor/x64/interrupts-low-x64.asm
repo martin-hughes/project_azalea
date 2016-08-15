@@ -1,6 +1,8 @@
 [BITS 64]
 SEGMENT .text
 
+extern end_of_irq_ack_fn
+
 ; Stops interrupts on this processor.
 GLOBAL asm_proc_stop_interrupts
 asm_proc_stop_interrupts:
@@ -13,7 +15,8 @@ GLOBAL asm_proc_start_interrupts
 asm_proc_start_interrupts:
     sti
     push rax
-    call asm_proc_irq_ack
+    mov rax, end_of_irq_ack_fn
+    call [rax]
     pop rax
     ret
 
@@ -29,7 +32,8 @@ asm_proc_install_idt:
     mov rax, idt_pointer
     lidt [rax]
 
-    call asm_proc_irq_ack
+    mov rax, end_of_irq_ack_fn
+    call [rax]
 
     pop rax
 
@@ -134,14 +138,7 @@ asm_proc_def_interrupt_handler:
 
 GLOBAL asm_proc_def_irq_handler
 asm_proc_def_irq_handler:
-    DEF_INT_HANDLER asm_proc_irq_ack
-
-GLOBAL asm_proc_irq_ack
-asm_proc_irq_ack:
-    mov al, 0x20
-    out 0xA0, al
-    out 0x20, al
-    ret
+    DEF_INT_HANDLER end_of_irq_ack_fn
 
 ; If this interrupt handler is called, panic.
 GLOBAL asm_proc_panic_interrupt_handler

@@ -30,6 +30,8 @@ void proc_configure_idt();
 void proc_configure_idt_entry(unsigned int interrupt_num, int req_priv_lvl, void *fn_pointer);
 extern "C" void asm_proc_install_idt();
 
+extern "C" void *end_of_irq_ack_fn;
+
 #define NUM_INTERRUPTS 256
 #define IDT_ENTRY_LEN 16
 extern unsigned char interrupt_descriptor_table[NUM_INTERRUPTS * IDT_ENTRY_LEN];
@@ -81,6 +83,7 @@ extern "C" void proc_security_fault_handler(unsigned long err_code);
 
 namespace PROC_X64_MSRS
 {
+  const unsigned long IA32_APIC_BASE = 0x1b;
   const unsigned long IA32_MTRRCAP = 0xfe;
   const unsigned long IA32_MTRR_PHYSBASE0 = 0x200;
   const unsigned long IA32_MTRR_PHYSMASK0 = 0x201;

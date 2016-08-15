@@ -14,6 +14,7 @@ SEGMENT .text
 %endmacro
 
 GLOBAL asm_proc_configure_irqs
+extern end_of_irq_ack_fn
 ; Start by configuring the PICs.
 asm_proc_configure_irqs:
     push rax
@@ -34,6 +35,10 @@ asm_proc_configure_irqs:
     ; Disable the Local APIC if one exists. This might seem unnecesary, but it covers the case where a system has a
     ; Local APIC but no IO APIC - in which case, the kernel falls back to Legacy PIC mode.
     call asm_proc_disable_local_apic
+
+    mov rax, asm_proc_legacy_pic_irq_ack
+    mov rbx, end_of_irq_ack_fn
+    mov [rbx], rax
 
     pop rdx
     pop rcx
@@ -60,4 +65,21 @@ asm_proc_disable_local_apic:
     wrmsr
 
     no_apic:
+    ret
+
+; Disables the legacy PIC by masking all interrupts.
+; TODO: Is it necessary to still remap IRQs in order to prevent spurious exceptions being triggered?
+GLOBAL asm_proc_disable_legacy_pic
+asm_proc_disable_legacy_pic:
+  mov al, 0xff
+  out 0xa1, al
+  out 0x21, al
+
+  ret
+
+GLOBAL asm_proc_legacy_pic_irq_ack
+asm_proc_legacy_pic_irq_ack:
+    mov al, 0x20
+    out 0xA0, al
+    out 0x20, al
     ret

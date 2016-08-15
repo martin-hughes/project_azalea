@@ -48,6 +48,9 @@ int main()
   KL_TRC_TRACE((TRC_LVL_IMPORTANT, "Welcome to the OS!\n"));
 
   acpi_init_table_system();
+
+  proc_mp_init();
+
   time_gen_init();
   task_gen_init(kernel_start);
 

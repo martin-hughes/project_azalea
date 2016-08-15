@@ -230,7 +230,7 @@ ACPI_STATUS AcpiOsAcquireMutex(ACPI_MUTEX Handle, UINT16 Timeout)
   SYNC_ACQ_RESULT res;
   ASSERT(mutex != NULL);
 
-  if (wait = 0xFFFF)
+  if (wait == 0xFFFF)
   {
     wait = MUTEX_MAX_WAIT;
   }

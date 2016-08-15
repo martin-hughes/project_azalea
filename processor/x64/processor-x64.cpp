@@ -25,13 +25,10 @@ void proc_gen_init()
 	asm_proc_load_gdt();
 	tss_segment = (unsigned char *)NULL;
 
-	// Fill in the IDT, ready to re-enable interrupts. Firstly, re-map the IRQs
-	// so they do not overlap the exceptions reserved by Intel.
-	proc_conf_int_controller();
+	// Fill in the IDT now, so we at least handle our own exceptions.
 	proc_configure_idt();
 
-	// All set up. It should now be safe to enable interrupts.
-	asm_proc_start_interrupts();
+	// Further processor setup, including configuring PICs/APICs, continues after the memory mamanger is up.
 }
 
 // TODO: There needs to be one TSS / TSS descriptor per processor. (MT)

@@ -34,3 +34,26 @@ void acpi_init_table_system()
 
   KL_TRC_EXIT;
 }
+
+// Some helper functions for dealing with the subtable feature of ACPI.
+
+acpi_subtable_header *acpi_init_subtable_ptr(void *start_of_table, unsigned long offset)
+{
+  KL_TRC_ENTRY;
+
+  unsigned long start = (unsigned long)start_of_table;
+  unsigned long result = start + offset;
+
+  KL_TRC_DATA("Start of table", start);
+  KL_TRC_DATA("Offset", offset);
+  KL_TRC_DATA("Result", result);
+
+  KL_TRC_EXIT;
+
+  return (acpi_subtable_header *)result;
+}
+
+acpi_subtable_header *acpi_advance_subtable_ptr(acpi_subtable_header *header)
+{
+  return acpi_init_subtable_ptr((void *)header, (unsigned long)header->Length);
+}

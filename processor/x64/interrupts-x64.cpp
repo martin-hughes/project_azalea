@@ -6,8 +6,10 @@
 #include "klib/klib.h"
 
 #include "processor/x64/processor-x64-int.h"
+#include "processor/x64/pic/pic.h"
 
 unsigned char interrupt_descriptor_table[NUM_INTERRUPTS * IDT_ENTRY_LEN];
+void *end_of_irq_ack_fn = (void *)asm_proc_legacy_pic_irq_ack;
 
 //------------------------------------------------------------------------------
 // Basic interrupt handlers
