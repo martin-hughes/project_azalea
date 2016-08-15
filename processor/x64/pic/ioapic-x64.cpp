@@ -110,6 +110,8 @@ void proc_x64_ioapic_remap_interrupts(unsigned int ioapic_num, unsigned char bas
 {
   KL_TRC_ENTRY;
 
+  int temp_vect;
+
   KL_TRC_DATA("IO APIC number", ioapic_num);
   KL_TRC_DATA("Base interrupt", base_int);
   KL_TRC_DATA("APIC ID to route to", apic_id);
@@ -126,9 +128,13 @@ void proc_x64_ioapic_remap_interrupts(unsigned int ioapic_num, unsigned char bas
 
   ioapic = (ioapic_data *)first_item->item;
 
+  // Remap all the IRQs supported by this IOAPIC. Except for IRQ2 - make that into IRQ0. This is a bit of an ugly hack,
+  // but it comes about because the HPET signals IRQ0 on a legacy PIC, but input 2 on a IOAPIC. This hack then stops
+  // the rest of the code having to care about whether PIC or APIC mode is being used.
   for (int i = 0; i < 24; i++)
   {
-    proc_x64_ioapic_set_redir_tab(ioapic, i, i + base_int, apic_id);
+    temp_vect = (i == 2) ?  base_int : i + base_int;
+    proc_x64_ioapic_set_redir_tab(ioapic, i, temp_vect, apic_id);
   }
 
   KL_TRC_EXIT;
