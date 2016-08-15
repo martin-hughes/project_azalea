@@ -95,7 +95,7 @@ void proc_x64_ioapic_add_ioapic(acpi_madt_io_apic *table)
   ioapic_offset = table->Address % MEM_PAGE_SIZE;
   ioapic_phys_base = table->Address - ioapic_offset;
   virtual_addr = (unsigned long)mem_allocate_virtual_range(1);
-  mem_map_range((void *)ioapic_phys_base, (void *)virtual_addr, 1, (task_process *)NULL, MEM_UNCACHEABLE);
+  mem_map_range((void *)ioapic_phys_base, (void *)virtual_addr, 1, nullptr, MEM_UNCACHEABLE);
 
   data->reg_select = (unsigned int *)(virtual_addr + ioapic_offset);
   data->data_window = (unsigned int *)(virtual_addr + ioapic_offset + 16);

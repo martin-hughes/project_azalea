@@ -36,7 +36,7 @@ void ACPI_INTERNAL_VAR_XFACE AcpiError(const char *ModuleName, UINT32 LineNumber
 
   klib_snprintf(format_buf, 127, "%s %s", ACPI_MSG_ERROR, Format);
 
-  va_start(ArgList, Format);
+  va_start(ArgList, *Format);
   klib_vsnprintf(msg_buf, 255, format_buf, ArgList);
   panic(msg_buf);
   va_end(ArgList);
@@ -81,7 +81,7 @@ void ACPI_INTERNAL_VAR_XFACE AcpiException(const char *ModuleName, UINT32 LineNu
     AcpiOsPrintf(ACPI_MSG_EXCEPTION "%s, ", AcpiFormatException(Status));
   }
 
-  va_start(ArgList, Format);
+  va_start(ArgList, *Format);
   AcpiOsVprintf(Format, ArgList);
   ACPI_MSG_SUFFIX;
   va_end(ArgList);
@@ -114,7 +114,7 @@ void ACPI_INTERNAL_VAR_XFACE AcpiWarning(const char *ModuleName, UINT32 LineNumb
   ACPI_MSG_REDIRECT_BEGIN;
   AcpiOsPrintf(ACPI_MSG_WARNING);
 
-  va_start(ArgList, Format);
+  va_start(ArgList, *Format);
   AcpiOsVprintf(Format, ArgList);
   ACPI_MSG_SUFFIX;
   va_end(ArgList);
@@ -150,7 +150,7 @@ void ACPI_INTERNAL_VAR_XFACE AcpiInfo(const char *Format, ...)
 
   KL_TRC_TRACE((TRC_LVL_FLOW, ACPI_MSG_INFO));
 
-  va_start(ArgList, Format);
+  va_start(ArgList, *Format);
   klib_vsnprintf(msg_buf, 255, Format, ArgList);
   KL_TRC_TRACE((TRC_LVL_FLOW, msg_buf));
   KL_TRC_TRACE((TRC_LVL_FLOW, "\n"));
@@ -183,7 +183,7 @@ void ACPI_INTERNAL_VAR_XFACE AcpiBiosError(const char *ModuleName, UINT32 LineNu
 
   AcpiOsPrintf(ACPI_MSG_BIOS_ERROR);
 
-  va_start(ArgList, Format);
+  va_start(ArgList, *Format);
   AcpiOsVprintf(Format, ArgList);
   ACPI_MSG_SUFFIX;
   va_end(ArgList);
@@ -217,7 +217,7 @@ void ACPI_INTERNAL_VAR_XFACE AcpiBiosWarning(const char *ModuleName, UINT32 Line
 
   KL_TRC_TRACE((TRC_LVL_FLOW, ACPI_MSG_BIOS_WARNING));
 
-  va_start(ArgList, Format);
+  va_start(ArgList, *Format);
   klib_vsnprintf(out_buf, 255, Format, ArgList);
   KL_TRC_TRACE((TRC_LVL_FLOW, out_buf));
   KL_TRC_TRACE((TRC_LVL_FLOW, "\n"));

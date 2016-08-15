@@ -1555,7 +1555,9 @@ rpl_snprintf(char *str, size_t size, const char *format, ...)
   va_list ap;
   int len;
 
-  VA_START(ap, format);
+// Change by Martin - the last argument to this function is *format
+  VA_START(ap, *format);
+// End of change.
   VA_SHIFT(ap, str, char *);
   VA_SHIFT(ap, size, size_t);
   VA_SHIFT(ap, format, const char *);
@@ -1583,7 +1585,9 @@ rpl_asprintf(char **ret, const char *format, ...)
   va_list ap;
   int len;
 
-  VA_START(ap, format);
+// Change by Martin - the last argument to this function is *format
+  VA_START(ap, *format);
+// End of change.
   VA_SHIFT(ap, ret, char **);
   VA_SHIFT(ap, format, const char *);
   len = vasprintf(ret, format, ap);
