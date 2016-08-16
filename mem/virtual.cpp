@@ -1,27 +1,28 @@
-// Kernel core memory manager - Virtual memory manager.
-//
-// The virtual memory manager is responsible for allocating virtual memory
-// ranges to the caller. The caller is responsible for backing these ranges
-// with physical memory pages.
-//
-// Virtual address space info is stored in a linked list. Each element of the
-// list stores details of a range - whether it is allocated, and its length.
-// Each "lump" is a power-of-two number of pages.
-//
-// When a new request is made, the allocated is rounded to the next largest
-// power-of-two number of pages. The list is searched for the smallest
-// deallocated lump that will fit the request. If it is too big, it should be
-// the next power-of-two or more larger, and it is divided in two repeatedly
-// until the correct sized lump exists and can be returned. Details of it and
-// the remaining (now smaller) lumps are added to the information list and the
-// original lump removed.
-//
-// When a lump is deallocated, its neighbours in the list are considered to see
-// whether they will form a larger power-of-two sized block. If it can, the two
-// neighbour-lumps are coalesced and replaced in the range information list by
-// one entry.
-//
-// In some ways this represents an easy-to-implement buddy allocation system.
+/// @file virtual.cpp
+/// @brief Kernel core memory manager - Virtual memory manager.
+///
+/// The virtual memory manager is responsible for allocating virtual memory
+/// ranges to the caller. The caller is responsible for backing these ranges
+/// with physical memory pages.
+///
+/// Virtual address space info is stored in a linked list. Each element of the
+/// list stores details of a range - whether it is allocated, and its length.
+/// Each "lump" is a power-of-two number of pages.
+///
+/// When a new request is made, the allocated is rounded to the next largest
+/// power-of-two number of pages. The list is searched for the smallest
+/// deallocated lump that will fit the request. If it is too big, it should be
+/// the next power-of-two or more larger, and it is divided in two repeatedly
+/// until the correct sized lump exists and can be returned. Details of it and
+/// the remaining (now smaller) lumps are added to the information list and the
+/// original lump removed.
+///
+/// When a lump is deallocated, its neighbours in the list are considered to see
+/// whether they will form a larger power-of-two sized block. If it can, the two
+/// neighbour-lumps are coalesced and replaced in the range information list by
+/// one entry.
+///
+/// In some ways this represents an easy-to-implement buddy allocation system.
 
 //#define ENABLE_TRACING
 
@@ -29,6 +30,7 @@
 #include "mem/mem.h"
 #include "mem/mem-int.h"
 
+/// Whether or not the Virtual Memory Manager is initialized.
 bool vmm_initialized = false;
 klib_list vmm_range_data_list;
 
@@ -67,7 +69,23 @@ void mem_vmm_free_range_item(vmm_range_data *item);
 // Memory manager main interface functions.
 //------------------------------------------------------------------------------
 
-// Allocate some room in the kernel's virtual memory space.
+/// @brief Allocate some room in the kernel's virtual memory space.
+///
+/// Allocate the specified number of pages in the kernel's virtual memory space and return the address of that
+/// allocation This function does not attempt to create a mapping to physical memory, nor will it allow the allocation
+/// of memory within user space.
+///
+/// Independent of the requested number of pages to allocate, the actual allocation will be either 1, or an integer
+/// power of two number of pages. This may cause any stats about RAM allocations to differ from the user's expectations
+/// but they should not rely on the extra pages being available.
+///
+/// Users must use #mem_map_range to map the result to physical memory before use, or a page fault will result.
+///
+/// @param num_pages The number of pages to allocate. Need not be a power of two.
+///
+/// @return The address of the virtual range allocated.
+///
+/// @see mem_deallocate_virtual_range
 void *mem_allocate_virtual_range(unsigned int num_pages)
 {
   KL_TRC_ENTRY;
@@ -112,7 +130,17 @@ void *mem_allocate_virtual_range(unsigned int num_pages)
   return (void *)selected_range_data->start;
 }
 
-// Deallocate pages allocated earlier in the kernels virtual memory space.
+/// @brief Deallocate pages allocated earlier in the kernels virtual memory space.
+///
+/// Deallocate a range of virtual memory that was allocated by #mem_allocate_virtual_range.
+///
+/// The user is responsible for cleaning up the physical memory that was backing this range.
+///
+/// @param start The address of the virtual range. This must be exactly as returned from #mem_allocate_virtual_range or
+///              the allocation will fail - or worse, might scribble other allocations.
+///
+/// @param num_pages The number of pages allocated by #mem_allocate_virtual_range. This must be the same as the value
+//                   passed to #mem_allocate_virtual_range, or an error will result.
 void mem_deallocate_virtual_range(void *start, unsigned int num_pages)
 {
   KL_TRC_ENTRY;
@@ -151,7 +179,9 @@ void mem_deallocate_virtual_range(void *start, unsigned int num_pages)
   KL_TRC_EXIT;
 }
 
-// Straightforward set up of the virtual memory manager system.
+/// @brief Sets up the Virtual Memory Manager.
+///
+/// Must only be called once.
 void mem_vmm_initialize()
 {
   KL_TRC_ENTRY;
@@ -220,8 +250,9 @@ void mem_vmm_initialize()
 // Support functions.
 //------------------------------------------------------------------------------
 
-// Return the smallest range still available that is still larger than or equal
-// to num_pages.
+/// @brief Return the smallest range still available that is still larger than or equal to num_pages.
+///
+/// @param num_pages The minimum number of pages required in the range.
 klib_list_item *mem_vmm_get_suitable_range(unsigned int num_pages)
 {
   KL_TRC_ENTRY;
@@ -262,8 +293,21 @@ klib_list_item *mem_vmm_get_suitable_range(unsigned int num_pages)
   return selected_range_item;
 }
 
-// Split a large memory range in to two or more smaller chunks, so as to be left
-// with at least one that's exactly number_of_pages_reqd in length.
+/// @brief Split a range that is unnecessarily large into smaller ranges.
+///
+/// Split a large memory range in to two or more smaller chunks, so as to be left with at least one that's exactly
+/// number_of_pages_reqd in length.
+///
+/// Each range is required to be a power of two number of pages in size, so this function operates by dividing a range
+/// into two, and then recursively calling itself on one of the two new ranges until it has a suitably sized range to
+/// return
+///
+/// @param item_to_split The range which is too large and needs splitting.
+///
+/// @param number_of_pages_reqd The minimum number of pages that must be contained in the range returned.
+///
+/// @return A range item of the correct size (or larger) The caller need not clean this up, it lives in the list of
+///         ranges.
 klib_list_item *mem_vmm_split_range(klib_list_item *item_to_split,
                                     unsigned int number_of_pages_reqd)
 {
@@ -302,8 +346,14 @@ klib_list_item *mem_vmm_split_range(klib_list_item *item_to_split,
   return item_to_split;
 }
 
-// See whether a recently freed range can be merged with its partner. If it can,
-// repeat the process for the newly merged range.
+/// @brief See whether a recently freed range can be merged with its partner and merge if so.
+///
+/// Once a range has been released, see if its neighbour is free. If it is, these ranges can be combined to form a
+/// larger range - which is useful, since allocations can be smaller than an available range, but not larger. If the
+/// two ranges have merged, its possible that the newly merged range can merge with its neighbour, so recurse until no
+/// more merges can occur.
+///
+/// @param start_point A newly freed range.
 void mem_vmm_resolve_merges(klib_list_item *start_point)
 {
   KL_TRC_ENTRY;
@@ -376,9 +426,15 @@ void mem_vmm_resolve_merges(klib_list_item *start_point)
   KL_TRC_EXIT;
 }
 
-// Allocate a specific range of virtual memory. This is primarily used when
-// setting up VMM. num_pages must be a power of two, and start_addr must start
-// on a memory address that's a multiple of num_pages.
+/// @brief Allocate a specific range of virtual memory.
+///
+/// Allocate a specific range of virtual memory. This is primarily used when setting up VMM, in order that it knows
+/// about the memory already in use for the kernel.
+///
+/// @param start_addr The beginning of the range to allocate. This must be an address that's a multiple of num_pages
+///                   and a multiple of MEM_PAGE_SIZE.
+///
+/// @param num_pages The number of pages covered by this allocation. Must be an integer (or zero) power of two.
 void mem_vmm_allocate_specific_range(unsigned long start_addr,
                                      unsigned int num_pages)
 {
@@ -451,7 +507,14 @@ void mem_vmm_allocate_specific_range(unsigned long start_addr,
 // Internal memory management code.
 //------------------------------------------------------------------------------
 
-// Note the similarity with mem_vmm_allocate_range_item.
+/// @brief Allocate a list item for use in the range management code.
+///
+/// Allocate a new list item. In order that it is possible to allocate list items before the memory manager is fully
+/// initialised, there is small list of items to be used before the MM is ready.
+///
+/// Note the similarity with #mem_vmm_allocate_range_item.
+///
+/// @return An allocated list item. This muse be passed to #mem_vmm_free_list_item to destroy it.
 klib_list_item *mem_vmm_allocate_list_item()
 {
   KL_TRC_ENTRY;
@@ -477,7 +540,14 @@ klib_list_item *mem_vmm_allocate_list_item()
   return ret_item;
 }
 
-// Note the similarity with mem_vmm_allocate_list_item.
+/// @brief Allocate a range item for use in the range management code.
+///
+/// Allocate a new range item. In order that it is possible to allocate range items before the memory manager is fully
+/// initialised, there is small list of items to be used before the MM is ready.
+///
+/// Note the similarity with #mem_vmm_allocate_list_item.
+///
+/// @return An allocated list item. This muse be passed to #mem_vmm_free_range_item to destroy it.
 vmm_range_data *mem_vmm_allocate_range_item()
 {
   KL_TRC_ENTRY;
@@ -503,7 +573,14 @@ vmm_range_data *mem_vmm_allocate_range_item()
   return ret_item;
 }
 
-// Note the similarity with mem_vmm_free_range_item.
+/// @brief Free a list item allocated by #mem_vmm_allocate_list_item
+///
+/// Free a list item allocated by #mem_vmm_allocate_list_item. This takes care of returning the relevant items to the
+/// list of allocations that is used before the VMM is fully allocated, and returns the rest to #kfree
+///
+/// Note the similarity with #mem_vmm_free_range_item.
+///
+/// @param item The item to free
 void mem_vmm_free_list_item (klib_list_item *item)
 {
   KL_TRC_ENTRY;
@@ -522,7 +599,14 @@ void mem_vmm_free_list_item (klib_list_item *item)
   KL_TRC_EXIT;
 }
 
-// Note the similarity with mem_vmm_free_list_item.
+/// @brief Free a list item allocated by #mem_vmm_allocate_range_item
+///
+/// Free a list item allocated by #mem_vmm_allocate_range_item. This takes care of returning the relevant items to the
+/// list of allocations that is used before the VMM is fully allocated, and returns the rest to #kfree
+///
+/// Note the similarity with #mem_vmm_free_list_item.
+///
+/// @param item The item to free
 void mem_vmm_free_range_item (vmm_range_data *item)
 {
   KL_TRC_ENTRY;
