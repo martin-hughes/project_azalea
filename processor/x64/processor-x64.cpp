@@ -7,7 +7,7 @@
 
 #include "processor/x64/processor-x64-int.h"
 #include "processor/x64/pic/pic.h"
-#include "mem/x64/mem_internal_x64.h"
+#include "mem/x64/mem-x64-int.h"
 
 unsigned char *tss_segment;
 const unsigned char TSS_SEG_LENGTH = 104;

@@ -6,7 +6,7 @@
 
 extern "C"
 {
-#include "acpi/acpica/source/include/acpi.h"
+#include "external/acpica/source/include/acpi.h"
 }
 #include "klib/klib.h"
 #include "processor/timing/timing.h"

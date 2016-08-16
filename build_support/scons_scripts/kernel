@@ -24,7 +24,7 @@ dependencies_in = ['#entry/SConscript',
                    '#klib/synch/SConscript',
                    '#syscall/SConscript',
                    '#acpi/SConscript',
-                   '#acpi/SConscript-ACPICA',
+                   '#external/SConscript-ACPICA',
                    '#external/vsnprintf/Sconscript',
                   ]
                    

@@ -13,11 +13,11 @@
 
 //#define ENABLE_TRACING
 
-#include "mem/mem.h"
 #include "klib/klib.h"
-#include "mem/mem_internal.h"
-#include "mem/x64/mem_internal_x64.h"
 #include "processor/processor.h"
+#include "mem/mem.h"
+#include "mem/mem-int.h"
+#include "mem/x64/mem-x64-int.h"
 
 mem_process_info task0_entry;
 process_x64_data task0_x64_entry;

@@ -1,7 +1,7 @@
 // Contains x64-specific declarations.
 
-#ifndef MEM_INTERNAL_X64_H_
-#define MEM_INTERNAL_X64_H_
+#ifndef MEM_X64_INT_H_
+#define MEM_X64_INT_H_
 
 // Initial address of the PML4 paging address table.
 extern unsigned long pml4_table;

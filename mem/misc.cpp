@@ -1,8 +1,8 @@
 //#define ENABLE_TRACING
 
-#include "mem/mem.h"
-#include "mem/mem_internal.h"
 #include "klib/klib.h"
+#include "mem/mem.h"
+#include "mem/mem-int.h"
 
 // Allocate the specified number of pages and map virtual addresses ready for
 // use within the kernel.

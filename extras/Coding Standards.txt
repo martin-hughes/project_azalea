@@ -1,0 +1,149 @@
+This file describes the default way code in the project is written. It may be varied for reasons of clarity or any
+other sensible reason.
+
+Contents
+--------
+
+- Project Name
+- Format of code
+- Format of names within the code
+- Structure of comments, including documentation
+- Naming files
+- Required tracing
+- Spelling
+- Technical references
+- Exceptions
+
+Project name
+------------
+
+The project is currently unnamed. It is referred to variously as "the project", "the kernel" and "64bit". All are
+acceptable.
+
+Format of code
+--------------
+
+The reference format for code is defined in EclipseCodeStyle.xml as "Martin's style", and code shall be formatted in
+accordance with the Eclipse automatic formatter's output based on that.
+
+Not everyone has Eclipse, so in general:
+- Indents are two spaces, not tabs.
+- Braces occupy their own line
+- No spaces before opening parentheses, except after control qualifiers (if, while, for, etc.)
+- Lines are max. 120 characters long.
+- No wrapping until it is necessary. Then each item is on its own line, indented on the column of its predecessor.
+- Except where technically necessary, trailing whitespace shall be removed/
+
+There is no assembly language auto-formatter. Existing code may be used for comparison. Indentation will be by two
+spaces, and used to enhance clarity at the discretion of the developer.
+
+Some code predates these standards. Ideally it will be updated to conform when it is edited, as would surrounding code.
+This is not a requirement.
+
+Code shall be divided between code that is generic to all platforms, and platform specific code. The two must not be
+part of the same file, in order to facilitate future translation between platforms.
+
+C++ code may be written to take advantage of any feature contained within the C++14 specification that is supported by
+G++ 5.4 or later, and which does not require any external library. It is permissible to write replacements for those
+libraries if the feature is desirable.
+
+Assembly language instructions, register names and labels shall be lower case, separated by underscores if needed.
+Macro names shall be upper case.
+
+Naming conventions within code
+------------------------------
+
+All constants are upper case words separated by underscores. This includes, but is not limited to:
+- #define'd constants, including those that take arguments
+- variables declared const at a file or namespace scope
+- constants within an enum
+
+All other names are lower case words separated by underscores. This includes, but is not limited to:
+- Variables declared const within the scope of a function, or smaller scope
+- Function, class and structure names (other than preprocessor macros
+
+Certain names must be prefixed with the codename of the component within which they reside. These names are:
+- All function names
+- Variable names that are accesible outside of their own translation unit
+
+Names where this does not apply are:
+- Constants that apply to many components
+- Types and structures
+
+Component codenames are a maximum of four characters, based upon the position of the translation unit within the file
+tree. For example, the code name of the code within processor/ may be 'proc'. Assembly language functions are
+additionally prefixed with asm_ to remind developers that there may be special constraints for calling them. 
+
+Structure of comments
+---------------------
+
+Comments shall be started with two slashes. 
+Comments that would wrap must be on a line by themselves.
+Comments are indented to the level of the surrounding code.
+
+Documentation is produced by Doxygen. Comments shall be preceeded by a triple slash (///) rather than the C-style /**
+and special formatting shall be provided using markdown syntax. All entities shall be documented, including private or
+other hidden entities, structure members, function parameters, and return values.
+
+Naming files
+------------
+
+File names are divided in to four parts:
+- An optional prefix, describing the module the file belongs to
+- A descriptive part, succinctly describing the purpose of the file
+- An optional suffix, describing the platform this file applies to
+- The file extension, which describes the type of the file, per normal convention.
+
+Words in the prefix and descriptive part are lowercase, separated by underscores.
+The suffix is separated from the previous parts by a hyphen.
+The extension is, as usual, separated by a period.
+
+A prefix is necessary if there is likely to be a naming conflict between generically named files. It shall describe the
+module the file is part of. Words within the prefix are no more than 4 characters long. For example, a file that is
+part of the timing code might have a prefix of proc_time_
+
+The suffix is only used for two purposes:
+- Code that is platform specific, and
+- Header files intended to be internal to the component they reside in.
+
+The platform specific part shall describe the platform the code applies to. For example, code designed for x86_64 
+(AKA x64, IA-32e and AMD64) uses the suffix -x64.
+
+Header files intended to be internal use the suffix -int.
+
+Where both suffixes are used, -int comes last.
+
+Required tracing
+----------------
+
+Except where it is not desirable due to the possibility of causing deadlocks, all code is required to include the
+following tracing as a minimum:
+
+- Entry and exit tracing (via KL_TRC_ENTRY and KL_TRC_EXIT)
+- Tracing of all parameters and return values
+- Sufficient additional tracing to derive the control flow of code by examining the trace after running
+- Any other desirable tracing
+
+Code performance is not a consideration when adding tracing. In the final build it will all be compiled out.
+
+Spelling and grammar
+--------------------
+
+Spelling and grammar shall be British English. Commas are used between the final two items of a list (i.e. the Oxford
+Comma is used)
+
+Any significant dictionary or source may be used to justify a controversial spelling.
+
+Technical Words
+---------------
+
+There are some words or phrases that may be spelt differently but still mean the same thing. So, for the sake of
+consistency, they shall be referred to as in the following list:
+
+I/O APIC (except in code, where it shall be written as ioapic) 
+
+Exceptions
+----------
+
+None of these standards apply to code that originates from outside the project. All such code shall reside within the
+external directory at the root of the project.

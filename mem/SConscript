@@ -3,10 +3,10 @@
 files = ["misc.cpp",
          "physical.cpp",
          "virtual.cpp",
-         "x64/mem_x64.cpp",
-         "x64/mem_x64_pml4.cpp",
-         "x64/mem_support_x64.asm",
-         "x64/mem_pat_x64.cpp",
+         "x64/mem-x64.cpp",
+         "x64/mem_pml4-x64.cpp",
+         "x64/mem_support-x64.asm",
+         "x64/mem_pat-x64.cpp",
         ]
 
 Import('env')

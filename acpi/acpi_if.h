@@ -5,7 +5,7 @@
 
 extern "C"
 {
-#include "acpi/acpica/source/include/acpi.h"
+#include "external/acpica/source/include/acpi.h"
 }
 
 void acpi_init_table_system();

@@ -10,9 +10,9 @@
 
 //#define ENABLE_TRACING
 
-#include "mem/mem.h"
-#include "mem/mem_internal.h"
 #include "klib/klib.h"
+#include "mem/mem.h"
+#include "mem/mem-int.h"
 
 // In the page allocation bitmap, a 1 indicates that the page is FREE.
 const unsigned long MAX_SUPPORTED_PAGES = 2048;

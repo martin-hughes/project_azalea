@@ -2,8 +2,8 @@
 
 //#define ENABLE_TRACING
 
-#include "syscall/x64/syscall-x64-kernel.h"
-#include "syscall/x64/syscall-x64-kernel-int.h"
+#include "syscall/x64/syscall_kernel-x64.h"
+#include "syscall/x64/syscall_kernel-x64-int.h"
 #include "klib/klib.h"
 
 void *syscall_x64_kernel_stack;

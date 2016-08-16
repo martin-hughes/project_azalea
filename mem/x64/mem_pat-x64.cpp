@@ -1,9 +1,9 @@
 // Configure the x64 PAT register, and encode / decode between it and the page table entries.
 // Nothing special occurs here, all the values are fixed, so just use simple lookups.
 
-#include "mem/mem.h"
 #include "klib/klib.h"
-#include "mem_internal_x64.h"
+#include "mem/mem.h"
+#include "mem/x64/mem-x64-int.h"
 #include "processor/x64/processor-x64-int.h"
 
 const unsigned long PAT_REGISTER_VAL = 0x0005040600010406;

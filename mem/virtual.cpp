@@ -25,9 +25,9 @@
 
 //#define ENABLE_TRACING
 
-#include "mem/mem.h"
-#include "mem/mem_internal.h"
 #include "klib/klib.h"
+#include "mem/mem.h"
+#include "mem/mem-int.h"
 
 bool vmm_initialized = false;
 klib_list vmm_range_data_list;

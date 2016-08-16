@@ -5,7 +5,7 @@
 #include "processor/processor.h"
 #include "processor/processor-int.h"
 #include "processor/x64/processor-x64-int.h"
-#include "mem/x64/mem_internal_x64.h"
+#include "mem/x64/mem-x64-int.h"
 
 // Use this to get the address of the kernel's page tables.
 // TODO: Make sure this gets removed when setting up multiple processes (MT)

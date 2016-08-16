@@ -5,7 +5,7 @@
 
 #include "klib/klib.h"
 #include "mem/mem.h"
-#include "mem/x64/mem_internal_x64.h"
+#include "mem/x64/mem-x64-int.h"
 #include "processor/processor.h"
 
 bool pml4_system_initialized = false;

@@ -7,7 +7,7 @@
 #include "processor/timing/hpet.h"
 extern "C"
 {
-#include "acpi/acpica/source/include/acpi.h"
+#include "external/acpica/source/include/acpi.h"
 }
 
 hpet_hardware_cfg_block *hpet_config = (hpet_hardware_cfg_block *)NULL;

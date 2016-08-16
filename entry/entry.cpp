@@ -6,7 +6,7 @@
 #include "processor/processor.h"
 #include "processor/timing/timing.h"
 #include "mem/mem.h"
-#include "syscall/syscall-kernel.h"
+#include "syscall/syscall_kernel.h"
 #include "klib/klib.h"
 #include "acpi/acpi_if.h"
 
