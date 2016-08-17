@@ -1,15 +1,12 @@
-// x64-specific memory management code. This code is known as "core memory"
-// throughout the rest of the kernel.
-
-// Memory management is dealt with in two ways.
-// 1 - Physical memory is split in to 2MB pages. Whether or not these pages are
-//     allocated is stored in a simple bitmap.
-// 2 - Virtual memory ranges are dealt with in an as-yet undefined way.
-
-// Each process has its own complete set of page tables. However, the kernel section (all addresses above the mid-point
-// in memory) is kept synchronized across all processes, by updating the PML4 for each process whenever the PML4
-// entries relevant to the kernel are altered. At present, deallocating virtual ranges only unsets the PTEs, not the
-// PDEs or PML4 entries, so this only happens during range allocation.
+/// @file
+/// @brief x64-specific Memory Management Code
+///
+/// The bulk of x64-specific code deals with managing the page tables.
+///
+/// Each process has its own complete set of page tables. However, the kernel section (all addresses above the
+/// mid-point in memory) is kept synchronised across all processes, by updating the PML4 for each process whenever the
+/// PML4 entries relevant to the kernel are altered. At present, deallocating virtual ranges only unsets the PTEs, not
+/// the PDEs or PML4 entries, so this only happens during range allocation.
 
 //#define ENABLE_TRACING
 
@@ -40,8 +37,13 @@ void *mem_x64_kernel_stack_ptr;
 unsigned char *next_4kb_page;
 bool working_table_va_mapped;
 
+static kernel_spinlock pml4_edit_lock;
+
 void *mem_get_next_4kb_page();
 
+/// @brief Initialise the entire memory management subsystem.
+///
+/// This function is required across all platforms. However, the bulk of it is x64 specific, so it lives here.
 void mem_gen_init()
 {
   KL_TRC_ENTRY;
@@ -49,15 +51,15 @@ void mem_gen_init()
   unsigned long temp_phys_addr;
   unsigned long temp_offset;
 
-  // Initialise the physical memory subsystem. This will call back to x64-
-  // specific code later.
+  // Initialise the physical memory subsystem. This will call back to x64- specific code later.
   mem_init_gen_phys_sys();
 
   // Configure the x64 PAT system, so that caching works as expected.
   mem_x64_pat_init();
 
-  // Prepare the virtual memory subsystem. Start with some fairly simple
-  // Initialisation.
+  klib_synch_spinlock_init(pml4_edit_lock);
+
+  // Prepare the virtual memory subsystem. Start with some fairly simple initialisation.
   task0_x64_entry.pml4_phys_addr = (unsigned long)&pml4_table;
   task0_x64_entry.pml4_virt_addr = task0_x64_entry.pml4_phys_addr + 0xFFFFFFFF00000000;
   task0_entry.arch_specific_data = (void *)&task0_x64_entry;
@@ -80,15 +82,20 @@ void mem_gen_init()
   KL_TRC_EXIT;
 }
 
-// Generate the bitmap of physical pages. Check that we don't exceed
-// max_num_pages.
-void mem_gen_phys_pages_bitmap(unsigned long *bitmap_loc,
-                               unsigned long max_num_pages)
+/// @brief Generate the bitmap of physical pages, for use in the physical memory manager.
+///
+/// The number of physical pages in the system cannot exceed max_num_pages, or the system will crash.
+///
+/// @param bitmap_loc Where the physical memory manager (which is not platform-specific) requires the bitmap to be
+///                   stored.
+///
+/// @param max_num_pages The maximum number of pages the physical memory manager can deal with. IF the number of pages
+///                      available to the system exceeds this, the system will crash.
+void mem_gen_phys_pages_bitmap(unsigned long *bitmap_loc, unsigned long max_num_pages)
 {
   KL_TRC_ENTRY;
 
-  // Spin through the E820 memory map and look at the ranges to determine
-  // whether they're usable or not.
+  // Spin through the E820 memory map and look at the ranges to determine whether they're usable or not.
   const e820_record *cur_record = e820_memory_map;
   unsigned long start_addr;
   unsigned long end_addr;
@@ -103,10 +110,8 @@ void mem_gen_phys_pages_bitmap(unsigned long *bitmap_loc,
          (cur_record->length != 0) ||
          (cur_record->memory_type != 0))
   {
-    // Only type 1 memory is usable. If we've found some, round the start and
-    // end addresses to 2MB boundaries. Always ignore the first 2MB of RAM -
-    // we've already loaded the kernel in to there and it has some crazy stuff
-    // in anyway.
+    // Only type 1 memory is usable. If we've found some, round the start and end addresses to 2MB boundaries. Always
+    // ignore the first 2MB of RAM - we've already loaded the kernel in to there and it has some crazy stuff in anyway.
     if (cur_record->memory_type == 1)
     {
       start_addr = cur_record->start_addr;
@@ -120,12 +125,10 @@ void mem_gen_phys_pages_bitmap(unsigned long *bitmap_loc,
         end_addr = end_addr - (end_addr % MEM_PAGE_SIZE);
       }
 
-      // Only keep considering this chunk of pages if the start and end
-      // addresses are in the correct order. They might not be if this record
-      // points to a small chunk of RAM in the middle of a 2MB block.
+      // Only keep considering this chunk of pages if the start and end addresses are in the correct order. They might
+      // not be if this record points to a small chunk of RAM in the middle of a 2MB block.
       //
-      // As mentioned above, ignore the zero-2MB RAM page - this already has the
-      // kernel loaded in to it.
+      // As mentioned above, ignore the zero-2MB RAM page - this already has the kernel loaded in to it.
       if (end_addr > start_addr)
       {
         number_of_pages = (end_addr - start_addr) / MEM_PAGE_SIZE;
@@ -146,7 +149,15 @@ void mem_gen_phys_pages_bitmap(unsigned long *bitmap_loc,
   KL_TRC_EXIT;
 }
 
-// Map a 2MB virtual page to a provided physical page.
+/// @brief Map a single virtual page to a single physical page
+///
+/// @param virt_addr The virtual address that requires mapping
+///
+/// @param phys_addr The physical address that will be backing virt_addr
+///
+/// @param context The process that the mapping should occur in. Defaults to the currently running process.
+///
+/// @param cache_mode Which cache mode is required. Defaults to WRITE_BACK.
 void mem_map_virtual_page(unsigned long virt_addr,
                           unsigned long phys_addr,
                           task_process *context,
@@ -154,12 +165,8 @@ void mem_map_virtual_page(unsigned long virt_addr,
 {
   KL_TRC_ENTRY;
 
-  KL_TRC_TRACE((TRC_LVL_EXTRA, "Requested: (virtual) "));
-  KL_TRC_TRACE((TRC_LVL_EXTRA, virt_addr));
-  KL_TRC_TRACE((TRC_LVL_EXTRA, ", (physical) "));
-  KL_TRC_TRACE((TRC_LVL_EXTRA, phys_addr));
-  KL_TRC_TRACE((TRC_LVL_EXTRA, "\n"));
-
+  KL_TRC_DATA("Requested (virtual)", virt_addr);
+  KL_TRC_DATA("Requested (physical)", phys_addr);
 
   unsigned long *table_addr = get_pml4_table_addr(context);
   unsigned long virt_addr_cpy = virt_addr;
@@ -180,18 +187,11 @@ void mem_map_virtual_page(unsigned long virt_addr,
   virt_addr_cpy = virt_addr_cpy >> 9;
   pml4_entry_idx = (virt_addr_cpy & 0x00000000000001FF);
 
-  // Generate or check the PML4 address. The PML4 is already at a well-known
-  // virtual address - pml4_virtual_addr;
+  // Generate or check the PML4 address.
   encoded_entry = table_addr + pml4_entry_idx;
-  KL_TRC_TRACE((TRC_LVL_FLOW, "PML4 Index: "));
-  KL_TRC_TRACE((TRC_LVL_FLOW, (unsigned long) pml4_entry_idx));
-  KL_TRC_TRACE((TRC_LVL_FLOW, "\n"));
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Table address: "));
-  KL_TRC_TRACE((TRC_LVL_FLOW, (unsigned long) table_addr));
-  KL_TRC_TRACE((TRC_LVL_FLOW, "\n"));
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Encoded entry addr: "));
-  KL_TRC_TRACE((TRC_LVL_FLOW, (unsigned long) encoded_entry));
-  KL_TRC_TRACE((TRC_LVL_FLOW, "\n"));
+  KL_TRC_DATA("PML4 Index", (unsigned long) pml4_entry_idx);
+  KL_TRC_DATA("Table address", (unsigned long) table_addr);
+  KL_TRC_DATA("Encoded entry addr", (unsigned long) encoded_entry);
   if (PT_MARKED_PRESENT(*encoded_entry))
   {
     // Get the physical address of the next table.
@@ -210,37 +210,33 @@ void mem_map_virtual_page(unsigned long virt_addr,
     new_entry.end_of_tree = false;
     new_entry.cache_type = MEM_X64_CACHE_TYPES::WRITE_BACK;
 
+    if (is_kernel_allocation)
+    {
+      klib_synch_spinlock_lock(pml4_edit_lock);
+    }
+
     *encoded_entry = mem_encode_page_table_entry(new_entry);
 
     // If this allocation relates to the kernel - that is, it is for an allocation in the upper-half of memory, we need
     // to synchronise the relevant PML4s across all processes.
-    // TODO: Lock the PML4s, to avoid bad-ness. (LOCK)
     if (is_kernel_allocation)
     {
       ASSERT(pml4_entry_idx >= 2048);
       KL_TRC_TRACE((TRC_LVL_FLOW, "Synchronizing PML4.\n"));
       mem_x64_pml4_synchronize((void *)table_addr);
+      klib_synch_spinlock_unlock(pml4_edit_lock);
     }
   }
 
-  // Now look at the page directory pointer table. This is mapped to a well-
-  // known virtual address, since there's no direct mapping back from physical
-  // address to address accessible by the kernel.
+  // Now look at the page directory pointer table. This is temporarily mapped to a well-known virtual address, since
+  // there's no direct mapping back from physical address to addresses accessible by the kernel.
   mem_set_working_page_dir((unsigned long)table_phys_addr);
   table_addr = (unsigned long *)working_table_virtual_addr;
   encoded_entry = table_addr + page_dir_ptr_entry_idx;
-  KL_TRC_TRACE((TRC_LVL_FLOW, "PDPT Index: "));
-  KL_TRC_TRACE((TRC_LVL_FLOW, (unsigned long) page_dir_ptr_entry_idx));
-  KL_TRC_TRACE((TRC_LVL_FLOW, "\n"));
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Table address (phys): "));
-  KL_TRC_TRACE((TRC_LVL_FLOW, (unsigned long) table_phys_addr));
-  KL_TRC_TRACE((TRC_LVL_FLOW, "\n"));
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Encoded entry addr: "));
-  KL_TRC_TRACE((TRC_LVL_FLOW, (unsigned long) encoded_entry));
-  KL_TRC_TRACE((TRC_LVL_FLOW, "\n"));
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Encoded entry: "));
-  KL_TRC_TRACE((TRC_LVL_FLOW, (unsigned long) *encoded_entry));
-  KL_TRC_TRACE((TRC_LVL_FLOW, "\n"));
+  KL_TRC_DATA("PDPT Index", (unsigned long) page_dir_ptr_entry_idx);
+  KL_TRC_DATA("Table address (phys)", (unsigned long) table_phys_addr);
+  KL_TRC_DATA("Encoded entry addr" , (unsigned long) encoded_entry);
+  KL_TRC_DATA("Encoded entry", (unsigned long) *encoded_entry);
   if (PT_MARKED_PRESENT(*encoded_entry))
   {
     KL_TRC_TRACE((TRC_LVL_FLOW, "PDPT entry marked present\n"));
@@ -263,9 +259,8 @@ void mem_map_virtual_page(unsigned long virt_addr,
     KL_TRC_DATA("New entry", *encoded_entry);
   }
 
-  // Having mapped the page directory, it's possible to map the physical address
-  // to a virtual address. To prevent kernel bugs, assert that it's not already
-  // present - this'll stop any accidental overwriting of in-use page table
+  // Having mapped the page directory, it's possible to map the physical address to a virtual address. To prevent
+  // kernel bugs, assert that it's not already present - this'll stop any accidental overwriting of in-use page table
   // entries.
   mem_set_working_page_dir((unsigned long)table_phys_addr);
   table_addr = (unsigned long *)working_table_virtual_addr;
@@ -288,6 +283,9 @@ void mem_map_virtual_page(unsigned long virt_addr,
   KL_TRC_EXIT;
 }
 
+/// @brief Break the connection between a virtual memory address and its physical backing.
+///
+/// @param virt_addr The virtual memory address that will become unmapped.
 void mem_unmap_virtual_page(unsigned long virt_addr)
 {
   KL_TRC_ENTRY;
@@ -336,8 +334,7 @@ void mem_unmap_virtual_page(unsigned long virt_addr)
     return;
   }
 
-  // Having mapped the page directory, it's possible to unmap the range by
-  // setting the entry to NULL.
+  // Having mapped the page directory, it's possible to unmap the range by setting the entry to NULL.
   mem_set_working_page_dir((unsigned long)table_phys_addr);
   table_addr = (unsigned long *)working_table_virtual_addr;
   encoded_entry = table_addr + page_dir_entry_idx;
@@ -349,11 +346,12 @@ void mem_unmap_virtual_page(unsigned long virt_addr)
   KL_TRC_EXIT;
 }
 
-// Return the physical address of a 4kB page usable in the page table system by
-// neatly carving up a 2MB page.
-//
-// Do this instead of calling mem_allocate_phys_page because that returns 2MB
-// pages which results in huge wasteage.
+/// @brief Return the physical address of a 4kB "page" usable by the page table system by neatly carving up a 2MB page.
+///
+/// This is useful for certain callers instead of calling mem_allocate_phys_page because that returns 2MB pages which
+/// results in huge wasteage.
+///
+/// @return The physical address of the beginning of a 4kB "page".
 void *mem_get_next_4kb_page()
 {
   KL_TRC_ENTRY;
@@ -378,7 +376,9 @@ void *mem_get_next_4kb_page()
   return ret_val;
 }
 
-// Set up a well-known virtual address to the given physical address.
+/// @brief Set up a well-known virtual address to the given physical address.
+///
+/// @param phys_page_addr The physical page that needs mapping to working_table_va_entry_addr
 void mem_set_working_page_dir(unsigned long phys_page_addr)
 {
   KL_TRC_ENTRY;
@@ -425,7 +425,13 @@ void mem_set_working_page_dir(unsigned long phys_page_addr)
   KL_TRC_EXIT;
 }
 
-// Encode a page table entry from a nice user-friendly struct.
+/// @brief Encode a page table entry from a nice user-friendly struct.
+///
+/// Converts the struct given as an argument into the format used by x64 processors.
+///
+/// @param pte The page table entry (in struct format) that needs converting into machine format.
+///
+/// @return The encoded version of the PTE structure.
 unsigned long mem_encode_page_table_entry(page_table_entry &pte)
 {
   KL_TRC_ENTRY;
@@ -461,7 +467,11 @@ unsigned long mem_encode_page_table_entry(page_table_entry &pte)
   return result;
 }
 
-// Decode a page table entry back to a nice user-friendly struct.
+/// @brief Decode an encoded page table entry back to a nice user-friendly struct.
+///
+/// @param encoded The encoded page table entry, as used by the system
+///
+/// @return The structure format version of the PTE.
 page_table_entry mem_decode_page_table_entry(unsigned long encoded)
 {
   KL_TRC_ENTRY;
@@ -502,6 +512,11 @@ page_table_entry mem_decode_page_table_entry(unsigned long encoded)
   return decode;
 }
 
+/// @brief For a given virtual address, find the physical address that backs it.
+///
+/// @param virtual_addr The virtual address to decode. Must point at a page boundary.
+///
+/// @return The physical address backing virtual_addr
 void *mem_get_phys_addr(void *virtual_addr)
 {
   KL_TRC_ENTRY;
@@ -546,15 +561,19 @@ void *mem_get_phys_addr(void *virtual_addr)
   return (void *)mem_x64_phys_addr_from_pte(*encoded_entry);
 }
 
-// Fill in a process memory information struct, which is provided back to the task manager, for it to live with all the
-// other process information.
+/// @brief Create the memory manager specific part of a process's information block.
+///
+/// Fill in a process memory information struct, which is provided back to the task manager, for it to live with all the
+/// other process information.
+///
+/// @return A new, filled in, mem_process_info block. It is the callers responsibility to call
+///         mem_task_destroy_task_entry when it is no longer needed.
 mem_process_info *mem_task_create_task_entry()
 {
   KL_TRC_ENTRY;
 
   mem_process_info *new_proc_info;
   process_x64_data *new_x64_proc_info;
-
 
   new_proc_info = new mem_process_info;
   KL_TRC_DATA("Created new memory manager information at", (unsigned long)new_proc_info);
@@ -570,6 +589,7 @@ mem_process_info *mem_task_create_task_entry()
   return new_proc_info;
 }
 
+/// @brief Destroy a task's memory manager information block.
 void mem_task_destroy_task_entry()
 {
   panic("mem_task_destroy_task_entry not implemented");
@@ -577,9 +597,17 @@ void mem_task_destroy_task_entry()
   //Something to do with mem_x64_pml4_deallocate, eventually.
 }
 
-// Get the PML4 table address for the selected process, or the currently running process if context = NULL. The only
-// niggle is that there might not be a running thread if we're still sorting out memory before the task manager starts.
-// So, in that case, provide the address for the kernel table from the knowledge we set up during initialization.
+/// @brief Get the virtual address of the PML4 table for the currently running process.
+///
+/// Get the PML4 table address for the selected process, or the currently running process if context = NULL. The only
+/// niggle is that there might not be a running thread if we're still sorting out memory before the task manager
+/// starts. So, in that case, provide the address for the kernel table from the knowledge we set up during
+/// initialisation.
+///
+/// @param context The process to get the PML4 address for. May be NULL, in which case return it for the current
+///                process.
+///
+/// @return the address of the PML4 table.
 unsigned long *get_pml4_table_addr(task_process *context)
 {
   KL_TRC_ENTRY;
@@ -628,6 +656,11 @@ unsigned long *get_pml4_table_addr(task_process *context)
   return table_addr;
 }
 
+/// @brief Convert an encoded PTE into the physical address backing it.
+///
+/// @param encoded An encoded PTE
+///
+/// @return The physical backing address.
 unsigned long mem_x64_phys_addr_from_pte(unsigned long encoded)
 {
   KL_TRC_ENTRY;

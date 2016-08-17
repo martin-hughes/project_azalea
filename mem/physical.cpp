@@ -1,12 +1,12 @@
-// The kernel's physical memory management system. It is fairly simple - pages
-// are marked as allocated or deallocated in a bitmap. Requests for pages are
-// satisfied from that.
-//
-// Inevitably, this will lead to issues with fragmentation, but these can be
-// dealt with later.
-//
-// TODO: Make the allocator smarter generally. The slab allocator is so much
-// better than this one!
+/// @file
+/// @brief The kernel's physical memory management system.
+///
+/// The physical page management system is fairly simple - pages are marked as allocated or deallocated in a bitmap.
+/// Requests for pages are satisfied from that. Note that pages that are free are marked with a 1 in the bitmap, not a
+/// 0.
+///
+/// Inevitably, this simple approach will lead to issues with fragmentation if callers always require contiguous blocks
+/// of pages. This is left for another day.
 
 //#define ENABLE_TRACING
 
@@ -18,10 +18,13 @@
 const unsigned long MAX_SUPPORTED_PAGES = 2048;
 const unsigned long SIZE_OF_PAGE = 2097152;
 const unsigned long BITMAP_SIZE = MAX_SUPPORTED_PAGES / 64;
-unsigned long phys_pages_bitmap[BITMAP_SIZE];
-unsigned long free_pages;
+static unsigned long phys_pages_bitmap[BITMAP_SIZE];
+static unsigned long free_pages;
+static kernel_spinlock bitmap_lock;
 
-// Initialise the physical memory management subsystem.
+/// @brief Initialise the physical memory management subsystem.
+///
+/// **This function must only be called once**
 void mem_init_gen_phys_sys()
 {
   KL_TRC_ENTRY;
@@ -46,12 +49,20 @@ void mem_init_gen_phys_sys()
     }
   }
 
+  klib_synch_spinlock_init(bitmap_lock);
+
   ASSERT(free_pages > 0);
 
   KL_TRC_EXIT;
 }
 
-// Allocate a number of physical pages to the caller.
+/// @brief Allocate a number of physical pages to the caller.
+///
+/// **NOTE** At present, only a single contiguous page can be allocated.
+///
+/// @param num_pages Must be equal to 1.
+///
+/// @return The address of a newly allocated physical page.
 void *mem_allocate_physical_pages(unsigned int num_pages)
 {
   KL_TRC_ENTRY;
@@ -64,6 +75,7 @@ void *mem_allocate_physical_pages(unsigned int num_pages)
 
   // Spin through the list, looking for a free page. Upon finding one, mark it
   // as in use and return the relevant address.
+  klib_synch_spinlock_lock(bitmap_lock);
   for (int i = 0; i < MAX_SUPPORTED_PAGES / 64; i++)
   {
     mask = 0x8000000000000000;
@@ -78,22 +90,27 @@ void *mem_allocate_physical_pages(unsigned int num_pages)
 
         KL_TRC_TRACE((TRC_LVL_EXTRA, "Address found\n"));
         KL_TRC_EXIT;
+        klib_synch_spinlock_unlock(bitmap_lock);
         return (void *)addr;
       }
       mask = mask >> 1;
     }
   }
 
+  klib_synch_spinlock_unlock(bitmap_lock);
   KL_TRC_EXIT;
 
   panic("No free pages to allocate.");
   return NULL;
 }
 
-// Simply clear the relevant flag in the free pages bitmap. There isn't anything
-// yet to stop someone deallocating a page that doesn't actually exist.
-//
-// TODO: Should probably fix this - it could be used to crash the system. (STAB)
+/// @brief Deallocate a physical page, for use by someone else later.
+///
+/// Simply clear the relevant flag in the free pages bitmap.
+///
+/// @param start The address of the start of the physical page to deallocate.
+///
+/// @param num_pages Must be equal to 1.
 void mem_deallocate_physical_pages(void *start, unsigned int num_pages)
 {
   KL_TRC_ENTRY;
@@ -108,8 +125,12 @@ void mem_deallocate_physical_pages(void *start, unsigned int num_pages)
   KL_TRC_EXIT;
 }
 
-// Set a bit in the pages bitmap. NOTE: This corresponds to marking the page
-// FREE.
+/// @brief Mark the page as free in the bitmap.
+///
+/// Note that no checking is done to ensure the page is within the physical pages available to the system.
+///
+/// @param page_addr The address of the physical page to mark free.
+// TODO: There ought to be some checking to make sure we're deallocating a page that actually exists (STAB)
 void mem_set_bitmap_page_bit(unsigned long page_addr)
 {
   KL_TRC_ENTRY;
@@ -136,8 +157,11 @@ void mem_set_bitmap_page_bit(unsigned long page_addr)
   KL_TRC_EXIT;
 }
 
-// Clear a bit in the pages bitmap. Note that this corresponds to marking a page
-// IN USE.
+/// @brief Mark the page as in use in the bitmap.
+///
+/// Note that no checking is done to ensure the page is within the physical pages available to the system.
+///
+/// @param page_addr The address of the physical page to mark as in use.
 void mem_clear_bitmap_page_bit(unsigned long page_addr)
 {
   KL_TRC_ENTRY;
@@ -162,8 +186,13 @@ void mem_clear_bitmap_page_bit(unsigned long page_addr)
   KL_TRC_EXIT;
 }
 
-// Determine whether a specific page has its bit set in the pages bitmap. Note
-// that a true return value indicates the page is FREE.
+/// @brief Determine whether a specific page has its bit set in the pages bitmap.
+///
+/// Note that a true return value indicates the page is FREE.
+///
+/// @param page_addr The page address to check
+///
+/// @return TRUE implies the page is free (the bit is set), FALSE implies in use.
 bool mem_is_bitmap_page_bit_set(unsigned long page_addr)
 {
   KL_TRC_ENTRY;

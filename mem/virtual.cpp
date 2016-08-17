@@ -1,28 +1,25 @@
 /// @file virtual.cpp
 /// @brief Kernel core memory manager - Virtual memory manager.
 ///
-/// The virtual memory manager is responsible for allocating virtual memory
-/// ranges to the caller. The caller is responsible for backing these ranges
-/// with physical memory pages.
+/// The virtual memory manager is responsible for allocating virtual memory ranges to the caller. The caller is
+/// responsible for backing these ranges with physical memory pages.
 ///
-/// Virtual address space info is stored in a linked list. Each element of the
-/// list stores details of a range - whether it is allocated, and its length.
-/// Each "lump" is a power-of-two number of pages.
+/// Virtual address space info is stored in a linked list. Each element of the list stores details of a range - whether
+/// it is allocated, and its length. Each "lump" is a power-of-two number of pages.
 ///
-/// When a new request is made, the allocated is rounded to the next largest
-/// power-of-two number of pages. The list is searched for the smallest
-/// deallocated lump that will fit the request. If it is too big, it should be
-/// the next power-of-two or more larger, and it is divided in two repeatedly
-/// until the correct sized lump exists and can be returned. Details of it and
-/// the remaining (now smaller) lumps are added to the information list and the
-/// original lump removed.
+/// When a new request is made, the allocated is rounded to the next largest power-of-two number of pages. The list is
+/// searched for the smallest deallocated lump that will fit the request. If it is too big, it should be the next
+/// power-of-two or more larger, and it is divided in two repeatedly until the correct sized lump exists and can be
+/// returned. Details of it and the remaining (now smaller) lumps are added to the information list and the original
+/// lump removed.
 ///
-/// When a lump is deallocated, its neighbours in the list are considered to see
-/// whether they will form a larger power-of-two sized block. If it can, the two
-/// neighbour-lumps are coalesced and replaced in the range information list by
-/// one entry.
+/// When a lump is deallocated, its neighbours in the list are considered to see whether they will form a larger
+/// power-of-two sized block. If it can, the two neighbour-lumps are coalesced and replaced in the range information
+/// list by one entry.
 ///
 /// In some ways this represents an easy-to-implement buddy allocation system.
+///
+/// Only one thread may access the virtual allocation system at once.
 
 //#define ENABLE_TRACING
 
@@ -30,9 +27,9 @@
 #include "mem/mem.h"
 #include "mem/mem-int.h"
 
-/// Whether or not the Virtual Memory Manager is initialized.
-bool vmm_initialized = false;
-klib_list vmm_range_data_list;
+/// Whether or not the Virtual Memory Manager is initialised.
+static bool vmm_initialized = false;
+static klib_list vmm_range_data_list;
 
 struct vmm_range_data
 {
@@ -41,15 +38,20 @@ struct vmm_range_data
   bool allocated;
 };
 
-// Use these arrays for the initial startup of the memory manager. If there
-// isn't a predefined space we get in to a chicken-and-egg state - how does the
-// memory manager allocate memory for itself?
+// Use these arrays for the initial startup of the memory manager. If there isn't a predefined space we get in to a
+// chicken-and-egg state - how does the memory manager allocate memory for itself?
 
 const unsigned int NUM_INITIAL_RANGES = 64;
 klib_list_item initial_range_list[NUM_INITIAL_RANGES];
 vmm_range_data initial_range_data[NUM_INITIAL_RANGES];
 unsigned int initial_ranges_used;
 unsigned int initial_list_items_used;
+
+// This lock permits only one thread to access the VMM at a time. However, since this code is re-entrant, it is
+// necessary to store the thread ID of the owning thread as well, so that the thread doesn't try to claim a lock it
+// already owns.
+static kernel_spinlock vmm_lock;
+static unsigned long vmm_user_thread_id;
 
 // Support function declarations
 void mem_vmm_initialize();
@@ -64,6 +66,8 @@ klib_list_item *mem_vmm_allocate_list_item();
 vmm_range_data *mem_vmm_allocate_range_item();
 void mem_vmm_free_list_item (klib_list_item *item);
 void mem_vmm_free_range_item(vmm_range_data *item);
+bool mem_vmm_lock();
+void mem_vmm_unlock();
 
 //------------------------------------------------------------------------------
 // Memory manager main interface functions.
@@ -92,12 +96,16 @@ void *mem_allocate_virtual_range(unsigned int num_pages)
 
   klib_list_item *selected_list_item;
   vmm_range_data *selected_range_data;
+  bool acquired_lock;
 
   if (!vmm_initialized)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Initializing memory manager.\n"));
+    KL_TRC_TRACE((TRC_LVL_FLOW, "Initialising memory manager.\n"));
     mem_vmm_initialize();
   }
+
+  acquired_lock = mem_vmm_lock();
+  KL_TRC_DATA("Lock acquired?", acquired_lock);
 
   // How many pages are we actually going to allocate. If num_pages is exactly
   // a power of two, it will be used. Otherwise, it will be rounded up to the
@@ -125,6 +133,12 @@ void *mem_allocate_virtual_range(unsigned int num_pages)
   ASSERT(selected_range_data->number_of_pages == actual_num_pages);
   selected_range_data->allocated = true;
 
+  if (acquired_lock)
+  {
+    KL_TRC_TRACE((TRC_LVL_FLOW, "Releasing lock\n"));
+    mem_vmm_unlock();
+  }
+
   KL_TRC_EXIT;
 
   return (void *)selected_range_data->start;
@@ -148,8 +162,12 @@ void mem_deallocate_virtual_range(void *start, unsigned int num_pages)
   klib_list_item *cur_list_item;
   vmm_range_data *cur_range_data;
   unsigned int actual_num_pages;
+  bool acquired_lock;
 
   ASSERT(vmm_initialized);
+
+  acquired_lock = mem_vmm_lock();
+  KL_TRC_DATA("Lock acquired?", acquired_lock);
 
   actual_num_pages = round_to_power_two(num_pages);
 
@@ -165,6 +183,12 @@ void mem_deallocate_virtual_range(void *start, unsigned int num_pages)
 
       mem_vmm_resolve_merges(cur_list_item);
 
+      if (acquired_lock)
+      {
+        KL_TRC_TRACE((TRC_LVL_FLOW, "Releasing lock\n"));
+        mem_vmm_unlock();
+      }
+
       KL_TRC_EXIT;
       return;
     }
@@ -175,6 +199,12 @@ void mem_deallocate_virtual_range(void *start, unsigned int num_pages)
   // If we reach this point, we haven't been able to deallocate this range. It
   // probably wasn't a valid range to start with. Bail out.
   ASSERT(cur_list_item != NULL);
+
+  if (acquired_lock)
+  {
+    KL_TRC_TRACE((TRC_LVL_FLOW, "Releasing lock\n"));
+    mem_vmm_unlock();
+  }
 
   KL_TRC_EXIT;
 }
@@ -237,6 +267,9 @@ void mem_vmm_initialize()
     }
     root_item = root_item->next;
   }
+
+  klib_synch_spinlock_init(vmm_lock);
+  vmm_user_thread_id = 0;
 
   ASSERT(free_pages > 5);
   ASSERT(used_pages < 20);
@@ -623,4 +656,30 @@ void mem_vmm_free_range_item (vmm_range_data *item)
   }
 
   KL_TRC_EXIT;
+}
+
+/// @brief Ensure that the current thread is the only user of the VMM.
+///
+/// @return TRUE if the lock had to be acquired, FALSE if this thread already had the lock.
+bool mem_vmm_lock()
+{
+  KL_TRC_ENTRY;
+
+  if (vmm_user_thread_id != task_current_thread_id())
+  {
+    klib_synch_spinlock_lock(vmm_lock);
+    vmm_user_thread_id = task_current_thread_id();
+    return true;
+  }
+
+  return false;
+
+  KL_TRC_EXIT;
+}
+
+/// @brief This thread has finished using VMM, so allow other threads to instead.
+void mem_vmm_unlock()
+{
+  vmm_user_thread_id = 0;
+  klib_synch_spinlock_unlock(vmm_lock);
 }

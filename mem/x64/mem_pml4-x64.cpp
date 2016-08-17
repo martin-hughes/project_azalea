@@ -1,5 +1,12 @@
-// Manages a list of known PML4 tables. This is used to ensure that while each process has its own complete set of page
-// tables (of which the PML4 is root), the "kernel part" of those tables can be kept synchronized.
+/// @file
+/// @brief Manages all known PML4 tables in the system.
+///
+/// The PML4 table is the root of the page table tree. Each process in the system has its own set of page tables, and
+/// hence, its own PML4 table. The second half of the PML4 represents entries that map the kernel. Editing one PML4 is
+/// normally independent of all the others, but this means that the kernel could edit one PML4 and find itself unable
+/// to resolve some important variable after the processor selects a new set of page tables.
+///
+/// As such, this code keeps the kernel specific part of every known PML4 in synch with the others.
 
 //#define ENABLE_TRACING
 
@@ -8,11 +15,20 @@
 #include "mem/x64/mem-x64-int.h"
 #include "processor/processor.h"
 
-bool pml4_system_initialized = false;
-klib_list pml4_table_list;
-char pml4_copy_buffer[PML4_LENGTH / 2];
-unsigned long known_pml4s;
+static bool pml4_system_initialized = false;
+static klib_list pml4_table_list;
+static char pml4_copy_buffer[PML4_LENGTH / 2];
+static unsigned long known_pml4s;
+static kernel_spinlock pml4_copylock;
 
+static_assert(sizeof(char) == 1, "Only single byte characters supported right now");
+
+/// @brief Initialise the PML4 management system.
+///
+/// **Must only be called once!**
+///
+/// @param task0_data The x64-specific part of the process information for task 0 (which is the task that is nominally
+///                   running before the kernel starts tasking properly)
 void mem_x64_pml4_init_sys(process_x64_data &task0_data)
 {
   KL_TRC_ENTRY;
@@ -22,12 +38,16 @@ void mem_x64_pml4_init_sys(process_x64_data &task0_data)
   klib_list_item_initialize(&task0_data.pml4_list_item);
   task0_data.pml4_list_item.item = (void *)&task0_data;
   klib_list_add_head(&pml4_table_list, &task0_data.pml4_list_item);
-  pml4_system_initialized = true;
   known_pml4s = 1;
+  klib_synch_spinlock_init(pml4_copylock);
+  pml4_system_initialized = true;
 
   KL_TRC_EXIT;
 }
 
+/// @brief Allocate and start tracking the page tables for a new process
+///
+/// @param new_proc_data The x64-specific part of the process information for the newly-created process.
 void mem_x64_pml4_allocate(process_x64_data &new_proc_data)
 {
   KL_TRC_ENTRY;
@@ -40,11 +60,11 @@ void mem_x64_pml4_allocate(process_x64_data &new_proc_data)
 
   ASSERT(pml4_system_initialized);
 
+  klib_synch_spinlock_lock(pml4_copylock);
+
   klib_list_item_initialize(&new_proc_data.pml4_list_item);
   new_proc_data.pml4_list_item.item = (void *)&new_proc_data;
   klib_list_add_tail(&pml4_table_list, &new_proc_data.pml4_list_item);
-
-  static_assert(sizeof(char) == 1, "Only single byte characters supported right now");
 
   // Simply allocate a 4096 byte table. KLIB will make sure this is in the kernel's address space automatically.
   // The Virtual address is easy.
@@ -71,17 +91,28 @@ void mem_x64_pml4_allocate(process_x64_data &new_proc_data)
   known_pml4s++;
   KL_TRC_DATA("Number of known PML4 tables", known_pml4s);
 
+  klib_synch_spinlock_unlock(pml4_copylock);
+
   KL_TRC_EXIT;
 }
 
+/// @brief Stop tracking and deallocate a PML4 table for a process that is terminating.
+///
+/// @param proc_data The x64-specific part of the process data for the terminating process.
 void mem_x64_pml4_deallocate(process_x64_data &proc_data)
 {
   panic("mem_x64_pml4_deallocate not implemented");
 }
 
-// Synchronize the kernel part of all the PML4 tables, so that no matter which process calls in to the kernel, they see
-// the same page mapping within the kernel.
-// TODO: Definitely ought to add some locking here! (MT) (LOCK)
+/// @brief Synchronise the kernel part of all the PML4 tables
+///
+/// This means that no matter which process has its page tables loaded by the processor, the kernel always sees the
+/// same set of mappings for kernel space.
+///
+/// **It is the caller's responsibility to make sure that no other PML4 changes before this function returns.**
+/// Otherwise some PML4s might have the new data and others not, or the newer changes might be obliterated entirely.
+///
+/// @param updated_pml4_table The PML4 that has changed. All others will be made to be the same as this.
 void mem_x64_pml4_synchronize(void *updated_pml4_table)
 {
   KL_TRC_ENTRY;
@@ -96,6 +127,7 @@ void mem_x64_pml4_synchronize(void *updated_pml4_table)
   updated_kernel_section += PML4_LENGTH / 2;
   KL_TRC_DATA("About to synchronize top part of PML4, starting at address", (unsigned long)updated_kernel_section);
 
+  klib_synch_spinlock_lock(pml4_copylock);
   kl_memcpy((void *)updated_kernel_section, (void *)pml4_copy_buffer, PML4_LENGTH / 2);
 
   for(list_item = pml4_table_list.head; list_item != NULL; list_item = list_item->next)
@@ -106,6 +138,7 @@ void mem_x64_pml4_synchronize(void *updated_pml4_table)
 
     updated_pml4s++;
   }
+  klib_synch_spinlock_unlock(pml4_copylock);
 
   ASSERT(updated_pml4s == known_pml4s);
 
