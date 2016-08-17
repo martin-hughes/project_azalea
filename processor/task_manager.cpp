@@ -20,7 +20,7 @@ klib_list complete_thread_list;
 // all threads. The scheduler can then simply iterate over this list for ever and ever.
 klib_list running_thread_list;
 
-// TODO: Make this processor=specific (MT)
+// TODO: Make this processor-specific (MT)
 task_thread *current_thread = (task_thread *)NULL;
 
 // TODO: Make this processor-specific (MT)

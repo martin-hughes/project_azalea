@@ -2,7 +2,6 @@
 
 Import('env')
 files = ["task_manager.cpp",
-         "timing/pit.asm",
          "timing/timing.cpp",
          "timing/hpet.cpp",
          "x64/control-x64.asm",

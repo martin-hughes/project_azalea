@@ -37,9 +37,7 @@ void proc_configure_idt()
   static_assert(sizeof(short) == 2, "Type length check failed");
 
   // Start by zero-ing out everything.
-  kl_memset(interrupt_descriptor_table,
-            0,
-            sizeof(interrupt_descriptor_table));
+  kl_memset(interrupt_descriptor_table, 0, sizeof(interrupt_descriptor_table));
 
   // Fill in the vectors we actually care about.
   for (int i = 0; i < 256; i++)

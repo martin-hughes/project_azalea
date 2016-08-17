@@ -173,7 +173,7 @@ void *kmalloc(unsigned int mem_size)
         &slab_header_ptr->list_entry);
   }
 
-  // TODO: Make this more customizable? (STAB)?
+  // TODO: Make this more customizable?
   //
   // If this slab is more than 90% full and there aren't any spare empty slabs
   // left, pre-allocate one now.

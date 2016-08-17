@@ -207,8 +207,7 @@ bool klib_list_is_empty(klib_list *list_obj)
   return ((list_obj->head == NULL) && (list_obj->tail == NULL));
 }
 
-// TODO: Add unit test for this code. Also, consider adding the list length to
-// klib_list, for speed?
+// TODO: Add unit test for this code. Also, consider adding the list length to klib_list, for speed?
 unsigned long klib_list_get_length(klib_list *list_obj)
 {
   unsigned long count = 0;

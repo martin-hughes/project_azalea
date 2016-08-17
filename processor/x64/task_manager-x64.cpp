@@ -7,12 +7,6 @@
 #include "processor/x64/processor-x64-int.h"
 #include "mem/x64/mem-x64-int.h"
 
-// Use this to get the address of the kernel's page tables.
-// TODO: Make sure this gets removed when setting up multiple processes (MT)
-// TODO: Looks like it's already been done? (19/07/16)
-//extern unsigned long pml4_table;
-
-
 const unsigned int req_stack_entries = 22;
 const unsigned int STACK_EFLAGS_OFFSET = 15;
 const unsigned int STACK_RIP_OFFSET = 16;

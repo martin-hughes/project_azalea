@@ -13,12 +13,11 @@
 #ifdef KL_TRACE_BY_MAGIC_PORT
 void kl_trc_init_tracing()
 {
-  // Currently needs no initialization
+  // Currently needs no initialisation
 }
 
 void kl_trc_trace(unsigned long level, const char *message)
 {
-  // TODO: Implement tracing better. At the moment, only qemu logging is supported.
   asm_trc_dbg_port_output_string(message);
 }
 
@@ -32,7 +31,7 @@ const unsigned short TRC_COM1_BASE_PORT = 0x3F8;
 
 void kl_trc_init_tracing()
 {
-  // Initialize the serial port. This is modified from http://wiki.osdev.org/Serial_Ports
+  // Initialise the serial port. This is modified from http://wiki.osdev.org/Serial_Ports
   asm_proc_write_port(TRC_COM1_BASE_PORT + 1, 0x00, 8); // Disable all interrupts
   asm_proc_write_port(TRC_COM1_BASE_PORT + 3, 0x80, 8); // Enable DLAB (set baud rate divisor)
   asm_proc_write_port(TRC_COM1_BASE_PORT + 0, 0x03, 8); // Set divisor to 3 (lo byte) 38400 baud

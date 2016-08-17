@@ -22,9 +22,6 @@
 mem_process_info task0_entry;
 process_x64_data task0_x64_entry;
 
-//TODO: Currently, pml4_virtual_addr is being removed in favour of process-specific entries in process_data_list.
-// TODO: This seems to be OK on 19/07/16 - remove it? (BUG)
-//unsigned long pml4_virtual_addr;
 const unsigned long working_table_virtual_addr_base = 0xFFFFFFFFFFE00000;
 unsigned long working_table_virtual_addr;
 
@@ -150,8 +147,6 @@ void mem_gen_phys_pages_bitmap(unsigned long *bitmap_loc,
 }
 
 // Map a 2MB virtual page to a provided physical page.
-// TODO: There's a simple assumption that anything above half-way is a kernel allocation, otherwise it's user-mode
-// TODO: Confirm that this is reasonable. (STAB)
 void mem_map_virtual_page(unsigned long virt_addr,
                           unsigned long phys_addr,
                           task_process *context,
@@ -218,7 +213,7 @@ void mem_map_virtual_page(unsigned long virt_addr,
     *encoded_entry = mem_encode_page_table_entry(new_entry);
 
     // If this allocation relates to the kernel - that is, it is for an allocation in the upper-half of memory, we need
-    // to synchronize the relevant PML4s across all processes.
+    // to synchronise the relevant PML4s across all processes.
     // TODO: Lock the PML4s, to avoid bad-ness. (LOCK)
     if (is_kernel_allocation)
     {

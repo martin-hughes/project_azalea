@@ -482,8 +482,8 @@ void mem_vmm_allocate_specific_range(unsigned long start_addr,
         KL_TRC_TRACE((TRC_LVL_FLOW, "Size too large\n"));
         cur_item = mem_vmm_split_range(cur_item, cur_data->number_of_pages / 2);
 
-        // Recursion isn't the most efficient way to deal with this, but it'll
-        // do for now. TODO: Improve efficiency.
+        // Recursion isn't the most efficient way to deal with this, but it'll do for now.
+        // TODO: Improve efficiency.
         mem_vmm_allocate_specific_range(start_addr, num_pages);
       }
 
