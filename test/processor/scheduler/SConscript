@@ -1,0 +1,7 @@
+# Klib Maths helpers test program.
+
+Import('env')
+obj = env.Library("klib-scheduler-test", [ "scheduler_1.cpp", 
+                                           "scheduler_test_list.cpp",
+                                           "fake_platform_part.cpp" ])
+Return ("obj") 

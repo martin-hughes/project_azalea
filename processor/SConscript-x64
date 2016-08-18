@@ -1,8 +1,7 @@
 # Kernel processor library.
 
 Import('env')
-files = ["task_manager.cpp",
-         "timing/timing.cpp",
+files = ["timing/timing.cpp",
          "timing/hpet.cpp",
          "x64/control-x64.asm",
          "x64/gdt-x64.asm",
@@ -20,5 +19,5 @@ files = ["task_manager.cpp",
          "x64/pic/apic.cpp",
          "x64/pic/ioapic-x64.cpp",
         ]
-obj = env.Library("processor", files)
+obj = env.Library("processor_x64", files)
 Return ("obj") 

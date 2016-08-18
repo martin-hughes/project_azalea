@@ -13,7 +13,8 @@ env['LINK'] = 'ld -Map output/kernel_map.map'
 
 # List of required components.
 dependencies_in = ['#entry/SConscript',
-                   '#processor/SConscript',
+                   '#processor/SConscript-generic',
+                   '#processor/SConscript-x64',
                    '#klib/memory/SConscript',
                    '#klib/panic/SConscript',
                    '#mem/SConscript',

@@ -2,6 +2,7 @@
 #define PROCESSOR_H_
 
 #include "klib/lists/lists.h"
+#include "klib/synch/kernel_locks.h"
 #include "mem/mem.h"
 
 // Main kernel interface to processor specific functions. Includes the task management system.
@@ -44,18 +45,22 @@ struct task_thread
     // An entry for the parent's thread list.
     klib_list_item process_list_item;
 
-    // An entry for the master thread list.
-    klib_list_item master_thread_list_item;
-
-    // An entry for the running thread list;
-    klib_list_item running_thread_list_item;
-
     // A pointer to the thread's execution context. This is processor specific, so no specific structure can
     // be pointed to. Only processor-specific code should access this field.
     void *execution_context;
 
     // Is the thread running? It will only be considered for execution if so.
-    bool running;
+    volatile bool permit_running;
+
+    // A pointer to the next thread. In normal operation, these form a cycle of threads, and the task manager is able
+    // to manipulate this cycle without breaking the chain.
+    task_thread *next_thread;
+
+    // A lock used by the task manager to claim ownership of this thread. It has several meanings:
+    // - The task manager might be about to manipulate the thread cycle, so the scheduler should avoid scheduling this
+    //   thread
+    // - The scheduler might be running this thread, in which case no other processor should run it as well
+    kernel_spinlock cycle_lock;
 };
 
 // Initialise the first processor and some of the data structures needed to manage all processors in the system.
@@ -111,6 +116,10 @@ void task_stop_process(task_process *process);
 void task_start_thread(task_thread *thread);
 void task_stop_thread(task_thread *thread);
 void task_yield();
+
+// Multiple processor control functions
+unsigned int proc_mp_proc_count();
+unsigned int proc_mp_this_proc_id();
 
 // Force the scheduler to re-schedule this thread continually, or allow it to schedule normally. This allows a thread
 // to avoid being preempted in a state that might leave it in a deadlock. Naturally, it must be used with extreme care!

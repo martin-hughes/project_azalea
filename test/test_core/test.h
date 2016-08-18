@@ -4,6 +4,7 @@
 // Allow asserting in all tests. Expect to be linked against the dummy panic lib
 // so that panics are caught by the test system.
 #include "klib/misc/assert.h"
+#include "klib/tracing/tracing.h"
 #include "klib/panic/panic.h"
 
 typedef void (*test_entry_ptr)();

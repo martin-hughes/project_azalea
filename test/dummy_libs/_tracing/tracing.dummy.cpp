@@ -15,5 +15,10 @@ void kl_trc_init_tracing()
 
 void kl_trc_trace(unsigned long level, const char *message)
 {
-  cout << "TRC: (" << level << ") " << message << endl;
+  cout << message;
+}
+
+void kl_trc_trace(unsigned long level, const unsigned long val)
+{
+  cout << std::hex << val;
 }

@@ -3,11 +3,11 @@
 
 #define ENABLE_TRACING
 
+#include "klib/klib.h"
 #include "processor/processor.h"
 #include "processor/timing/timing.h"
 #include "mem/mem.h"
 #include "syscall/syscall_kernel.h"
-#include "klib/klib.h"
 #include "acpi/acpi_if.h"
 
 // Rough boot steps:
@@ -40,7 +40,6 @@ typedef void (*fn_ptr)();
 // page mapping, since the kernel is linked higher-half but loaded at 1MB, then kicking the task manager in to life.
 int main()
 {
-
   proc_gen_init();
   mem_gen_init();
   syscall_gen_init();

@@ -1,0 +1,7 @@
+# Kernel processor library.
+
+Import('env')
+files = ["task_manager.cpp",
+        ]
+obj = env.Library("processor_generic", files)
+Return ("obj") 

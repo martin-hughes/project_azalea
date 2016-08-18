@@ -5,9 +5,11 @@ typedef unsigned long kernel_spinlock;
 
 void klib_synch_spinlock_init(kernel_spinlock &lock);
 void klib_synch_spinlock_lock(kernel_spinlock &lock);
+bool klib_synch_spinlock_try_lock(kernel_spinlock &lock);
 void klib_synch_spinlock_unlock(kernel_spinlock &lock);
 
 extern "C" void asm_klib_synch_spinlock_lock(kernel_spinlock *lock);
+extern "C" unsigned long asm_klib_synch_spinlock_try_lock(kernel_spinlock *lock);
 
 #define KLOCK_NUM_LOCKS 2
 

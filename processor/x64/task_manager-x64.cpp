@@ -1,3 +1,6 @@
+/// @file
+/// @brief x64-specific part of the task manager
+
 //#define ENABLE_TRACING
 
 #include "klib/klib.h"
@@ -24,6 +27,16 @@ const unsigned long DEF_RFLAGS_USER = (unsigned long)0x3200;
 const unsigned long DEF_CS_USER = 0x18;
 const unsigned long DEF_SS_USER = 0x20;
 
+/// @brief Create a new x64 execution context
+///
+/// Create an entire x64 execution context that will cause entry_point to be executed within new_thread. This must only
+/// be called once for each thread object.
+///
+/// @param entry_point The point where the new thread will begin executing
+///
+/// @param new_thread The thread that is having an execution context created for it
+///
+/// @return A pointer to the execution context. This is opaque to non-x64 code.
 void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thread)
 {
   task_x64_exec_context *new_context;
@@ -91,17 +104,36 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
 
 // TODO: Note that at present, exec_ptr is always 0 because RIP is stored in the stack.
 // TODO: Probably should remove it then...
+/// @brief Main task switcher
+///
+/// task_int_swap_task() is called by the timer interrupt. It saves the execution context of the thread currently
+/// executing, selects the next one and provides the new execution context to the caller.
+///
+/// The action of choosing the next thread to execute is not platform specific, it is provided by generic code in
+/// #task_get_next_thread.
+///
+/// @param stack_ptr The stack pointer that provides the execution context that has just finished executing
+///
+/// @param exec_ptr The value of the program counter for the suspended thread (note: This is not actually used, or even
+///                 correct at the moment.
+///
+/// @param cr3_value The value of CR3 used by the suspended thread
+///
+/// @return The execution context for the caller to begin executing.
 task_x64_exec_context *task_int_swap_task(unsigned long stack_ptr, unsigned long exec_ptr, unsigned long cr3_value)
 {
   task_thread *current_thread;
   task_x64_exec_context *current_context;
   task_x64_exec_context *next_context;
+  task_thread *next_thread;
 
   KL_TRC_ENTRY;
 
   current_thread = task_get_cur_thread();
-  if (current_thread != NULL)
+  KL_TRC_DATA("Current thread", (unsigned long)current_thread);
+  if (current_thread != nullptr)
   {
+    KL_TRC_TRACE((TRC_LVL_FLOW, "Storing exec context\n"));
     current_context = (task_x64_exec_context *)current_thread->execution_context;
     current_context->stack_ptr = (void *)stack_ptr;
     current_context->exec_ptr = (void *)exec_ptr;
@@ -111,7 +143,10 @@ task_x64_exec_context *task_int_swap_task(unsigned long stack_ptr, unsigned long
     KL_TRC_DATA("Computed RIP of leaving thread", *(((unsigned long *)current_context->stack_ptr)+STACK_RIP_OFFSET));
   }
 
-  next_context = (task_x64_exec_context *)task_get_next_thread()->execution_context;
+  next_thread = task_get_next_thread();
+  KL_TRC_DATA("Next thread", (unsigned long)next_thread);
+  next_context = (task_x64_exec_context *)next_thread->execution_context;
+
   KL_TRC_DATA("New CR3 value", (unsigned long)next_context->cr3_value);
   KL_TRC_DATA("Stack pointer", (unsigned long)next_context->stack_ptr);
   KL_TRC_DATA("Computed RIP of new thread", *(((unsigned long *)next_context->stack_ptr)+STACK_RIP_OFFSET));
@@ -121,7 +156,13 @@ task_x64_exec_context *task_int_swap_task(unsigned long stack_ptr, unsigned long
   return next_context;
 }
 
-// Sets up the timer interrupt to call the task switching mechanism.
+/// @brief Install the task switching routine
+///
+/// Links the timer's interrupt with code that causes the task switching process to begin. Once this code executes, the
+/// timer will fire and task switching occur, and this could happen at an arbitrary time.
+///
+/// We have not set up the kernel's entry code path to be one of the threads in the execution list, so at some point
+/// the timer will fire and schedule another thread, and this code path will simply cease.
 void task_install_task_switcher()
 {
   KL_TRC_ENTRY;
@@ -132,8 +173,7 @@ void task_install_task_switcher()
   KL_TRC_EXIT;
 }
 
-// Platform-specific initialization required before tasking can start.
-// On x64, this is to create a suitable TSS and TSS descriptor.
+/// @brief Platform-specific initialisation needed for task switching to begin.
 void task_platform_init()
 {
   KL_TRC_ENTRY;

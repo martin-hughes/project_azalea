@@ -34,6 +34,13 @@ void synch_test_1()
   klib_synch_spinlock_lock(main_lock);
   ASSERT(!lock_locked);
   klib_synch_spinlock_unlock(main_lock);
+
+  ASSERT(klib_synch_spinlock_try_lock(main_lock));
+  ASSERT(!klib_synch_spinlock_try_lock(main_lock));
+  klib_synch_spinlock_unlock(main_lock);
+  klib_synch_spinlock_lock(main_lock);
+  ASSERT(!klib_synch_spinlock_try_lock(main_lock));
+  klib_synch_spinlock_unlock(main_lock);
 }
 
 void* second_part(void *)
