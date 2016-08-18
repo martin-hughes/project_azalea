@@ -1,5 +1,7 @@
-// Configure the x64 PAT register, and encode / decode between it and the page table entries.
-// Nothing special occurs here, all the values are fixed, so just use simple lookups.
+/// @file
+/// @brief Configure the x64 PAT register, and encode / decode between it and the page table entries.
+///
+/// Nothing fancy occurs in this file, all the values are fixed, so just use simple lookups.
 
 #include "klib/klib.h"
 #include "mem/mem.h"
@@ -8,17 +10,19 @@
 
 const unsigned long PAT_REGISTER_VAL = 0x0005040600010406;
 
-// Configure that PAT as follows:
-// PAT 0: Write back (default)
-// PAT 1: Write through (default)
-// PAT 2: Write combining (not the default of UC-)
-// PAT 3: Uncacheable (default)
-// PAT 4: Write back (default)
-// PAT 5: Write through (default)
-// PAT 6: Write protected (not the dault of UC-)
-// PAT 7: Uncacheable (default)
-//
-// This table is encoded in PAT_REGISTER_VAL, above.
+/// @brief Initialise the PAT
+///
+/// Configure that PAT entries as follows:
+/// 0. Write back (default)
+/// 1. Write through (default)
+/// 2. Write combining (not the default of UC-)
+/// 3. Uncacheable (default)
+/// 4. Write back (default)
+/// 5. Write through (default)
+/// 6. Write protected (not the default of UC-)
+/// 7. Uncacheable (default)
+///
+/// This entire table is encoded in PAT_REGISTER_VAL.
 void mem_x64_pat_init()
 {
   KL_TRC_ENTRY;
@@ -26,6 +30,16 @@ void mem_x64_pat_init()
   KL_TRC_EXIT;
 }
 
+/// @brief For a given required caching type, return the index in the PAT that would fulfil it.
+///
+/// If, for any reason, the request cannot be fulfilled, the system will panic.
+///
+/// @param cache_type The required caching mode. Must be one of MEM_X64_CACHE_TYPES.
+///
+/// @param first_half Whether or not the returned value must be three or less, since some parts of the page tables only
+///                   support small values.
+///
+/// @return The index into the PAT that represents the requested caching mode.
 unsigned char mem_x64_pat_get_val(const unsigned char cache_type, bool first_half)
 {
   KL_TRC_ENTRY;
@@ -65,6 +79,12 @@ unsigned char mem_x64_pat_get_val(const unsigned char cache_type, bool first_hal
   KL_TRC_DATA("Result", result);
   return result;
 }
+
+/// @brief Convert and index into the PAT back into a cache type
+///
+/// @param pat_idx The index in the PAT to decode. Must be in the range 0-7, inclusive, or the system will panic.
+///
+/// @return The caching mode that PAT entry represents.
 unsigned char mem_x64_pat_decode(const unsigned char pat_idx)
 {
   KL_TRC_ENTRY;

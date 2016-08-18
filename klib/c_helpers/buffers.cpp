@@ -1,3 +1,6 @@
+/// @file
+/// @brief Kernel memory buffer helper functions
+
 #include "buffers.h"
 #include "klib/tracing/tracing.h"
 #include "klib/panic/panic.h"
@@ -8,11 +11,11 @@
 /// A drop-in replacement for the familiar memset function. The entire buffer must be contained within kernel memory
 /// (i.e. the upper half of virtual memory space) and must not wrap.
 ///
-/// @param buffer The buffer whose value is set to a repetition of #val.
+/// @param buffer The buffer whose value is set to a repetition of val.
 ///
-/// @param val This character is repetitively filled across #buffer.
+/// @param val This character is repetitively filled across buffer.
 ///
-/// @param len The length of the buffer to fill with the value in #val
+/// @param len The length of the buffer to fill with the value in val
 void kl_memset(void* buffer, unsigned char val, unsigned long len)
 {
   unsigned long end = (unsigned long)buffer + len;

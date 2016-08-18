@@ -1,3 +1,9 @@
+/// @file
+/// @brief Implementation of a simple doubly-linked list.
+///
+/// A simple doubly-linked list implementation. It is not naturally thread-safe - that is, the caller is responsible
+/// for locking if needed.
+
 #include "lists.h"
 #include "klib/klib.h"
 
