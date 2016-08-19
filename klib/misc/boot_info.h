@@ -26,7 +26,7 @@ extern const unsigned int *boot_info_video_base_addr;
 extern const unsigned short *boot_info_video_x_pix;
 extern const unsigned short *boot_info_video_y_pix;
 extern const unsigned long *boot_info_ioapic_addrs;
-extern const unsigned char *boot_info_ioapic_ids;
+extern const unsigned char *boot_info_lapic_ids;
 
 extern const e820_record *e820_memory_map;
 

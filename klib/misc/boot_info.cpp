@@ -19,6 +19,6 @@ const unsigned short *boot_info_video_y_pix =
     (unsigned short *)0xFFFFFFFF00005020;
 const unsigned long *boot_info_ioapic_addrs =
     (unsigned long *)0xFFFFFFFF00005068;
-const unsigned char *boot_info_ioapic_ids = (unsigned char *)0xFFFFFFFF00005100;
+const unsigned char *boot_info_lapic_ids = (unsigned char *)0xFFFFFFFF00005100;
 
 const e820_record *e820_memory_map = (e820_record *)0xFFFFFFFF00004000;

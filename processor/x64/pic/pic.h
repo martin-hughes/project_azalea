@@ -9,4 +9,27 @@ extern "C" void asm_proc_configure_irqs();
 extern "C" void asm_proc_disable_legacy_pic();
 extern "C" void asm_proc_legacy_pic_irq_ack();
 
+enum class PROC_IPI_SHORT_TARGET
+{
+  NONE = 0,
+  SELF = 1,
+  ALL_INCL_SELF = 2,
+  ALL_EXCL_SELF = 3,
+};
+
+enum class PROC_IPI_INTERRUPT
+{
+  FIXED = 0,
+  LOWEST_PRI = 1,
+  SMI = 2,
+  NMI = 4,
+  INIT = 5,
+  STARTUP = 6,
+};
+
+void proc_send_ipi(unsigned int apic_dest,
+                   PROC_IPI_SHORT_TARGET shorthand,
+                   PROC_IPI_INTERRUPT interrupt,
+                   unsigned char vector);
+
 #endif

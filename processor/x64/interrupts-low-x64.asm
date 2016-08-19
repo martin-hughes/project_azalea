@@ -206,11 +206,11 @@ EXTERN proc_debug_fault_handler
 asm_proc_debug_fault_handler:
     DEF_INT_HANDLER proc_debug_fault_handler
 
-; Exception 2
+; Exception 2 - NMIs are used for inter-processor control messages.
 GLOBAL asm_proc_nmi_int_handler
-EXTERN proc_nmi_int_handler
+EXTERN proc_mp_x64_receive_signal_int
 asm_proc_nmi_int_handler:
-    DEF_INT_HANDLER proc_nmi_int_handler
+    DEF_INT_HANDLER proc_mp_x64_receive_signal_int
 
 ; Exception 3
 GLOBAL asm_proc_brkpt_trap_handler

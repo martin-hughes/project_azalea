@@ -1,5 +1,7 @@
 #pragma once
 
+enum class PROC_IPI_MSGS;
+
 // CPU Control
 extern "C" void asm_proc_stop_this_proc();
 extern "C" void asm_proc_read_cpuid(unsigned long eax_value,
@@ -36,6 +38,10 @@ extern "C" void *end_of_irq_ack_fn;
 #define IDT_ENTRY_LEN 16
 extern unsigned char interrupt_descriptor_table[NUM_INTERRUPTS * IDT_ENTRY_LEN];
 
+// Multi-processor control
+void proc_mp_x64_signal_proc(unsigned int proc_id, PROC_IPI_MSGS msg);
+extern "C" void proc_mp_x64_receive_signal_int();
+
 // Specialised interrupt handlers:
 extern "C" void asm_proc_page_fault_handler();
 extern "C" void proc_page_fault_handler(unsigned long fault_code, unsigned long fault_addr, unsigned long fault_instruction);
@@ -47,7 +53,6 @@ extern "C" void proc_div_by_zero_fault_handler();
 extern "C" void asm_proc_debug_fault_handler(); // 1
 extern "C" void proc_debug_fault_handler();
 extern "C" void asm_proc_nmi_int_handler(); // 2
-extern "C" void proc_nmi_int_handler();
 extern "C" void asm_proc_brkpt_trap_handler(); // 3
 extern "C" void proc_brkpt_trap_handler();
 extern "C" void asm_proc_overflow_trap_handler(); // 4
@@ -81,23 +86,3 @@ extern "C" void proc_virt_except_fault_handler();
 extern "C" void asm_proc_security_fault_handler(); // 30
 extern "C" void proc_security_fault_handler(unsigned long err_code);
 
-namespace PROC_X64_MSRS
-{
-  const unsigned long IA32_APIC_BASE = 0x1b;
-  const unsigned long IA32_MTRRCAP = 0xfe;
-  const unsigned long IA32_MTRR_PHYSBASE0 = 0x200;
-  const unsigned long IA32_MTRR_PHYSMASK0 = 0x201;
-  const unsigned long IA32_MTRR_FIX64K_00000 = 0x250;
-  const unsigned long IA32_MTRR_FIX16K_80000 = 0x258;
-  const unsigned long IA32_MTRR_FIX16K_A0000 = 0x259;
-  const unsigned long IA32_MTRR_FIX4K_C0000 = 0x268;
-  const unsigned long IA32_MTRR_FIX4K_C8000 = 0x269;
-  const unsigned long IA32_MTRR_FIX4K_D0000 = 0x26A;
-  const unsigned long IA32_MTRR_FIX4K_D8000 = 0x26B;
-  const unsigned long IA32_MTRR_FIX4K_E0000 = 0x26C;
-  const unsigned long IA32_MTRR_FIX4K_E8000 = 0x26D;
-  const unsigned long IA32_MTRR_FIX4K_F0000 = 0x26E;
-  const unsigned long IA32_MTRR_FIX4K_F8000 = 0x26F;
-  const unsigned long IA32_PAT = 0x277;
-  const unsigned long IA32_MTRR_DEF_TYPE = 0x2FF;
-};

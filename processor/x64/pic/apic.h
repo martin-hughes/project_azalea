@@ -1,6 +1,8 @@
 #ifndef _PROC_APIC_H
 #define _PROC_APIC_H
 
+#include "pic.h"
+
 // Interface to control regular APICs (not X2 APICs)
 
 void proc_x64_configure_apic_mode();
@@ -9,6 +11,11 @@ unsigned char proc_x64_apic_get_local_id();
 
 extern "C" void asm_proc_apic_spurious_interrupt();
 extern "C" void proc_x64_apic_irq_ack();
+
+void proc_apic_send_ipi(const unsigned int apic_dest,
+                        const PROC_IPI_SHORT_TARGET shorthand,
+                        const PROC_IPI_INTERRUPT interrupt,
+                        const unsigned char vector);
 
 struct apic_registers
 {

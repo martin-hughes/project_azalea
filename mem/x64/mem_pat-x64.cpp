@@ -6,6 +6,7 @@
 #include "klib/klib.h"
 #include "mem/mem.h"
 #include "mem/x64/mem-x64-int.h"
+#include "processor/x64/processor-x64.h"
 #include "processor/x64/processor-x64-int.h"
 
 const unsigned long PAT_REGISTER_VAL = 0x0005040600010406;
@@ -26,7 +27,7 @@ const unsigned long PAT_REGISTER_VAL = 0x0005040600010406;
 void mem_x64_pat_init()
 {
   KL_TRC_ENTRY;
-  asm_proc_write_msr(PROC_X64_MSRS::IA32_PAT, PAT_REGISTER_VAL);
+  proc_write_msr(PROC_X64_MSRS::IA32_PAT, PAT_REGISTER_VAL);
   KL_TRC_EXIT;
 }
 

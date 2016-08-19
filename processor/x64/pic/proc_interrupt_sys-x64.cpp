@@ -1,3 +1,9 @@
+/// @file
+/// @brief Code for managing the PICs (of all types) attached to the system.
+///
+/// This code is as generic an interface as possible for the various types of Programmable Interrupt Controller that
+/// may be attached to an x64 system. During initialisation, it selects the most advanced mode that it supports.
+
 //#define ENABLE_TRACING
 
 #include "processor/x64/pic/pic.h"
@@ -7,24 +13,22 @@
 #include "klib/klib.h"
 
 // The various PIC types supported by 64bit.
-enum APIC_TYPES { LEGACY_PIC, APIC, X2APIC };
+enum class APIC_TYPES { LEGACY_PIC, APIC, X2APIC };
 
 const unsigned long APIC_PRESENT = 0x0000020000000000;
 const unsigned long X2_APIC_PRESENT = 0x0000000000200000;
 
-APIC_TYPES selected_pic_mode = LEGACY_PIC;
+APIC_TYPES selected_pic_mode = APIC_TYPES::LEGACY_PIC;
 
 APIC_TYPES proc_x64_detect_pic_type();
 
 // See what kind of interrupt controller (PIC, APIC, etc.) this system uses. Then configure it as appropriate.
-// TODO: Consider multiple processors here. (MT)
 // TODO: Enable x2APIC mode.
 // TODO: Consider the possibility of multiple IOAPICs. (We use just one now) (STAB)?
-// For now, just configure it on the local processor.
 
-
-// Configure the interrupt controller attached to this processor. Each processor will start their own (A)PIC.
-// The system's IO-APICs are initialized separately, by the main OS startup code.
+/// @brief Configure the interrupt controller attached to this processor.
+///
+/// Each processor will start their own (A)PIC. The system's IO-APICs are initialised separately.
 void proc_conf_local_int_controller()
 {
   KL_TRC_ENTRY;
@@ -33,15 +37,15 @@ void proc_conf_local_int_controller()
 
   switch (local_pic)
   {
-    case LEGACY_PIC:
+    case APIC_TYPES::LEGACY_PIC:
       KL_TRC_TRACE((TRC_LVL_FLOW, "Using legacy PIC mode\n"));
-      selected_pic_mode = LEGACY_PIC;
+      selected_pic_mode = APIC_TYPES::LEGACY_PIC;
       break;
 
-    case APIC:
-    case X2APIC:
+    case APIC_TYPES::APIC:
+    case APIC_TYPES::X2APIC:
       KL_TRC_TRACE((TRC_LVL_FLOW, "Attempting to use APIC mode\n"));
-      selected_pic_mode = APIC;
+      selected_pic_mode = APIC_TYPES::APIC;
       break;
 
     default:
@@ -50,11 +54,11 @@ void proc_conf_local_int_controller()
 
   switch (selected_pic_mode)
   {
-    case LEGACY_PIC:
+    case APIC_TYPES::LEGACY_PIC:
       asm_proc_configure_irqs();
       break;
 
-    case APIC:
+    case APIC_TYPES::APIC:
       proc_x64_configure_apic_mode();
       break;
 
@@ -65,8 +69,9 @@ void proc_conf_local_int_controller()
   KL_TRC_EXIT;
 }
 
-// Configure any interrupt controllers that are not local to a specific processor. That's only expected to be the
-// IO-APICs.
+/// @brief Configure any interrupt controllers that are not local to a specific processor.
+///
+/// For the time being, that's only expected to be the IO-APICs.
 void proc_configure_global_int_ctrlrs()
 {
   KL_TRC_ENTRY;
@@ -75,7 +80,7 @@ void proc_configure_global_int_ctrlrs()
 
   proc_x64_ioapic_load_data();
 
-  if (selected_pic_mode != LEGACY_PIC)
+  if (selected_pic_mode != APIC_TYPES::LEGACY_PIC)
   {
     // If there's no legacy PIC, then there must be both an APIC and IO-APIC. The IO-APIC, being a system-wide (global)
     // interrupt controller, still needs its interrupts remapping. If we're in legacy PIC mode, this has been done
@@ -92,13 +97,14 @@ void proc_configure_global_int_ctrlrs()
   KL_TRC_EXIT;
 }
 
-// Detect which type of PIC is attached to this processor.
-// TODO: What happens if different processors have different types of PIC? (MT)
+/// @brief Detect which type of PIC is attached to this processor.
+///
+/// For the time being, it is assumed that all processors have the same type of PIC as this one.
 APIC_TYPES proc_x64_detect_pic_type()
 {
   KL_TRC_ENTRY;
 
-  APIC_TYPES detected_pic = LEGACY_PIC;
+  APIC_TYPES detected_pic = APIC_TYPES::LEGACY_PIC;
   unsigned long apic_det_result;
   unsigned long ebx_eax;
   unsigned long edx_ecx;
@@ -113,21 +119,55 @@ APIC_TYPES proc_x64_detect_pic_type()
     if ((edx_ecx & X2_APIC_PRESENT) != 0)
     {
       KL_TRC_TRACE((TRC_LVL_FLOW, "x2APIC present\n"));
-      detected_pic = X2APIC;
+      detected_pic = APIC_TYPES::X2APIC;
     }
     else
     {
       KL_TRC_TRACE((TRC_LVL_FLOW, "Regular APIC/xAPIC\n"));
-      detected_pic = APIC;
+      detected_pic = APIC_TYPES::APIC;
     }
   }
   else
   {
     KL_TRC_TRACE((TRC_LVL_FLOW, "No APIC detected - using legacy PIC\n"));
-    detected_pic = LEGACY_PIC;
+    detected_pic = APIC_TYPES::LEGACY_PIC;
   }
 
   KL_TRC_EXIT;
 
   return detected_pic;
+}
+
+/// @brief Send an IPI to another processor
+///
+/// A more detailed description of the meaning of these parameters can be found in the Intel System Programming Guide.
+///
+/// @param apic_dest The ID of the APIC to send the IPI to. May be zero if a shorthand is used.
+///
+/// @param shorthand If needed, the shorthand code for signalling multiple processors at once
+///
+/// @param interrupt The desired type of IPI to send
+///
+/// @param vector The vector number for this IPI. Depending on the type of IPI being sent, this may be ignored.
+void proc_send_ipi(unsigned int apic_dest,
+                   PROC_IPI_SHORT_TARGET shorthand,
+                   PROC_IPI_INTERRUPT interrupt,
+                   unsigned char vector)
+{
+  KL_TRC_ENTRY;
+
+  ASSERT(selected_pic_mode == APIC_TYPES::APIC || selected_pic_mode == APIC_TYPES::X2APIC);
+
+  switch (selected_pic_mode)
+  {
+    case APIC_TYPES::APIC:
+      proc_apic_send_ipi(apic_dest, shorthand, interrupt, vector);
+      break;
+
+    case APIC_TYPES::X2APIC:
+      panic("X2 APIC mode not yet supported");
+      break;
+  }
+
+  KL_TRC_EXIT;
 }

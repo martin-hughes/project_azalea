@@ -16,11 +16,6 @@ void proc_debug_fault_handler()
   panic("Debug fault");
 }
 
-void proc_nmi_int_handler()
-{
-  panic("NMI received");
-}
-
 void proc_brkpt_trap_handler()
 {
   panic("Breakpoint hit");
