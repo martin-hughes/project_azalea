@@ -15,10 +15,6 @@ void panic(const char *message)
 	// conditions.
 	proc_stop_interrupts();
 
-	// Stop all other processors too. It's possible that a another processor
-	// could panic at the same time as this one, but we'll live with that race.
-	proc_stop_other_procs();
-
 	// TODO: Switch back to a text display.
 
 	// Print a simple message on the screen.
@@ -26,6 +22,10 @@ void panic(const char *message)
 	panic_print("KERNEL PANIC", 0);
 	panic_print("------------", 1);
 	panic_print(message, 3);
+
+	// Stop all other processors too. It's possible that a another processor
+	// could panic at the same time as this one, but we'll live with that race.
+	proc_stop_other_procs();
 
 	// Finally, we don't want to continue. This processor should be the last one
 	// running, so this will stop the system completely.

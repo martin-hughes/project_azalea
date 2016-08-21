@@ -20,6 +20,8 @@
 #include "processor/x64/pic/pic.h"
 #include "processor/x64/pic/apic.h"
 #include "acpi/acpi_if.h"
+#include "mem/x64/mem-x64.h"
+#include "syscall/x64/syscall_kernel-x64.h"
 
 /// @brief Controls communication between source and target processors.
 enum class PROC_MP_X64_MSG_STATE
@@ -54,8 +56,17 @@ extern processor_info *proc_info_block;
 extern unsigned int processor_count;
 
 const unsigned char SUBTABLE_LAPIC_TYPE = 0;
+const unsigned short *pure_64_nmi_idt_entry = reinterpret_cast<const unsigned short *>(0xFFFFFFFF00000020);
 
 static proc_mp_ipi_msg_state *inter_proc_signals = nullptr;
+
+extern "C" unsigned long asm_proc_pure64_nmi_trampoline_start;
+extern "C" unsigned long asm_proc_pure64_nmi_trampoline_end;
+
+static_assert(sizeof(unsigned short) == 2, "Sizeof short must be two");
+
+// Pointers to kernel stacks, one per processor. This allows each processor to enter syscall with its own stack.
+void **kernel_syscall_stack_ptrs;
 
 /// @brief Prepare the system to start multi-processing
 ///
@@ -70,6 +81,8 @@ void proc_mp_init()
   acpi_subtable_header *subtable;
   acpi_madt_local_apic *lapic_table;
   unsigned int procs_found = 0;
+  unsigned long pure64_nmi_handler_loc;
+  unsigned int trampoline_length;
 
   // Prepare the IO-APICs, these will be useful for distributing interrupts between processors later on.
   proc_conf_local_int_controller();
@@ -81,6 +94,7 @@ void proc_mp_init()
 
   proc_info_block = new processor_info[processor_count];
   inter_proc_signals = new proc_mp_ipi_msg_state[processor_count];
+  kernel_syscall_stack_ptrs = new void *[processor_count];
 
   retval = AcpiGetTable((ACPI_STRING)table_name, 0, (ACPI_TABLE_HEADER **)&madt_table);
   ASSERT(retval == AE_OK);
@@ -112,7 +126,7 @@ void proc_mp_init()
 
   ASSERT(procs_found == processor_count);
 
-  // Fill in the inter-processor signal control code. We have to fill in a valid signal, even though it isn't actually
+  // Fill in the inter-processor signal control codes. We have to fill in a valid signal, even though it isn't actually
   // being sent, so pick an arbitrary one. Processors should be protected from acting on it through the value of
   // msg_control_state.
   for (unsigned int i = 0; i < processor_count; i++)
@@ -120,10 +134,57 @@ void proc_mp_init()
     inter_proc_signals[i].msg_being_sent == PROC_IPI_MSGS::SUSPEND;
     inter_proc_signals[i].msg_control_state == PROC_MP_X64_MSG_STATE::NO_MSG;
     klib_synch_spinlock_init(inter_proc_signals[i].signal_lock);
+
+    // Generate a stack for syscall to use. Remember that the stack grows downwards from the end of the allocation.
+    kernel_syscall_stack_ptrs[i] = proc_x64_allocate_stack();
+
   }
 
+  // The processors have been left halted with interrupts disabled by the bootloader. Short of a full reset of them the
+  // only way to signal the APs is by NMI, but at the moment that handler calls Pure64 code. Cheat by redirecting it to
+  // our handler. Start by finding exactly where the Pure64 NMI handler is.
+  pure64_nmi_handler_loc = (unsigned long)pure_64_nmi_idt_entry[0] |
+                           ((unsigned long)pure_64_nmi_idt_entry[3] << 16) |
+                           ((unsigned long)pure_64_nmi_idt_entry[4] << 32) |
+                           ((unsigned long)pure_64_nmi_idt_entry[5] << 48);
+  KL_TRC_DATA("Pure64 NMI Handler location", pure64_nmi_handler_loc);
+
+  // The address that has just been calculated assumes that physical and virtual addresses are equal, but we've loaded
+  // in the higher half...
+  pure64_nmi_handler_loc |= 0xFFFFFFFF00000000;
+
+  // There's a short trampoline written in assembly language that is simply copied straight over the Pure64 NMI
+  // handler.
+  trampoline_length = reinterpret_cast<unsigned long>(&asm_proc_pure64_nmi_trampoline_end) -
+                      reinterpret_cast<unsigned long>(&asm_proc_pure64_nmi_trampoline_start);
+  KL_TRC_DATA("Trampoline start", reinterpret_cast<unsigned long>(&asm_proc_pure64_nmi_trampoline_start));
+  KL_TRC_DATA("Trampoline length", trampoline_length);
+
+  kl_memcpy(reinterpret_cast<void *>(&asm_proc_pure64_nmi_trampoline_start), reinterpret_cast<void *>(pure64_nmi_handler_loc), trampoline_length);
+
+  // Recreate the GDT so that it is long enough to contain TSS descriptors for all processors
+  proc_recreate_gdt(processor_count);
+
+  // The APs have had their NMI handlers overwritten, ready to go. They are triggered in to life by proc_mp_start_aps()
   // Now all interrupt controllers needed for the BSP are good to go. Enable interrupts.
   asm_proc_start_interrupts();
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Application Processor (AP) startup code.
+///
+/// When this function is complete, the AP it is running on will be able to participate fully in the scheduling system.
+void proc_mp_ap_startup()
+{
+  KL_TRC_ENTRY;
+
+  asm_proc_install_idt();
+  mem_x64_pat_init();
+  asm_syscall_x64_prepare();
+  proc_load_tss(proc_mp_this_proc_id());
+
+  panic("Starting an AP!");
 
   KL_TRC_EXIT;
 }

@@ -91,8 +91,11 @@ enum class PROC_IPI_MSGS
 // Initialise the first processor and some of the data structures needed to manage all processors in the system.
 void proc_gen_init();
 
-// Continue initialization such that the other processors can be started, but leave them idle for now.
+// Continue initialisation such that the other processors can be started, but leave them idle for now.
 void proc_mp_init();
+
+// Start all APs.
+void proc_mp_start_aps();
 
 // Stop the processor this function is called on. It may then be reinitialised later.
 void proc_stop_this_proc();

@@ -1,6 +1,8 @@
 /// @file
 /// @brief Platform-agnostic processor control functions
 
+//#define ENABLE_TRACING
+
 #include "klib/klib.h"
 #include "processor.h"
 #include "processor-int.h"
@@ -39,7 +41,7 @@ void proc_mp_signal_processor(unsigned int proc_id, PROC_IPI_MSGS msg)
 {
   KL_TRC_ENTRY;
 
-  KL_TRC_DATA("Message to send", static_cast<unsigned long>msg);
+  KL_TRC_DATA("Message to send", static_cast<unsigned long>(msg));
   KL_TRC_DATA("Processor to signal", proc_id);
 
   ASSERT(proc_id < processor_count);
@@ -56,16 +58,17 @@ void proc_mp_receive_signal(PROC_IPI_MSGS msg)
 {
   KL_TRC_ENTRY;
 
-  KL_TRC_DATA("Received message", static_cast<unsigned long>msg);
+  KL_TRC_DATA("Received message", static_cast<unsigned long>(msg));
 
   switch (msg)
   {
     case PROC_IPI_MSGS::RESUME:
-      INCOMPLETE_CODE(RESUME MSG);
+      asm_proc_start_interrupts();
+      asm("hlt");
       break;
 
     case PROC_IPI_MSGS::SUSPEND:
-      INCOMPLETE_CODE(SUSPEND MSG);
+      proc_stop_this_proc();
       break;
 
     case PROC_IPI_MSGS::TLB_SHOOTDOWN:
@@ -112,3 +115,26 @@ void proc_stop_all_procs()
 
   KL_TRC_EXIT;
 }
+
+/// @brief Start all Application Processors (APs)
+///
+/// Trigger all processors other than the BSP to begin executing.
+///
+/// They have been left halted with interrupts disabled by the bootloader (Pure64), so they are signalled by NMI to
+/// come up, since the NMI isn't blocked.
+void proc_mp_start_aps()
+{
+  KL_TRC_ENTRY;
+
+  if (processor_count > 1)
+  {
+    KL_TRC_TRACE((TRC_LVL_FLOW, "Starting other processors\n"));
+    for (unsigned int i = 1; i < processor_count; i++)
+    {
+      proc_mp_signal_processor(i, PROC_IPI_MSGS::RESUME);
+    }
+  }
+
+  KL_TRC_EXIT;
+}
+

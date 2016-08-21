@@ -7,7 +7,7 @@ SEGMENT .text
 GLOBAL asm_proc_load_gdt
 asm_proc_load_gdt:
   ; Fill in the GDT.
-  mov rax, gdt_pointer
+  mov rax, main_gdt_pointer
   lgdt [rax]
 
   ; x64 mode doesn't allow for jumps to set the CS register, so fill in in via
@@ -43,17 +43,17 @@ _lgdt_jump:
 GLOBAL asm_proc_load_tss
 asm_proc_load_tss:
   push rax
-  mov ax, 48
+  mov rax, rdi
   ltr ax
   pop rax
   ret
 
 ; This is the table that the processor uses to locate the GDT proper.
-GLOBAL gdt_pointer
-gdt_pointer:
+GLOBAL main_gdt_pointer
+main_gdt_pointer:
   ; Length of the table, in bytes, minus 1
-  dw end_of_gdt_table - gdt_table - 1
-  dq gdt_table
+  dw initial_end_of_gdt_table - initial_gdt_table - 1
+  dq initial_gdt_table
 
 ; A helper for filling in GDT entries.
 ;
@@ -97,7 +97,9 @@ gdt_pointer:
 ; The complete GDT table. It consists of a NULL entry, followed by Kernel and
 ; User space components. It should never change in normal operation.
 ALIGN 8
-gdt_table:
+GLOBAL initial_gdt_table
+GLOBAL initial_end_of_gdt_table
+initial_gdt_table:
   ; NULL entry
   dw 0x0000
   dw 0x0000
@@ -125,5 +127,5 @@ GLOBAL tss_gdt_entry
 tss_gdt_entry:
   TSS_ENTRY
 
-end_of_gdt_table:
+initial_end_of_gdt_table:
 

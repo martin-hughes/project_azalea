@@ -42,13 +42,13 @@ int main()
 {
   proc_gen_init();
   mem_gen_init();
-  syscall_gen_init();
 
   KL_TRC_TRACE((TRC_LVL_IMPORTANT, "Welcome to the OS!\n"));
 
   acpi_init_table_system();
 
   proc_mp_init();
+  syscall_gen_init();
 
   time_gen_init();
   task_gen_init(kernel_start);
@@ -68,6 +68,9 @@ int main()
 void kernel_start()
 {
   KL_TRC_TRACE((TRC_LVL_FLOW, "Entered kernel start\n"));
+
+  // kernel_start() runs on the BSP. Bring up the APs so they are ready to take on any threads created below.
+  proc_mp_start_aps();
 
   //task_create_new_process(dummy_proc, false);
 

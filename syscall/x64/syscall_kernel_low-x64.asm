@@ -50,13 +50,29 @@ asm_syscall_x64_prepare:
 ; System call number comes by RAX.
 GLOBAL asm_syscall_x64_syscall
 EXTERN syscall_x64_kernel_syscall
-EXTERN syscall_x64_kernel_stack
+EXTERN kernel_syscall_stack_ptrs
 asm_syscall_x64_syscall:
+  ; Stop interrupts while we're fiddling with the stack, to avoid bad corruptions.
+  cli
+
+  ; Figure out which processor we're dealing with
+  mov rbx, 0
+  str bx
+  sub bx, 48
+
+  ; BX now contains the processor ID number, multiplied by 16. 8 bytes is the length of a pointer type on x64, so now
+  ; we can figure out the kernel stack pointer as being located at BX + [kernel_syscall_stack_ptrs]
+  shr bx, 1
+
   ; Switch to kernel stack, saving the user mode one.
-  mov rbx, rsp
-  mov rdx, syscall_x64_kernel_stack
+  mov rdx, kernel_syscall_stack_ptrs
   mov rdx, [rdx]
+  add rdx, rbx
+  mov rdx, [rdx]
+  mov rbx, rsp
   mov rsp, rdx
+
+  sti
 
   ; Save RCX (which is the stored RIP) and R11 (which is the stored RFLAGS), as well as RBX which is the address of the
   ; user-mode stack.
@@ -81,7 +97,7 @@ asm_syscall_x64_syscall:
 
   ; Carry on! Manually encode a "64-bit operands" (REX.W) prefix because:
   ; 1 - otherwise sysret thinks it's jumping back to 32-bit code, and hilarity ensues
-  ; 2 - For some reason, adding the prefix using it's mnemonic doesn't seem to work with NASM.
+  ; 2 - For some reason, adding the prefix using its mnemonic doesn't seem to work with NASM.
   db 0x48
   sysret
 

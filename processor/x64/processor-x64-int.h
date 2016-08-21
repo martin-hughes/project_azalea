@@ -18,7 +18,9 @@ extern "C" void asm_proc_write_port(const unsigned long port_id, const unsigned 
 extern "C" void asm_proc_load_gdt();
 extern unsigned char tss_gdt_entry[TSS_DESC_LEN];
 void proc_init_tss();
-extern "C" void asm_proc_load_tss();
+void proc_load_tss(unsigned int proc_num);
+extern "C" void asm_proc_load_tss(unsigned long gdt_offset);
+void proc_recreate_gdt(unsigned int num_procs);
 
 // Interrupt setup and handling
 extern "C" void asm_proc_stop_interrupts();
@@ -41,6 +43,7 @@ extern unsigned char interrupt_descriptor_table[NUM_INTERRUPTS * IDT_ENTRY_LEN];
 // Multi-processor control
 void proc_mp_x64_signal_proc(unsigned int proc_id, PROC_IPI_MSGS msg);
 extern "C" void proc_mp_x64_receive_signal_int();
+extern "C" void proc_mp_ap_startup();
 
 // Specialised interrupt handlers:
 extern "C" void asm_proc_page_fault_handler();
@@ -86,3 +89,5 @@ extern "C" void proc_virt_except_fault_handler();
 extern "C" void asm_proc_security_fault_handler(); // 30
 extern "C" void proc_security_fault_handler(unsigned long err_code);
 
+// Helper functions
+void *proc_x64_allocate_stack();

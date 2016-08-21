@@ -5,6 +5,7 @@
 
 #include "klib/klib.h"
 #include "mem/mem.h"
+#include "mem/x64/mem-x64.h"
 #include "mem/x64/mem-x64-int.h"
 #include "processor/x64/processor-x64.h"
 #include "processor/x64/processor-x64-int.h"

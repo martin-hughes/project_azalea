@@ -3,8 +3,10 @@
 Import('env')
 files = ["timing/timing.cpp",
          "timing/hpet.cpp",
+         "x64/ap_startup-x64.asm",
          "x64/control-x64.asm",
-         "x64/gdt-x64.asm",
+         "x64/gdt-x64.cpp",
+         "x64/gdt-low-x64.asm",
          "x64/interrupts-low-x64.asm",
          "x64/task_manager-low-x64.asm",
          "x64/interrupts-x64.cpp",

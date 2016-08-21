@@ -14,6 +14,7 @@
 #include "processor/processor.h"
 #include "mem/mem.h"
 #include "mem/mem-int.h"
+#include "mem/x64/mem-x64.h"
 #include "mem/x64/mem-x64-int.h"
 
 mem_process_info task0_entry;

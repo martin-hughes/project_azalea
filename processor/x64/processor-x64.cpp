@@ -11,9 +11,6 @@
 #include "processor/x64/pic/pic.h"
 #include "mem/x64/mem-x64-int.h"
 
-unsigned char *tss_segment;
-const unsigned char TSS_SEG_LENGTH = 104;
-
 /// @brief Initialise the first processor.
 ///
 /// Does as much initialisation of the BSP as possible. We leave some of the harder stuff, like configuring the APIC
@@ -28,94 +25,11 @@ void proc_gen_init()
 	// Fill in the GDT, and select an appropriate set of segments. The TSS descriptor and segment will
 	// come later.
 	asm_proc_load_gdt();
-	tss_segment = (unsigned char *)NULL;
 
 	// Fill in the IDT now, so we at least handle our own exceptions.
 	proc_configure_idt();
 
 	// Further processor setup, including configuring PICs/APICs, continues after the memory mamanger is up.
-}
-
-// TODO: There needs to be one TSS / TSS descriptor per processor. (MT)
-/// @brief Create a TSS for the BSP
-///
-/// Create a TSS and configure the TSS descriptor in the GDT to point at it. This function is the the BSP only.
-void proc_init_tss()
-{
-  KL_TRC_ENTRY;
-
-  unsigned long tss_seg_ulong;
-
-  // We make the assumption below that the length fits into one byte of the limit field.
-  static_assert(TSS_SEG_LENGTH < 255, "The TSS segment size can't be described to the CPU");
-
-  // Allocate a new TSS segment.
-  tss_segment = new unsigned char[TSS_SEG_LENGTH];
-  unsigned long *segment_rsp0;
-  tss_seg_ulong = (unsigned long)tss_segment;
-  kl_memset(tss_segment, 0, TSS_SEG_LENGTH);
-
-  ////////////////////////////////////
-  // Fill in TSS segment descriptor //
-  ////////////////////////////////////
-
-  KL_TRC_DATA("Filling in TSS GDT entry at", (unsigned long)tss_gdt_entry);
-  KL_TRC_DATA("To point at TSS at", (unsigned long)tss_segment);
-
-  // These two bytes define the length of the segment.
-  tss_gdt_entry[0] = (unsigned char)(TSS_SEG_LENGTH - 1);
-  tss_gdt_entry[1] = 0;
-
-  // The next three bytes define the lowest three bytes of the base of the segment.
-  tss_gdt_entry[2] = (unsigned char)(tss_seg_ulong  & 0x00000000000000FF);
-  tss_gdt_entry[3] = (unsigned char)((tss_seg_ulong & 0x000000000000FF00) >> 8);
-  tss_gdt_entry[4] = (unsigned char)((tss_seg_ulong & 0x0000000000FF0000) >> 16);
-
-  // The next byte is formed of these bits (MSb first)
-  // 1 - Present
-  // 00 - DPL, but we don't want this called directly from ring 3.
-  // 0 - As defined.
-  // 1001 - Type, without busy (0x2) set.
-  tss_gdt_entry[5] = 0x89;
-
-  // The next byte is formed of these bits (MSb first)
-  // 0 - Granularity of 1 byte.
-  // 00 - as defined.
-  // 1 - Available
-  // 0000 - Highest nybble of the segment length.
-  tss_gdt_entry[6] = 0x10;
-
-  // The remaining 5 bytes of base
-  tss_gdt_entry[7] =  (unsigned char)((tss_seg_ulong & 0x00000000FF000000) >> 24);
-  tss_gdt_entry[8] =  (unsigned char)((tss_seg_ulong & 0x000000FF00000000) >> 32);
-  tss_gdt_entry[9] =  (unsigned char)((tss_seg_ulong & 0x0000FF0000000000) >> 40);
-  tss_gdt_entry[10] = (unsigned char)((tss_seg_ulong & 0x00FF000000000000) >> 48);
-  tss_gdt_entry[11] = (unsigned char)((tss_seg_ulong & 0xFF00000000000000) >> 56);
-
-  // Remaining 4 bytes are 0 or unused.
-  tss_gdt_entry[12] = 0;
-  tss_gdt_entry[13] = 0;
-  tss_gdt_entry[14] = 0;
-  tss_gdt_entry[15] = 0;
-
-  /////////////////////////
-  // Fill in TSS segment //
-  /////////////////////////
-
-  // The only important field is RSP0 - the stack pointer to use when jumping to ring 0.
-  segment_rsp0 = (unsigned long *)(tss_segment + 4);
-  *segment_rsp0 = (unsigned long)mem_x64_kernel_stack_ptr;
-  KL_TRC_DATA("Set Kernel RSP to", (unsigned long)mem_x64_kernel_stack_ptr);
-  KL_TRC_DATA("At position", (unsigned long)segment_rsp0);
-
-  ///////////////////
-  // Load the TSS! //
-  ///////////////////
-  KL_TRC_TRACE((TRC_LVL_FLOW, "About to load TSS\n"));
-  asm_proc_load_gdt();
-  asm_proc_load_tss();
-
-  KL_TRC_EXIT;
 }
 
 /// @brief Cause this processor to enter the halted state.
@@ -219,4 +133,22 @@ void proc_write_msr(PROC_X64_MSRS msr, unsigned long value)
   asm_proc_write_msr(msr_l, value);
 
   KL_TRC_EXIT;
+}
+
+// TODO: Could allocate a blank page below as a guard.
+/// @brief Allocate a single-page stack to the kernel.
+///
+/// @return An address that can be used as a stack pointer, growing downwards as far as the next page boundary.
+void *proc_x64_allocate_stack()
+{
+  KL_TRC_ENTRY;
+
+  void *new_stack = kmalloc(MEM_PAGE_SIZE);
+  new_stack = reinterpret_cast<void *>(reinterpret_cast<unsigned long>(new_stack) + MEM_PAGE_SIZE - 8);
+
+  KL_TRC_DATA("Issuing new stack", reinterpret_cast<unsigned long>(new_stack));
+
+  KL_TRC_EXIT;
+
+  return new_stack;
 }

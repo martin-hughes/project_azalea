@@ -60,7 +60,6 @@ namespace MEM_X64_CACHE_TYPES
   const unsigned char WRITE_BACK = 6;
 }
 
-void mem_x64_pat_init();
 unsigned char mem_x64_pat_get_val(const unsigned char cache_type, bool first_half);
 unsigned char mem_x64_pat_decode(const unsigned char pat_idx);
 
