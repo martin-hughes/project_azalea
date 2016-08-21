@@ -1,6 +1,8 @@
 /// @file
 /// @brief Code to interact with the processors' GDTs
 
+//#define ENABLE_TRACING
+
 #include "klib/klib.h"
 #include "processor/processor.h"
 #include "processor/x64/processor-x64.h"
@@ -47,34 +49,24 @@ void proc_recreate_gdt(unsigned int num_procs)
   initial_gdt_len = (unsigned short)(reinterpret_cast<unsigned long>(&initial_end_of_gdt_table) -
                                      reinterpret_cast<unsigned long>(&initial_gdt_table));
 
-  // If there's only one processor there's already a perfectly sensible GDT created, so don't bother messing with it.
-  if (num_procs == 1)
+  KL_TRC_TRACE((TRC_LVL_FLOW, "More processors\n"));
+  length_of_gdt = proc_gdt_calc_req_len(num_procs);
+
+  system_gdt = new unsigned char[length_of_gdt];
+
+  ASSERT(length_of_gdt >= initial_gdt_len);
+
+  kl_memcpy(&initial_gdt_table, system_gdt, initial_gdt_len);
+
+  // Populate all the other TSSs
+  for (int i = 0; i < num_procs; i++)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "No additional processors\n"));
-    system_gdt = &initial_gdt_table;
-    KL_TRC_DATA("GDT Pointer", reinterpret_cast<unsigned long>(system_gdt));
+    offset = proc_calc_tss_desc_offset(i);
+    proc_generate_tss(&system_gdt[offset], proc_x64_allocate_stack());
   }
-  else
-  {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "More processors\n"));
-    length_of_gdt = proc_gdt_calc_req_len(num_procs);
 
-    system_gdt = new unsigned char[length_of_gdt];
-
-    ASSERT(length_of_gdt > initial_gdt_len);
-
-    kl_memcpy(&initial_gdt_table, system_gdt, initial_gdt_len);
-
-    // Populate all the other TSSs
-    for (int i = 1; i < num_procs; i++)
-    {
-      offset = proc_calc_tss_desc_offset(i);
-      proc_generate_tss(&system_gdt[offset], proc_x64_allocate_stack());
-    }
-
-    proc_gdt_populate_pointer(main_gdt_pointer, reinterpret_cast<unsigned long>(system_gdt), length_of_gdt);
-    asm_proc_load_gdt();
-  }
+  proc_gdt_populate_pointer(main_gdt_pointer, reinterpret_cast<unsigned long>(system_gdt), length_of_gdt);
+  asm_proc_load_gdt();
 
   KL_TRC_EXIT;
 }

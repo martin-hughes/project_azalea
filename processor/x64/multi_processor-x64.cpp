@@ -182,9 +182,11 @@ void proc_mp_ap_startup()
   asm_proc_install_idt();
   mem_x64_pat_init();
   asm_syscall_x64_prepare();
+  asm_proc_load_gdt();
   proc_load_tss(proc_mp_this_proc_id());
 
   panic("Starting an AP!");
+  // Still need to signal completion to the signalling processor.
 
   KL_TRC_EXIT;
 }
