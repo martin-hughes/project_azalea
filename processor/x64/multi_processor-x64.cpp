@@ -130,8 +130,9 @@ void proc_mp_init()
   // msg_control_state.
   for (unsigned int i = 0; i < processor_count; i++)
   {
-    inter_proc_signals[i].msg_being_sent == PROC_IPI_MSGS::SUSPEND;
-    inter_proc_signals[i].msg_control_state == PROC_MP_X64_MSG_STATE::NO_MSG;
+    KL_TRC_DATA("Filling in signals for proc", i);
+    inter_proc_signals[i].msg_being_sent = PROC_IPI_MSGS::SUSPEND;
+    inter_proc_signals[i].msg_control_state = PROC_MP_X64_MSG_STATE::NO_MSG;
     klib_synch_spinlock_init(inter_proc_signals[i].signal_lock);
 
     // Generate a stack for syscall to use. Remember that the stack grows downwards from the end of the allocation.
@@ -159,7 +160,9 @@ void proc_mp_init()
   KL_TRC_DATA("Trampoline start", reinterpret_cast<unsigned long>(&asm_proc_pure64_nmi_trampoline_start));
   KL_TRC_DATA("Trampoline length", trampoline_length);
 
-  kl_memcpy(reinterpret_cast<void *>(&asm_proc_pure64_nmi_trampoline_start), reinterpret_cast<void *>(pure64_nmi_handler_loc), trampoline_length);
+  kl_memcpy(reinterpret_cast<void *>(&asm_proc_pure64_nmi_trampoline_start),
+            reinterpret_cast<void *>(pure64_nmi_handler_loc),
+            trampoline_length);
 
   // Recreate the GDT so that it is long enough to contain TSS descriptors for all processors
   proc_recreate_gdt(processor_count);
@@ -182,6 +185,8 @@ void proc_mp_ap_startup()
   KL_TRC_ENTRY;
 
   unsigned int proc_num = proc_mp_this_proc_id();
+
+  ASSERT(proc_num != 0);
 
   asm_proc_install_idt();
   mem_x64_pat_init();
@@ -306,7 +311,7 @@ void proc_mp_x64_signal_proc(unsigned int proc_id, PROC_IPI_MSGS msg)
 /// In x64 land, inter processor signals are sent by signalling an NMI to the target. That carries no data with it, so
 /// look up in the signal table to see what we received. Then pass that to the generic code to deal with it how it
 /// likes
-extern "C" void proc_mp_x64_receive_signal_int()
+void proc_mp_x64_receive_signal_int()
 {
   KL_TRC_ENTRY;
 
@@ -316,7 +321,7 @@ extern "C" void proc_mp_x64_receive_signal_int()
 
   proc_mp_receive_signal(inter_proc_signals[this_proc_id].msg_being_sent);
 
-  inter_proc_signals[this_proc_id].msg_control_state == PROC_MP_X64_MSG_STATE::ACKNOWLEDGED;
+  inter_proc_signals[this_proc_id].msg_control_state = PROC_MP_X64_MSG_STATE::ACKNOWLEDGED;
 
   KL_TRC_EXIT;
 }

@@ -107,7 +107,7 @@ unsigned long proc_read_msr(PROC_X64_MSRS msr)
   unsigned long retval;
   unsigned long msr_l = static_cast<unsigned long>(msr);
 
-  KL_TRC_DATA("Reading MSR", msr);
+  KL_TRC_DATA("Reading MSR", msr_l);
   retval = asm_proc_read_msr(msr_l);
   KL_TRC_DATA("Returned value", retval);
 
@@ -127,7 +127,7 @@ void proc_write_msr(PROC_X64_MSRS msr, unsigned long value)
 
   unsigned long msr_l = static_cast<unsigned long>(msr);
 
-  KL_TRC_DATA("Writing MSR", msr);
+  KL_TRC_DATA("Writing MSR", msr_l);
   KL_TRC_DATA("Value", value);
 
   asm_proc_write_msr(msr_l, value);

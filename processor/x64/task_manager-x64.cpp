@@ -68,8 +68,7 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
 
   // Allocate a whole 2MB for the stack. The stack grows downwards, so position the expected stack pointer near to the
   // end of the page.
-  stack_addr = (unsigned long *)kmalloc(MEM_PAGE_SIZE);
-  stack_addr += (MEM_PAGE_SIZE / sizeof(unsigned long));
+  stack_addr = static_cast<unsigned long *>(proc_x64_allocate_stack());
   stack_addr -= req_stack_entries;
   KL_TRC_DATA("Stack address", (unsigned long)stack_addr);
 
@@ -144,14 +143,6 @@ task_x64_exec_context *task_int_swap_task(unsigned long stack_ptr, unsigned long
     KL_TRC_DATA("Computed RIP of leaving thread", *(((unsigned long *)current_context->stack_ptr)+STACK_RIP_OFFSET));
   }
 
-  // Only processor 0 directly receives timer interrupts. In order to trigger scheduling on all other processors, send
-  // them an IPI for the correct vector.
-  if (proc_mp_this_proc_id() == 0)
-  {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Sending broadcast IPI\n"));
-    proc_send_ipi(0, PROC_IPI_SHORT_TARGET::ALL_EXCL_SELF, PROC_IPI_INTERRUPT::FIXED, 32);
-  }
-
   next_thread = task_get_next_thread();
   KL_TRC_DATA("Next thread", (unsigned long)next_thread);
   next_context = (task_x64_exec_context *)next_thread->execution_context;
@@ -159,6 +150,14 @@ task_x64_exec_context *task_int_swap_task(unsigned long stack_ptr, unsigned long
   KL_TRC_DATA("New CR3 value", (unsigned long)next_context->cr3_value);
   KL_TRC_DATA("Stack pointer", (unsigned long)next_context->stack_ptr);
   KL_TRC_DATA("Computed RIP of new thread", *(((unsigned long *)next_context->stack_ptr)+STACK_RIP_OFFSET));
+
+  // Only processor 0 directly receives timer interrupts. In order to trigger scheduling on all other processors, send
+  // them an IPI for the correct vector.
+  if (proc_mp_this_proc_id() == 0)
+  {
+    KL_TRC_TRACE((TRC_LVL_FLOW, "Sending broadcast IPI\n"));
+    proc_send_ipi(0, PROC_IPI_SHORT_TARGET::ALL_EXCL_SELF, PROC_IPI_INTERRUPT::FIXED, 32);
+  }
 
   KL_TRC_EXIT;
 

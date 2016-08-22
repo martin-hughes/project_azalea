@@ -1,7 +1,11 @@
 [BITS 64]
 SEGMENT .text
 
+task_switch_lock:
+    dq 0x00
+
 EXTERN task_int_swap_task
+EXTERN asm_klib_synch_spinlock_lock
 GLOBAL asm_task_switch_interrupt
 extern end_of_irq_ack_fn
 asm_task_switch_interrupt:
@@ -23,23 +27,33 @@ asm_task_switch_interrupt:
     push r14
     push r15
 
+    mov rdi, task_switch_lock
+    call asm_klib_synch_spinlock_lock
+
     mov rdi, rsp
     mov rsi, 0
     mov rdx, cr3
 
     call task_int_swap_task
 
+    push rax
+
+    mov rax, end_of_irq_ack_fn
+    call [rax]
+
+    pop rax
     mov rdx, rax
     add rdx, 16
     mov rax, [rdx]
 
     mov cr3, rax
 
-	sub rdx, 16
+    sub rdx, 16
     mov rsp, [rdx]
 
-    mov rax, end_of_irq_ack_fn
-    call [rax]
+    mov rax, task_switch_lock
+    mov rbx, 0
+    mov [rax], rbx
 
     pop r15
     pop r14

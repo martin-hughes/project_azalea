@@ -12,7 +12,8 @@ SEGMENT .text
 EXTERN proc_mp_ap_startup
 asm_proc_mp_ap_startup:
   call proc_mp_ap_startup
-  int 12
+  cli
+  hlt
 
 ; This code is copied over the Pure64 NMI handling code, to direct it to our AP startup code, below.
 GLOBAL asm_proc_pure64_nmi_trampoline_start

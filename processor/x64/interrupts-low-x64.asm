@@ -1,7 +1,7 @@
 [BITS 64]
 SEGMENT .text
 
-extern end_of_irq_ack_fn
+EXTERN end_of_irq_ack_fn
 
 ; Stops interrupts on this processor.
 GLOBAL asm_proc_stop_interrupts
