@@ -31,7 +31,7 @@ extern "C" void asm_proc_panic_interrupt_handler();
 extern "C" void proc_def_interrupt_handler();
 extern "C" void proc_panic_interrupt_handler();
 void proc_configure_idt();
-void proc_configure_idt_entry(unsigned int interrupt_num, int req_priv_lvl, void *fn_pointer);
+void proc_configure_idt_entry(unsigned int interrupt_num, int req_priv_lvl, void *fn_pointer, unsigned char ist_num);
 extern "C" void asm_proc_install_idt();
 
 extern "C" void *end_of_irq_ack_fn;

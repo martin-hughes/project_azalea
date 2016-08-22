@@ -42,7 +42,7 @@ asm_proc_pure64_new_nmi_handler:
   mov rax, _breakout_jump
   push rax        ; Push RIP on to the stack.
 
-  iretq           ; Bounce over to the next instruction.
+  iretq           ; Bounce over to the next instruction. This allows the next NMI to be generated when needed.
 
 _breakout_jump:
 

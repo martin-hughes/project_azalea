@@ -92,7 +92,7 @@ void proc_stop_other_procs()
 
   for (unsigned int i = 0; i < processor_count; i++)
   {
-    if (this_proc_id != i)
+    if ((this_proc_id != i) && (proc_info_block[i].processor_running))
     {
       KL_TRC_DATA("Signalling processor", i);
       proc_mp_signal_processor(i, PROC_IPI_MSGS::SUSPEND);

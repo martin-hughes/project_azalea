@@ -5,6 +5,7 @@
 
 #include "klib/klib.h"
 #include "processor/processor.h"
+#include "processor/processor-int.h"
 #include "processor/x64/processor-x64.h"
 #include "processor/x64/processor-x64-int.h"
 #include "processor/x64/pic/pic.h"
@@ -20,7 +21,7 @@ const unsigned char TSS_SEG_LENGTH = 104;
 
 unsigned short proc_gdt_calc_req_len(unsigned int num_procs);
 void proc_gdt_populate_pointer(unsigned char *ptr, unsigned long loc, unsigned short len);
-void proc_generate_tss(unsigned char *tss_descriptor, void *kernel_stack_loc);
+void proc_generate_tss(unsigned char *tss_descriptor, void *kernel_stack_loc, void *ist1_stack_loc);
 unsigned short proc_calc_tss_desc_offset(unsigned int proc_num);
 
 /// @brief Recreate the GDT
@@ -62,7 +63,7 @@ void proc_recreate_gdt(unsigned int num_procs)
   for (int i = 0; i < num_procs; i++)
   {
     offset = proc_calc_tss_desc_offset(i);
-    proc_generate_tss(&system_gdt[offset], proc_x64_allocate_stack());
+    proc_generate_tss(&system_gdt[offset], proc_x64_allocate_stack(), proc_x64_allocate_stack());
   }
 
   proc_gdt_populate_pointer(main_gdt_pointer, reinterpret_cast<unsigned long>(system_gdt), length_of_gdt);
@@ -123,7 +124,7 @@ void proc_init_tss()
 {
   KL_TRC_ENTRY;
 
-  proc_generate_tss(tss_gdt_entry,  mem_x64_kernel_stack_ptr);
+  proc_generate_tss(tss_gdt_entry,  mem_x64_kernel_stack_ptr, nullptr);
 
   KL_TRC_TRACE((TRC_LVL_FLOW, "About to load TSS\n"));
   asm_proc_load_gdt();
@@ -139,13 +140,17 @@ void proc_init_tss()
 ///
 /// @param tss_descriptor A pointer to the TSS descriptor to populate
 ///
-/// @param kernel_stack_lock A pointer to the kernel stack to use when entering the task described by this TSS.
-void proc_generate_tss(unsigned char *tss_descriptor, void *kernel_stack_loc)
+/// @param kernel_stack_loc A pointer to the kernel stack to use when entering the task described by this TSS.
+///
+/// @param ist1_stack_loc A pointer to a stack to use for interrupts using entry 1 of the Interrupt Stack Table
+///                       mechanism. Initially, this is just the NMI handler.
+void proc_generate_tss(unsigned char *tss_descriptor, void *kernel_stack_loc, void *ist1_stack_loc)
 {
   KL_TRC_ENTRY;
 
   unsigned long tss_seg_ulong;
   unsigned char *tss_segment;
+  unsigned long *ist1_entry;
 
   // We make the assumption below that the length fits into one byte of the limit field.
   static_assert(TSS_SEG_LENGTH < 255, "The TSS segment size can't be described to the CPU");
@@ -203,11 +208,15 @@ void proc_generate_tss(unsigned char *tss_descriptor, void *kernel_stack_loc)
   // Fill in TSS segment //
   /////////////////////////
 
-  // The only important field is RSP0 - the stack pointer to use when jumping to ring 0.
-  segment_rsp0 = (unsigned long *)(tss_segment + 4);
-  *segment_rsp0 = (unsigned long)kernel_stack_loc;
+  // There are two important fields. The first is RSP0 - the stack pointer to use when jumping to ring 0.
+  segment_rsp0 = reinterpret_cast<unsigned long *>(tss_segment + 4);
+  *segment_rsp0 = reinterpret_cast<unsigned long>(kernel_stack_loc);
   KL_TRC_DATA("Set Kernel RSP to", (unsigned long)kernel_stack_loc);
   KL_TRC_DATA("At position", (unsigned long)segment_rsp0);
+
+  // Next, fill in IST1
+  ist1_entry = reinterpret_cast<unsigned long *>(tss_segment + 36);
+  *ist1_entry = reinterpret_cast<unsigned long>(ist1_stack_loc);
 
   KL_TRC_EXIT;
 }

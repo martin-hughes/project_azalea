@@ -22,6 +22,7 @@
 #include "acpi/acpi_if.h"
 #include "mem/x64/mem-x64.h"
 #include "syscall/x64/syscall_kernel-x64.h"
+#include "processor/timing/timing.h"
 
 /// @brief Controls communication between source and target processors.
 enum class PROC_MP_X64_MSG_STATE
@@ -51,9 +52,6 @@ struct proc_mp_ipi_msg_state
   /// Prevents more than one processor signalling the target at once. Controlled by the initiator
   kernel_spinlock signal_lock;
 };
-
-extern processor_info *proc_info_block;
-extern unsigned int processor_count;
 
 const unsigned char SUBTABLE_LAPIC_TYPE = 0;
 const unsigned short *pure_64_nmi_idt_entry = reinterpret_cast<const unsigned short *>(0xFFFFFFFF00000020);
@@ -112,6 +110,7 @@ void proc_mp_init()
       lapic_table = (acpi_madt_local_apic *)subtable;
 
       proc_info_block[procs_found].processor_id = procs_found;
+      proc_info_block[procs_found].processor_running = false;
       proc_info_block[procs_found].platform_data.lapic_id = lapic_table->Id;
 
       KL_TRC_DATA("Our processor ID", procs_found);
@@ -165,6 +164,9 @@ void proc_mp_init()
   // Recreate the GDT so that it is long enough to contain TSS descriptors for all processors
   proc_recreate_gdt(processor_count);
 
+  // The first processor is definitely running already!
+  proc_info_block[0].processor_running = true;
+
   // The APs have had their NMI handlers overwritten, ready to go. They are triggered in to life by proc_mp_start_aps()
   // Now all interrupt controllers needed for the BSP are good to go. Enable interrupts.
   asm_proc_start_interrupts();
@@ -179,14 +181,35 @@ void proc_mp_ap_startup()
 {
   KL_TRC_ENTRY;
 
+  unsigned int proc_num = proc_mp_this_proc_id();
+
   asm_proc_install_idt();
   mem_x64_pat_init();
   asm_syscall_x64_prepare();
   asm_proc_load_gdt();
   proc_load_tss(proc_mp_this_proc_id());
 
-  panic("Starting an AP!");
-  // Still need to signal completion to the signalling processor.
+  proc_info_block[proc_num].processor_running = true;
+
+  // Signal completion to the signalling processor.
+  if (inter_proc_signals[proc_num].msg_being_sent == PROC_IPI_MSGS::RESUME)
+  {
+    KL_TRC_TRACE((TRC_LVL_FLOW, "Expected startup message received\n"));
+    ASSERT(inter_proc_signals[proc_num].msg_control_state == PROC_MP_X64_MSG_STATE::MSG_WAITING);
+    inter_proc_signals[proc_num].msg_control_state = PROC_MP_X64_MSG_STATE::ACKNOWLEDGED;
+  }
+  else
+  {
+    ASSERT(inter_proc_signals[proc_num].msg_control_state == PROC_MP_X64_MSG_STATE::NO_MSG);
+  }
+
+  // Starting interrupts ought to enable the processor to schedule work. If it doesn't start within a second, then
+  // something has gone wrong.
+  asm_proc_start_interrupts();
+
+  KL_TRC_TRACE((TRC_LVL_FLOW, "Waiting for scheduling\n"));
+  time_stall_process(1000000000);
+  panic("Failed to start AP");
 
   KL_TRC_EXIT;
 }

@@ -60,7 +60,7 @@ void proc_x64_configure_local_apic()
   local_apic = (apic_registers *)(((unsigned long)virtual_page) + offset);
 
   // Configure a spurious interrupt vector, and using the magic flags, enable the APIC to send interrupts
-  proc_configure_idt_entry(APIC_SPURIOUS_INT_VECTOR, 0, (void *)asm_proc_apic_spurious_interrupt);
+  proc_configure_idt_entry(APIC_SPURIOUS_INT_VECTOR, 0, (void *)asm_proc_apic_spurious_interrupt, 0);
   asm_proc_install_idt();
   local_apic->spurious_interrupt_vector = APIC_SIV_FLAGS | APIC_SPURIOUS_INT_VECTOR;
 

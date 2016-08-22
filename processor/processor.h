@@ -76,6 +76,9 @@ template <typename T> struct processor_info_generic
   /// in the system
   unsigned int processor_id;
 
+  /// Has the processor been started or not?
+  bool processor_running;
+
   /// Platform specific processor information
   T platform_data;
 };

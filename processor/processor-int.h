@@ -19,10 +19,10 @@ struct task_x64_exec_context
 void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thread);
 
 task_thread *task_get_next_thread();
-
 extern "C" task_x64_exec_context *task_int_swap_task(unsigned long stack_ptr, unsigned long exec_ptr, unsigned long cr3_value);
 
 void task_install_task_switcher();
 void task_platform_init();
+
 
 #endif

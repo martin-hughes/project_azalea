@@ -13,6 +13,9 @@ struct processor_info_x64
 
 typedef processor_info_generic<processor_info_x64> processor_info;
 
+extern processor_info *proc_info_block;
+extern unsigned int processor_count;
+
 enum class PROC_X64_MSRS
 {
   IA32_APIC_BASE = 0x1b,
