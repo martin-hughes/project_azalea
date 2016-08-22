@@ -34,7 +34,7 @@ void memory_test_2()
 {
   test_only_reset_allocator();
 
-  srand (time(NULL));
+  srand (time(nullptr));
 
   bool allocate = false;
   float proportion;

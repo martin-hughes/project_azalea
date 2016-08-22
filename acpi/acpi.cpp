@@ -18,7 +18,7 @@ void acpi_init_table_system()
 
   KL_TRC_TRACE((TRC_LVL_IMPORTANT, "ACPI Subsystem initialized\n"));
 
-  if (AcpiInitializeTables((ACPI_TABLE_DESC*) NULL, 0, FALSE) != AE_OK)
+  if (AcpiInitializeTables((ACPI_TABLE_DESC*) nullptr, 0, FALSE) != AE_OK)
   {
     panic("Failed to initialize ACPI tables");
   }

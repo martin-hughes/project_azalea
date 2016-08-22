@@ -70,7 +70,7 @@ void mem_gen_init()
   temp_phys_addr = (unsigned long)mem_get_phys_addr((void *)(task0_x64_entry.pml4_virt_addr - temp_offset));
   ASSERT(temp_phys_addr == (task0_x64_entry.pml4_phys_addr - temp_offset));
 
-  next_4kb_page = (unsigned char *)NULL;
+  next_4kb_page = nullptr;
   working_table_va_mapped = false;
 
   // Allocate a virtual address that is used for the kernel stack in all processes.
@@ -358,7 +358,7 @@ void *mem_get_next_4kb_page()
   KL_TRC_ENTRY;
 
   void *ret_val;
-  if (next_4kb_page == NULL)
+  if (next_4kb_page == nullptr)
   {
     next_4kb_page = (unsigned char *)mem_allocate_physical_pages(1);
   }
@@ -369,7 +369,7 @@ void *mem_get_next_4kb_page()
 
   if (((unsigned long)next_4kb_page) % MEM_PAGE_SIZE == 0)
   {
-    next_4kb_page = (unsigned char *)NULL;
+    next_4kb_page = nullptr;
   }
 
   KL_TRC_EXIT;
@@ -390,7 +390,7 @@ void mem_set_working_page_dir(unsigned long phys_page_addr)
   KL_TRC_DATA("phys_page_addr", phys_page_addr);
   KL_TRC_DATA("working_table_va_entry_addr", (unsigned long)working_table_va_entry_addr);
 
-  ASSERT(working_table_va_entry_addr != NULL);
+  ASSERT(working_table_va_entry_addr != nullptr);
   ASSERT((phys_page_addr & 0x0FFF) == 0);
 
   page_offset = phys_page_addr & 0x1FFFFF;
@@ -620,27 +620,27 @@ unsigned long *get_pml4_table_addr(task_process *context)
   process_x64_data *proc_data;
   unsigned long *table_addr;
 
-  if (context != NULL)
+  if (context != nullptr)
   {
     KL_TRC_TRACE((TRC_LVL_FLOW, "Context provided, use appropriate PML4\n"));
     mem_info = context->mem_info;
-    ASSERT(mem_info != NULL);
+    ASSERT(mem_info != nullptr);
     proc_data = (process_x64_data *)mem_info->arch_specific_data;
-    ASSERT(proc_data != NULL);
+    ASSERT(proc_data != nullptr);
     table_addr = (unsigned long *)proc_data->pml4_virt_addr;
   }
   else
   {
     KL_TRC_TRACE((TRC_LVL_FLOW, "No context provided, use current context\n"));
-    if(cur_thread != NULL)
+    if(cur_thread != nullptr)
     {
       KL_TRC_TRACE((TRC_LVL_FLOW, "Provide process specific data\n"));
       cur_process = cur_thread->parent_process;
-      ASSERT(cur_process != NULL);
+      ASSERT(cur_process != nullptr);
       mem_info = cur_process->mem_info;
-      ASSERT(mem_info != NULL);
+      ASSERT(mem_info != nullptr);
       proc_data = (process_x64_data *)mem_info->arch_specific_data;
-      ASSERT(proc_data != NULL);
+      ASSERT(proc_data != nullptr);
       table_addr = (unsigned long *)proc_data->pml4_virt_addr;
     }
     else
@@ -650,7 +650,7 @@ unsigned long *get_pml4_table_addr(task_process *context)
     }
   }
 
-  ASSERT(table_addr != NULL);
+  ASSERT(table_addr != nullptr);
   KL_TRC_DATA("Returning PML4 address", (unsigned long)table_addr);
 
   KL_TRC_EXIT;

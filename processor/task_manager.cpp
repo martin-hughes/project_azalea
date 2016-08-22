@@ -86,7 +86,7 @@ void task_gen_init(ENTRY_PROC kern_start_proc)
   klib_list_initialize(&process_list);
 
   task0_mem_info = mem_task_get_task0_entry();
-  ASSERT(task0_mem_info != NULL);
+  ASSERT(task0_mem_info != nullptr);
 
   KL_TRC_TRACE((TRC_LVL_FLOW, "Preparing the processor\n"));
   task_platform_init();
@@ -145,7 +145,7 @@ task_process *task_create_new_process(ENTRY_PROC entry_point,
   klib_list_initialize(&new_process->child_threads);
   new_process->process_list_item.item = (void *)new_process;
   new_process->kernel_mode = kernel_mode;
-  if (mem_info != NULL)
+  if (mem_info != nullptr)
   {
     KL_TRC_TRACE((TRC_LVL_FLOW, "mem_info provided\n"));
     new_process->mem_info = mem_info;
@@ -459,7 +459,7 @@ PROCESS_ID task_current_process_id()
 task_process *task_get_process_data(PROCESS_ID proc_id)
 {
   panic("task_get_process_data not implemented");
-  return (task_process *)NULL;
+  return nullptr;
 }
 
 /// @brief Get the task_thread block matching a given thread ID
@@ -470,7 +470,7 @@ task_process *task_get_process_data(PROCESS_ID proc_id)
 task_thread *task_get_thread_data(THREAD_ID thread_id)
 {
   panic("task_get_thread_data not implemented");
-  return (task_thread *)NULL;
+  return nullptr;
 }
 
 /// @brief Start executing all threads within the given process
@@ -480,18 +480,18 @@ void task_start_process(task_process *process)
 {
   KL_TRC_ENTRY;
 
-  task_thread *next_thread = (task_thread *)NULL;
-  klib_list_item *next_item = (klib_list_item *)NULL;
+  task_thread *next_thread = nullptr;
+  klib_list_item *next_item = nullptr;
 
   KL_TRC_DATA("Process address", (unsigned long)process);
 
-  ASSERT(process != (task_process*)NULL);
+  ASSERT(process != nullptr);
   next_item = process->child_threads.head;
 
-  while (next_item != (klib_list_item *)NULL)
+  while (next_item != nullptr)
   {
     next_thread = (task_thread *)next_item->item;
-    ASSERT(next_thread != NULL);
+    ASSERT(next_thread != nullptr);
     KL_TRC_DATA("Next thread", (unsigned long)next_thread);
     task_start_thread(next_thread);
 

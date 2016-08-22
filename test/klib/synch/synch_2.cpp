@@ -36,5 +36,5 @@ void synch_test_2()
 void* test2_second_part(void *)
 {
 
-  return NULL;
+  return nullptr;
 }

@@ -10,7 +10,7 @@ extern "C"
 #include "external/acpica/source/include/acpi.h"
 }
 
-hpet_hardware_cfg_block *hpet_config = (hpet_hardware_cfg_block *)NULL;
+hpet_hardware_cfg_block *hpet_config = nullptr;
 
 void time_hpet_set_flag(unsigned long &hpet_reg, const unsigned long flag);
 void time_hpet_clear_flag(unsigned long &hpet_reg, const unsigned long flag);
@@ -51,7 +51,7 @@ void time_hpet_init()
 
   retval = AcpiGetTable(table_name, 0, (ACPI_TABLE_HEADER **)&hpet_table);
   ASSERT(retval == AE_OK);
-  ASSERT(hpet_table->Address.Address != (unsigned long)NULL);
+  ASSERT(hpet_table->Address.Address != (unsigned long)nullptr);
 
   // Map the HPET configuration into the kernel's address space.
   phys_addr = hpet_table->Address.Address;

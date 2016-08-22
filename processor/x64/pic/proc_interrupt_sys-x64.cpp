@@ -108,7 +108,6 @@ void proc_configure_global_int_ctrlrs()
     ASSERT(proc_x64_ioapic_get_count() > 0);
 
     // Remap what would have been called IRQ 0-15 into interrupts 32-47. Point them all towards the BSP for now.
-    // TODO: The timer interrupt will definitely need to go to all processors (MT)
     proc_x64_ioapic_remap_interrupts(0, 32, bsp_apic_id);
   }
 

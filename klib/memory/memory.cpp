@@ -173,7 +173,7 @@ void *kmalloc(unsigned int mem_size)
   }
 
   return_addr = allocate_chunk_from_slab(slab_ptr, slab_idx);
-  ASSERT(return_addr != NULL);
+  ASSERT(return_addr != nullptr);
 
   // If the slab is completely full, add it to the appropriate list. If it isn't, it must be at least partially full
   // now, so add it to that list.
@@ -370,7 +370,7 @@ void init_allocator_system()
     klib_list_initialize(&full_slabs_list[i]);
 
     new_empty_slab = allocate_new_slab(i);
-    ASSERT(new_empty_slab != NULL);
+    ASSERT(new_empty_slab != nullptr);
     new_empty_slab_header = (slab_header *)new_empty_slab;
     klib_list_add_tail(&free_slabs_list[i], &new_empty_slab_header->list_entry);
   }
@@ -452,7 +452,7 @@ void *allocate_chunk_from_slab(void *slab, unsigned int chunk_size_idx)
   unsigned long chunk_offset;
 
 
-  ASSERT(slab != NULL);
+  ASSERT(slab != nullptr);
   ASSERT(chunk_size_idx < NUM_SLAB_LISTS);
 
   // Compute the address of the first part of the bitmap.
@@ -541,7 +541,7 @@ bool slab_is_full(void* slab, unsigned int chunk_size_idx)
   slab_header *slab_header_ptr = (slab_header *)slab;
   unsigned int max_chunks;
 
-  ASSERT(slab != NULL);
+  ASSERT(slab != nullptr);
   ASSERT(chunk_size_idx < NUM_SLAB_LISTS);
   max_chunks = NUM_CHUNKS_PER_SLAB[chunk_size_idx];
   ASSERT(slab_header_ptr->allocation_count <= max_chunks);
@@ -566,7 +566,7 @@ bool slab_is_empty(void* slab, unsigned int chunk_size_idx)
 
   slab_header *slab_header_ptr = (slab_header *)slab;
 
-  ASSERT(slab != NULL);
+  ASSERT(slab != nullptr);
 
   KL_TRC_EXIT;
 

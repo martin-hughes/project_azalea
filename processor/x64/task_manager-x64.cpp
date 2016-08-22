@@ -51,13 +51,13 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
 
   KL_TRC_ENTRY;
 
-  ASSERT(new_thread != NULL);
+  ASSERT(new_thread != nullptr);
   parent_process = new_thread->parent_process;
-  ASSERT(parent_process != NULL);
+  ASSERT(parent_process != nullptr);
   memmgr_data = parent_process->mem_info;
-  ASSERT(memmgr_data != NULL);
+  ASSERT(memmgr_data != nullptr);
   memmgr_x64_data = (process_x64_data *)memmgr_data->arch_specific_data;
-  ASSERT(memmgr_data != NULL);
+  ASSERT(memmgr_data != nullptr);
 
   // Fill in the easy parts of the context
   new_context = new task_x64_exec_context;

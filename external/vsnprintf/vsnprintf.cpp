@@ -545,8 +545,9 @@ static UINTMAX_T cast(LDOUBLE);
 static UINTMAX_T myround(LDOUBLE);
 static LDOUBLE mypow10(int);
 
-// Change by Martin. Hide errno from extern, it's not used elsewhere in the kernel.
+// Change by Martin. Hide errno from extern, it's not used elsewhere in the kernel. Define NULL to be nullptr
 int errno;
+#define NULL nullptr
 // End of change.
 
 int

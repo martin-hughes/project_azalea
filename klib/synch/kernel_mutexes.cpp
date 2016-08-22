@@ -11,7 +11,7 @@ void klib_synch_mutex_init(klib_mutex &mutex)
   klib_synch_spinlock_lock(mutex.access_lock);
 
   mutex.mutex_locked = false;
-  mutex.owner_thread = (task_thread *)NULL;
+  mutex.owner_thread = nullptr;
   klib_list_initialize(&mutex.waiting_threads_list);
 
   klib_synch_spinlock_unlock(mutex.access_lock);
@@ -53,7 +53,7 @@ SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, unsigned long max_wa
     task_thread *this_thread = task_get_cur_thread();
     klib_list_item *item = new klib_list_item;
 
-    ASSERT(mutex.owner_thread != NULL);
+    ASSERT(mutex.owner_thread != nullptr);
 
     klib_list_item_initialize(item);
     item->item = (void *)this_thread;
@@ -107,11 +107,11 @@ void klib_synch_mutex_release(klib_mutex &mutex)
   ASSERT((task_thread *)mutex.owner_thread == task_get_cur_thread());
 
   next_owner = mutex.waiting_threads_list.head;
-  if (next_owner == NULL)
+  if (next_owner == nullptr)
   {
     KL_TRC_TRACE((TRC_LVL_FLOW, "No next owner for the mutex, release\n"));
     mutex.mutex_locked = false;
-    mutex.owner_thread = (task_thread *)NULL;
+    mutex.owner_thread = nullptr;
   }
   else
   {
@@ -121,7 +121,7 @@ void klib_synch_mutex_release(klib_mutex &mutex)
     klib_list_remove(next_owner);
     task_start_thread((task_thread *)next_owner->item);
     delete next_owner;
-    next_owner = (klib_list_item *)NULL;
+    next_owner = nullptr;
   }
 
   klib_synch_spinlock_unlock(mutex.access_lock);

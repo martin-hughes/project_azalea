@@ -172,7 +172,7 @@ void mem_deallocate_virtual_range(void *start, unsigned int num_pages)
   actual_num_pages = round_to_power_two(num_pages);
 
   cur_list_item = vmm_range_data_list.head;
-  while (cur_list_item != NULL)
+  while (cur_list_item != nullptr)
   {
     cur_range_data = (vmm_range_data *)cur_list_item->item;
     if (cur_range_data->start == (unsigned long)start)
@@ -198,7 +198,7 @@ void mem_deallocate_virtual_range(void *start, unsigned int num_pages)
 
   // If we reach this point, we haven't been able to deallocate this range. It
   // probably wasn't a valid range to start with. Bail out.
-  ASSERT(cur_list_item != NULL);
+  ASSERT(cur_list_item != nullptr);
 
   if (acquired_lock)
   {
@@ -252,11 +252,11 @@ void mem_vmm_initialize()
   used_pages = 0;
 
   root_item = vmm_range_data_list.head;
-  ASSERT(root_item != NULL);
-  while (root_item != NULL)
+  ASSERT(root_item != nullptr);
+  while (root_item != nullptr)
   {
     root_data = (vmm_range_data *)root_item->item;
-    ASSERT(root_data != NULL);
+    ASSERT(root_data != nullptr);
     if (root_data->allocated)
     {
       used_pages += root_data->number_of_pages;
@@ -291,9 +291,9 @@ klib_list_item *mem_vmm_get_suitable_range(unsigned int num_pages)
   KL_TRC_ENTRY;
 
   klib_list_item *cur_range_item;
-  klib_list_item *selected_range_item = (klib_list_item *)NULL;
+  klib_list_item *selected_range_item = nullptr;
   vmm_range_data *cur_range;
-  vmm_range_data *selected_range = (vmm_range_data *)NULL;
+  vmm_range_data *selected_range = nullptr;
 
   ASSERT(!klib_list_is_empty(&vmm_range_data_list));
   ASSERT(num_pages != 0);
@@ -302,14 +302,14 @@ klib_list_item *mem_vmm_get_suitable_range(unsigned int num_pages)
   // Spin through the list of range data to look for the smallest suitable
   // range.
   cur_range_item = vmm_range_data_list.head;
-  while(cur_range_item != NULL)
+  while(cur_range_item != nullptr)
   {
     //KL_TRC_TRACE((TRC_LVL_FLOW, "Looking at next item.\n"));
     cur_range = (vmm_range_data *)cur_range_item->item;
-    ASSERT(cur_range != NULL);
+    ASSERT(cur_range != nullptr);
     if ((cur_range->allocated == false) &&
         (cur_range->number_of_pages >= num_pages) &&
-        ((selected_range == NULL) ||
+        ((selected_range == nullptr) ||
          (selected_range->number_of_pages > cur_range->number_of_pages)))
     {
       //KL_TRC_TRACE((TRC_LVL_FLOW, "Item found.\n"));
@@ -322,7 +322,7 @@ klib_list_item *mem_vmm_get_suitable_range(unsigned int num_pages)
   KL_TRC_EXIT;
 
   // TODO: Do something more sensible for out-of-memory conditions. (STAB)
-  ASSERT(selected_range_item != NULL);
+  ASSERT(selected_range_item != nullptr);
   return selected_range_item;
 }
 
@@ -402,7 +402,7 @@ void mem_vmm_resolve_merges(klib_list_item *start_point)
   klib_list_item *released_item;
   vmm_range_data *released_data;
 
-  ASSERT (start_point != NULL);
+  ASSERT (start_point != nullptr);
 
   // We want to merge in the reverse way that we split items. This means that
   // the address of the newly merged block must be a multiple of the size of
@@ -486,7 +486,7 @@ void mem_vmm_allocate_specific_range(unsigned long start_addr,
   // Look for the range that contains this memory address. Split it down to
   // size.
   cur_item = vmm_range_data_list.head;
-  while (cur_item != NULL)
+  while (cur_item != nullptr)
   {
     KL_TRC_TRACE((TRC_LVL_FLOW, "cur_item != NULL\n"));
     cur_data = (vmm_range_data *)cur_item->item;
@@ -531,7 +531,7 @@ void mem_vmm_allocate_specific_range(unsigned long start_addr,
 
   // Presumably this means we tried to get a range that's not owned by the
   // kernel.
-  ASSERT(cur_item != NULL);
+  ASSERT(cur_item != nullptr);
 
   KL_TRC_EXIT;
 }

@@ -78,7 +78,7 @@ void kernel_start()
   fn_ptr user_proc = (fn_ptr)0x200000;
   task_process *new_proc;
   new_proc = task_create_new_process(user_proc, false);
-  ASSERT(new_proc != NULL);
+  ASSERT(new_proc != nullptr);
 
   // Allocate it some memory for the code to go in, and allow the kernel to access it.
   void *physical_page = mem_allocate_physical_pages(1);

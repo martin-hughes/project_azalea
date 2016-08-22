@@ -106,7 +106,7 @@ void klib_synch_semaphore_clear(klib_semaphore &semaphore)
   klib_synch_spinlock_lock(semaphore.access_lock);
 
   next_owner = semaphore.waiting_threads_list.head;
-  if (next_owner == NULL)
+  if (next_owner == nullptr)
   {
     KL_TRC_TRACE((TRC_LVL_FLOW, "No next user for the semaphore, release\n"));
     ASSERT(semaphore.cur_user_count > 0);
@@ -120,7 +120,7 @@ void klib_synch_semaphore_clear(klib_semaphore &semaphore)
     klib_list_remove(next_owner);
     task_start_thread((task_thread *)next_owner->item);
     delete next_owner;
-    next_owner = (klib_list_item *)NULL;
+    next_owner = nullptr;
   }
 
   klib_synch_spinlock_unlock(semaphore.access_lock);

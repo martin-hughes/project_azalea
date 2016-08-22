@@ -25,13 +25,13 @@ void mem_gen_init()
 void *mem_allocate_physical_pages(unsigned int num_pages)
 {
   panic("mem_allocate_physical_pages not implemented");
-  return NULL;
+  return nullptr;
 }
 
 void *mem_allocate_virtual_range(unsigned int num_pages)
 {
   panic("mem_allocate_virtual_range Not implemented");
-  return NULL;
+  return nullptr;
 }
 
 void mem_map_range(void *physical_start, void* virtual_start, unsigned int len)

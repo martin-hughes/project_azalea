@@ -31,21 +31,12 @@ enum MEM_CACHE_MODES
 
 struct task_process;
 
-// In theory, no other part of the kernel should define NULL, however because we
-// include this file in some of the unit tests - which also include some of the
-// standard library headers - it's possible that it'll be defined there before
-// here, so guard against that.
-#ifndef NULL
-#define NULL ((void *)0)
-#endif
-
-// TODO: Consider how these interact with multiple possible process spaces. (MT)
 void *mem_allocate_physical_pages(unsigned int num_pages);
 void *mem_allocate_virtual_range(unsigned int num_pages);
 void mem_map_range(void *physical_start,
                    void* virtual_start,
                    unsigned int len,
-                   task_process *context = (task_process *)NULL,
+                   task_process *context = nullptr,
                    MEM_CACHE_MODES cache_mode = MEM_WRITE_BACK);
 void *mem_allocate_pages(unsigned int num_pages);
 

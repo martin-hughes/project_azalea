@@ -119,7 +119,7 @@ void task_gen_init(ENTRY_PROC kern_start_proc);
 // Create a new process, with a thread starting at entry_point.
 task_process *task_create_new_process(ENTRY_PROC entry_point,
     bool kernel_mode = false,
-    mem_process_info *mem_info = (mem_process_info *)NULL);
+    mem_process_info *mem_info = nullptr);
 
 // Create a new thread starting at entry_point, with parent parent_process.
 task_thread *task_create_new_thread(ENTRY_PROC entry_point, task_process *parent_process);

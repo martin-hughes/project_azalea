@@ -25,7 +25,7 @@ void synch_test_1()
   cout << "This test takes 10 seconds to complete." << endl;
 
   klib_synch_spinlock_init(main_lock);
-  pthread_create(&other_thread, NULL, &second_part, NULL);
+  pthread_create(&other_thread, nullptr, &second_part, nullptr);
   while (!lock_locked)
   {
     // Spin! Wait for the lock to be locked, otherwise there's a chance that the next statement will lock the lock
@@ -51,5 +51,5 @@ void* second_part(void *)
   lock_locked = false;
   klib_synch_spinlock_unlock(main_lock);
 
-  return NULL;
+  return nullptr;
 }

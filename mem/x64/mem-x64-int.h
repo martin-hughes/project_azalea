@@ -26,10 +26,6 @@ struct process_x64_data
   unsigned long pml4_virt_addr;
 };
 
-#ifndef NULL
-#define NULL ((void *)0)
-#endif
-
 unsigned long mem_encode_page_table_entry(page_table_entry &pte);
 page_table_entry mem_decode_page_table_entry(unsigned long encoded);
 void mem_set_working_page_dir(unsigned long phys_page_addr);
@@ -43,7 +39,7 @@ void mem_x64_pml4_init_sys(process_x64_data &task0_data);
 void mem_x64_pml4_allocate(process_x64_data &new_proc_data);
 void mem_x64_pml4_deallocate(process_x64_data &proc_data);
 void mem_x64_pml4_synchronize(void *updated_pml4_table);
-unsigned long *get_pml4_table_addr(task_process *context = (task_process *)NULL);
+unsigned long *get_pml4_table_addr(task_process *context = nullptr);
 
 extern void *mem_x64_kernel_stack_ptr;
 

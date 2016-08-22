@@ -51,7 +51,7 @@ ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer(void)
 ACPI_STATUS AcpiOsPredefinedOverride(const ACPI_PREDEFINED_NAMES *InitVal, ACPI_STRING *NewVal)
 {
   KL_TRC_ENTRY;
-  *NewVal = (ACPI_STRING)NULL;
+  *NewVal = (ACPI_STRING)nullptr;
   KL_TRC_EXIT;
 
   return AE_OK;
@@ -60,7 +60,7 @@ ACPI_STATUS AcpiOsPredefinedOverride(const ACPI_PREDEFINED_NAMES *InitVal, ACPI_
 ACPI_STATUS AcpiOsTableOverride(ACPI_TABLE_HEADER *ExistingTable, ACPI_TABLE_HEADER **NewTable)
 {
   KL_TRC_ENTRY;
-  *NewTable = (ACPI_TABLE_HEADER *)NULL;
+  *NewTable = (ACPI_TABLE_HEADER *)nullptr;
   KL_TRC_EXIT;
 
   return AE_OK;
@@ -70,7 +70,7 @@ ACPI_STATUS AcpiOsPhysicalTableOverride(ACPI_TABLE_HEADER *ExistingTable, ACPI_P
                                         UINT32 *NewTableLength)
 {
   KL_TRC_ENTRY;
-  *NewAddress = (ACPI_PHYSICAL_ADDRESS)NULL;
+  *NewAddress = (ACPI_PHYSICAL_ADDRESS)nullptr;
   KL_TRC_EXIT;
 
   return AE_OK;
@@ -94,7 +94,7 @@ void AcpiOsDeleteLock(ACPI_SPINLOCK Handle)
 {
   KL_TRC_ENTRY;
   kernel_spinlock *lock = (kernel_spinlock *)Handle;
-  ASSERT(lock != NULL);
+  ASSERT(lock != nullptr);
   delete lock;
   KL_TRC_EXIT;
 }
@@ -104,7 +104,7 @@ ACPI_CPU_FLAGS AcpiOsAcquireLock(ACPI_SPINLOCK Handle)
 {
   KL_TRC_ENTRY;
   kernel_spinlock *lock = (kernel_spinlock *)Handle;
-  ASSERT(lock != NULL);
+  ASSERT(lock != nullptr);
   klib_synch_spinlock_lock(*lock);
   KL_TRC_EXIT;
 
@@ -115,7 +115,7 @@ void AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags)
 {
   KL_TRC_ENTRY;
   kernel_spinlock *lock = (kernel_spinlock *)Handle;
-  ASSERT(lock != NULL);
+  ASSERT(lock != nullptr);
   klib_synch_spinlock_unlock(*lock);
   KL_TRC_EXIT;
 }
@@ -139,7 +139,7 @@ ACPI_STATUS AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle)
 {
   KL_TRC_ENTRY;
   klib_semaphore *sp = (klib_semaphore *)Handle;
-  ASSERT(sp != NULL);
+  ASSERT(sp != nullptr);
   delete sp;
   KL_TRC_EXIT;
 
@@ -154,8 +154,8 @@ ACPI_STATUS AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Time
   ACPI_STATUS retval;
   klib_semaphore *sp = (klib_semaphore *)Handle;
 
-  if (sp == NULL) return AE_BAD_PARAMETER;
-  ASSERT(sp != NULL);
+  if (sp == nullptr) return AE_BAD_PARAMETER;
+  ASSERT(sp != nullptr);
   ASSERT(Units == 1);
 
   if (wait == 0xFFFF)
@@ -188,7 +188,7 @@ ACPI_STATUS AcpiOsSignalSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units)
 {
   KL_TRC_ENTRY;
   klib_semaphore *sp = (klib_semaphore *)Handle;
-  ASSERT(sp != NULL);
+  ASSERT(sp != nullptr);
   ASSERT(Units == 1);
 
   klib_synch_semaphore_clear(*sp);
@@ -216,7 +216,7 @@ void AcpiOsDeleteMutex(ACPI_MUTEX Handle)
 {
   KL_TRC_ENTRY;
   klib_mutex *mutex = (klib_mutex *)Handle;
-  ASSERT(mutex != NULL);
+  ASSERT(mutex != nullptr);
   delete mutex;
   KL_TRC_EXIT;
 }
@@ -228,7 +228,7 @@ ACPI_STATUS AcpiOsAcquireMutex(ACPI_MUTEX Handle, UINT16 Timeout)
   unsigned long wait = Timeout;
   ACPI_STATUS retval;
   SYNC_ACQ_RESULT res;
-  ASSERT(mutex != NULL);
+  ASSERT(mutex != nullptr);
 
   if (wait == 0xFFFF)
   {
@@ -260,7 +260,7 @@ void AcpiOsReleaseMutex(ACPI_MUTEX Handle)
 {
   KL_TRC_ENTRY;
   klib_mutex *mutex = (klib_mutex *)Handle;
-  ASSERT(mutex != NULL);
+  ASSERT(mutex != nullptr);
 
   klib_synch_mutex_release(*mutex);
   KL_TRC_EXIT;
@@ -284,7 +284,7 @@ void *AcpiOsAllocate(ACPI_SIZE Size)
 void AcpiOsFree(void * Memory)
 {
   KL_TRC_ENTRY;
-  ASSERT(Memory != NULL);
+  ASSERT(Memory != nullptr);
   delete (char *)Memory;
   KL_TRC_EXIT;
 }
@@ -370,7 +370,7 @@ ACPI_THREAD_ID AcpiOsGetThreadId(void)
   KL_TRC_ENTRY;
   thread_id = (unsigned long)task_get_cur_thread();
 
-  // If task_get_cur_thread returns NULL then we're still single threaded, in which case it's acceptable to send any
+  // If task_get_cur_thread returns 0 then we're still single threaded, in which case it's acceptable to send any
   // positive integer back to ACPICA.
   if (thread_id == 0)
   {
@@ -388,7 +388,7 @@ ACPI_STATUS AcpiOsExecute(ACPI_EXECUTE_TYPE Type, ACPI_OSD_EXEC_CALLBACK Functio
   return AE_OK;
 }
 
-// TODO: Don't know quite what this does...
+// Don't know quite what this does...
 void AcpiOsWaitEventsComplete(void)
 {
   KL_TRC_ENTRY;
@@ -429,7 +429,7 @@ ACPI_STATUS AcpiOsReadPort(ACPI_IO_ADDRESS Address, UINT32 *Value, UINT32 Width)
   KL_TRC_DATA("Output address", (unsigned long)Value);
   KL_TRC_DATA("Width", Width);
 
-  ASSERT(Value != (UINT32 *)NULL);
+  ASSERT(Value != (UINT32 *)nullptr);
   ASSERT((Width == 8) || (Width == 16) || (Width == 32));
 
   *Value = proc_read_port(Address, Width);
@@ -617,7 +617,7 @@ void *AcpiOsOpenDirectory(char *Pathname, char *WildcardSpec, char RequestedFile
   KL_TRC_ENTRY;
   panic("ACPI attempted to open directory");
   KL_TRC_EXIT;
-  return NULL;
+  return nullptr;
 }
 
 char *AcpiOsGetNextFilename(void *DirHandle)
@@ -625,7 +625,7 @@ char *AcpiOsGetNextFilename(void *DirHandle)
   KL_TRC_ENTRY;
   panic("ACPI attempted to enumerate directory");
   KL_TRC_EXIT;
-  return (char *)NULL;
+  return (char *)nullptr;
 }
 
 void AcpiOsCloseDirectory(void *DirHandle)
@@ -643,7 +643,7 @@ ACPI_FILE AcpiOsOpenFile (const char *Path, UINT8 Modes)
   KL_TRC_ENTRY;
   panic("ACPI attempted to open file");
   KL_TRC_EXIT;
-  return NULL;
+  return nullptr;
 }
 
 void AcpiOsCloseFile(ACPI_FILE File)

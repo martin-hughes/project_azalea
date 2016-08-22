@@ -12,7 +12,7 @@ bool mem_is_bitmap_page_bit_set(unsigned long page_addr);
 
 void mem_map_virtual_page(unsigned long virt_addr,
                           unsigned long phys_addr,
-                          task_process *context = (task_process *)NULL,
+                          task_process *context = nullptr,
                           MEM_CACHE_MODES cache_mode = MEM_WRITE_BACK);
 void mem_unmap_virtual_page(unsigned long virt_addr);
 

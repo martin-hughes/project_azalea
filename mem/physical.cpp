@@ -101,7 +101,7 @@ void *mem_allocate_physical_pages(unsigned int num_pages)
   KL_TRC_EXIT;
 
   panic("No free pages to allocate.");
-  return NULL;
+  return nullptr;
 }
 
 /// @brief Deallocate a physical page, for use by someone else later.

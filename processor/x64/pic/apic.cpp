@@ -72,7 +72,7 @@ void proc_x64_configure_local_apic()
   offset = apic_base_addr % MEM_PAGE_SIZE;
   page_base = apic_base_addr - offset;
   virtual_page = mem_allocate_virtual_range(1);
-  mem_map_range((void *)page_base, virtual_page, 1, (task_process *)NULL, MEM_UNCACHEABLE);
+  mem_map_range((void *)page_base, virtual_page, 1, nullptr, MEM_UNCACHEABLE);
   local_apics[this_proc_id] = (apic_registers *)(((unsigned long)virtual_page) + offset);
 
   // Configure a spurious interrupt vector, and using the magic flags, enable the APIC to send interrupts

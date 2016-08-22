@@ -130,7 +130,7 @@ void mem_x64_pml4_synchronize(void *updated_pml4_table)
   klib_synch_spinlock_lock(pml4_copylock);
   kl_memcpy((void *)updated_kernel_section, (void *)pml4_copy_buffer, PML4_LENGTH / 2);
 
-  for(list_item = pml4_table_list.head; list_item != NULL; list_item = list_item->next)
+  for(list_item = pml4_table_list.head; list_item != nullptr; list_item = list_item->next)
   {
     proc_data = (process_x64_data *)list_item->item;
     pml4_destination = (unsigned char *)(proc_data->pml4_virt_addr + PML4_LENGTH / 2);

@@ -123,8 +123,8 @@ void proc_x64_ioapic_remap_interrupts(unsigned int ioapic_num, unsigned char bas
   ioapic_data *ioapic;
 
   first_item = ioapic_list.head;
-  ASSERT(first_item != NULL);
-  ASSERT(first_item->item != NULL);
+  ASSERT(first_item != nullptr);
+  ASSERT(first_item->item != nullptr);
 
   ioapic = (ioapic_data *)first_item->item;
 

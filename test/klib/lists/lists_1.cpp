@@ -30,10 +30,10 @@ void list_test_1()
   // Try mushing the list object's pointers.
   list_root.head = &demo_items[0];
   ASSERT(!klib_list_is_valid(&list_root));
-  list_root.head = NULL;
+  list_root.head = nullptr;
   list_root.tail = &demo_items[0];
   ASSERT(!klib_list_is_valid(&list_root));
-  list_root.tail = NULL;
+  list_root.tail = nullptr;
 
   // Add an item at the head and remove it again.
   klib_list_add_head(&list_root, &demo_items[0]);
