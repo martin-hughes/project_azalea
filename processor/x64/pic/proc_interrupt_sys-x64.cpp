@@ -22,6 +22,39 @@ APIC_TYPES selected_pic_mode = APIC_TYPES::LEGACY_PIC;
 
 APIC_TYPES proc_x64_detect_pic_type();
 
+/// @brief Select an interrupt control system for the system to use
+///
+/// The choices currently are to use the Legacy PIC, or APIC. X2APIC systems use the normal APIC.
+///
+/// @param num_procs The number of processors attached to the system.
+void proc_conf_interrupt_control_sys(unsigned int num_procs)
+{
+  KL_TRC_ENTRY;
+
+  APIC_TYPES local_pic = proc_x64_detect_pic_type();
+
+  switch (local_pic)
+  {
+    case APIC_TYPES::LEGACY_PIC:
+      KL_TRC_TRACE((TRC_LVL_FLOW, "Using legacy PIC mode\n"));
+      selected_pic_mode = APIC_TYPES::LEGACY_PIC;
+      ASSERT(num_procs == 1);
+      break;
+
+    case APIC_TYPES::APIC:
+    case APIC_TYPES::X2APIC:
+      KL_TRC_TRACE((TRC_LVL_FLOW, "Attempting to use APIC mode\n"));
+      selected_pic_mode = APIC_TYPES::APIC;
+      proc_x64_configure_sys_apic_mode(num_procs);
+      break;
+
+    default:
+      panic("Unsupported PIC type detected!");
+  }
+
+  KL_TRC_EXIT;
+}
+
 // See what kind of interrupt controller (PIC, APIC, etc.) this system uses. Then configure it as appropriate.
 // TODO: Enable x2APIC mode.
 // TODO: Consider the possibility of multiple IOAPICs. (We use just one now) (STAB)?
@@ -38,28 +71,15 @@ void proc_conf_local_int_controller()
   switch (local_pic)
   {
     case APIC_TYPES::LEGACY_PIC:
-      KL_TRC_TRACE((TRC_LVL_FLOW, "Using legacy PIC mode\n"));
-      selected_pic_mode = APIC_TYPES::LEGACY_PIC;
-      break;
-
-    case APIC_TYPES::APIC:
-    case APIC_TYPES::X2APIC:
-      KL_TRC_TRACE((TRC_LVL_FLOW, "Attempting to use APIC mode\n"));
-      selected_pic_mode = APIC_TYPES::APIC;
-      break;
-
-    default:
-      panic("Unsupported PIC type detected!");
-  }
-
-  switch (selected_pic_mode)
-  {
-    case APIC_TYPES::LEGACY_PIC:
+      ASSERT(proc_mp_this_proc_id() == 0);
+      ASSERT(selected_pic_mode == APIC_TYPES::LEGACY_PIC);
       asm_proc_configure_irqs();
       break;
 
     case APIC_TYPES::APIC:
-      proc_x64_configure_apic_mode();
+    case APIC_TYPES::X2APIC:
+      ASSERT(selected_pic_mode == APIC_TYPES::APIC);
+      proc_x64_configure_local_apic_mode();
       break;
 
     default:

@@ -2,6 +2,7 @@
 #define __PROC_X64_PIC_AND_APIC
 
 // Interface for controlling the system's various PICs or APIC/xAPIC/x2APICs
+void proc_conf_interrupt_control_sys(unsigned int num_procs);
 void proc_conf_local_int_controller();
 void proc_configure_global_int_ctrlrs();
 

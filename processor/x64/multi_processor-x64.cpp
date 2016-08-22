@@ -82,11 +82,6 @@ void proc_mp_init()
   unsigned long pure64_nmi_handler_loc;
   unsigned int trampoline_length;
 
-  // Prepare the IO-APICs, these will be useful for distributing interrupts between processors later on.
-  proc_conf_local_int_controller();
-  proc_configure_global_int_ctrlrs();
-
-  // Gather information about the processors.
   processor_count = *boot_info_cpu_cores_active;
   KL_TRC_DATA("Number of processors", processor_count);
 
@@ -122,6 +117,11 @@ void proc_mp_init()
 
     subtable = acpi_advance_subtable_ptr(subtable);
   }
+
+  // Prepare the interrupt controllers for business.
+  proc_conf_interrupt_control_sys(processor_count);
+  proc_conf_local_int_controller();
+  proc_configure_global_int_ctrlrs();
 
   ASSERT(procs_found == processor_count);
 
@@ -188,6 +188,7 @@ void proc_mp_ap_startup()
   asm_syscall_x64_prepare();
   asm_proc_load_gdt();
   proc_load_tss(proc_mp_this_proc_id());
+  proc_conf_local_int_controller();
 
   proc_info_block[proc_num].processor_running = true;
 

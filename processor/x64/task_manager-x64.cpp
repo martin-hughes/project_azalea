@@ -9,6 +9,7 @@
 #include "processor/processor-int.h"
 #include "processor/x64/processor-x64-int.h"
 #include "mem/x64/mem-x64-int.h"
+#include "processor/x64/pic/pic.h"
 
 const unsigned int req_stack_entries = 22;
 const unsigned int STACK_EFLAGS_OFFSET = 15;
@@ -141,6 +142,14 @@ task_x64_exec_context *task_int_swap_task(unsigned long stack_ptr, unsigned long
     KL_TRC_DATA("Storing CR3", (unsigned long)current_context->cr3_value);
     KL_TRC_DATA("Storing Stack pointer", (unsigned long)current_context->stack_ptr);
     KL_TRC_DATA("Computed RIP of leaving thread", *(((unsigned long *)current_context->stack_ptr)+STACK_RIP_OFFSET));
+  }
+
+  // Only processor 0 directly receives timer interrupts. In order to trigger scheduling on all other processors, send
+  // them an IPI for the correct vector.
+  if (proc_mp_this_proc_id() == 0)
+  {
+    KL_TRC_TRACE((TRC_LVL_FLOW, "Sending broadcast IPI\n"));
+    proc_send_ipi(0, PROC_IPI_SHORT_TARGET::ALL_EXCL_SELF, PROC_IPI_INTERRUPT::FIXED, 32);
   }
 
   next_thread = task_get_next_thread();

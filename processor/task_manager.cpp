@@ -76,6 +76,7 @@ void task_gen_init(ENTRY_PROC kern_start_proc)
   mem_process_info *task0_mem_info;
   task_process *first_process;
   unsigned int number_of_procs = proc_mp_proc_count();
+  task_thread *new_idle_thread;
 
   next_proc_id = 0;
   next_thread_id = 0;
@@ -97,15 +98,18 @@ void task_gen_init(ENTRY_PROC kern_start_proc)
   task_start_process(first_process);
 
   KL_TRC_TRACE((TRC_LVL_FLOW, "Creating per-process info\n"));
+  KL_TRC_DATA("Number of processors", number_of_procs);
   current_threads = new task_thread *[number_of_procs];
   continue_this_thread = new bool[number_of_procs];
   idle_threads = new task_thread *[number_of_procs];
   for (int i = 0; i < number_of_procs; i++)
   {
+    KL_TRC_DATA("Working on processor", i);
     current_threads[i] = nullptr;
     continue_this_thread[i] = false;
 
-    idle_threads[i] = task_create_new_thread(task_idle_thread_cycle, first_process);
+    new_idle_thread = task_create_new_thread(task_idle_thread_cycle, first_process);
+    idle_threads[i] = new_idle_thread;
     task_thread_cycle_remove(idle_threads[i]);
     idle_threads[i]->permit_running = false;
   }
@@ -187,6 +191,9 @@ task_thread *task_create_new_thread(ENTRY_PROC entry_point, task_process *parent
   task_thread *new_thread = new task_thread;
 
   ASSERT(parent_process != nullptr);
+
+  KL_TRC_DATA("Entry point", reinterpret_cast<unsigned long>(entry_point));
+  KL_TRC_DATA("Parent Process", reinterpret_cast<unsigned long>(parent_process));
 
   new_thread->parent_process = parent_process;
 
@@ -368,6 +375,8 @@ task_thread *task_get_cur_thread()
 {
   KL_TRC_ENTRY;
 
+  unsigned int proc_id;
+
   task_thread *ret_thread;
   if (current_threads == nullptr)
   {
@@ -376,7 +385,9 @@ task_thread *task_get_cur_thread()
   }
   else
   {
-    ret_thread = current_threads[proc_mp_this_proc_id()];
+    proc_id = proc_mp_this_proc_id();
+    KL_TRC_DATA("Getting thread for processor ID", proc_id);
+    ret_thread = current_threads[proc_id];
     KL_TRC_DATA("Returning thread", (unsigned long)ret_thread);
   }
 

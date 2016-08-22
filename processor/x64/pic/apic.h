@@ -4,8 +4,8 @@
 #include "pic.h"
 
 // Interface to control regular APICs (not X2 APICs)
-
-void proc_x64_configure_apic_mode();
+void proc_x64_configure_sys_apic_mode(unsigned int num_procs);
+void proc_x64_configure_local_apic_mode();
 void proc_x64_configure_local_apic();
 unsigned char proc_x64_apic_get_local_id();
 
@@ -21,7 +21,7 @@ struct apic_registers
 {
   unsigned long reserved_1[4] __attribute__ ((aligned (16)));
 
-  unsigned int local_apid_id __attribute__ ((aligned (16))); // Offset 0x20: Local APIC ID Register (RO).
+  unsigned int local_apic_id __attribute__ ((aligned (16))); // Offset 0x20: Local APIC ID Register (RO).
 
   unsigned int local_apic_version __attribute__ ((aligned (16))); // Offset 0x30: Local APIC version register (RO).
 
