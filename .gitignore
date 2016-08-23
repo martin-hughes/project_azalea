@@ -4,7 +4,7 @@
 .sconsign.dblite
 .settings/
 Debug/
-docs/
+docs/html/
 output/
 *.pyc
 kernel_disc_image_nonlive.vdi
