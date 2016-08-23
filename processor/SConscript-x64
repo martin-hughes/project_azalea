@@ -20,6 +20,7 @@ files = ["timing/timing.cpp",
          "x64/pic/apic-x64.asm",
          "x64/pic/apic.cpp",
          "x64/pic/ioapic-x64.cpp",
+         "multi_processor.cpp",
         ]
 obj = env.Library("processor_x64", files)
 Return ("obj") 

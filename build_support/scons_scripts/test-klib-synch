@@ -7,6 +7,9 @@ import defaults
 env = Environment()
 defaults.setup_default_env(env)
 
+env['CXXFLAGS'] = '-std=gnu++14'
+env['LINKFLAGS'] = '-Wl,--start-group'
+
 # List of required components.
 dependencies_in = ['#test/test_core/SConscript',
                    '#test/klib/synch/SConscript',

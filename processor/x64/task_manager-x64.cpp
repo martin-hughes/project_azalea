@@ -102,8 +102,6 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
   return (void *)new_context;
 }
 
-// TODO: Note that at present, exec_ptr is always 0 because RIP is stored in the stack.
-// TODO: Probably should remove it then...
 /// @brief Main task switcher
 ///
 /// task_int_swap_task() is called by the timer interrupt. It saves the execution context of the thread currently
@@ -114,8 +112,9 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
 ///
 /// @param stack_ptr The stack pointer that provides the execution context that has just finished executing
 ///
-/// @param exec_ptr The value of the program counter for the suspended thread (note: This is not actually used, or even
-///                 correct at the moment.
+/// @param exec_ptr The value of the program counter for the suspended thread. Note: This value is for information only
+///                 - When the thread resumes, it will use the value of RIP that is stored in the stack above
+///                 stack_ptr.
 ///
 /// @param cr3_value The value of CR3 used by the suspended thread
 ///

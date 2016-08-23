@@ -31,7 +31,7 @@ asm_task_switch_interrupt:
     call asm_klib_synch_spinlock_lock
 
     mov rdi, rsp
-    mov rsi, 0
+    mov rsi, [rsp + 128]
     mov rdx, cr3
 
     call task_int_swap_task

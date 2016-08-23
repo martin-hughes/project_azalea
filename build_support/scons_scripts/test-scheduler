@@ -13,7 +13,7 @@ env['LINKFLAGS'] = '-Wl,--start-group'
 # List of required components.
 dependencies_in = ['#test/test_core/SConscript',
                    '#test/processor/scheduler/SConscript',
-                   '#processor/Sconscript-tm',
+                   '#processor/Sconscript-generic',
                    '#klib/misc/SConscript',
                    '#klib/synch/SConscript',
                    '#klib/lists/Sconscript',

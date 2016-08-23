@@ -19,6 +19,7 @@ void list_test_1()
   for (int i = 0; i < num_demo_items; i++)
   {
     klib_list_item_initialize(&demo_items[i]);
+    demo_items[i].item = const_cast<unsigned int *>(&num_demo_items);
   }
 
   // Test the empty list.
@@ -82,6 +83,8 @@ void list_test_1()
   ASSERT(demo_items[0].next == &demo_items[2]);
   ASSERT(demo_items[2].next == &demo_items[3]);
   ASSERT(list_root.tail == &demo_items[3]);
+
+  ASSERT(klib_list_get_length(&list_root) == 5);
 
   klib_list_remove(&demo_items[3]);
   ASSERT(klib_list_is_valid(&list_root));

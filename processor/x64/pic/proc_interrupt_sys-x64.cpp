@@ -56,7 +56,6 @@ void proc_conf_interrupt_control_sys(unsigned int num_procs)
 }
 
 // See what kind of interrupt controller (PIC, APIC, etc.) this system uses. Then configure it as appropriate.
-// TODO: Enable x2APIC mode.
 // TODO: Consider the possibility of multiple IOAPICs. (We use just one now) (STAB)?
 
 /// @brief Configure the interrupt controller attached to this processor.

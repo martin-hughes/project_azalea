@@ -40,25 +40,6 @@ void kl_trc_init_tracing()
 #endif
 }
 
-void kl_trc_output_argument(char const *str)
-{
-#ifdef KL_TRACE_BY_SERIAL_PORT
-  while(*str != 0)
-  {
-    while(!kl_trc_serial_port_ready())
-    {
-      //spin!
-    }
-
-    asm_proc_write_port(TRC_COM1_BASE_PORT, *str, 8);
-    str++;
-  }
-#endif
-#ifdef KL_TRACE_BY_MAGIC_PORT
-  asm_trc_dbg_port_output_string(str);
-#endif
-}
-
 void kl_trc_output_argument(unsigned long value)
 {
   char buf[19] = "0x0000000000000000";
@@ -79,7 +60,26 @@ void kl_trc_output_argument(unsigned long value)
     value >>= 4;
   }
 
-  kl_trc_output_argument(buf);
+  kl_trc_output_argument((char const *)buf);
+}
+
+void kl_trc_output_argument(char const *str)
+{
+#ifdef KL_TRACE_BY_SERIAL_PORT
+  while(*str != 0)
+  {
+    while(!kl_trc_serial_port_ready())
+    {
+      //spin!
+    }
+
+    asm_proc_write_port(TRC_COM1_BASE_PORT, *str, 8);
+    str++;
+  }
+#endif
+#ifdef KL_TRACE_BY_MAGIC_PORT
+  asm_trc_dbg_port_output_string(str);
+#endif
 }
 
 void kl_trc_output_argument()

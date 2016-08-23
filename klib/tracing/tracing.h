@@ -1,6 +1,8 @@
 #ifndef _KLIB_TRACING_H
 #define _KLIB_TRACING_H
 
+#include <type_traits>
+
 //#define ENABLE_TRACING
 
 enum class TRC_LVL
@@ -19,7 +21,7 @@ enum class TRC_LVL
 #define KL_TRC_ENTRY kl_trc_trace(TRC_LVL::FLOW, "ENTRY ", __FUNCTION__, " { \n")
 #define KL_TRC_EXIT kl_trc_trace(TRC_LVL::FLOW, "EXIT ", __FUNCTION__, " } \n")
 
-#define KL_TRC_DATA(name, val) kl_trc_trace(TRC_LVL::FLOW, (name), ": ", (val), "\n")
+#define KL_TRC_DATA(name, val) kl_trc_trace(TRC_LVL::FLOW, (name), ": ", (unsigned long)(val), "\n")
 
 #else
 #define KL_TRC_INIT_TRACING
@@ -37,6 +39,7 @@ void kl_trc_init_tracing();
 
 template <typename... args_t> void kl_trc_trace(TRC_LVL lvl, args_t... params);
 template <typename p, typename... args_t> void kl_trc_output_argument(p param, args_t... params);
+//template <typename p> void kl_trc_output_argument(p param);
 void kl_trc_output_argument(char const *str);
 void kl_trc_output_argument(unsigned long value);
 void kl_trc_output_argument();
@@ -48,7 +51,14 @@ template <typename... args_t> void kl_trc_trace(TRC_LVL lvl, args_t... params)
 
 template <typename p, typename... args_t> void kl_trc_output_argument(p param, args_t... params)
 {
-  kl_trc_output_argument(param);
+  if (std::is_integral<p>::value)
+  {
+    kl_trc_output_argument((unsigned long)param);
+  }
+  else
+  {
+    kl_trc_output_argument(param);
+  }
   kl_trc_output_argument(params...);
 }
 

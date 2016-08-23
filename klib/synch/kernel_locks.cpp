@@ -2,8 +2,6 @@
 #include "klib/klib.h"
 #include "processor/processor.h"
 
-// TODO: Add some more data to the spinlocks, e.g. an initialised flag?
-
 void klib_synch_spinlock_init(kernel_spinlock &lock)
 {
   KL_TRC_ENTRY;
