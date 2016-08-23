@@ -39,7 +39,7 @@ bool klib_synch_spinlock_try_lock(kernel_spinlock &lock)
 
   res = asm_klib_synch_spinlock_try_lock(&lock) == 1 ? true : false;
 
-  KL_TRC_EXIT
+  KL_TRC_EXIT;
 
   return res;
 }

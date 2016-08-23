@@ -196,12 +196,12 @@ void mem_map_virtual_page(unsigned long virt_addr,
   if (PT_MARKED_PRESENT(*encoded_entry))
   {
     // Get the physical address of the next table.
-    KL_TRC_TRACE((TRC_LVL_FLOW, "PML4 entry marked present\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "PML4 entry marked present\n");
     table_phys_addr = (void *)mem_x64_phys_addr_from_pte(*encoded_entry);
   }
   else
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "PML4 entry not present\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "PML4 entry not present\n");
     table_phys_addr = (void *)mem_get_next_4kb_page();
 
     new_entry.target_addr = (unsigned long)table_phys_addr;
@@ -223,7 +223,7 @@ void mem_map_virtual_page(unsigned long virt_addr,
     if (is_kernel_allocation)
     {
       ASSERT(pml4_entry_idx >= 2048);
-      KL_TRC_TRACE((TRC_LVL_FLOW, "Synchronizing PML4.\n"));
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Synchronizing PML4.\n");
       mem_x64_pml4_synchronize((void *)table_addr);
       klib_synch_spinlock_unlock(pml4_edit_lock);
     }
@@ -240,12 +240,12 @@ void mem_map_virtual_page(unsigned long virt_addr,
   KL_TRC_DATA("Encoded entry", (unsigned long) *encoded_entry);
   if (PT_MARKED_PRESENT(*encoded_entry))
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "PDPT entry marked present\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "PDPT entry marked present\n");
     table_phys_addr = (void *)mem_x64_phys_addr_from_pte(*encoded_entry);
   }
   else
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "PDPT entry not present\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "PDPT entry not present\n");
 
     table_phys_addr = (void *)mem_get_next_4kb_page();
 
@@ -398,7 +398,7 @@ void mem_set_working_page_dir(unsigned long phys_page_addr)
 
   if (working_table_va_mapped)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Invalidating PT\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Invalidating PT\n");
     *working_table_va_entry_addr = 0;
     mem_invalidate_page_table(working_table_virtual_addr_base);
     working_table_va_mapped = false;
@@ -622,7 +622,7 @@ unsigned long *get_pml4_table_addr(task_process *context)
 
   if (context != nullptr)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Context provided, use appropriate PML4\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Context provided, use appropriate PML4\n");
     mem_info = context->mem_info;
     ASSERT(mem_info != nullptr);
     proc_data = (process_x64_data *)mem_info->arch_specific_data;
@@ -631,10 +631,10 @@ unsigned long *get_pml4_table_addr(task_process *context)
   }
   else
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "No context provided, use current context\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "No context provided, use current context\n");
     if(cur_thread != nullptr)
     {
-      KL_TRC_TRACE((TRC_LVL_FLOW, "Provide process specific data\n"));
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Provide process specific data\n");
       cur_process = cur_thread->parent_process;
       ASSERT(cur_process != nullptr);
       mem_info = cur_process->mem_info;
@@ -645,7 +645,7 @@ unsigned long *get_pml4_table_addr(task_process *context)
     }
     else
     {
-      KL_TRC_TRACE((TRC_LVL_FLOW, "No context provided, use current context\n"));
+      KL_TRC_TRACE(TRC_LVL::FLOW, "No context provided, use current context\n");
       table_addr = (unsigned long *)task0_x64_entry.pml4_virt_addr;
     }
   }

@@ -50,7 +50,7 @@ void proc_recreate_gdt(unsigned int num_procs)
   initial_gdt_len = (unsigned short)(reinterpret_cast<unsigned long>(&initial_end_of_gdt_table) -
                                      reinterpret_cast<unsigned long>(&initial_gdt_table));
 
-  KL_TRC_TRACE((TRC_LVL_FLOW, "More processors\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "More processors\n");
   length_of_gdt = proc_gdt_calc_req_len(num_procs);
 
   system_gdt = new unsigned char[length_of_gdt];
@@ -126,7 +126,7 @@ void proc_init_tss()
 
   proc_generate_tss(tss_gdt_entry,  mem_x64_kernel_stack_ptr, nullptr);
 
-  KL_TRC_TRACE((TRC_LVL_FLOW, "About to load TSS\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "About to load TSS\n");
   asm_proc_load_gdt();
   proc_load_tss(0);
 

@@ -88,7 +88,7 @@ void *mem_allocate_physical_pages(unsigned int num_pages)
         addr = SIZE_OF_PAGE * ((64 * i) + j);
         phys_pages_bitmap[i] = phys_pages_bitmap[i] & (~mask);
 
-        KL_TRC_TRACE((TRC_LVL_EXTRA, "Address found\n"));
+        KL_TRC_TRACE(TRC_LVL::EXTRA, "Address found\n");
         KL_TRC_EXIT;
         klib_synch_spinlock_unlock(bitmap_lock);
         return (void *)addr;

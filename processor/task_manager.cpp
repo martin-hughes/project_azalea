@@ -88,16 +88,16 @@ void task_gen_init(ENTRY_PROC kern_start_proc)
   task0_mem_info = mem_task_get_task0_entry();
   ASSERT(task0_mem_info != nullptr);
 
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Preparing the processor\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Preparing the processor\n");
   task_platform_init();
 
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Creating first process\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Creating first process\n");
   first_process = task_create_new_process(kern_start_proc, true, task0_mem_info);
   KL_TRC_DATA("First process at", (unsigned long)first_process);
   ASSERT(first_process != nullptr);
   task_start_process(first_process);
 
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Creating per-process info\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Creating per-process info\n");
   KL_TRC_DATA("Number of processors", number_of_procs);
   current_threads = new task_thread *[number_of_procs];
   continue_this_thread = new bool[number_of_procs];
@@ -114,7 +114,7 @@ void task_gen_init(ENTRY_PROC kern_start_proc)
     idle_threads[i]->permit_running = false;
   }
 
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Beginning task switching\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Beginning task switching\n");
   task_install_task_switcher();
 
   KL_TRC_EXIT;
@@ -147,12 +147,12 @@ task_process *task_create_new_process(ENTRY_PROC entry_point,
   new_process->kernel_mode = kernel_mode;
   if (mem_info != nullptr)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "mem_info provided\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "mem_info provided\n");
     new_process->mem_info = mem_info;
   }
   else
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "No mem_info, create it\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "No mem_info, create it\n");
     new_process->mem_info = mem_task_create_task_entry();
   }
 
@@ -165,7 +165,7 @@ task_process *task_create_new_process(ENTRY_PROC entry_point,
   }
   klib_synch_spinlock_unlock(next_id_lock);
 
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Checks complete, adding process to list\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Checks complete, adding process to list\n");
   klib_list_add_head(&process_list, &new_process->process_list_item);
 
   task_create_new_thread(entry_point, new_process);
@@ -273,7 +273,7 @@ task_thread *task_get_next_thread()
 
   if (continue_this_thread[proc_id])
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Requested to continue current thread\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Requested to continue current thread\n");
     next_thread = current_threads[proc_id];
     ASSERT(next_thread != nullptr);
   }
@@ -281,19 +281,19 @@ task_thread *task_get_next_thread()
   {
     if (current_threads[proc_id] == idle_threads[proc_id])
     {
-      KL_TRC_TRACE((TRC_LVL_FLOW, "Currently on an idle thread, attempt to find non-idle thread\n"));
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Currently on an idle thread, attempt to find non-idle thread\n");
       ASSERT(start_of_thread_cycle != nullptr);
       next_thread = start_of_thread_cycle;
     }
     else if (current_threads[proc_id] == nullptr)
     {
-      KL_TRC_TRACE((TRC_LVL_FLOW, "No threads running previously, start at the beginning\n"));
+      KL_TRC_TRACE(TRC_LVL::FLOW, "No threads running previously, start at the beginning\n");
       ASSERT(start_of_thread_cycle != nullptr);
       next_thread = start_of_thread_cycle;
     }
     else
     {
-      KL_TRC_TRACE((TRC_LVL_FLOW, "Try next thread.\n"));
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Try next thread.\n");
       next_thread = current_threads[proc_id]->next_thread;
       ASSERT(next_thread != nullptr);
     }
@@ -306,25 +306,25 @@ task_thread *task_get_next_thread()
       KL_TRC_DATA("Considering thread", (unsigned long)next_thread);
       if ((next_thread->permit_running) && (next_thread->cycle_lock != 1))
       {
-        KL_TRC_TRACE((TRC_LVL_FLOW, "Trying to lock for ourselves... "));
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Trying to lock for ourselves... ");
         if (klib_synch_spinlock_try_lock(next_thread->cycle_lock))
         {
           // Having locked it, double check that it's still OK to run, otherwise release it and carry on
           if (next_thread->permit_running)
           {
-            KL_TRC_TRACE((TRC_LVL_FLOW, "SUCCESS!\n"));
+            KL_TRC_TRACE(TRC_LVL::FLOW, "SUCCESS!\n");
             found_thread = true;
             break;
           }
           else
           {
-            KL_TRC_TRACE((TRC_LVL_FLOW, "Had to release it again\n"));
+            KL_TRC_TRACE(TRC_LVL::FLOW, "Had to release it again\n");
             klib_synch_spinlock_unlock(next_thread->cycle_lock);
           }
         }
         else
         {
-          KL_TRC_TRACE((TRC_LVL_FLOW, "Not this time, continue\n"));
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Not this time, continue\n");
         }
       }
 
@@ -337,7 +337,7 @@ task_thread *task_get_next_thread()
       KL_TRC_DATA("The next thread to execute is live thread", (unsigned long)next_thread);
       if ((next_thread != current_threads[proc_id]) && (current_threads[proc_id] != nullptr))
       {
-        KL_TRC_TRACE((TRC_LVL_FLOW, "Unlocking old thread\n"));
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Unlocking old thread\n");
         klib_synch_spinlock_unlock(current_threads[proc_id]->cycle_lock);
       }
     }
@@ -345,12 +345,12 @@ task_thread *task_get_next_thread()
     {
       if ((current_threads[proc_id] != nullptr) && (current_threads[proc_id]->permit_running))
       {
-        KL_TRC_TRACE((TRC_LVL_FLOW, "Stick with our current thread\n"));
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Stick with our current thread\n");
         next_thread = current_threads[proc_id];
       }
       else
       {
-        KL_TRC_TRACE((TRC_LVL_FLOW, "No thread found, switch to idle thread\n"));
+        KL_TRC_TRACE(TRC_LVL::FLOW, "No thread found, switch to idle thread\n");
         if (current_threads[proc_id] != nullptr)
         {
           klib_synch_spinlock_unlock(current_threads[proc_id]->cycle_lock);
@@ -380,7 +380,7 @@ task_thread *task_get_cur_thread()
   task_thread *ret_thread;
   if (current_threads == nullptr)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "No threads running yet, return NULL\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "No threads running yet, return NULL\n");
     ret_thread = nullptr;
   }
   else
@@ -415,9 +415,7 @@ THREAD_ID task_current_thread_id()
     ti = thread->thread_id;
   }
 
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Returning thread ID: "));
-  KL_TRC_TRACE((TRC_LVL_FLOW, ti));
-  KL_TRC_TRACE((TRC_LVL_FLOW, "\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Returning thread ID: ", ti, "\n");
 
   KL_TRC_EXIT;
   return ti;
@@ -443,9 +441,7 @@ PROCESS_ID task_current_process_id()
     pi = thread->parent_process->process_id;
   }
 
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Returning process ID: "));
-  KL_TRC_TRACE((TRC_LVL_FLOW, pi));
-  KL_TRC_TRACE((TRC_LVL_FLOW, "\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Returning process ID: ", pi, "\n");
 
   KL_TRC_EXIT;
   return pi;
@@ -543,7 +539,7 @@ void task_start_thread(task_thread *thread)
   ASSERT(thread != nullptr);
   if(!thread->permit_running)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Thread not running, start it\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Thread not running, start it\n");
     thread->permit_running = true;
   }
 
@@ -564,7 +560,7 @@ void task_stop_thread(task_thread *thread)
   ASSERT(thread != nullptr);
   if(thread->permit_running)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Thread running, stop it\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Thread running, stop it\n");
     thread->permit_running = false;
   }
 
@@ -650,14 +646,14 @@ void task_thread_cycle_remove(task_thread *thread)
   // Special case here - we're deleting the last thread.
   if (thread->next_thread == thread)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Deleting the last thread\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Deleting the last thread\n");
     start_of_thread_cycle = nullptr;
   }
   else
   {
     if (start_of_thread_cycle == thread)
     {
-      KL_TRC_TRACE((TRC_LVL_FLOW, "Moving start of thread cycle out of the way of the dead thread\n"));
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Moving start of thread cycle out of the way of the dead thread\n");
       start_of_thread_cycle = thread->next_thread;
     }
 

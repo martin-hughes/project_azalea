@@ -42,20 +42,20 @@ SYNC_ACQ_RESULT klib_synch_semaphore_wait(klib_semaphore &semaphore, unsigned lo
 
   if (semaphore.cur_user_count < semaphore.max_users)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Immediately acquired\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Immediately acquired\n");
     semaphore.cur_user_count++;
     res = SYNC_ACQ_ACQUIRED;
   }
   else if (max_wait == 0)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "No spare slots and immediate fallback\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "No spare slots and immediate fallback\n");
     res = SYNC_ACQ_TIMEOUT;
   }
   else
   {
     ASSERT(max_wait == SEMAPHORE_MAX_WAIT);
 
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Semaphore full, indefinite wait.\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Semaphore full, indefinite wait.\n");
 
     // Wait for the semaphore to become free. Add this thread to the list of waiting threads, then suspend this thread.
     task_thread *this_thread = task_get_cur_thread();
@@ -108,13 +108,13 @@ void klib_synch_semaphore_clear(klib_semaphore &semaphore)
   next_owner = semaphore.waiting_threads_list.head;
   if (next_owner == nullptr)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "No next user for the semaphore, release\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "No next user for the semaphore, release\n");
     ASSERT(semaphore.cur_user_count > 0);
     semaphore.cur_user_count--;
   }
   else
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Getting next user from the head of list\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Getting next user from the head of list\n");
     KL_TRC_DATA("Next user is", (unsigned long)next_owner->item);
     ASSERT(semaphore.cur_user_count == semaphore.max_users);
     klib_list_remove(next_owner);

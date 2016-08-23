@@ -100,9 +100,7 @@ void mem_unmap_range(void *virtual_start, unsigned int num_pages)
 mem_process_info *mem_task_get_task0_entry()
 {
   KL_TRC_ENTRY;
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Returning task 0 data address: "));
-  KL_TRC_TRACE((TRC_LVL_FLOW, (unsigned long)&task0_entry));
-  KL_TRC_TRACE((TRC_LVL_FLOW, "\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Returning task 0 data address: ", (unsigned long)&task0_entry, "\n");
 
   KL_TRC_EXIT;
 

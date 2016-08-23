@@ -74,14 +74,14 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
 
   if (parent_process->kernel_mode)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Creating a kernel mode exec context.\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Creating a kernel mode exec context.\n");
     new_flags = DEF_RFLAGS_KERNEL;
     new_cs = DEF_CS_KERNEL;
     new_ss = DEF_SS_KERNEL;
   }
   else
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Creating a user mode exec context.\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Creating a user mode exec context.\n");
     new_flags = DEF_RFLAGS_USER;
     // The +3s below add the RPL (ring 3) to the CS/SS selectors, which don't otherwise contain them.
     new_cs = DEF_CS_USER + 3;
@@ -133,7 +133,7 @@ task_x64_exec_context *task_int_swap_task(unsigned long stack_ptr, unsigned long
   KL_TRC_DATA("Current thread", (unsigned long)current_thread);
   if (current_thread != nullptr)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Storing exec context\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Storing exec context\n");
     current_context = (task_x64_exec_context *)current_thread->execution_context;
     current_context->stack_ptr = (void *)stack_ptr;
     current_context->exec_ptr = (void *)exec_ptr;
@@ -155,7 +155,7 @@ task_x64_exec_context *task_int_swap_task(unsigned long stack_ptr, unsigned long
   // them an IPI for the correct vector.
   if (proc_mp_this_proc_id() == 0)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Sending broadcast IPI\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Sending broadcast IPI\n");
     proc_send_ipi(0, PROC_IPI_SHORT_TARGET::ALL_EXCL_SELF, PROC_IPI_INTERRUPT::FIXED, 32);
   }
 

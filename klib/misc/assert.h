@@ -5,7 +5,7 @@
 #define STRIZE(X) STRIZE_2(X)
 #define ASSERT(X) if (!(X)) \
   { \
-    KL_TRC_TRACE((TRC_LVL_ERROR, "Assertion failed: " # X "\nAt "  __FILE__  ":" STRIZE(__LINE__) "\n")); \
+    KL_TRC_TRACE(TRC_LVL::ERROR, "Assertion failed: " # X "\nAt "  __FILE__  ":" STRIZE(__LINE__) "\n"); \
     panic ("Assertion failed: " # X "\nAt "  __FILE__  ":" STRIZE(__LINE__)); \
   }
 

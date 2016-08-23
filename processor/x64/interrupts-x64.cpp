@@ -114,7 +114,7 @@ void proc_configure_idt_entry(unsigned int interrupt_num, int req_priv_lvl, void
   ASSERT((req_priv_lvl == 0) || (req_priv_lvl == 3))
   if (req_priv_lvl)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Access from privilege level 3 requested\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Access from privilege level 3 requested\n");
     type_field |= 0x6000;
   }
 
@@ -156,15 +156,9 @@ void proc_configure_idt_entry(unsigned int interrupt_num, int req_priv_lvl, void
 void proc_page_fault_handler(unsigned long fault_code, unsigned long fault_addr, unsigned long fault_instruction)
 {
   KL_TRC_ENTRY;
-  KL_TRC_TRACE((TRC_LVL_EXTRA, "fault code: "));
-  KL_TRC_TRACE((TRC_LVL_EXTRA, fault_code));
-  KL_TRC_TRACE((TRC_LVL_EXTRA, "\n"));
-  KL_TRC_TRACE((TRC_LVL_EXTRA, "CR2 (bad mem address): "));
-  KL_TRC_TRACE((TRC_LVL_EXTRA, fault_addr));
-  KL_TRC_TRACE((TRC_LVL_EXTRA, "\n"));
-  KL_TRC_TRACE((TRC_LVL_EXTRA, "Instruction pointer: "));
-  KL_TRC_TRACE((TRC_LVL_EXTRA, fault_instruction));
-  KL_TRC_TRACE((TRC_LVL_EXTRA, "\n"));
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "fault code: ", fault_code, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "CR2 (bad mem address): ", fault_addr, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Instruction pointer: ", fault_instruction, "\n");
   KL_TRC_EXIT;
   panic("Page fault!");
 }

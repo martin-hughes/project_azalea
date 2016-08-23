@@ -72,7 +72,7 @@ void time_hpet_init()
   ASSERT(HPET_PERIOD(cap_flags) <= max_period_fs);
   ASSERT(time_hpet_get_flag(cap_flags, hpet_hw_leg_rte_cap));
 
-  KL_TRC_TRACE((TRC_LVL_FLOW, "HPET general information:\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "HPET general information:\n");
   KL_TRC_DATA("Revision", HPET_REVISION(cap_flags));
   KL_TRC_DATA("Number of timers", HPET_NUM_TIMERS(cap_flags));
   KL_TRC_DATA("Period in fs", HPET_PERIOD(cap_flags));

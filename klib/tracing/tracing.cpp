@@ -10,28 +10,26 @@
 //#define KL_TRACE_BY_MAGIC_PORT
 #define KL_TRACE_BY_SERIAL_PORT
 
-#ifdef KL_TRACE_BY_MAGIC_PORT
-void kl_trc_init_tracing()
-{
-  // Currently needs no initialisation
-}
-
-void kl_trc_trace(unsigned long level, const char *message)
-{
-  asm_trc_dbg_port_output_string(message);
-}
-
-#endif
 
 #ifdef KL_TRACE_BY_SERIAL_PORT
 
 #include "processor/x64/processor-x64-int.h"
-
 const unsigned short TRC_COM1_BASE_PORT = 0x3F8;
+
+bool kl_trc_serial_port_ready()
+{
+  return bool(asm_proc_read_port(TRC_COM1_BASE_PORT + 5, 8) & 0x20);
+}
+
+#endif
 
 void kl_trc_init_tracing()
 {
-  // Initialise the serial port. This is modified from http://wiki.osdev.org/Serial_Ports
+#ifdef KL_TRACE_BY_MAGIC_PORT
+  // Currently needs no initialisation
+#endif
+
+#ifdef KL_TRACE_BY_SERIAL_PORT
   asm_proc_write_port(TRC_COM1_BASE_PORT + 1, 0x00, 8); // Disable all interrupts
   asm_proc_write_port(TRC_COM1_BASE_PORT + 3, 0x80, 8); // Enable DLAB (set baud rate divisor)
   asm_proc_write_port(TRC_COM1_BASE_PORT + 0, 0x03, 8); // Set divisor to 3 (lo byte) 38400 baud
@@ -39,30 +37,29 @@ void kl_trc_init_tracing()
   asm_proc_write_port(TRC_COM1_BASE_PORT + 3, 0x03, 8); // 8 bits, no parity, one stop bit
   asm_proc_write_port(TRC_COM1_BASE_PORT + 2, 0xC7, 8); // Enable FIFO, clear them, with 14-byte threshold
   asm_proc_write_port(TRC_COM1_BASE_PORT + 4, 0x0B, 8); // IRQs enabled, RTS/DSR set
+#endif
 }
 
-bool kl_trc_serial_port_ready()
+void kl_trc_output_argument(char const *str)
 {
-  return bool(asm_proc_read_port(TRC_COM1_BASE_PORT + 5, 8) & 0x20);
-}
-
-void kl_trc_trace(unsigned long level, const char *message)
-{
-  while(*message != 0)
+#ifdef KL_TRACE_BY_SERIAL_PORT
+  while(*str != 0)
   {
     while(!kl_trc_serial_port_ready())
     {
       //spin!
     }
 
-    asm_proc_write_port(TRC_COM1_BASE_PORT, *message, 8);
-    message++;
+    asm_proc_write_port(TRC_COM1_BASE_PORT, *str, 8);
+    str++;
   }
+#endif
+#ifdef KL_TRACE_BY_MAGIC_PORT
+  asm_trc_dbg_port_output_string(str);
+#endif
 }
 
-#endif
-
-void kl_trc_trace(unsigned long level, unsigned long value)
+void kl_trc_output_argument(unsigned long value)
 {
   char buf[19] = "0x0000000000000000";
   char temp = 0;
@@ -82,5 +79,11 @@ void kl_trc_trace(unsigned long level, unsigned long value)
     value >>= 4;
   }
 
-  kl_trc_trace(level, buf);
+  kl_trc_output_argument(buf);
+}
+
+void kl_trc_output_argument()
+{
+  // This function is called when there are no more arguments for kl_trc_output_argument, so it doesn't need to do
+  // anything
 }

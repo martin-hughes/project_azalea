@@ -16,21 +16,21 @@ void acpi_init_table_system()
     panic("Failed to initialize ACPI");
   }
 
-  KL_TRC_TRACE((TRC_LVL_IMPORTANT, "ACPI Subsystem initialized\n"));
+  KL_TRC_TRACE(TRC_LVL::IMPORTANT, "ACPI Subsystem initialized\n");
 
   if (AcpiInitializeTables((ACPI_TABLE_DESC*) nullptr, 0, FALSE) != AE_OK)
   {
     panic("Failed to initialize ACPI tables");
   }
 
-  KL_TRC_TRACE((TRC_LVL_IMPORTANT, "ACPI Tables initialized\n"));
+  KL_TRC_TRACE(TRC_LVL::IMPORTANT, "ACPI Tables initialized\n");
 
   if (AcpiLoadTables() != AE_OK)
   {
     panic("Failed to load ACPI tables");
   }
 
-  KL_TRC_TRACE((TRC_LVL_IMPORTANT, "ACPI Tables loaded\n"));
+  KL_TRC_TRACE(TRC_LVL::IMPORTANT, "ACPI Tables loaded\n");
 
   KL_TRC_EXIT;
 }

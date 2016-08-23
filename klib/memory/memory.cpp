@@ -400,17 +400,13 @@ void *allocate_new_slab(unsigned int chunk_size_idx)
   // Allocate a new slab and fill in the header.
   void *new_slab = mem_allocate_pages(1);
   slab_header* new_slab_header = (slab_header *)new_slab;
-  KL_TRC_TRACE((TRC_LVL_IMPORTANT, "Got address: "));
-  KL_TRC_TRACE((TRC_LVL_IMPORTANT, (unsigned long)new_slab_header));
-  KL_TRC_TRACE((TRC_LVL_IMPORTANT, "\n"));
-  KL_TRC_TRACE((TRC_LVL_IMPORTANT, "Got address 2: "));
-  KL_TRC_TRACE((TRC_LVL_IMPORTANT, (unsigned long)(&new_slab_header->list_entry)));
-  KL_TRC_TRACE((TRC_LVL_IMPORTANT, "\n"));
+  KL_TRC_TRACE(TRC_LVL::IMPORTANT, "Got address: ", (unsigned long)new_slab_header, "\n");
+  KL_TRC_TRACE(TRC_LVL::IMPORTANT, "Got address 2: ", (unsigned long)(&new_slab_header->list_entry), "\n");
   klib_list_item_initialize(&new_slab_header->list_entry);
-  KL_TRC_TRACE((TRC_LVL_IMPORTANT, "List initialized.\n"));
+  KL_TRC_TRACE(TRC_LVL::IMPORTANT, "List initialized.\n");
   new_slab_header->list_entry.item = new_slab;
   new_slab_header->allocation_count = 0;
-  KL_TRC_TRACE((TRC_LVL_IMPORTANT, "Written to address\n"));
+  KL_TRC_TRACE(TRC_LVL::IMPORTANT, "Written to address\n");
 
   // Empty the allocation bitmap. Round up to the next whole number of 8-byte
   // longs.

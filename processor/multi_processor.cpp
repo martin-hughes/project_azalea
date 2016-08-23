@@ -128,7 +128,7 @@ void proc_mp_start_aps()
 
   if (processor_count > 1)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Starting other processors\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Starting other processors\n");
     for (unsigned int i = 1; i < processor_count; i++)
     {
       proc_mp_signal_processor(i, PROC_IPI_MSGS::RESUME);

@@ -200,7 +200,7 @@ void proc_mp_ap_startup()
   // Signal completion to the signalling processor.
   if (inter_proc_signals[proc_num].msg_being_sent == PROC_IPI_MSGS::RESUME)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Expected startup message received\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Expected startup message received\n");
     ASSERT(inter_proc_signals[proc_num].msg_control_state == PROC_MP_X64_MSG_STATE::MSG_WAITING);
     inter_proc_signals[proc_num].msg_control_state = PROC_MP_X64_MSG_STATE::ACKNOWLEDGED;
   }
@@ -213,7 +213,7 @@ void proc_mp_ap_startup()
   // something has gone wrong.
   asm_proc_start_interrupts();
 
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Waiting for scheduling\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Waiting for scheduling\n");
   time_stall_process(1000000000);
   panic("Failed to start AP");
 
@@ -239,7 +239,7 @@ unsigned int proc_mp_this_proc_id()
 
   if (processor_count > 0)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Checking processor IDs\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Checking processor IDs\n");
     for (int i = 0; i < processor_count; i++)
     {
       if (lapic_id == proc_info_block[i].platform_data.lapic_id)
@@ -252,7 +252,7 @@ unsigned int proc_mp_this_proc_id()
   }
   else
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Not fully init'd, assume processor 0\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Not fully init'd, assume processor 0\n");
     apic_id_found = true;
     proc_id = 0;
   }

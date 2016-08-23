@@ -35,19 +35,19 @@ SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, unsigned long max_wa
 
   if (mutex.mutex_locked == false)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Mutex unlocked, so acquire now.\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Mutex unlocked, so acquire now.\n");
     mutex.mutex_locked = true;
     mutex.owner_thread = task_get_cur_thread();
     res = SYNC_ACQ_ACQUIRED;
   }
   else if (max_wait == 0)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Mutex locked, but no timeout, so return now.\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Mutex locked, but no timeout, so return now.\n");
     res = SYNC_ACQ_TIMEOUT;
   }
   else if (max_wait == MUTEX_MAX_WAIT)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Mutex locked, indefinite wait.\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Mutex locked, indefinite wait.\n");
 
     // Wait for the mutex to become free. Add this thread to the list of waiting threads, then suspend this thread.
     task_thread *this_thread = task_get_cur_thread();
@@ -85,7 +85,7 @@ SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, unsigned long max_wa
   else
   {
     // TODO: Mutex timed waits.
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Mutex locked, defined wait.\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Mutex locked, defined wait.\n");
     INCOMPLETE_CODE("Mutex timed wait");
   }
 
@@ -109,13 +109,13 @@ void klib_synch_mutex_release(klib_mutex &mutex)
   next_owner = mutex.waiting_threads_list.head;
   if (next_owner == nullptr)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "No next owner for the mutex, release\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "No next owner for the mutex, release\n");
     mutex.mutex_locked = false;
     mutex.owner_thread = nullptr;
   }
   else
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Getting next owner from the head of list\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Getting next owner from the head of list\n");
     KL_TRC_DATA("Next owner is", (unsigned long)next_owner->item);
     mutex.owner_thread = (task_thread *)next_owner->item;
     klib_list_remove(next_owner);

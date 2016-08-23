@@ -36,14 +36,14 @@ void proc_conf_interrupt_control_sys(unsigned int num_procs)
   switch (local_pic)
   {
     case APIC_TYPES::LEGACY_PIC:
-      KL_TRC_TRACE((TRC_LVL_FLOW, "Using legacy PIC mode\n"));
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Using legacy PIC mode\n");
       selected_pic_mode = APIC_TYPES::LEGACY_PIC;
       ASSERT(num_procs == 1);
       break;
 
     case APIC_TYPES::APIC:
     case APIC_TYPES::X2APIC:
-      KL_TRC_TRACE((TRC_LVL_FLOW, "Attempting to use APIC mode\n"));
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Attempting to use APIC mode\n");
       selected_pic_mode = APIC_TYPES::APIC;
       proc_x64_configure_sys_apic_mode(num_procs);
       break;
@@ -134,21 +134,21 @@ APIC_TYPES proc_x64_detect_pic_type()
 
   if ((edx_ecx & APIC_PRESENT) != 0)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "APIC Present. Looking for X2 APIC\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "APIC Present. Looking for X2 APIC\n");
     if ((edx_ecx & X2_APIC_PRESENT) != 0)
     {
-      KL_TRC_TRACE((TRC_LVL_FLOW, "x2APIC present\n"));
+      KL_TRC_TRACE(TRC_LVL::FLOW, "x2APIC present\n");
       detected_pic = APIC_TYPES::X2APIC;
     }
     else
     {
-      KL_TRC_TRACE((TRC_LVL_FLOW, "Regular APIC/xAPIC\n"));
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Regular APIC/xAPIC\n");
       detected_pic = APIC_TYPES::APIC;
     }
   }
   else
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "No APIC detected - using legacy PIC\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "No APIC detected - using legacy PIC\n");
     detected_pic = APIC_TYPES::LEGACY_PIC;
   }
 

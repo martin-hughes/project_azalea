@@ -100,7 +100,7 @@ void *mem_allocate_virtual_range(unsigned int num_pages)
 
   if (!vmm_initialized)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Initialising memory manager.\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Initialising memory manager.\n");
     mem_vmm_initialize();
   }
 
@@ -124,7 +124,7 @@ void *mem_allocate_virtual_range(unsigned int num_pages)
 
   if (selected_range_data->number_of_pages != actual_num_pages)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Splitting over-sized page.\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Splitting over-sized page.\n");
     selected_list_item = mem_vmm_split_range(selected_list_item,
                                              actual_num_pages);
     selected_range_data = (vmm_range_data *)selected_list_item->item;
@@ -135,7 +135,7 @@ void *mem_allocate_virtual_range(unsigned int num_pages)
 
   if (acquired_lock)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Releasing lock\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Releasing lock\n");
     mem_vmm_unlock();
   }
 
@@ -185,7 +185,7 @@ void mem_deallocate_virtual_range(void *start, unsigned int num_pages)
 
       if (acquired_lock)
       {
-        KL_TRC_TRACE((TRC_LVL_FLOW, "Releasing lock\n"));
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Releasing lock\n");
         mem_vmm_unlock();
       }
 
@@ -202,7 +202,7 @@ void mem_deallocate_virtual_range(void *start, unsigned int num_pages)
 
   if (acquired_lock)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Releasing lock\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Releasing lock\n");
     mem_vmm_unlock();
   }
 
@@ -243,9 +243,9 @@ void mem_vmm_initialize()
   //     N.B. The kernel actually starts at 1MB higher than this, and is
   //     currently limited to 1MB in size.
   // - Page table modification area: 0xFFFFFFFFFFFE0000 - end.
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Allocating first range.\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Allocating first range.\n");
   mem_vmm_allocate_specific_range(0xFFFFFFFF00000000, 1);
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Allocating second range.\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Allocating second range.\n");
   mem_vmm_allocate_specific_range(0xFFFFFFFFFFE00000, 1);
 
   free_pages = 0;
@@ -488,7 +488,7 @@ void mem_vmm_allocate_specific_range(unsigned long start_addr,
   cur_item = vmm_range_data_list.head;
   while (cur_item != nullptr)
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "cur_item != NULL\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "cur_item != NULL\n");
     cur_data = (vmm_range_data *)cur_item->item;
 
     // Have end_addr be one lower than it seems like it ought to be. This
@@ -498,7 +498,7 @@ void mem_vmm_allocate_specific_range(unsigned long start_addr,
     end_addr = cur_data->start + (cur_data->number_of_pages * MEM_PAGE_SIZE) -1;
     if ((cur_data->start <= start_addr) && (end_addr > start_addr))
     {
-      KL_TRC_TRACE((TRC_LVL_FLOW, "Correct range found\n"));
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Correct range found\n");
       ASSERT(cur_data->number_of_pages >= num_pages);
 
       // If the range we've found is the correct size - perfect. Allocate it and
@@ -506,13 +506,13 @@ void mem_vmm_allocate_specific_range(unsigned long start_addr,
       // to allocate it.
       if (cur_data->number_of_pages == num_pages)
       {
-        KL_TRC_TRACE((TRC_LVL_FLOW, "Correct size found\n"));
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Correct size found\n");
         ASSERT(!cur_data->allocated);
         cur_data->allocated = true;
       }
       else
       {
-        KL_TRC_TRACE((TRC_LVL_FLOW, "Size too large\n"));
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Size too large\n");
         cur_item = mem_vmm_split_range(cur_item, cur_data->number_of_pages / 2);
 
         // Recursion isn't the most efficient way to deal with this, but it'll do for now.
@@ -527,7 +527,7 @@ void mem_vmm_allocate_specific_range(unsigned long start_addr,
     cur_item = cur_item->next;
   }
 
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Item found\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Item found\n");
 
   // Presumably this means we tried to get a range that's not owned by the
   // kernel.

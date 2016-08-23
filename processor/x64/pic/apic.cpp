@@ -62,7 +62,7 @@ void proc_x64_configure_local_apic()
   KL_TRC_DATA("APIC control flags", apic_ctrl);
   if (!(apic_ctrl & APIC_ENABLED))
   {
-    KL_TRC_TRACE((TRC_LVL_FLOW, "Enabling APIC\n"));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Enabling APIC\n");
     apic_ctrl |= APIC_ENABLED;
     proc_write_msr(PROC_X64_MSRS::IA32_APIC_BASE, apic_ctrl);
   }

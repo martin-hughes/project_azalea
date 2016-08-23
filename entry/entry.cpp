@@ -43,7 +43,7 @@ int main()
   proc_gen_init();
   mem_gen_init();
 
-  KL_TRC_TRACE((TRC_LVL_IMPORTANT, "Welcome to the OS!\n"));
+  KL_TRC_TRACE(TRC_LVL::IMPORTANT, "Welcome to the OS!\n");
 
   acpi_init_table_system();
 
@@ -55,7 +55,7 @@ int main()
 
   // If the kernel gets back to here, just run in a loop. The task manager will soon kick in.
   // It takes too long, then assume something has gone wrong and abort.
-  KL_TRC_TRACE((TRC_LVL_IMPORTANT, "Back to main(), waiting for start.\n"));
+  KL_TRC_TRACE(TRC_LVL::IMPORTANT, "Back to main(), waiting for start.\n");
   time_stall_process(1000000000);
 
   panic("System failed to start - main timer hasn't hit.");
@@ -67,7 +67,7 @@ int main()
 // Main kernel start procedure.
 void kernel_start()
 {
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Entered kernel start\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Entered kernel start\n");
 
   // kernel_start() runs on the BSP. Bring up the APs so they are ready to take on any threads created below.
   proc_mp_start_aps();
@@ -86,19 +86,19 @@ void kernel_start()
   KL_TRC_DATA("Physical page to use", (unsigned long)physical_page);
   KL_TRC_DATA("Kernel virtual page", (unsigned long)kernel_virtual_page);
   mem_map_range(physical_page, kernel_virtual_page, 1);
-  KL_TRC_TRACE((TRC_LVL_FLOW, "First map complete\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "First map complete\n");
 
   // Copy the simple test program in to it.
   kl_memcpy((void *)dummy_prog, kernel_virtual_page, sizeof(dummy_prog));
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Program copied\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Program copied\n");
 
   // No need to access it from the kernel any more
   mem_unmap_range(kernel_virtual_page, 1);
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Kernel space unmapped\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Kernel space unmapped\n");
 
   // In the context of the program, set up the virtual page allocation. The process starts at 2MB.
   mem_map_range(physical_page, (void *)0x200000, 1, new_proc);
-  KL_TRC_TRACE((TRC_LVL_FLOW, "User mode map complete, starting now.\n"));
+  KL_TRC_TRACE(TRC_LVL::FLOW, "User mode map complete, starting now.\n");
 
   // Process should be good to go!
   task_start_process(new_proc);
