@@ -157,7 +157,7 @@ task_process *task_create_new_process(ENTRY_PROC entry_point,
 ///
 /// @param entry_point The point that the thread will begin executing from.
 ///
-/// @parent_process The process this thread is part of.
+/// @param parent_process The process this thread is part of.
 ///
 /// @return The new thread
 task_thread *task_create_new_thread(ENTRY_PROC entry_point, task_process *parent_process)

@@ -9,6 +9,7 @@
 #include "mem/mem.h"
 #include "syscall/syscall_kernel.h"
 #include "acpi/acpi_if.h"
+#include "object_mgr/object_mgr.h"
 
 // Rough boot steps:
 //
@@ -43,6 +44,7 @@ int main()
   proc_gen_init();
   mem_gen_init();
   hm_gen_init();
+  om_gen_init();
 
   KL_TRC_TRACE(TRC_LVL::IMPORTANT, "Welcome to the OS!\n");
 

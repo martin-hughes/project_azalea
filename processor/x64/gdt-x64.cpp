@@ -74,7 +74,7 @@ void proc_recreate_gdt(unsigned int num_procs)
 
 /// @brief Fills in a 6-byte GDT pointer table.
 ///
-/// @param The GDT pointer table to populate
+/// @param ptr The GDT pointer table to populate
 ///
 /// @param loc The location of the GDT in virtual memory
 ///

@@ -77,4 +77,4 @@ There are two other sources of documentation, although both are very much in dev
 
 1. Code comments in the source files. You can gather these, and function call traces by running doxygen against
 `extras/Docs-Doxyfile`. The output appears in `docs/html/`
-2. The Markdown documentation in `docs/components/`
+2. The Markdown documentation in [System Architecture.md](./System Architecture.md) and `docs/components/`
