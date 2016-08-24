@@ -17,6 +17,7 @@
 #include "processor.h"
 #include "processor-int.h"
 #include "mem/mem.h"
+#include "object_mgr/object_mgr.h"
 
 // This is a list of all processes known to the system.
 klib_list process_list;
@@ -129,7 +130,7 @@ task_process *task_create_new_process(ENTRY_PROC entry_point,
   klib_list_initialize(&new_process->child_threads);
   new_process->process_list_item.item = (void *)new_process;
   new_process->kernel_mode = kernel_mode;
-  new_process->process_id = hm_get_handle();
+  new_process->process_id = om_store_object(new_process);
   if (mem_info != nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "mem_info provided\n");
@@ -178,7 +179,7 @@ task_thread *task_create_new_thread(ENTRY_PROC entry_point, task_process *parent
   klib_list_add_tail(&parent_process->child_threads, &new_thread->process_list_item);
   new_thread->execution_context = task_int_create_exec_context(entry_point, new_thread);
   new_thread->permit_running = false;
-  new_thread->thread_id = hm_get_handle();
+  new_thread->thread_id = om_store_object(new_thread);
 
   task_thread_cycle_add(new_thread);
 
@@ -422,8 +423,13 @@ PROCESS_ID task_current_process_id()
 /// @return The task_process data block
 task_process *task_get_process_data(PROCESS_ID proc_id)
 {
-  panic("task_get_process_data not implemented");
-  return nullptr;
+  task_process *ret_proc;
+  KL_TRC_ENTRY;
+  ret_proc = (task_process *)om_retrieve_object(proc_id);
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Process ID ", proc_id, " correlates to data block ", ret_proc, "\n");
+  KL_TRC_EXIT;
+  return ret_proc;
 }
 
 /// @brief Get the task_thread block matching a given thread ID
@@ -433,8 +439,13 @@ task_process *task_get_process_data(PROCESS_ID proc_id)
 /// @return The task_thread data block
 task_thread *task_get_thread_data(THREAD_ID thread_id)
 {
-  panic("task_get_thread_data not implemented");
-  return nullptr;
+  task_process *ret_thread;
+  KL_TRC_ENTRY;
+  ret_thread = (task_thread *)om_retrieve_object(thread_id);
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Thread ID ", thread_id, " correlates to data block ", ret_thread, "\n");
+  KL_TRC_EXIT;
+  return ret_thread;
 }
 
 /// @brief Start executing all threads within the given process
