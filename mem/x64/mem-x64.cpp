@@ -77,7 +77,6 @@ void mem_gen_init()
   mem_x64_kernel_stack_ptr = mem_allocate_virtual_range(1);
 
   // At the minute, all process actually just use the same stack, so back that up with a physical page.
-  // TODO: Make it so this isn't necessary! (STAB)
   mem_map_range(mem_allocate_physical_pages(1), mem_x64_kernel_stack_ptr, 1);
 
   KL_TRC_EXIT;

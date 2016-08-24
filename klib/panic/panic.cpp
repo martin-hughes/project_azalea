@@ -15,8 +15,6 @@ void panic(const char *message)
 	// conditions.
 	proc_stop_interrupts();
 
-	// TODO: Switch back to a text display.
-
 	// Print a simple message on the screen.
 	panic_clear_screen();
 	panic_print("KERNEL PANIC", 0);

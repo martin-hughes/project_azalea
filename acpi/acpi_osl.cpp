@@ -331,7 +331,6 @@ void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Size)
   KL_TRC_EXIT;
 }
 
-// TODO: This capability doesn't exist in the memory manager yet. It may be necessary to add it.
 ACPI_STATUS AcpiOsGetPhysicalAddress(void *LogicalAddress, ACPI_PHYSICAL_ADDRESS *PhysicalAddress)
 {
   KL_TRC_ENTRY;
@@ -344,7 +343,6 @@ ACPI_STATUS AcpiOsGetPhysicalAddress(void *LogicalAddress, ACPI_PHYSICAL_ADDRESS
 /*
  * Interrupt handlers
  */
-// TODO: We don't need these just yet.
 ACPI_STATUS AcpiOsInstallInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER ServiceRoutine, void *Context)
 {
   KL_TRC_ENTRY;
@@ -507,7 +505,6 @@ ACPI_STATUS AcpiOsWritePciConfiguration(ACPI_PCI_ID *PciId, UINT32 Reg, UINT64 V
 /*
  * Miscellaneous
  */
-// TODO: This might not always be true in future...
 BOOLEAN AcpiOsReadable(void *Pointer, ACPI_SIZE Length)
 {
   KL_TRC_ENTRY;
@@ -515,7 +512,6 @@ BOOLEAN AcpiOsReadable(void *Pointer, ACPI_SIZE Length)
   return TRUE;
 }
 
-// TODO: Might not be true in future...
 BOOLEAN AcpiOsWritable(void *Pointer, ACPI_SIZE Length)
 {
   KL_TRC_ENTRY;

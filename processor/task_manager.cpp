@@ -592,8 +592,6 @@ void task_resume_scheduling()
 }
 
 /// @brief Give up the rest of our time slice.
-// In the simplest example, just HLT and wait for the scheduler to kick in.
-// TODO: This doesn't cover the case where an interrupt occurs that isn't the task switcher! (STAB)
 void task_yield()
 {
   KL_TRC_ENTRY;
