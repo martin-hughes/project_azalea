@@ -7,14 +7,15 @@
 #include "klib/lists/lists.h"
 #include "klib/synch/kernel_locks.h"
 #include "mem/mem.h"
+#include "object_mgr/handles.h"
 
 // Main kernel interface to processor specific functions. Includes the task management system.
 
 // Definition of a possible entry point:
 typedef void (* ENTRY_PROC)();
 
-typedef unsigned long PROCESS_ID;
-typedef unsigned long THREAD_ID;
+typedef GEN_HANDLE PROCESS_ID;
+typedef GEN_HANDLE THREAD_ID;
 
 /// Structure to hold information about a process. All information is stored here, to be accessed by the various
 /// components as needed. This removes the need for per-component lookup tables for each process.

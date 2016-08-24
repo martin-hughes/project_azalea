@@ -42,6 +42,7 @@ int main()
 {
   proc_gen_init();
   mem_gen_init();
+  hm_gen_init();
 
   KL_TRC_TRACE(TRC_LVL::IMPORTANT, "Welcome to the OS!\n");
 

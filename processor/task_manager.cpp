@@ -33,19 +33,6 @@ static bool *continue_this_thread = nullptr;
 // of pointers equal in size to the number of processors.
 task_thread **idle_threads = nullptr;
 
-// This field tracks which process ID to dispense next. It counts up until it reaches the maximum, then the system
-// crashes. This field must be protected by next_id_lock.
-// TODO: Prevent crashing. (STAB)
-static PROCESS_ID next_proc_id;
-
-// This field tracks which thread ID to dispense next. It counts up until it reaches the maximum, then the system
-// crashes. This field must be protected by next_id_lock.
-// TODO: Prevent crashing. (STAB)
-static PROCESS_ID next_thread_id;
-
-// Protects the next proc and thread ID variables, to prevent two threads or processes getting the same ID
-static kernel_spinlock next_id_lock;
-
 // A pointer to an arbitrary thread within the cycle of threads. It doesn't really matter which thread this points to,
 // the CPUs can just cycle through the cycle to find the one they want.
 task_thread *start_of_thread_cycle = nullptr;
@@ -78,9 +65,6 @@ void task_gen_init(ENTRY_PROC kern_start_proc)
   unsigned int number_of_procs = proc_mp_proc_count();
   task_thread *new_idle_thread;
 
-  next_proc_id = 0;
-  next_thread_id = 0;
-  klib_synch_spinlock_init(next_id_lock);
   klib_synch_spinlock_init(thread_cycle_lock);
 
   klib_list_initialize(&process_list);
@@ -145,6 +129,7 @@ task_process *task_create_new_process(ENTRY_PROC entry_point,
   klib_list_initialize(&new_process->child_threads);
   new_process->process_list_item.item = (void *)new_process;
   new_process->kernel_mode = kernel_mode;
+  new_process->process_id = hm_get_handle();
   if (mem_info != nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "mem_info provided\n");
@@ -155,15 +140,6 @@ task_process *task_create_new_process(ENTRY_PROC entry_point,
     KL_TRC_TRACE(TRC_LVL::FLOW, "No mem_info, create it\n");
     new_process->mem_info = mem_task_create_task_entry();
   }
-
-  klib_synch_spinlock_lock(next_id_lock);
-  new_process->process_id = next_proc_id;
-  next_proc_id++;
-  if (next_proc_id == 0)
-  {
-    panic("Out of process IDs!");
-  }
-  klib_synch_spinlock_unlock(next_id_lock);
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Checks complete, adding process to list\n");
   klib_list_add_head(&process_list, &new_process->process_list_item);
@@ -202,15 +178,7 @@ task_thread *task_create_new_thread(ENTRY_PROC entry_point, task_process *parent
   klib_list_add_tail(&parent_process->child_threads, &new_thread->process_list_item);
   new_thread->execution_context = task_int_create_exec_context(entry_point, new_thread);
   new_thread->permit_running = false;
-
-  klib_synch_spinlock_lock(next_id_lock);
-  new_thread->thread_id = next_thread_id;
-  next_thread_id++;
-  if (next_thread_id == 0)
-  {
-    panic("Out of thread IDs!");
-  }
-  klib_synch_spinlock_unlock(next_id_lock);
+  new_thread->thread_id = hm_get_handle();
 
   task_thread_cycle_add(new_thread);
 
