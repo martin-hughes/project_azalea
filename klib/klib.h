@@ -9,7 +9,7 @@
 #define KLIB_DEBUG
 #endif
 
-#include "lists/lists.h"
+#include "klib/data_structures/lists.h"
 #include "panic/panic.h"
 #include "c_helpers/buffers.h"
 #include "misc/assert.h"

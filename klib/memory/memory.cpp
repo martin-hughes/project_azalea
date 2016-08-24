@@ -32,10 +32,10 @@
 
 //#define ENABLE_TRACING
 
+#include "klib/data_structures/lists.h"
 #include "memory.h"
 #include "klib/c_helpers/buffers.h"
 #include "klib/panic/panic.h"
-#include "klib/lists/lists.h"
 #include "klib/misc/assert.h"
 #include "klib/tracing/tracing.h"
 #include "klib/synch/kernel_locks.h"

@@ -1,4 +1,4 @@
-# SConstruct file for klib-lists-test.
+# SConstruct file for klib-lists-data-structures.
 
 import os
 import defaults
@@ -12,10 +12,9 @@ env['LINKFLAGS'] = '-Wl,--start-group'
 
 # List of required components.
 dependencies_in = ['#test/test_core/SConscript',
-                   '#test/klib/lists/SConscript',
-                   '#klib/lists/SConscript',
+                   '#test/klib/data_structures/SConscript',
+                   '#klib/data_structures/SConscript',
                    '#test/dummy_libs/panic/SConscript',
-                   #'#test/dummy_libs/tracing/SConscript',
                   ]
                    
 # Build components.
@@ -26,4 +25,4 @@ for dep in dependencies_in:
   dep_out = SConscript(dep, 'env', variant_dir=out_dir, duplicate=0)
   dependencies_out.append(dep_out)
 
-env.Program("output/klib-lists-test", dependencies_out)
+env.Program("output/klib-data-structures-test", dependencies_out)

@@ -1,0 +1,7 @@
+# Klib Lists test program.
+
+Import('env')
+obj = env.Library("klib-data-structures-test", 
+                  [ "ds_1.cpp", 
+                    "ds_test_list.cpp" ])
+Return ("obj") 
