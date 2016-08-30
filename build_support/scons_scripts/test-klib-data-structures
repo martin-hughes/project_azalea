@@ -15,6 +15,7 @@ dependencies_in = ['#test/test_core/SConscript',
                    '#test/klib/data_structures/SConscript',
                    '#klib/data_structures/SConscript',
                    '#test/dummy_libs/panic/SConscript',
+                   '#test/dummy_libs/_tracing/SConscript',
                   ]
                    
 # Build components.
