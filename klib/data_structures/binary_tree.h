@@ -7,8 +7,6 @@
 #ifndef __BINARY_TREE_H
 #define __BINARY_TREE_H
 
-#define ENABLE_TRACING
-
 #include "klib/tracing/tracing.h"
 #include "klib/panic/panic.h"
 #include "klib/misc/assert.h"
@@ -61,6 +59,8 @@ public:
   {
     root = nullptr;
     left_side_last = false;
+
+    ASSERT(false);
   }
 
   /// @brief Standard destructor.
