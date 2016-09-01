@@ -59,8 +59,6 @@ public:
   {
     root = nullptr;
     left_side_last = false;
-
-    ASSERT(false);
   }
 
   /// @brief Standard destructor.
@@ -379,6 +377,10 @@ protected:
       search_node = node;
       while(search_node->parent != nullptr)
       {
+        if ((search_node != search_node->parent->left) && (search_node != search_node->parent->right))
+        {
+          return false;
+        }
         if (((search_node->parent->left == node) && (search_val > search_node->parent->key)) ||
            ((search_node->parent->right == node) && (search_val < search_node->parent->key)))
         {
