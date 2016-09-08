@@ -198,7 +198,7 @@ protected:
   ///
   /// @param start The node to start looking from
   ///
-  /// @retun The node at the leftmost leaf from the start node.
+  /// @return The node at the leftmost leaf from the start node.
   tree_node *find_left_leaf(tree_node *start)
   {
     if (start->left == nullptr)
@@ -215,7 +215,7 @@ protected:
   ///
   /// @param start The node to start looking from
   ///
-  /// @retun The node at the rightmost leaf from the start node.
+  /// @return The node at the rightmost leaf from the start node.
   tree_node *find_right_leaf(tree_node *start)
   {
     if (start->right == nullptr)

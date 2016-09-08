@@ -11,7 +11,7 @@
 using namespace std;
 
 const unsigned long NUM_TESTS = 100;
-set<unsigned long> keys;
+static set<unsigned long> keys;
 
 void data_structures_test_2()
 {
@@ -28,10 +28,10 @@ void data_structures_test_2()
     auto return_val = keys.insert(cur_key);
     if (return_val.second)
     {
-      cout << keys.size() << ". Inserting key " << cur_key << "... " << flush;
+      //cout << keys.size() << ". Inserting key " << cur_key << "... " << flush;
       tree->insert(cur_key, 6);
       tree->debug_verify_tree();
-      cout << "Tree verified." << endl;
+      //cout << "Tree verified." << endl;
     }
   }
 
@@ -44,11 +44,11 @@ void data_structures_test_2()
     }
 
     cur_key = *iter;
-    cout << keys.size() << ". Removing key " << cur_key << "... " << flush;
+    //cout << keys.size() << ". Removing key " << cur_key << "... " << flush;
     keys.erase(cur_key);
     ASSERT(tree->contains(cur_key));
     tree->remove(cur_key);
     tree->debug_verify_tree();
-    cout << "Tree verfied." << endl;
+    //cout << "Tree verfied." << endl;
   }
 }
