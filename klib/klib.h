@@ -11,6 +11,7 @@
 
 #include "klib/data_structures/lists.h"
 #include "klib/data_structures/binary_tree.h"
+#include "klib/data_structures/red_black_tree.h"
 #include "panic/panic.h"
 #include "c_helpers/buffers.h"
 #include "misc/assert.h"
