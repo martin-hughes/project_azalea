@@ -289,7 +289,7 @@ public:
   /// Panics if a fault is found.
   void debug_verify_tree()
   {
-    debug_print_tree(root, 0);
+    //debug_print_tree(root, 0);
     ASSERT(debug_check_node(root));
     debug_verify_black_length(root);
   }
@@ -483,7 +483,7 @@ protected:
 
     ASSERT(node != nullptr);
     KL_TRC_TRACE(TRC_LVL::FLOW, "** Removing node with key ", node->key, " from this tree:\n");
-    debug_print_tree(root, 0);
+    //debug_print_tree(root, 0);
     KL_TRC_TRACE(TRC_LVL::EXTRA, "======================\n");
 
 
@@ -585,7 +585,7 @@ protected:
 
     KL_TRC_TRACE(TRC_LVL::EXTRA, "Rebalancing around key ", start_node->key, " (", (left_side_deleted ? "left gone" : "right gone"), ")\n");
     KL_TRC_TRACE(TRC_LVL::EXTRA, "++++++++++++++++++++++\n");
-    debug_print_tree(root, 0);
+    //debug_print_tree(root, 0);
     KL_TRC_TRACE(TRC_LVL::EXTRA, "^^^^^^^^^^^^^^^^^^^^^^\n");
 
     tree_node *sibling = nullptr;
@@ -616,65 +616,88 @@ protected:
         if (left_side_deleted)
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "Left side was deleted, rotate left\n");
-          /*if (((sibling->left != nullptr) && (!sibling->left->is_black)) &&
-              ((sibling->right == nullptr) || (sibling->right->is_black)))*/
-          if ((sibling->left != nullptr) && (!sibling->left->is_black))
+          if (((sibling->left != nullptr) && (!sibling->left->is_black)) &&
+              ((sibling->right == nullptr) || (sibling->right->is_black)))
           {
             // Only the sibling's left child is red, so do an extra rotation.
             KL_TRC_TRACE(TRC_LVL::FLOW, "Right-left sibling, extra rotation\n");
 
+            sibling->left->is_black = true;
             rotate_right(sibling);
             ASSERT(start_node->right->right != nullptr);
-            //start_node->right->is_black = true;
-            start_node->right->right->is_black = false;
+
+//            sibling->is_black = true;
+//            sibling->parent->is_black = false;
           }
 
           rotate_left(start_node);
-          if (start_node->parent->right != nullptr)
-          {
-            start_node->parent->right->is_black = true;
-          }
-          //start_node->parent->is_black = false;
+          /*if (start_node->left == nullptr)  // start_node->left is actually double-black.
+          {*/
+            if(!start_node->is_black)
+            {
+              start_node->is_black = true;
+              if(start_node->parent->right != nullptr)
+              {
+                start_node->parent->right->is_black = true;
+              }
+              start_node->parent->is_black = false;
+
+              // It is not possible for start_node->parent->parent to be red, otherwise there'd have been two red nodes
+              // in a row before the rotation started.
+            }
+            else
+            {
+              if(start_node->parent->right != nullptr)
+              {
+                start_node->parent->right->is_black = true;
+              }
+            }
+          /*}*/
         }
         else
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "Right side deleted, rotate right\n");
-          /*if (((sibling->right != nullptr) && (sibling->right->is_black == false)) &&
-              ((sibling->left == nullptr) || (sibling->left->is_black)))*/
-          if ((sibling->right != nullptr) && (sibling->right->is_black == false))
+          if (((sibling->right != nullptr) && (sibling->right->is_black == false)) &&
+              ((sibling->left == nullptr) || (sibling->left->is_black)))
           {
             // Only the sibling's right child is red, so do an extra rotation.
             KL_TRC_TRACE(TRC_LVL::FLOW, "left-right sibling, extra rotation\n");
 
+            sibling->right->is_black = true;
             rotate_left(sibling);
             ASSERT(start_node->left->left != nullptr);
-            //start_node->left->is_black = true;
-            start_node->left->left->is_black = false;
+//            sibling->is_black = true;
+//            sibling->parent->is_black = false;
           }
 
           rotate_right(start_node);
-          if(start_node->parent->left != nullptr)
-          {
-            start_node->parent->left->is_black = true;
-          }
-          //start_node->parent->is_black = false;
+
+          /*if (start_node->right == nullptr)  // start_node->right is actually double-black.
+          {*/
+            if(!start_node->is_black)
+            {
+              start_node->is_black = true;
+              if(start_node->parent->left != nullptr)
+              {
+                start_node->parent->left->is_black = true;
+              }
+              start_node->parent->is_black = false;
+
+              // It is not possible for start_node->parent->parent to be red, otherwise there'd have been two red nodes
+              // in a row before the rotation started.
+            }
+            else
+            {
+              if(start_node->parent->left != nullptr)
+              {
+                start_node->parent->left->is_black = true;
+              }
+            }
+          /*}*/
         }
 
         // Since we've just done a rotation, start_node can't be at the top of the tree anymore.
         ASSERT(start_node->parent != nullptr);
-
-        if (start_node->parent->parent == nullptr)
-        {
-          start_node->parent->is_black = true;
-        }
-        if (start_node->parent->left != nullptr)
-        {
-          start_node->parent->left->is_black = true;
-        }
-        if(start_node->parent->right != nullptr)
-        {
-          start_node->parent->right->is_black = true;
-        }
       }
       else
       {
@@ -699,7 +722,6 @@ protected:
 
         if (start_node->parent != nullptr)
         {
-          //if (start_node->parent->is_black)
           if (node_was_black)
           {
             if (start_node->parent->left == start_node)
@@ -734,10 +756,6 @@ protected:
           start_node->parent->right->is_black = true;
         }
         start_node->is_black = false;
-        /*if (start_node->right != nullptr)
-        {
-          start_node->right->is_black = false;
-        }*/
       }
       else
       {
@@ -750,10 +768,6 @@ protected:
           start_node->parent->left->is_black = true;
         }
         start_node->is_black = false;
-        /*if (start_node->left != nullptr)
-        {
-          start_node->left->is_black = false;
-        }*/
       }
 
       if (start_node->parent->left == start_node)
@@ -765,6 +779,11 @@ protected:
         left_side_deleted = false;
       }
       rebalance_after_delete(start_node, left_side_deleted);
+    }
+
+    if ((root != nullptr) && (!root->is_black))
+    {
+      root->is_black = true;
     }
   }
 
