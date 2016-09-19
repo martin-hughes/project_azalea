@@ -439,7 +439,7 @@ task_process *task_get_process_data(PROCESS_ID proc_id)
 /// @return The task_thread data block
 task_thread *task_get_thread_data(THREAD_ID thread_id)
 {
-  task_process *ret_thread;
+  task_thread *ret_thread;
   KL_TRC_ENTRY;
   ret_thread = (task_thread *)om_retrieve_object(thread_id);
 

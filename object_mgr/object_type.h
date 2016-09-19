@@ -6,7 +6,6 @@ struct object_data
 {
   void *object_ptr;
   GEN_HANDLE handle;
-  klib_list_item *owner_list_item;
 };
 
 #endif

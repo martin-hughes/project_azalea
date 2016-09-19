@@ -14,7 +14,7 @@
 #include "object_mgr.h"
 #include "object_type.h"
 
-static klib_list om_main_list;
+static kl_rb_tree<GEN_HANDLE, object_data *> *om_main_store;
 static kernel_spinlock om_main_lock;
 
 object_data *om_int_retrieve_object(GEN_HANDLE handle);
@@ -24,7 +24,7 @@ void om_gen_init()
 {
   KL_TRC_ENTRY;
 
-  klib_list_initialize(&om_main_list);
+  om_main_store = new kl_rb_tree<GEN_HANDLE, object_data *>();
   klib_synch_spinlock_init(om_main_lock);
 
   KL_TRC_EXIT;
@@ -66,7 +66,6 @@ void om_correlate_object(void *object_ptr, GEN_HANDLE handle)
   KL_TRC_ENTRY;
 
   object_data *new_object = new object_data;
-  klib_list_item *new_item = new klib_list_item;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Object pointer: ", object_ptr, "\n");
 
@@ -74,12 +73,9 @@ void om_correlate_object(void *object_ptr, GEN_HANDLE handle)
 
   new_object->object_ptr = object_ptr;
   new_object->handle = handle;
-  new_object->owner_list_item = new_item;
-  klib_list_item_initialize(new_item);
-  new_item->item = new_object;
 
   klib_synch_spinlock_lock(om_main_lock);
-  klib_list_add_tail(&om_main_list, new_item);
+  om_main_store->insert(handle, new_object);
   klib_synch_spinlock_unlock(om_main_lock);
 
   KL_TRC_EXIT;
@@ -128,7 +124,7 @@ void om_remove_object(GEN_HANDLE handle)
 
 /// @brief Remove the correlation between handle and object, but leave both intact
 ///
-/// Removes the correlation between a handle and object, but does not deallcoate the handle It is up to the caller to
+/// Removes the correlation between a handle and object, but does not deallocate the handle It is up to the caller to
 /// manage the lifetime of both the object and handle.
 ///
 /// @param handle The handle for the object to remove.
@@ -142,10 +138,9 @@ void om_decorrelate_object(GEN_HANDLE handle)
 
   klib_synch_spinlock_lock(om_main_lock);
   found_object = om_int_retrieve_object(handle);
-  klib_list_remove(found_object->owner_list_item);
+  om_main_store->remove(handle);
   klib_synch_spinlock_unlock(om_main_lock);
 
-  delete found_object->owner_list_item;
   delete found_object;
 
   KL_TRC_EXIT;
@@ -164,26 +159,11 @@ object_data *om_int_retrieve_object(GEN_HANDLE handle)
 {
   KL_TRC_ENTRY;
 
-  klib_list_item *search_item;
   object_data *found_object = nullptr;
-  object_data *check_object;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Handle to retrieve: ", handle, "\n");
 
-  search_item = om_main_list.head;
-  while(search_item != nullptr)
-  {
-    check_object = static_cast<object_data *>(search_item->item);
-
-    if (check_object->handle == handle)
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Found object\n");
-      found_object = check_object;
-      break;
-    }
-
-    search_item = search_item->next;
-  }
+  found_object = om_main_store->search(handle);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Found item: ", found_object, "\n");
   KL_TRC_EXIT;
