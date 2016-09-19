@@ -32,10 +32,10 @@
 
 //#define ENABLE_TRACING
 
+#include "klib/data_structures/lists.h"
 #include "memory.h"
 #include "klib/c_helpers/buffers.h"
 #include "klib/panic/panic.h"
-#include "klib/lists/lists.h"
 #include "klib/misc/assert.h"
 #include "klib/tracing/tracing.h"
 #include "klib/synch/kernel_locks.h"
@@ -128,7 +128,6 @@ void *kmalloc(unsigned int mem_size)
   }
 
   // If the requested RAM is larger than we support via chunks, do a large malloc.
-  // TODO: At the minute, large allocations can be allocated, but not deallocated because they aren't tracked at all. (STAB)
   if (slab_idx >= NUM_SLAB_LISTS)
   {
     required_pages = ((mem_size - 1) / MEM_PAGE_SIZE) + 1;
@@ -188,8 +187,6 @@ void *kmalloc(unsigned int mem_size)
   }
   klib_synch_spinlock_unlock(slabs_list_lock);
 
-  // TODO: Make this more customisable?
-  //
   // If this slab is more than 90% full and there aren't any spare empty slabs
   // left, pre-allocate one now.
   //
@@ -241,7 +238,6 @@ void kfree(void *mem_block)
 
   // First, decide whether this is a "large allocation" or not. If it's a large allocation, the address being freed
   // will lie on a memory page boundary.
-  // TODO: Per the comment in kmalloc, currently large allocations can be allocated, but not deallocated. (STAB)
   if (mem_ptr_num % MEM_PAGE_SIZE == 0)
   {
     // This is a large allocation, which still needs to be properly implemented.

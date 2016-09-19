@@ -78,7 +78,6 @@ void proc_configure_idt()
   proc_configure_idt_entry(19, 0, (void *)asm_proc_simd_fpe_fault_handler, 0);
   proc_configure_idt_entry(20, 0, (void *)asm_proc_virt_except_fault_handler, 0);
   proc_configure_idt_entry(30, 0, (void *)asm_proc_security_fault_handler, 0);
-  // TODO: Probably ought to bin this, one day. (STAB)
   proc_configure_idt_entry(49, 3, (void *)asm_proc_panic_interrupt_handler, 0);
 
   // Load the new IDT.

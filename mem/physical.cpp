@@ -130,7 +130,6 @@ void mem_deallocate_physical_pages(void *start, unsigned int num_pages)
 /// Note that no checking is done to ensure the page is within the physical pages available to the system.
 ///
 /// @param page_addr The address of the physical page to mark free.
-// TODO: There ought to be some checking to make sure we're deallocating a page that actually exists (STAB)
 void mem_set_bitmap_page_bit(unsigned long page_addr)
 {
   KL_TRC_ENTRY;

@@ -116,7 +116,6 @@ void proc_x64_ioapic_remap_interrupts(unsigned int ioapic_num, unsigned char bas
   KL_TRC_DATA("Base interrupt", base_int);
   KL_TRC_DATA("APIC ID to route to", apic_id);
 
-  // TODO: For the time being, assume there's only one IOAPIC, so ioapic_num isn't valid.
   ASSERT(ioapic_num == 0);
 
   klib_list_item *first_item;

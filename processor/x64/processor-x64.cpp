@@ -135,7 +135,6 @@ void proc_write_msr(PROC_X64_MSRS msr, unsigned long value)
   KL_TRC_EXIT;
 }
 
-// TODO: Could allocate a blank page below as a guard.
 /// @brief Allocate a single-page stack to the kernel.
 ///
 /// @return An address that can be used as a stack pointer, growing downwards as far as the next page boundary.

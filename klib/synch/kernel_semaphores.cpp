@@ -28,8 +28,6 @@ void klib_synch_semaphore_init(klib_semaphore &semaphore, unsigned long max_user
 // Threads acquire the semaphore in order that they call this function.
 //
 // The return values should be self-explanatory.
-//
-// TODO: Add support for max_wait.
 SYNC_ACQ_RESULT klib_synch_semaphore_wait(klib_semaphore &semaphore, unsigned long max_wait)
 {
   KL_TRC_ENTRY;

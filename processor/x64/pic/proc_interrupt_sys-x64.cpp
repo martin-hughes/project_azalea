@@ -55,9 +55,6 @@ void proc_conf_interrupt_control_sys(unsigned int num_procs)
   KL_TRC_EXIT;
 }
 
-// See what kind of interrupt controller (PIC, APIC, etc.) this system uses. Then configure it as appropriate.
-// TODO: Consider the possibility of multiple IOAPICs. (We use just one now) (STAB)?
-
 /// @brief Configure the interrupt controller attached to this processor.
 ///
 /// Each processor will start their own (A)PIC. The system's IO-APICs are initialised separately.

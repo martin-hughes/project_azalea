@@ -228,7 +228,7 @@ void mem_vmm_initialize()
   klib_list_initialize(&vmm_range_data_list);
 
   // Set up a range item to cover the entirety of the kernel's available virtual
-  // memory space. TODO: Some of this is x64 specific. Move it there.
+  // memory space.
   root_item = mem_vmm_allocate_list_item();
   root_data = mem_vmm_allocate_range_item();
   klib_list_item_initialize(root_item);
@@ -321,7 +321,6 @@ klib_list_item *mem_vmm_get_suitable_range(unsigned int num_pages)
 
   KL_TRC_EXIT;
 
-  // TODO: Do something more sensible for out-of-memory conditions. (STAB)
   ASSERT(selected_range_item != nullptr);
   return selected_range_item;
 }
@@ -515,8 +514,6 @@ void mem_vmm_allocate_specific_range(unsigned long start_addr,
         KL_TRC_TRACE(TRC_LVL::FLOW, "Size too large\n");
         cur_item = mem_vmm_split_range(cur_item, cur_data->number_of_pages / 2);
 
-        // Recursion isn't the most efficient way to deal with this, but it'll do for now.
-        // TODO: Improve efficiency.
         mem_vmm_allocate_specific_range(start_addr, num_pages);
       }
 
