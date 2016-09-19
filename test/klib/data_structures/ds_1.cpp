@@ -1,8 +1,8 @@
+#include "test/klib/data_structures/ds_test_list.h"
+#include "klib/data_structures/lists.h"
 #include <iostream>
 
-#include "klib/lists/lists.h"
 #include "test/test_core/test.h"
-#include "lists_test_list.h"
 
 using namespace std;
 
@@ -11,7 +11,7 @@ const unsigned int num_demo_items = 5;
 klib_list_item demo_items[num_demo_items];
 
 // Create a new list, add and delete items, check the list is still valid.
-void list_test_1()
+void data_structures_test_1()
 {
   cout << "Lists test 1" << endl;
 

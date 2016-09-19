@@ -4,7 +4,7 @@
 /// A simple doubly-linked list implementation. It is not naturally thread-safe - that is, the caller is responsible
 /// for locking if needed.
 
-#include "lists.h"
+#include <klib/data_structures/lists.h>
 #include "klib/klib.h"
 
 void klib_list_initialize(klib_list *new_list)

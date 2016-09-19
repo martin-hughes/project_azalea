@@ -4,7 +4,7 @@
 #ifndef PROCESSOR_H_
 #define PROCESSOR_H_
 
-#include "klib/lists/lists.h"
+#include "klib/data_structures/lists.h"
 #include "klib/synch/kernel_locks.h"
 #include "mem/mem.h"
 

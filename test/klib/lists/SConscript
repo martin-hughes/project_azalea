@@ -1,5 +1,0 @@
-# Klib Lists test program.
-
-Import('env')
-obj = env.Library("klib-lists-test", [ "lists_1.cpp", "lists_test_list.cpp" ])
-Return ("obj") 
