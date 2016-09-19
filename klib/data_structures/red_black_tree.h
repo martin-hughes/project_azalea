@@ -289,7 +289,6 @@ public:
   /// Panics if a fault is found.
   void debug_verify_tree()
   {
-    //debug_print_tree(root, 0);
     ASSERT(debug_check_node(root));
     debug_verify_black_length(root);
   }
@@ -482,10 +481,6 @@ protected:
     bool left_side_deleted = false;
 
     ASSERT(node != nullptr);
-    KL_TRC_TRACE(TRC_LVL::FLOW, "** Removing node with key ", node->key, " from this tree:\n");
-    //debug_print_tree(root, 0);
-    KL_TRC_TRACE(TRC_LVL::EXTRA, "======================\n");
-
 
     if ((node->left != nullptr) && (node->right != nullptr))
     {
@@ -495,22 +490,17 @@ protected:
       //
       // However, removing the successor node might change that, but that will be covered by the "zero or one children"
       // case, below.
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Two children, ");
       if (left_side_last)
       {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "left successor ");
         successor = find_left_leaf(node->right);
       }
       else
       {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "right successor ");
         successor = find_right_leaf(node->left);
       }
 
       ASSERT(successor != nullptr);
       ASSERT((successor->left == nullptr) || (successor->right == nullptr));
-
-      KL_TRC_TRACE(TRC_LVL::FLOW, "with key ", successor->key, "\n");
 
       node->key = successor->key;
       node->value = successor->value;
@@ -527,19 +517,13 @@ protected:
       // of the red node without affecting the tree.
       if (child != nullptr)
       {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "One child with key ", child->key, ", coloured ", (child->is_black ? "Black" : "RED"), ", ");
         child_was_black = child->is_black;
         child->is_black = true;
         child->parent = node->parent;
       }
-      else
-      {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "No children, ");
-      }
 
       if (node->parent != nullptr)
       {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "With a parent\n");
         if (node->parent->left == node)
         {
           node->parent->left = child;
@@ -554,7 +538,6 @@ protected:
       }
       else
       {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "At the root\n");
         root = child;
       }
 
@@ -564,7 +547,6 @@ protected:
       {
         // Use node->parent rather than child->parent (which would match the new tree structure better) because child
         // might be nullptr.
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Rebalancing!\n");
         rebalance_after_delete(node->parent, left_side_deleted);
       }
 
@@ -583,11 +565,6 @@ protected:
   {
     ASSERT(start_node != nullptr);
 
-    KL_TRC_TRACE(TRC_LVL::EXTRA, "Rebalancing around key ", start_node->key, " (", (left_side_deleted ? "left gone" : "right gone"), ")\n");
-    KL_TRC_TRACE(TRC_LVL::EXTRA, "++++++++++++++++++++++\n");
-    //debug_print_tree(root, 0);
-    KL_TRC_TRACE(TRC_LVL::EXTRA, "^^^^^^^^^^^^^^^^^^^^^^\n");
-
     tree_node *sibling = nullptr;
     bool node_was_black = false;
 
@@ -595,15 +572,12 @@ protected:
         ((start_node->right == nullptr) || (start_node->right->is_black)))
     {
       // Both sides are black
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Both sides of parent are black\n");
       if ((left_side_deleted) && (start_node->right != nullptr))
       {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Left side was deleted, sibling to the right\n");
         sibling = start_node->right;
       }
       else if (start_node->left != nullptr)
       {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Right side was deleted, sibling to the left\n");
         sibling = start_node->left;
       }
 
@@ -611,89 +585,72 @@ protected:
           (((sibling->left != nullptr) && (!sibling->left->is_black)) ||
            ((sibling->right != nullptr) && (!sibling->right->is_black))))
       {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "One red sibling-child\n");
         // At least one of the children of the deleted node's sibling is red.
         if (left_side_deleted)
         {
-          KL_TRC_TRACE(TRC_LVL::FLOW, "Left side was deleted, rotate left\n");
           if (((sibling->left != nullptr) && (!sibling->left->is_black)) &&
               ((sibling->right == nullptr) || (sibling->right->is_black)))
           {
             // Only the sibling's left child is red, so do an extra rotation.
-            KL_TRC_TRACE(TRC_LVL::FLOW, "Right-left sibling, extra rotation\n");
-
             sibling->left->is_black = true;
             rotate_right(sibling);
             ASSERT(start_node->right->right != nullptr);
-
-//            sibling->is_black = true;
-//            sibling->parent->is_black = false;
           }
 
           rotate_left(start_node);
-          /*if (start_node->left == nullptr)  // start_node->left is actually double-black.
-          {*/
-            if(!start_node->is_black)
-            {
-              start_node->is_black = true;
-              if(start_node->parent->right != nullptr)
-              {
-                start_node->parent->right->is_black = true;
-              }
-              start_node->parent->is_black = false;
 
-              // It is not possible for start_node->parent->parent to be red, otherwise there'd have been two red nodes
-              // in a row before the rotation started.
-            }
-            else
+          if(!start_node->is_black)
+          {
+            start_node->is_black = true;
+            if(start_node->parent->right != nullptr)
             {
-              if(start_node->parent->right != nullptr)
-              {
-                start_node->parent->right->is_black = true;
-              }
+              start_node->parent->right->is_black = true;
             }
-          /*}*/
+            start_node->parent->is_black = false;
+
+            // It is not possible for start_node->parent->parent to be red, otherwise there'd have been two red nodes
+            // in a row before the rotation started.
+          }
+          else
+          {
+            if(start_node->parent->right != nullptr)
+            {
+              start_node->parent->right->is_black = true;
+            }
+          }
         }
         else
         {
-          KL_TRC_TRACE(TRC_LVL::FLOW, "Right side deleted, rotate right\n");
           if (((sibling->right != nullptr) && (sibling->right->is_black == false)) &&
               ((sibling->left == nullptr) || (sibling->left->is_black)))
           {
             // Only the sibling's right child is red, so do an extra rotation.
-            KL_TRC_TRACE(TRC_LVL::FLOW, "left-right sibling, extra rotation\n");
-
             sibling->right->is_black = true;
             rotate_left(sibling);
             ASSERT(start_node->left->left != nullptr);
-//            sibling->is_black = true;
-//            sibling->parent->is_black = false;
           }
 
           rotate_right(start_node);
 
-          /*if (start_node->right == nullptr)  // start_node->right is actually double-black.
-          {*/
-            if(!start_node->is_black)
+          if(!start_node->is_black)
+          {
+            start_node->is_black = true;
+            if(start_node->parent->left != nullptr)
             {
-              start_node->is_black = true;
-              if(start_node->parent->left != nullptr)
-              {
-                start_node->parent->left->is_black = true;
-              }
-              start_node->parent->is_black = false;
+              start_node->parent->left->is_black = true;
+            }
+            start_node->parent->is_black = false;
 
-              // It is not possible for start_node->parent->parent to be red, otherwise there'd have been two red nodes
-              // in a row before the rotation started.
-            }
-            else
+            // It is not possible for start_node->parent->parent to be red, otherwise there'd have been two red nodes
+            // in a row before the rotation started.
+          }
+          else
+          {
+            if(start_node->parent->left != nullptr)
             {
-              if(start_node->parent->left != nullptr)
-              {
-                start_node->parent->left->is_black = true;
-              }
+              start_node->parent->left->is_black = true;
             }
-          /*}*/
+          }
         }
 
         // Since we've just done a rotation, start_node can't be at the top of the tree anymore.
@@ -701,19 +658,16 @@ protected:
       }
       else
       {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Sibling and children all black\n");
         // The sibling and both of its children are all black.
         if (left_side_deleted)
         {
           // If this is false, then the tree wasn't originally balanced in terms of blackness.
           ASSERT(start_node->right != nullptr);
-          KL_TRC_TRACE(TRC_LVL::FLOW, "Recolour right child\n");
           start_node->right->is_black = false;
         }
         else
         {
           ASSERT(start_node->left != nullptr);
-          KL_TRC_TRACE(TRC_LVL::FLOW, "Recolour left child\n");
           start_node->left->is_black = false;
         }
 
@@ -744,10 +698,8 @@ protected:
     else
     {
       // The sibling of the deleted node is red.
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Sibling of deleted is red\n");
       if (left_side_deleted)
       {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Left side deleted\n");
         ASSERT((start_node->right != nullptr) && (!start_node->right->is_black));
         rotate_left(start_node);
         start_node->parent->is_black = true;
@@ -759,7 +711,6 @@ protected:
       }
       else
       {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Right side deleted\n");
         ASSERT((start_node->left != nullptr) && (!start_node->left->is_black));
         rotate_right(start_node);
         start_node->parent->is_black = true;
