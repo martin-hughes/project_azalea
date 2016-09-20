@@ -1,4 +1,4 @@
-// 64bit's ACPI interface. Primarily bumps stuff back and forth to ACPICA.
+// Project Azalea's ACPI interface. Primarily bumps stuff back and forth to ACPICA.
 
 //#define ENABLE_TRACING
 

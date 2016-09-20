@@ -17,8 +17,11 @@ Contents
 Project name
 ------------
 
-The project is currently unnamed. It is referred to variously as "the project", "the kernel" and "64bit". All are
-acceptable.
+The project is currently unnamed, but has a "code name" of Project Azalea. It is referred to internally as "the
+project", "the kernel" and "Project Azalea". All are acceptable.
+
+Before picking a code name, the project has previously been known as "64bit" (since it was a 64bit kernel) - this name
+is deprecated and should be removed if possible.
 
 Format of code
 --------------

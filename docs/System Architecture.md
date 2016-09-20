@@ -9,9 +9,9 @@
 
 ## Overview
 
-The kernel is a pure 64-bit system intended to run on modern Intel CPUs. So far as possible, it is intended to uses new
-C++ features, where those do not introduce external dependencies. It has support for pre-emptive SMP and fully
-separated memory spaces for each process.
+The kernel of Project Azalea is a pure 64-bit system intended to run on modern Intel CPUs. So far as possible, it is
+intended to uses new C++ features, where those do not introduce external dependencies. It has support for pre-emptive
+SMP and fully separated memory spaces for each process.
 
 There are several main components, and some more minor ones, all described below.
 

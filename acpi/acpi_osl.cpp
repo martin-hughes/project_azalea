@@ -1,4 +1,4 @@
-//ACPI OS Services Layer for 64bit.
+//ACPI OS Services Layer for Project Azalea.
 //
 // At present this file does not contain KL_TRC_ENTRY / _EXIT calls, just in case it screws up ACPI. Maybe add them one
 // day. Many of these functions are not supported, so they would just cause the kernel to panic. They shouldn't be

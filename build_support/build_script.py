@@ -1,4 +1,4 @@
-# Build script for Martin's Test Kernel
+# Build script for the Project Azalea Kernel
 
 import os
 

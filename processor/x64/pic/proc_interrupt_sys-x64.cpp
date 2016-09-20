@@ -12,7 +12,7 @@
 #include "processor/x64/processor-x64-int.h"
 #include "klib/klib.h"
 
-// The various PIC types supported by 64bit.
+// The various PIC types supported by the Project Azalea kernel.
 enum class APIC_TYPES { LEGACY_PIC, APIC, X2APIC };
 
 const unsigned long APIC_PRESENT = 0x0000020000000000;

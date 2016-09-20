@@ -1,4 +1,4 @@
-// Martin's Test Kernel
+// Project Azalea Kernel
 // Main entry point.
 
 #define ENABLE_TRACING

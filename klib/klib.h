@@ -1,4 +1,4 @@
-// Main include for Martin's Kernel Base Library - 'klib'
+// Main include for Project Azalea Kernel Support Library - 'klib'
 //
 // klib provides processor-agnostic helper functions that will be used throughout the kernel.
 #pragma once

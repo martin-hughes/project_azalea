@@ -1,9 +1,10 @@
-# Martin's 64 bit OS - Readme
+# Project Azalea - Readme
 
 ## Table of Contents
 
 - [License](#License)
 - [Background](#Background)
+- [Choosing a Name](#Choosing a Name)
 - [Requirements](#Requirements)
 - [Getting Started](#Getting Started)
 - [Contributing](#Contributing)
@@ -36,6 +37,16 @@ further than doing some basic memory mapping and writing on the screen.
 Nowadays, the author is all grown up and has several years professional programming experience under his belt (NOTE:
 may not be apparent from the source code!) so when he was bored relatively recently he decided to try again, but
 targeting a modern platform. The result is this project.
+
+## Choosing a Name
+
+Why "Project Azalea". Good question. For ages, the author was trying to think of a better name than "the kernel" or
+"that damned thing". He felt that his project needed a name, but couldn't think of a decent name for the end product -
+whatever that might end up being. Instead he decided to pick a codename, which doesn't need to be so representative of
+what's being made. He quite likes the look of azalea plants, and they start with the letter "A", so it seemed like a
+reasonable codename.
+
+Sorry if you hate it.
 
 ## Requirements
 

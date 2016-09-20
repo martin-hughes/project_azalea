@@ -222,8 +222,8 @@
 #elif defined(__QNX__)
 #include "acqnx.h"
 
-#elif defined(__MY_KERN)
-#include "ac64bit.h"
+#elif defined(__AZALEA__)
+#include "acazalea.h"
 
 #else
 

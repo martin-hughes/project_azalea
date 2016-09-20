@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Name: ac64bit.h - OS specific defines, etc. for Martin's 64 bit kernel.
+ * Name: acazalea.h - OS specific defines, etc. for the Project Azalea kernel.
  *
  *****************************************************************************/
 
