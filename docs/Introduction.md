@@ -1,14 +1,14 @@
-# Project Azalea - Readme
+# Project Azalea - Introduction
 
 ## Table of Contents
 
-- [License](#License)
-- [Background](#Background)
-- [Choosing a Name](#Choosing a Name)
-- [Requirements](#Requirements)
-- [Getting Started](#Getting Started)
-- [Contributing](#Contributing)
-- [Find out more](#Find out more)
+- [License](#license)
+- [Background](#background)
+- [Choosing a Name](#choosing-a-name)
+- [Requirements](#requirements)
+- [Getting Started](#getting-started)
+- [Contributing](#contributing)
+- [Find out more](#find-out-more)
 
 ## Licence
 

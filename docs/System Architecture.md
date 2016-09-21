@@ -2,7 +2,7 @@
 
 ## Table of Contents
 
-- [Overview](#Overview)
+- [Overview](#overview)
 - [Main components](#main-components)
 - [Minor components](#minor-components)
 - [External components](#external-components)

@@ -2,11 +2,11 @@
 
 ## Contents
 
-- [Introduction](#Introduction)
-- [Physical Memory](#Physical Memory)
-- [Virtual Memory](#Virtual Memory)
-- [KLib Interface](#KLib Interface)
-- [Minor Functions](#Minor Functions)
+- [Introduction](#introduction)
+- [Physical Memory](#physical-memory)
+- [Virtual Memory](#virtual-memory)
+- [KLib Interface](#klib-interface)
+- [Minor Functions](#minor-functions)
 
 ## Introduction
 
