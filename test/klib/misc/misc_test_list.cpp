@@ -3,5 +3,6 @@
 
 single_test test_list[] = {
     { misc_test_1, "kl_strlen tests" },
+    { misc_test_2, "kl_memcmp tests" },
 };
-unsigned int number_of_tests = 1;
+unsigned int number_of_tests = 2;
