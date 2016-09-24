@@ -95,7 +95,7 @@ public:
   void insert(key_type key, value_type value)
   {
     tree_node *search_node;
-    tree_node *new_node;
+    tree_node *new_node = nullptr;
     tree_node *uncle_node;
     tree_node *saved_parent;
 

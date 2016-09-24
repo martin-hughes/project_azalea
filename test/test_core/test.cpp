@@ -3,6 +3,13 @@
 // interface and features common to most tests.
 //------------------------------------------------------------------------------
 
+// On WIN32 builds of the tests, it is possible to do built-in memory leak detection.
+#ifdef WIN32
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+#endif
+
 #include <iostream>
 #include "test.h"
 
@@ -13,6 +20,13 @@ int main()
   const char *test_name;
   test_entry_ptr test_fn;
   bool passed;
+  bool all_passed = true;
+
+#ifdef WIN32
+  _CrtMemState before_state;
+  _CrtMemState after_state;
+  _CrtMemState differences;
+#endif
 
   for(int i=0; i < number_of_tests; i++)
   {
@@ -20,6 +34,11 @@ int main()
     test_fn = test_list[i].entry_point;
     cout << "Executing test #" << i << ": " << test_name << endl;
     passed = true;
+
+#ifdef WIN32
+    _CrtMemCheckpoint(&before_state);
+#endif
+
     try
     {
       test_fn();
@@ -30,12 +49,31 @@ int main()
       passed = false;
     }
 
+#ifdef WIN32
+    _CrtMemCheckpoint(&after_state);
+    if (_CrtMemDifference(&differences, &before_state, &after_state))
+    {
+      cout << "Test FAILED - MEMORY LEAK" << endl;
+      _CrtMemDumpStatistics(&differences);
+      passed = false;
+    }
+#endif
+
     if (passed)
     {
       cout << "Test PASSED" << endl;
     }
+    else
+    {
+      all_passed = false;
+    }
   }
-  return 0;
+
+#ifdef WIN32
+  _CrtDumpMemoryLeaks();
+#endif
+
+  return (all_passed ? 0 : 1);
 }
 
 assertion_failure::assertion_failure(const char *reason)

@@ -51,4 +51,6 @@ void data_structures_test_2()
     tree->debug_verify_tree();
     //cout << "Tree verfied." << endl;
   }
+
+  delete tree;
 }
