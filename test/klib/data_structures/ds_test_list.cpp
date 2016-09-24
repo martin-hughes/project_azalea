@@ -5,5 +5,6 @@ single_test test_list[] = {
     { data_structures_test_1, "Basic list test" },
     { data_structures_test_2, "Basic BST test" },
     { data_structures_test_3, "Basic red-black tree test" },
+    { data_structures_test_4, "Basic string tests" },
 };
-unsigned int number_of_tests = 3;
+unsigned int number_of_tests = 4;
