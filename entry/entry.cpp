@@ -10,17 +10,21 @@
 #include "syscall/syscall_kernel.h"
 #include "acpi/acpi_if.h"
 #include "object_mgr/object_mgr.h"
+#include "system_tree/system_tree.h"
 
 // Rough boot steps:
 //
 // main() function:
-// - Initialise processor. (For x64, this is GDT, IDT)
+// - Initialise main processor. (For x64, this is GDT, IDT)
 // - Initialise memory manager.
+// - Initialise kernel data stores. (HM, OM, ST)
+// - Initialise other processors, but leave them suspended.
+// - Prepare the system call interface on all processors.
 // - Initialise the task manager with the kernel's wake-up task (which is in ring 0)
 // - Start the clock, so that task is kicked in to life.
 //
 // Kernel wake-up task (kernel_start()):
-// - who knows?
+// - Bring other processors in to the task scheduling loop
 
 void kernel_start();
 //void dummy_proc();
@@ -45,6 +49,7 @@ int main()
   mem_gen_init();
   hm_gen_init();
   om_gen_init();
+  system_tree_init();
 
   KL_TRC_TRACE(TRC_LVL::IMPORTANT, "Welcome to the OS!\n");
 

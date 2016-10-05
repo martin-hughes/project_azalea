@@ -4,7 +4,7 @@
 //------------------------------------------------------------------------------
 
 // On WIN32 builds of the tests, it is possible to do built-in memory leak detection.
-#ifdef WIN32
+#if defined(WIN32) || defined(_WIN64)
 #define _CRTDBG_MAP_ALLOC
 #include <stdlib.h>
 #include <crtdbg.h>
@@ -22,20 +22,20 @@ int main()
   bool passed;
   bool all_passed = true;
 
-#ifdef WIN32
+#if defined(WIN32) || defined(_WIN64)
   _CrtMemState before_state;
   _CrtMemState after_state;
   _CrtMemState differences;
 #endif
 
-  for(int i=0; i < number_of_tests; i++)
+  for(unsigned int i=0; i < number_of_tests; i++)
   {
     test_name = test_list[i].test_name;
     test_fn = test_list[i].entry_point;
-    cout << "Executing test #" << i << ": " << test_name << endl;
+    cout << "Executing test #" << i + 1 << ": " << test_name << endl;
     passed = true;
 
-#ifdef WIN32
+#if defined(WIN32) || defined(_WIN64)
     _CrtMemCheckpoint(&before_state);
 #endif
 
@@ -49,7 +49,7 @@ int main()
       passed = false;
     }
 
-#ifdef WIN32
+#if defined(WIN32) || defined(_WIN64)
     _CrtMemCheckpoint(&after_state);
     if (_CrtMemDifference(&differences, &before_state, &after_state))
     {
@@ -69,7 +69,7 @@ int main()
     }
   }
 
-#ifdef WIN32
+#if defined(WIN32) || defined(_WIN64)
   _CrtDumpMemoryLeaks();
 #endif
 

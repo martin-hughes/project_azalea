@@ -326,6 +326,11 @@ protected:
       start_node = root;
     }
 
+    if (start_node == nullptr)
+    {
+      return nullptr;
+    }
+
     if (start_node->key == key)
     {
       return start_node;

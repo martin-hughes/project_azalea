@@ -86,6 +86,8 @@ void kl_memcpy(const void *from, void *to, unsigned long len)
 ///
 /// @param b The second buffer to compare
 ///
+/// @param len The maximum number of bytes to compare.
+///
 /// @return 0 if the buffers are equal, -1 if a < b and +1 if a > b
 char kl_memcmp(const void *a, const void *b, unsigned long len)
 {

@@ -1,4 +1,4 @@
-# SConstruct file for klib-lists-data-structures.
+# SConstruct file for system-tree-test
 
 import os
 import defaults
@@ -12,11 +12,13 @@ env['LINKFLAGS'] = '-Wl,--start-group'
 
 # List of required components.
 dependencies_in = ['#test/test_core/SConscript',
-                   '#test/klib/data_structures/SConscript',
-                   '#klib/data_structures/SConscript',
-                   '#test/dummy_libs/panic/SConscript',
+                   '#test/system_tree/SConscript',
+                   '#klib/misc/SConscript',
+                   '#klib/synch/SConscript',
+                   '#klib/data_structures/Sconscript',
                    '#test/dummy_libs/_tracing/SConscript',
-                   '#klib/c_helpers/SConscript',
+                   '#test/dummy_libs/panic/SConscript',
+                   '#system_tree/SConscript',
                   ]
                    
 # Build components.
@@ -27,4 +29,4 @@ for dep in dependencies_in:
   dep_out = SConscript(dep, 'env', variant_dir=out_dir, duplicate=0)
   dependencies_out.append(dep_out)
 
-env.Program("output/klib-data-structures-test", dependencies_out)
+env.Program("output/system-tree-test", dependencies_out)

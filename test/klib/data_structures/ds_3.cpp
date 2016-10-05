@@ -18,11 +18,13 @@ static set<unsigned long> keys;
 void data_structures_test_3()
 {
   cout << "Red black trees test" << endl;
-
+  
   kl_rb_tree<unsigned long, unsigned long> *tree = new kl_rb_tree<unsigned long, unsigned long>();
   unsigned long cur_key;
 
   srand (time(nullptr));
+
+  ASSERT(!tree->contains(65));
 
   while(keys.size() < NUM_TESTS)
   {
@@ -38,7 +40,7 @@ void data_structures_test_3()
   while (keys.size() > 0)
   {
     set<unsigned long>::iterator iter(keys.begin());
-    for (int i = 0; i < (rand() % keys.size()); i++)
+    for (unsigned int i = 0; i < (rand() % keys.size()); i++)
     {
       iter++;
     }
@@ -49,4 +51,6 @@ void data_structures_test_3()
     tree->remove(cur_key);
     tree->debug_verify_tree();
   }
+
+  delete tree;
 }
