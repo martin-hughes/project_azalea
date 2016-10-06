@@ -181,6 +181,8 @@ task_thread *task_create_new_thread(ENTRY_PROC entry_point, task_process *parent
   new_thread->permit_running = false;
   new_thread->thread_id = om_store_object(new_thread);
 
+  klib_synch_spinlock_init(new_thread->cycle_lock);
+
   task_thread_cycle_add(new_thread);
 
   KL_TRC_EXIT;

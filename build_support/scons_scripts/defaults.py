@@ -22,6 +22,6 @@ def setup_kernel_build_env(env):
     
 def setup_test_build_env(env):
     _setup_default_env(env)
-    env['CXXFLAGS'] = '-std=gnu++14 -D AZALEA_TEST_CODE'
+    env['CXXFLAGS'] = '-g -O0 -std=gnu++14 -D AZALEA_TEST_CODE'
     env['LINKFLAGS'] = '-Wl,--start-group'
     env.AppendENVPath('CPATH', "#/external/googletest/googletest/include")
