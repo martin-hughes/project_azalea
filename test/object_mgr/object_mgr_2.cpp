@@ -1,6 +1,6 @@
+#include "test/object_mgr/object_mgr_tests.h"
 #include "object_mgr/handles.h"
 #include "object_mgr/object_mgr.h"
-#include "test/object_mgr/object_mgr_test_list.h"
 #include "test/test_core/test.h"
 #include <iostream>
 
@@ -32,4 +32,6 @@ void object_mgr_test_2()
   {
     om_remove_object(handles[i]);
   }
+
+  test_only_reset_om();
 }

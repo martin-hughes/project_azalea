@@ -1,0 +1,10 @@
+# GoogleTest library.
+
+files = ["googletest/googletest/src/gtest-all.cc",
+        ]
+
+Import('env')
+env.AppendENVPath('CPATH', "#/external/googletest/googletest/include")
+env.AppendENVPath('CPATH', "#/external/googletest/googletest/")
+obj = env.Library("google-test", files)
+Return ("obj")  

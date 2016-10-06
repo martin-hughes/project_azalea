@@ -1,8 +1,9 @@
 #include <iostream>
 
 #include "klib/misc/math_hacks.h"
-#include "maths_test_list.h"
 #include "test/test_core/test.h"
+
+#include "gtest/gtest.h"
 
 using namespace std;
 
@@ -26,9 +27,20 @@ pow2_test rounding_tests[] = {
 
 const unsigned long num_rounding_tests = sizeof (rounding_tests) / sizeof (pow2_test);
 
+class MathsTest : public ::testing::Test
+{
+protected:
+  MathsTest()
+  {
+  }
+
+  virtual ~MathsTest()
+  {
+  }
+};
 
 // Create a new list, add and delete items, check the list is still valid.
-void maths_test_1()
+TEST(MathsTest, maths_test_1)
 {
   unsigned long actual_output;
 

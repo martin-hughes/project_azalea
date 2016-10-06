@@ -6,36 +6,14 @@
 #include <iostream>
 #include "test.h"
 
+#include "gtest/gtest.h"
+
 using namespace std;
 
-int main()
+int main(int argc, char **argv)
 {
-  const char *test_name;
-  test_entry_ptr test_fn;
-  bool passed;
-
-  for(int i=0; i < number_of_tests; i++)
-  {
-    test_name = test_list[i].test_name;
-    test_fn = test_list[i].entry_point;
-    cout << "Executing test #" << i << ": " << test_name << endl;
-    passed = true;
-    try
-    {
-      test_fn();
-    }
-    catch(assertion_failure *asf)
-    {
-      cout << "Test FAILED: " << asf->get_reason() << endl;
-      passed = false;
-    }
-
-    if (passed)
-    {
-      cout << "Test PASSED" << endl;
-    }
-  }
-  return 0;
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }
 
 assertion_failure::assertion_failure(const char *reason)

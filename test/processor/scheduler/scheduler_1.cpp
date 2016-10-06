@@ -1,4 +1,4 @@
-#include "test/processor/scheduler/scheduler_test_list.h"
+#include "test/processor/scheduler/scheduler_tests.h"
 #include "object_mgr/handles.h"
 #include "object_mgr/object_mgr.h"
 #include "processor/processor.h"
