@@ -1,0 +1,97 @@
+# SConstruct file for all test programs.
+
+class test_script:
+  def __init__(self, name, deps, libs):
+    self.name = name
+    self.deps = deps
+    self.libs = libs
+
+test_programs = [
+  test_script(name = 'klib-data-structures',
+    deps = ['#test/test_core/SConscript',
+            '#test/klib/data_structures/SConscript',
+            '#klib/data_structures/SConscript',
+            '#test/dummy_libs/panic/SConscript',
+            '#test/dummy_libs/_tracing/SConscript',
+           ],
+    libs = [ ]),
+           
+  test_script(name = 'klib-math', 
+    deps = ['#test/test_core/SConscript',
+            '#test/klib/math/SConscript',
+            '#klib/misc/SConscript',
+            '#test/dummy_libs/panic/SConscript',
+           ],
+    libs = [ ]),
+    
+  test_script(name = 'klib-memory',
+    deps = ['#test/test_core/SConscript',
+            '#test/klib/memory/SConscript',
+            '#klib/memory/SConscript',
+            '#klib/data_structures/SConscript',
+            '#klib/c_helpers/SConscript',
+            '#test/dummy_libs/core_mem/SConscript',
+            '#test/dummy_libs/panic/SConscript',
+            '#klib/synch/SConscript',
+           ],
+    libs = [ ]),
+    
+  test_script(name = 'klib-synch',
+    deps = ['#test/test_core/SConscript',
+            '#test/klib/synch/SConscript',
+            '#klib/synch/SConscript',
+            '#test/dummy_libs/panic/SConscript',
+            #'#test/dummy_libs/tracing/SConscript',
+            #'#test/dummy_libs/processor/SConscript',
+            '#klib/data_structures/Sconscript',
+           ],
+    libs = [ 'pthread' ]),
+  
+  test_script(name = 'object-mgr',
+    deps = ['#test/test_core/SConscript',
+            '#test/object_mgr/SConscript',
+            '#klib/misc/SConscript',
+            '#klib/synch/SConscript',
+            '#klib/data_structures/Sconscript',
+            '#test/dummy_libs/_tracing/SConscript',
+            '#test/dummy_libs/panic/SConscript',
+            '#object_mgr/SConscript',
+           ],
+    libs = [ ]),
+    
+  test_script(name = 'scheduler',
+    deps = ['#test/test_core/SConscript',
+            '#test/processor/scheduler/SConscript',
+            '#processor/Sconscript-generic',
+            '#klib/misc/SConscript',
+            '#klib/synch/SConscript',
+            '#klib/data_structures/Sconscript',
+            '#test/dummy_libs/_tracing/SConscript',
+            '#test/dummy_libs/panic/SConscript',
+            '#object_mgr/SConscript',
+           ],
+    libs = [ ]),
+  ]
+
+import os
+import defaults
+
+def build_test_script(script):  
+  # Build components.
+  dependencies_out = [ ]
+  
+  for dep in script.deps:
+    out_dir = os.path.join('output', 'test', dep.strip('#'))
+    out_dir = os.path.dirname(out_dir)
+    dep_out = SConscript(dep, 'env', variant_dir=out_dir, duplicate=0)
+    dependencies_out.append(dep_out)
+  
+  env['LIBS'] = env['LIBS'] + script.libs
+  env.Program("output/%s-test" % script.name, dependencies_out)
+
+# Setup Environment.
+env = Environment()
+defaults.setup_test_build_env(env)
+
+for script in test_programs:
+  build_test_script(script)
