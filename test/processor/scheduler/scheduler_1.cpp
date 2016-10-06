@@ -1,4 +1,6 @@
 #include "test/processor/scheduler/scheduler_test_list.h"
+#include "object_mgr/handles.h"
+#include "object_mgr/object_mgr.h"
 #include "processor/processor.h"
 #include "processor/processor-int.h"
 #include <iostream>
@@ -22,6 +24,8 @@ void scheduler_test_1()
 
   cout << "Scheduler task cycle tests" << endl;
 
+  hm_gen_init();
+  om_gen_init();
   task_gen_init(test_1_fake_task);
 
   // At the moment, there is only one thread, so it should be returned to us repeatedly.
@@ -92,6 +96,8 @@ void scheduler_test_1()
   {
     ASSERT(idle_thread_a == task_get_next_thread());
   }
+
+  test_only_reset_om();
 
 }
 
