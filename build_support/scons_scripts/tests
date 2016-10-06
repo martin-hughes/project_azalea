@@ -1,0 +1,49 @@
+# SConstruct file for all test programs.
+
+class test_script:
+  def __init__(self, name, deps, libs):
+    self.name = name
+    self.deps = deps
+    self.libs = libs
+
+test_programs = [
+  test_script(name = 'main-tests', 
+    deps = ['#klib/c_helpers/SConscript',
+            '#klib/data_structures/SConscript',
+            '#klib/memory/SConscript',
+            '#klib/misc/SConscript',
+            '#klib/synch/SConscript',
+            '#processor/Sconscript-generic',
+            '#object_mgr/SConscript',
+            '#test/SConscript-main',
+            '#test/dummy_libs/core_mem/SConscript',
+            '#test/dummy_libs/panic/SConscript',
+            '#test/dummy_libs/_tracing/SConscript',
+            '#test/test_core/SConscript',
+            '#external/SConscript-GoogleTest',
+           ],
+    libs = [ "pthread" ]),
+  ]
+
+import os
+import defaults
+
+def build_test_script(script):  
+  # Build components.
+  dependencies_out = [ ]
+  
+  for dep in script.deps:
+    out_dir = os.path.join('output', 'test', dep.strip('#'))
+    out_dir = os.path.dirname(out_dir)
+    dep_out = SConscript(dep, 'env', variant_dir=out_dir, duplicate=0)
+    dependencies_out.append(dep_out)
+  
+  env['LIBS'] = env['LIBS'] + script.libs
+  env.Program("output/%s" % script.name, dependencies_out)
+
+# Setup Environment.
+env = Environment()
+defaults.setup_test_build_env(env)
+
+for script in test_programs:
+  build_test_script(script)

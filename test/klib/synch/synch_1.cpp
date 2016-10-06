@@ -6,8 +6,9 @@
 #include <pthread.h>
 #include <unistd.h>
 
+#include "synch_tests.h"
+
 #include "klib/synch/kernel_locks.h"
-#include "synch_test_list.h"
 #include "test/test_core/test.h"
 
 using namespace std;

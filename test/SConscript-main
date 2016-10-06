@@ -1,0 +1,34 @@
+# Contains tests that use the "normal" set of required libraries. The various support libraries continue to have their
+# own SConscript files. We do not link the various tests into a static library first because otherwise Google Test
+# loses track of the test cases - the test classes must be visible in the "main" part of the test program.
+
+Import('env')
+
+obj = [ ]
+files = [ "klib/math/maths_tests.cpp",
+          
+          "klib/data_structures/ds_tests.cpp",
+          "klib/data_structures/ds_1.cpp",
+          "klib/data_structures/ds_2.cpp",
+          "klib/data_structures/ds_3.cpp",
+          
+          "klib/memory/memory_tests.cpp",
+          "klib/memory/memory_1.cpp",
+          "klib/memory/memory_2.cpp",
+          
+          "klib/synch/synch_tests.cpp",
+          "klib/synch/synch_1.cpp",
+          
+          "object_mgr/object_mgr_tests.cpp",
+          "object_mgr/object_mgr_1.cpp",
+          "object_mgr/object_mgr_2.cpp",
+          
+          "processor/scheduler/scheduler_tests.cpp",
+          "processor/scheduler/scheduler_1.cpp",
+          "processor/scheduler/fake_platform_part.cpp",
+        ]
+
+for f in files:
+  obj = obj + [ env.Object(f) ]
+
+Return ("obj")

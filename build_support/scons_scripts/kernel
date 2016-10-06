@@ -5,11 +5,7 @@ import defaults
 
 # Setup environment.
 env = Environment()
-defaults.setup_default_env(env)
-env['CXXFLAGS'] = '-mno-red-zone -nostdlib -nostartfiles -nodefaultlibs -mcmodel=large -fno-exceptions -std=gnu++14 -U _LINUX -U __linux__ -D __AZALEA__'
-env['CFLAGS'] = '-mno-red-zone -nostdlib -nostartfiles -nodefaultlibs -mcmodel=large -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__'
-env['LINKFLAGS'] = "-T build_support/kernel_stage.ld --start-group"
-env['LINK'] = 'ld -Map output/kernel_map.map'
+defaults.setup_kernel_build_env(env)
 
 # List of required components.
 dependencies_in = ['#entry/SConscript',
@@ -34,7 +30,10 @@ dependencies_in = ['#entry/SConscript',
 dependencies_out = [ ]
 
 for dep in dependencies_in:
-  out_dir = os.path.join('output', dep.strip('#'))
+  # Transform the name so that the intermediate files end up in output/kernel/... and remove the SConscript part of the
+  # path.
+  out_dir = os.path.join('output', 'kernel', dep.strip('#'))
+  out_dir = os.path.dirname(out_dir)
   dep_out = SConscript(dep, 'env', variant_dir=out_dir, duplicate=0)
   dependencies_out.append(dep_out)
 

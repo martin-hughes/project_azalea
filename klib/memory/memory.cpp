@@ -573,6 +573,7 @@ bool slab_is_empty(void* slab, unsigned int chunk_size_idx)
 ///
 /// **Note:** This invalidates any allocations done using kmalloc. Test code must not reuse those allocations after
 /// calling this function.
+#ifdef AZALEA_TEST_CODE
 void test_only_reset_allocator()
 {
   KL_TRC_ENTRY;
@@ -607,3 +608,4 @@ void test_only_reset_allocator()
 
   KL_TRC_EXIT;
 }
+#endif

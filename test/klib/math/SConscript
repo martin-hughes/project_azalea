@@ -1,5 +1,0 @@
-# Klib Maths helpers test program.
-
-Import('env')
-obj = env.Library("klib-maths-test", [ "maths_1.cpp", "maths_test_list.cpp" ])
-Return ("obj") 

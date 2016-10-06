@@ -1,9 +1,0 @@
-# Klib-memory test program.
-
-Import('env')
-files = [ "memory_test_list.cpp", 
-		  "memory_1.cpp",
-		  "memory_2.cpp" ]
-
-obj = env.Library("klib-memory-test", files)
-Return ("obj") 

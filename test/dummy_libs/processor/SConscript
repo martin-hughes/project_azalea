@@ -1,5 +1,0 @@
-# Dummy processor library. Currently only supports some of the task management functions.
-
-Import('env')
-obj = env.Library("test-dummy-processor", [ "task_manager.dummy.cpp" ])
-Return ("obj")

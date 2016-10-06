@@ -14,8 +14,13 @@
 #include "object_mgr.h"
 #include "object_type.h"
 
-static kl_rb_tree<GEN_HANDLE, object_data *> *om_main_store;
-static kernel_spinlock om_main_lock;
+namespace
+{
+  kl_rb_tree<GEN_HANDLE, object_data *> *om_main_store;
+  kernel_spinlock om_main_lock;
+
+  bool om_initialized = false;
+}
 
 object_data *om_int_retrieve_object(GEN_HANDLE handle);
 
@@ -24,8 +29,12 @@ void om_gen_init()
 {
   KL_TRC_ENTRY;
 
+  ASSERT(!om_initialized);
+
   om_main_store = new kl_rb_tree<GEN_HANDLE, object_data *>();
   klib_synch_spinlock_init(om_main_lock);
+
+  om_initialized = true;
 
   KL_TRC_EXIT;
 }
@@ -39,7 +48,9 @@ void om_gen_init()
 /// @return A handle that correlates to object_ptr
 GEN_HANDLE om_store_object(void *object_ptr)
 {
-  KL_TRC_ENTRY
+  KL_TRC_ENTRY;
+
+  ASSERT(om_initialized);
 
   GEN_HANDLE new_handle = hm_get_handle();
 
@@ -64,6 +75,8 @@ GEN_HANDLE om_store_object(void *object_ptr)
 void om_correlate_object(void *object_ptr, GEN_HANDLE handle)
 {
   KL_TRC_ENTRY;
+
+  ASSERT(om_initialized);
 
   object_data *new_object = new object_data;
 
@@ -92,6 +105,8 @@ void *om_retrieve_object(GEN_HANDLE handle)
 
   object_data *found_object;
 
+  ASSERT(om_initialized);
+
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Looking for handle ", handle, "\n");
 
   klib_synch_spinlock_lock(om_main_lock);
@@ -115,6 +130,8 @@ void om_remove_object(GEN_HANDLE handle)
 {
   KL_TRC_ENTRY;
 
+  ASSERT(om_initialized);
+
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Remove and destroy handle ", handle, "\n");
   om_decorrelate_object(handle);
   hm_release_handle(handle);
@@ -131,6 +148,8 @@ void om_remove_object(GEN_HANDLE handle)
 void om_decorrelate_object(GEN_HANDLE handle)
 {
   KL_TRC_ENTRY;
+
+  ASSERT(om_initialized);
 
   object_data *found_object;
 
@@ -161,6 +180,8 @@ object_data *om_int_retrieve_object(GEN_HANDLE handle)
 
   object_data *found_object = nullptr;
 
+  ASSERT(om_initialized);
+
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Handle to retrieve: ", handle, "\n");
 
   found_object = om_main_store->search(handle);
@@ -170,3 +191,13 @@ object_data *om_int_retrieve_object(GEN_HANDLE handle)
 
   return found_object;
 }
+
+
+#ifdef AZALEA_TEST_CODE
+void test_only_reset_om()
+{
+  om_initialized = false;
+  delete om_main_store;
+  om_main_store = nullptr;
+}
+#endif
