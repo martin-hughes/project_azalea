@@ -31,6 +31,7 @@ enum class PROC_IPI_INTERRUPT
 void proc_send_ipi(unsigned int apic_dest,
                    PROC_IPI_SHORT_TARGET shorthand,
                    PROC_IPI_INTERRUPT interrupt,
-                   unsigned char vector);
+                   unsigned char vector,
+                   const bool wait_for_delivery);
 
 #endif

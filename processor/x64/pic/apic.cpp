@@ -12,6 +12,7 @@
 const unsigned long APIC_ENABLED = 0x0000000000000800;
 const unsigned char APIC_SPURIOUS_INT_VECTOR = 127;
 const unsigned int APIC_SIV_FLAGS = 0x100;
+const unsigned long icr_delivery_status = 0x1000;
 
 static apic_registers **local_apics = nullptr;
 
@@ -134,10 +135,13 @@ unsigned char proc_x64_apic_get_local_id()
 /// @param interrupt The desired type of IPI to send
 ///
 /// @param vector The vector number for this IPI. Depending on the type of IPI being sent, this may be ignored.
+///
+/// @param wait_for_delivery True if this processor should wait for the interrupt to have been delivered to the target.
 void proc_apic_send_ipi(const unsigned int apic_dest,
                         const PROC_IPI_SHORT_TARGET shorthand,
                         const PROC_IPI_INTERRUPT interrupt,
-                        const unsigned char vector)
+                        const unsigned char vector,
+                        const bool wait_for_delivery)
 {
   KL_TRC_ENTRY;
 
@@ -160,6 +164,11 @@ void proc_apic_send_ipi(const unsigned int apic_dest,
   // The high part must be written first, as writing the low part causes the interrupt to be sent.
   local_apics[this_proc_id]->lvt_interrupt_command_2 = reg_high_part;
   local_apics[this_proc_id]->lvt_interrupt_command_1 = reg_low_part;
+
+  while (wait_for_delivery && ((local_apics[this_proc_id]->lvt_interrupt_command_1 & icr_delivery_status) != 0))
+  {
+    // Wait!
+  }
 
   KL_TRC_EXIT;
 }

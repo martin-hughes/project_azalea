@@ -164,10 +164,13 @@ APIC_TYPES proc_x64_detect_pic_type()
 /// @param interrupt The desired type of IPI to send
 ///
 /// @param vector The vector number for this IPI. Depending on the type of IPI being sent, this may be ignored.
+///
+/// @param wait_for_delivery True if this processor should wait for the interrupt to have been delivered to the target.
 void proc_send_ipi(unsigned int apic_dest,
                    PROC_IPI_SHORT_TARGET shorthand,
                    PROC_IPI_INTERRUPT interrupt,
-                   unsigned char vector)
+                   unsigned char vector,
+                   const bool wait_for_delivery)
 {
   KL_TRC_ENTRY;
 
@@ -176,7 +179,7 @@ void proc_send_ipi(unsigned int apic_dest,
   switch (selected_pic_mode)
   {
     case APIC_TYPES::APIC:
-      proc_apic_send_ipi(apic_dest, shorthand, interrupt, vector);
+      proc_apic_send_ipi(apic_dest, shorthand, interrupt, vector, wait_for_delivery);
       break;
 
     case APIC_TYPES::X2APIC:

@@ -293,7 +293,8 @@ void proc_mp_x64_signal_proc(unsigned int proc_id, PROC_IPI_MSGS msg)
   proc_send_ipi(proc_info_block[proc_id].platform_data.lapic_id,
                 PROC_IPI_SHORT_TARGET::NONE,
                 PROC_IPI_INTERRUPT::NMI,
-                0);
+                0,
+                false);
 
   while(inter_proc_signals[proc_id].msg_control_state != PROC_MP_X64_MSG_STATE::ACKNOWLEDGED)
   {

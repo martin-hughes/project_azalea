@@ -155,7 +155,7 @@ task_x64_exec_context *task_int_swap_task(unsigned long stack_ptr, unsigned long
   if (proc_mp_this_proc_id() == 0)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Sending broadcast IPI\n");
-    proc_send_ipi(0, PROC_IPI_SHORT_TARGET::ALL_EXCL_SELF, PROC_IPI_INTERRUPT::FIXED, 32);
+    proc_send_ipi(0, PROC_IPI_SHORT_TARGET::ALL_EXCL_SELF, PROC_IPI_INTERRUPT::FIXED, 32, false);
   }
 
   KL_TRC_EXIT;
@@ -186,6 +186,20 @@ void task_platform_init()
   KL_TRC_ENTRY;
 
   proc_init_tss();
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Give up the rest of our time slice.
+///
+/// Signal the scheduler to run. It'll a new thread to run as usual, and it might choose this one to run again.
+void task_yield()
+{
+  KL_TRC_ENTRY;
+
+  // Signal ourselves with a task-switching interrupt and that'll allow the task manager to select a new thread to run
+  // (which might be this one)
+  proc_send_ipi(0, PROC_IPI_SHORT_TARGET::SELF, PROC_IPI_INTERRUPT::FIXED, 32, true);
 
   KL_TRC_EXIT;
 }

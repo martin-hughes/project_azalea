@@ -572,16 +572,6 @@ void task_resume_scheduling()
   KL_TRC_EXIT;
 }
 
-/// @brief Give up the rest of our time slice.
-void task_yield()
-{
-  KL_TRC_ENTRY;
-
-  asm("hlt");
-
-  KL_TRC_EXIT;
-}
-
 /// @brief Add a new thread to the cycle of all threads
 ///
 /// All threads are joined in a cycle by task_thread::next_thread. Add new_thread to this cycle.

@@ -15,7 +15,8 @@ extern "C" void proc_x64_apic_irq_ack();
 void proc_apic_send_ipi(const unsigned int apic_dest,
                         const PROC_IPI_SHORT_TARGET shorthand,
                         const PROC_IPI_INTERRUPT interrupt,
-                        const unsigned char vector);
+                        const unsigned char vector,
+                        const bool wait_for_delivery);
 
 struct apic_registers
 {
