@@ -17,25 +17,25 @@
 /// until after the memory manager is running.
 void proc_gen_init()
 {
-	// Interrupts should have been left disabled by the bootloader, but since
-	// we're about to fiddle with the GDT, IDT and such, it's probably best
-	// to make sure.
-	asm_proc_stop_interrupts();
+  // Interrupts should have been left disabled by the bootloader, but since
+  // we're about to fiddle with the GDT, IDT and such, it's probably best
+  // to make sure.
+  asm_proc_stop_interrupts();
 
-	// Fill in the GDT, and select an appropriate set of segments. The TSS descriptor and segment will
-	// come later.
-	asm_proc_load_gdt();
+  // Fill in the GDT, and select an appropriate set of segments. The TSS descriptor and segment will
+  // come later.
+  asm_proc_load_gdt();
 
-	// Fill in the IDT now, so we at least handle our own exceptions.
-	proc_configure_idt();
+  // Fill in the IDT now, so we at least handle our own exceptions.
+  proc_configure_idt();
 
-	// Further processor setup, including configuring PICs/APICs, continues after the memory mamanger is up.
+  // Further processor setup, including configuring PICs/APICs, continues after the memory mamanger is up.
 }
 
 /// @brief Cause this processor to enter the halted state.
 void proc_stop_this_proc()
 {
-	asm_proc_stop_this_proc();
+  asm_proc_stop_this_proc();
 }
 
 /// @brief Stop interrupts.
@@ -43,7 +43,7 @@ void proc_stop_this_proc()
 ///This should only be used when preparing to panic, to prevent any race conditions.
 void proc_stop_interrupts()
 {
-	asm_proc_stop_interrupts();
+  asm_proc_stop_interrupts();
 }
 
 /// @brief Read from a processor I/O port.
