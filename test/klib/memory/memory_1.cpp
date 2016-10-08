@@ -4,11 +4,11 @@
 // More complex tests to prove that the allocator works as expected are covered
 // by later tests.
 
+#include "test/klib/memory/memory_tests.h"
 #include <iostream>
 
 #include "klib/memory/memory.h"
 #include "test/test_core/test.h"
-#include "memory_test_list.h"
 
 using namespace std;
 

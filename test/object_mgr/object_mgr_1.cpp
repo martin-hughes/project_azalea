@@ -1,6 +1,6 @@
+#include "test/object_mgr/object_mgr_tests.h"
 #include "object_mgr/handles.h"
 
-#include "test/object_mgr/object_mgr_test_list.h"
 #include "test/test_core/test.h"
 #include <iostream>
 

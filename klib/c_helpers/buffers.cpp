@@ -24,7 +24,9 @@ void kl_memset(void* buffer, unsigned char val, unsigned long len)
   ASSERT(end > (unsigned long)buffer);
 
   // Make sure this setting occurs in kernel space, by checking that the high bit of the address is set.
+#ifndef AZALEA_TEST_CODE
   ASSERT(((unsigned long)buffer & (((unsigned long)1) << 63)) != 0);
+#endif
 
 	unsigned char* b = (unsigned char*)buffer;
 	for(unsigned long done = 0; done < len; done++)

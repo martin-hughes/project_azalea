@@ -8,6 +8,8 @@ void kfree(void *mem_block);
 
 // Only for use by test code. See the associated comment in memory.cpp for
 // details.
+#ifdef AZALEA_TEST_CODE
 void test_only_reset_allocator();
+#endif
 
 #endif

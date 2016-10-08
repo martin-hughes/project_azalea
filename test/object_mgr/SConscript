@@ -1,8 +1,0 @@
-# Object Manager test program.
-
-Import('env')
-obj = env.Library("object-mgr-test", [ "object_mgr_1.cpp", 
-                                       "object_mgr_2.cpp",
-                                       "object_mgr_test_list.cpp",
-                                     ])
-Return ("obj") 

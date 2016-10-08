@@ -9,4 +9,8 @@ void om_decorrelate_object(GEN_HANDLE handle);
 void *om_retrieve_object(GEN_HANDLE handle);
 void om_remove_object(GEN_HANDLE handle);
 
+#ifdef AZALEA_TEST_CODE
+void test_only_reset_om();
+#endif
+
 #endif
