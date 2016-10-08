@@ -49,7 +49,7 @@ void kl_memset(void* buffer, unsigned char val, unsigned long len)
 /// @param to The buffer to copy to
 ///
 /// @param len The length of data to copy.
-void kl_memcpy(void *from, void *to, unsigned long len)
+void kl_memcpy(const void *from, void *to, unsigned long len)
 {
   unsigned char *f = (unsigned char *)from;
   unsigned char *t = (unsigned char *)to;
@@ -77,4 +77,47 @@ void kl_memcpy(void *from, void *to, unsigned long len)
     t++;
     f++;
   }
+}
+
+/// @brief Kernel buffer comparison function
+///
+/// Approximately a drop-in for regular memcmp, compares two buffers and returns which of them (if either) is lower
+/// numerically
+///
+/// @param a The first buffer to compare
+///
+/// @param b The second buffer to compare
+///
+/// @param len The maximum number of bytes to compare.
+///
+/// @return 0 if the buffers are equal, -1 if a < b and +1 if a > b
+char kl_memcmp(const void *a, const void *b, unsigned long len)
+{
+  const char *_a = static_cast<const char *>(a);
+  const char *_b = static_cast<const char *>(b);
+
+  unsigned long ctr = 0;
+
+  if (len == 0)
+  {
+    return 0;
+  }
+
+  while (ctr < len)
+  {
+    if (*_a < *_b)
+    {
+      return -1;
+    }
+    else if (*_a > *_b)
+    {
+      return 1;
+    }
+
+    ctr++;
+    _a++;
+    _b++;
+  }
+
+  return 0;
 }

@@ -22,6 +22,8 @@ void data_structures_test_2()
 
   srand (time(nullptr));
 
+  ASSERT(!tree->contains(42));
+
   while(keys.size() < NUM_TESTS)
   {
     cur_key = rand() % 10000;
@@ -38,7 +40,7 @@ void data_structures_test_2()
   while (keys.size() > 0)
   {
     set<unsigned long>::iterator iter(keys.begin());
-    for (int i = 0; i < (rand() % keys.size()); i++)
+    for (unsigned int i = 0; i < (rand() % keys.size()); i++)
     {
       iter++;
     }
@@ -51,4 +53,6 @@ void data_structures_test_2()
     tree->debug_verify_tree();
     //cout << "Tree verfied." << endl;
   }
+
+  delete tree;
 }

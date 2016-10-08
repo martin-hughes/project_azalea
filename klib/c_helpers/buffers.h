@@ -2,4 +2,5 @@
 // otherwise.
 
 void kl_memset(void* buffer, unsigned char val, unsigned long len);
-void kl_memcpy(void *from, void *to, unsigned long len);
+void kl_memcpy(const void *from, void *to, unsigned long len);
+char kl_memcmp(const void *a, const void *b, unsigned long len);

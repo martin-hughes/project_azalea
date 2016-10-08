@@ -1,0 +1,32 @@
+# SConstruct file for system-tree-test
+
+import os
+import defaults
+
+# Setup Environment.
+env = Environment()
+defaults.setup_default_env(env)
+
+env['CXXFLAGS'] = '-std=gnu++14'
+env['LINKFLAGS'] = '-Wl,--start-group'
+
+# List of required components.
+dependencies_in = ['#test/test_core/SConscript',
+                   '#test/system_tree/SConscript',
+                   '#klib/misc/SConscript',
+                   '#klib/synch/SConscript',
+                   '#klib/data_structures/Sconscript',
+                   '#test/dummy_libs/_tracing/SConscript',
+                   '#test/dummy_libs/panic/SConscript',
+                   '#system_tree/SConscript',
+                  ]
+                   
+# Build components.
+dependencies_out = [ ]
+
+for dep in dependencies_in:
+  out_dir = os.path.join('output', dep.strip('#'))
+  dep_out = SConscript(dep, 'env', variant_dir=out_dir, duplicate=0)
+  dependencies_out.append(dep_out)
+
+env.Program("output/system-tree-test", dependencies_out)

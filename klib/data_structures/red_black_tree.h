@@ -95,7 +95,7 @@ public:
   void insert(key_type key, value_type value)
   {
     tree_node *search_node;
-    tree_node *new_node;
+    tree_node *new_node = nullptr;
     tree_node *uncle_node;
     tree_node *saved_parent;
 
@@ -474,7 +474,6 @@ protected:
   void remove_node(tree_node *node)
   {
     tree_node *successor = nullptr;
-    tree_node *parent;
     tree_node *sibling = nullptr;
     tree_node *child = nullptr;
     bool child_was_black = true;
@@ -766,6 +765,11 @@ protected:
     if (start_node == nullptr)
     {
       start_node = root;
+    }
+
+    if (start_node == nullptr)
+    {
+      return nullptr;
     }
 
     if (start_node->key == key)

@@ -3,6 +3,11 @@
 
 // KLIB Variable Arguments List support. Relies heavily on the GCC builtins!
 
+// Ordinarily we'd not check against WIN32, but putting this here allows the tests code to be built in Visual Studio,
+// and I find debugging in Visual Studio much easier than Eclipse!
+#ifndef WIN32
+#ifndef _WIN64
+
 typedef __builtin_va_list       va_list;
 
 #define va_start(ap, last) \
@@ -16,5 +21,8 @@ typedef __builtin_va_list       va_list;
 
 #define va_end(ap) \
         __builtin_va_end(ap)
+
+#endif
+#endif
 
 #endif

@@ -27,3 +27,8 @@ TEST(DataStructuresTest, RedBlackTrees1)
 {
   data_structures_test_3();
 }
+
+TEST(DataStructuresTest, Strings1)
+{
+  data_structures_test_4();
+}
