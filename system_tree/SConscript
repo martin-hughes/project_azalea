@@ -5,5 +5,5 @@ files = [ "system_tree.cpp",
           "system_tree_simple_branch.cpp",
           "system_tree_root.cpp", 
         ]
-obj = env.Library("syscall", files)
+obj = env.Library("system_tree", files)
 Return ("obj") 

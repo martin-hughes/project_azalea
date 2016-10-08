@@ -1,8 +1,0 @@
-# System Tree test program.
-
-Import('env')
-obj = env.Library("system-tree-test", [ "system_tree_1.cpp",
-                                        "system_tree_2.cpp",
-                                        "system_tree_test_list.cpp",
-                                      ])
-Return ("obj") 

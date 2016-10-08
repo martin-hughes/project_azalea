@@ -15,6 +15,7 @@ test_programs = [
             '#klib/synch/SConscript',
             '#processor/Sconscript-generic',
             '#object_mgr/SConscript',
+            '#system_tree/SConscript',
             '#test/SConscript-main',
             '#test/dummy_libs/core_mem/SConscript',
             '#test/dummy_libs/panic/SConscript',

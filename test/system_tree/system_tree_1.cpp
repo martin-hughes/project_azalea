@@ -1,4 +1,4 @@
-#include "test/system_tree/system_tree_test_list.h"
+#include "test/system_tree/system_tree_tests.h"
 #include "test/test_core/test.h"
 #include "system_tree/system_tree_simple_branch.h"
 #include "system_tree/system_tree.h"
@@ -38,7 +38,7 @@ void system_tree_test_1()
   ASSERT(ptr == &c);
 
   ASSERT(system_tree()->get_leaf("branch_c", &leaf_ptr) == ERR_CODE::NOT_FOUND);
-  
+
   ASSERT(system_tree()->add_branch("branch_c", &a) == ERR_CODE::ALREADY_EXISTS);
   ASSERT(system_tree()->delete_child("branch_c") == ERR_CODE::NO_ERROR);
   ASSERT(system_tree()->delete_child("branch_b") == ERR_CODE::NO_ERROR);

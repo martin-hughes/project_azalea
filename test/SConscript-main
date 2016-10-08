@@ -27,6 +27,10 @@ files = [ "klib/math/maths_tests.cpp",
           "processor/scheduler/scheduler_tests.cpp",
           "processor/scheduler/scheduler_1.cpp",
           "processor/scheduler/fake_platform_part.cpp",
+          
+          "system_tree/system_tree_tests.cpp",
+          "system_tree/system_tree_1.cpp",
+          "system_tree/system_tree_2.cpp",
         ]
 
 for f in files:

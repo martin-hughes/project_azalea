@@ -1,4 +1,4 @@
-#include "test/system_tree/system_tree_test_list.h"
+#include "test/system_tree/system_tree_tests.h"
 #include "test/test_core/test.h"
 #include "system_tree/system_tree_simple_branch.h"
 #include "system_tree/system_tree.h"
