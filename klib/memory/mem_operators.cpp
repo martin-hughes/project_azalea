@@ -25,4 +25,9 @@ void operator delete (void *unlucky, unsigned long)
   kfree(unlucky);
 }
 
+void operator delete[] (void *unlucky)
+{
+  kfree(unlucky);
+}
+
 #endif

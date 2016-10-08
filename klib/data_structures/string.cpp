@@ -233,7 +233,7 @@ void kl_string::reset_string()
 {
   if (this->string_contents)
   {
-    delete this->string_contents;
+    delete[] this->string_contents;
     this->string_contents = nullptr;
     this->buffer_length = 0;
   }
@@ -247,7 +247,7 @@ void kl_string::resize_buffer(unsigned long new_size)
   {
     kl_memcpy(this->string_contents, new_buf, (new_size < this->buffer_length ? new_size : this->buffer_length));
     new_buf[new_size - 1] = 0;
-    delete this->string_contents;
+    delete[] this->string_contents;
   }
 
   this->string_contents = new_buf;
