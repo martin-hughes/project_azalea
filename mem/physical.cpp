@@ -14,13 +14,26 @@
 #include "mem/mem.h"
 #include "mem/mem-int.h"
 
-// In the page allocation bitmap, a 1 indicates that the page is FREE.
-const unsigned long MAX_SUPPORTED_PAGES = 2048;
-const unsigned long SIZE_OF_PAGE = 2097152;
-const unsigned long BITMAP_SIZE = MAX_SUPPORTED_PAGES / 64;
-static unsigned long phys_pages_bitmap[BITMAP_SIZE];
-static unsigned long free_pages;
-static kernel_spinlock bitmap_lock;
+
+namespace
+{
+  // In the page allocation bitmap, a 1 indicates that the page is FREE.
+  const unsigned long MAX_SUPPORTED_PAGES = 2048;
+  const unsigned long SIZE_OF_PAGE = 2097152;
+  const unsigned long BITMAP_SIZE = MAX_SUPPORTED_PAGES / 64;
+
+  // Determines whether or not a page has been allocated. A 1 indicates free, 0 indicates allocated.
+  unsigned long phys_pages_alloc_bitmap[BITMAP_SIZE];
+
+  // Determines whether or not a page actually exists to be used. A 1 indicates exists, 0 indicates invalid.
+  unsigned long phys_pages_exist_bitmap[BITMAP_SIZE];
+
+  // A simple count of the number of free pages.
+  unsigned long free_pages;
+
+  // Protects the bitmap from multi-threaded accesses.
+  kernel_spinlock bitmap_lock;
+}
 
 /// @brief Initialise the physical memory management subsystem.
 ///
@@ -32,7 +45,9 @@ void mem_init_gen_phys_sys()
   unsigned long mask;
 
   // Fill in the free pages bitmap appropriately.
-  mem_gen_phys_pages_bitmap(phys_pages_bitmap, MAX_SUPPORTED_PAGES);
+  mem_gen_phys_pages_bitmap(phys_pages_alloc_bitmap, MAX_SUPPORTED_PAGES);
+
+  kl_memcpy(phys_pages_alloc_bitmap, phys_pages_exist_bitmap, sizeof(phys_pages_alloc_bitmap));
 
   // Count up the number of free pages.
   for(int i = 0; i < BITMAP_SIZE; i++)
@@ -41,7 +56,7 @@ void mem_init_gen_phys_sys()
     for (int j = 0; j < 64; j++)
     {
       ASSERT(mask != 0);
-      if ((phys_pages_bitmap[i] & mask) != 0)
+      if ((phys_pages_alloc_bitmap[i] & mask) != 0)
       {
         free_pages++;
       }
@@ -72,6 +87,7 @@ void *mem_allocate_physical_pages(unsigned int num_pages)
 
   // For the time being, only allow the allocation of single pages.
   ASSERT(num_pages == 1);
+  ASSERT(free_pages > 0);
 
   // Spin through the list, looking for a free page. Upon finding one, mark it
   // as in use and return the relevant address.
@@ -83,10 +99,12 @@ void *mem_allocate_physical_pages(unsigned int num_pages)
     for (int j = 0; j < 64; j++)
     {
       ASSERT(mask != 0);
-      if ((phys_pages_bitmap[i] & mask) != 0)
+      if ((phys_pages_alloc_bitmap[i] & mask) != 0)
       {
         addr = SIZE_OF_PAGE * ((64 * i) + j);
-        phys_pages_bitmap[i] = phys_pages_bitmap[i] & (~mask);
+        ASSERT((phys_pages_exist_bitmap[i] & mask) != 0);
+        phys_pages_alloc_bitmap[i] = phys_pages_alloc_bitmap[i] & (~mask);
+        free_pages--;
 
         KL_TRC_TRACE(TRC_LVL::EXTRA, "Address found\n");
         KL_TRC_EXIT;
@@ -120,7 +138,8 @@ void mem_deallocate_physical_pages(void *start, unsigned int num_pages)
   ASSERT(num_pages == 1);
   ASSERT(start_num % SIZE_OF_PAGE == 0);
   ASSERT(!mem_is_bitmap_page_bit_set(start_num));
-  mem_set_bitmap_page_bit(start_num);
+  mem_set_bitmap_page_bit(start_num, false);
+  free_pages++;
 
   KL_TRC_EXIT;
 }
@@ -130,7 +149,11 @@ void mem_deallocate_physical_pages(void *start, unsigned int num_pages)
 /// Note that no checking is done to ensure the page is within the physical pages available to the system.
 ///
 /// @param page_addr The address of the physical page to mark free.
-void mem_set_bitmap_page_bit(unsigned long page_addr)
+///
+/// @param ignore_checks If set to false, the system will check that this page is known to exist before changing the
+///                      state of the allocation bitmap. However, this interferes with generating the map to start with
+///                      so ignore_checks can be set to true to bypass this.
+void mem_set_bitmap_page_bit(unsigned long page_addr, const bool ignore_checks)
 {
   KL_TRC_ENTRY;
 
@@ -148,10 +171,11 @@ void mem_set_bitmap_page_bit(unsigned long page_addr)
 
   ASSERT(mask != 0);
   ASSERT(bitmap_qword < BITMAP_SIZE);
+  ASSERT((ignore_checks) || ((phys_pages_exist_bitmap[bitmap_qword] & mask) != 0));
 
-  phys_pages_bitmap[bitmap_qword] = phys_pages_bitmap[bitmap_qword] | mask;
+  phys_pages_alloc_bitmap[bitmap_qword] = phys_pages_alloc_bitmap[bitmap_qword] | mask;
 
-  ASSERT(phys_pages_bitmap[bitmap_qword] != 0);
+  ASSERT(phys_pages_alloc_bitmap[bitmap_qword] != 0);
 
   KL_TRC_EXIT;
 }
@@ -180,7 +204,8 @@ void mem_clear_bitmap_page_bit(unsigned long page_addr)
   ASSERT(mask != 0);
   ASSERT(bitmap_qword < BITMAP_SIZE);
 
-  phys_pages_bitmap[bitmap_qword] = phys_pages_bitmap[bitmap_qword] & (~mask);
+  ASSERT((phys_pages_exist_bitmap[bitmap_qword] & mask) != 0);
+  phys_pages_alloc_bitmap[bitmap_qword] = phys_pages_alloc_bitmap[bitmap_qword] & (~mask);
 
   KL_TRC_EXIT;
 }
@@ -213,6 +238,6 @@ bool mem_is_bitmap_page_bit_set(unsigned long page_addr)
 
   KL_TRC_EXIT;
 
-  return (phys_pages_bitmap[bitmap_qword] & mask);
+  return (phys_pages_alloc_bitmap[bitmap_qword] & mask);
 
 }

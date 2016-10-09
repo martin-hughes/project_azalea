@@ -137,7 +137,7 @@ void mem_gen_phys_pages_bitmap(unsigned long *bitmap_loc, unsigned long max_num_
         {
           if (start_addr != 0)
           {
-            mem_set_bitmap_page_bit(start_addr);
+            mem_set_bitmap_page_bit(start_addr, true);
           }
           start_addr += MEM_PAGE_SIZE;
         }

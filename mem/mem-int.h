@@ -6,7 +6,7 @@ void mem_gen_phys_pages_bitmap(unsigned long *bitmap_loc,
                                unsigned long max_num_pages);
 
 
-void mem_set_bitmap_page_bit(unsigned long page_addr);
+void mem_set_bitmap_page_bit(unsigned long page_addr, const bool ignore_checks);
 void mem_clear_bitmap_page_bit(unsigned long page_addr);
 bool mem_is_bitmap_page_bit_set(unsigned long page_addr);
 
