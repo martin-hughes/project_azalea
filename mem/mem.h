@@ -44,6 +44,7 @@ void mem_deallocate_physical_pages(void *start, unsigned int num_pages);
 void mem_deallocate_virtual_range(void *start, unsigned int num_pages);
 void mem_unmap_range(void *virtual_start, unsigned int num_pages);
 void mem_deallocate_pages(void *virtual_start, unsigned int num_pages);
+void *mem_get_phys_addr(void *virtual_addr);
 
 // A helper function to allow the task manager to easily find the information
 // about task-0 memory.

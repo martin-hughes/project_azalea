@@ -75,10 +75,19 @@ int main()
 // Main kernel start procedure.
 void kernel_start()
 {
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Entered kernel start\n");
+  KL_TRC_TRACE(TRC_LVL::FLOW,
+               "Entered kernel start - thread: ",
+               reinterpret_cast<unsigned long>(task_get_cur_thread()),
+               "\n");
+
+  ACPI_STATUS status;
 
   // kernel_start() runs on the BSP. Bring up the APs so they are ready to take on any threads created below.
   proc_mp_start_aps();
+
+  // Bring the ACPI system up to full readiness.
+  status = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
+  ASSERT(status == AE_OK);
 
   //task_create_new_process(dummy_proc, false);
 

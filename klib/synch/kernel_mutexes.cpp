@@ -1,5 +1,7 @@
 // KLIB mutex implementation.
 
+//#define ENABLE_TRACING
+
 #include "klib/klib.h"
 
 // Initialize a mutex object. The owner of the mutex object is responsible for managing the memory associated with it.
@@ -93,15 +95,17 @@ SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, unsigned long max_wa
 }
 
 // Release the mutex. If a thread is waiting for it, it will be permitted to run.
-void klib_synch_mutex_release(klib_mutex &mutex)
+void klib_synch_mutex_release(klib_mutex &mutex, const bool disregard_owner)
 {
   KL_TRC_ENTRY;
 
   klib_list_item *next_owner;
+  task_thread *owner_thread = mutex.owner_thread;
 
   klib_synch_spinlock_lock(mutex.access_lock);
+
   ASSERT(mutex.mutex_locked);
-  ASSERT((task_thread *)mutex.owner_thread == task_get_cur_thread());
+  ASSERT((disregard_owner) || (owner_thread == task_get_cur_thread()));
 
   next_owner = mutex.waiting_threads_list.head;
   if (next_owner == nullptr)
@@ -114,9 +118,9 @@ void klib_synch_mutex_release(klib_mutex &mutex)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Getting next owner from the head of list\n");
     KL_TRC_DATA("Next owner is", (unsigned long)next_owner->item);
-    mutex.owner_thread = (task_thread *)next_owner->item;
+    mutex.owner_thread = (task_thread *)(next_owner->item);
     klib_list_remove(next_owner);
-    task_start_thread((task_thread *)next_owner->item);
+    task_start_thread((task_thread *)(next_owner->item));
     delete next_owner;
     next_owner = nullptr;
   }

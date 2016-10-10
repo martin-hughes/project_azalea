@@ -49,7 +49,7 @@ void proc_configure_idt()
   // Fill in the vectors we actually care about.
   for (int i = 0; i < 256; i++)
   {
-    if ((i < 32) || (i > 48))
+    if ((i < IRQ_BASE) || (i > IRQ_BASE + 16))
     {
       proc_configure_idt_entry(i, 0, (void *)asm_proc_def_interrupt_handler, 0);
     }

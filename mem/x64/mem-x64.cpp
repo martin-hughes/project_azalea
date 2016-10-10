@@ -514,22 +514,26 @@ page_table_entry mem_decode_page_table_entry(unsigned long encoded)
 
 /// @brief For a given virtual address, find the physical address that backs it.
 ///
-/// @param virtual_addr The virtual address to decode. Must point at a page boundary.
+/// @param virtual_addr The virtual address to decode. Need not point at a page boundary.
 ///
-/// @return The physical address backing virtual_addr
+/// @return The physical address backing virtual_addr, or nullptr if no physical RAM backs virtual_addr
 void *mem_get_phys_addr(void *virtual_addr)
 {
   KL_TRC_ENTRY;
 
-  unsigned long virt_addr_cpy = (unsigned long)virtual_addr;
+  unsigned long virt_addr_cpy;
   unsigned long pml4_entry_idx;
   unsigned long page_dir_ptr_entry_idx;
   unsigned long page_dir_entry_idx;
   unsigned long *table_addr = get_pml4_table_addr();
   unsigned long *encoded_entry;
   void *table_phys_addr;
+  unsigned long offset;
+  bool return_addr_found = false;
+  unsigned long phys_addr = 0;
 
-  ASSERT(((unsigned long)virtual_addr) % MEM_PAGE_SIZE == 0);
+  offset = ((unsigned long)virtual_addr) % MEM_PAGE_SIZE;
+  virt_addr_cpy = ((unsigned long)virtual_addr) - offset;
 
   virt_addr_cpy = virt_addr_cpy >> 21;
   page_dir_entry_idx = (virt_addr_cpy & 0x00000000000001FF);
@@ -541,24 +545,32 @@ void *mem_get_phys_addr(void *virtual_addr)
   // Start moving through the page table tree by looking at the PML4 table and
   // getting the physical address of the next table.
   encoded_entry = table_addr + pml4_entry_idx;
-  ASSERT(PT_MARKED_PRESENT(*encoded_entry));
-  table_phys_addr = (void *)mem_x64_phys_addr_from_pte(*encoded_entry);
+  if (PT_MARKED_PRESENT(*encoded_entry))
+  {
+    table_phys_addr = (void *)mem_x64_phys_addr_from_pte(*encoded_entry);
 
-  // Now look at the page directory pointer table.
-  mem_set_working_page_dir((unsigned long)table_phys_addr);
-  table_addr = (unsigned long *)working_table_virtual_addr;
-  encoded_entry = table_addr + page_dir_ptr_entry_idx;
-  ASSERT(PT_MARKED_PRESENT(*encoded_entry));
-  table_phys_addr = (void *)mem_x64_phys_addr_from_pte(*encoded_entry);
+    // Now look at the page directory pointer table.
+    mem_set_working_page_dir((unsigned long)table_phys_addr);
+    table_addr = (unsigned long *)working_table_virtual_addr;
+    encoded_entry = table_addr + page_dir_ptr_entry_idx;
+    if (PT_MARKED_PRESENT(*encoded_entry))
+    {
+      table_phys_addr = (void *)mem_x64_phys_addr_from_pte(*encoded_entry);
 
-  // Having worked through all the page directories, grab the address out.
-  mem_set_working_page_dir((unsigned long)table_phys_addr);
-  table_addr = (unsigned long *)working_table_virtual_addr;
-  encoded_entry = table_addr + page_dir_entry_idx;
+      // Having worked through all the page directories, grab the address out.
+      mem_set_working_page_dir((unsigned long)table_phys_addr);
+      table_addr = (unsigned long *)working_table_virtual_addr;
+      encoded_entry = table_addr + page_dir_entry_idx;
+
+      phys_addr = mem_x64_phys_addr_from_pte(*encoded_entry);
+      phys_addr += offset;
+      return_addr_found = true;
+    }
+  }
 
   KL_TRC_EXIT;
 
-  return (void *)mem_x64_phys_addr_from_pte(*encoded_entry);
+  return return_addr_found ? reinterpret_cast<void *>(phys_addr) : nullptr;
 }
 
 /// @brief Create the memory manager specific part of a process's information block.

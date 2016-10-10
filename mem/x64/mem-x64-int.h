@@ -30,7 +30,6 @@ unsigned long mem_encode_page_table_entry(page_table_entry &pte);
 page_table_entry mem_decode_page_table_entry(unsigned long encoded);
 void mem_set_working_page_dir(unsigned long phys_page_addr);
 extern "C" void mem_invalidate_page_table(unsigned long virt_addr);
-void *mem_get_phys_addr(void *virtual_addr);
 unsigned long mem_x64_phys_addr_from_pte(unsigned long encoded);
 
 #define PT_MARKED_PRESENT(x) ((x) & 1)

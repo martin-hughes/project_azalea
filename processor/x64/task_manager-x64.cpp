@@ -28,6 +28,8 @@ const unsigned long DEF_RFLAGS_USER = (unsigned long)0x3200;
 const unsigned long DEF_CS_USER = 0x18;
 const unsigned long DEF_SS_USER = 0x20;
 
+const unsigned int TM_INTERRUPT_NUM = IRQ_BASE;
+
 /// @brief Create a new x64 execution context
 ///
 /// Create an entire x64 execution context that will cause entry_point to be executed within new_thread. This must only
@@ -155,7 +157,7 @@ task_x64_exec_context *task_int_swap_task(unsigned long stack_ptr, unsigned long
   if (proc_mp_this_proc_id() == 0)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Sending broadcast IPI\n");
-    proc_send_ipi(0, PROC_IPI_SHORT_TARGET::ALL_EXCL_SELF, PROC_IPI_INTERRUPT::FIXED, 32, false);
+    proc_send_ipi(0, PROC_IPI_SHORT_TARGET::ALL_EXCL_SELF, PROC_IPI_INTERRUPT::FIXED, TM_INTERRUPT_NUM, false);
   }
 
   KL_TRC_EXIT;
@@ -174,7 +176,7 @@ void task_install_task_switcher()
 {
   KL_TRC_ENTRY;
 
-  proc_configure_idt_entry(32, 0, (void *)asm_task_switch_interrupt, 0);
+  proc_configure_idt_entry(TM_INTERRUPT_NUM, 0, (void *)asm_task_switch_interrupt, 0);
   asm_proc_install_idt();
 
   KL_TRC_EXIT;
@@ -199,7 +201,7 @@ void task_yield()
 
   // Signal ourselves with a task-switching interrupt and that'll allow the task manager to select a new thread to run
   // (which might be this one)
-  proc_send_ipi(0, PROC_IPI_SHORT_TARGET::SELF, PROC_IPI_INTERRUPT::FIXED, 32, true);
+  proc_send_ipi(0, PROC_IPI_SHORT_TARGET::SELF, PROC_IPI_INTERRUPT::FIXED, TM_INTERRUPT_NUM, true);
 
   KL_TRC_EXIT;
 }

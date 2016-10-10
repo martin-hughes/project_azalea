@@ -75,6 +75,10 @@ void proc_mp_receive_signal(PROC_IPI_MSGS msg)
       INCOMPLETE_CODE(TLB SHOOTDOWN MSG);
       break;
 
+    case PROC_IPI_MSGS::RELOAD_IDT:
+      asm_proc_install_idt();
+      break;
+
     default:
       panic("Unrecognised IP signal received.");
   }
@@ -138,3 +142,13 @@ void proc_mp_start_aps()
   KL_TRC_EXIT;
 }
 
+/// @brief Send an IPI message to all processors, including the one running this code.
+///
+/// @param msg The message to send to all processors.
+void proc_mp_signal_all_processors(PROC_IPI_MSGS msg)
+{
+  for (unsigned int i = 0; i < processor_count; i++)
+  {
+    proc_mp_signal_processor(i, msg);
+  }
+}

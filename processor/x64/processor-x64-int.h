@@ -91,3 +91,5 @@ extern "C" void proc_security_fault_handler(unsigned long err_code);
 
 // Helper functions
 void *proc_x64_allocate_stack();
+
+const unsigned long IRQ_BASE = 32;

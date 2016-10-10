@@ -90,6 +90,7 @@ enum class PROC_IPI_MSGS
   RESUME,          ///< Bring the processor back in to action after suspending it.
   SUSPEND,         ///< Halt the processor with interrupts disabled.
   TLB_SHOOTDOWN,   ///< Invalidate the processor's page tables.
+  RELOAD_IDT,      ///< Pick up changes to the system IDT.
 };
 
 // Initialise the first processor and some of the data structures needed to manage all processors in the system.
@@ -152,6 +153,7 @@ void task_yield();
 unsigned int proc_mp_proc_count();
 unsigned int proc_mp_this_proc_id();
 void proc_mp_signal_processor(unsigned int proc_id, PROC_IPI_MSGS msg);
+void proc_mp_signal_all_processors(PROC_IPI_MSGS msg);
 void proc_mp_receive_signal(PROC_IPI_MSGS msg);
 
 // Force the scheduler to re-schedule this thread continually, or allow it to schedule normally. This allows a thread

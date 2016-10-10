@@ -1,19 +1,29 @@
-//ACPI OS Services Layer for Project Azalea.
-//
-// At present this file does not contain KL_TRC_ENTRY / _EXIT calls, just in case it screws up ACPI. Maybe add them one
-// day. Many of these functions are not supported, so they would just cause the kernel to panic. They shouldn't be
-// needed!
+// ACPI OS Services Layer for Project Azalea.
 
+//#define ENABLE_TRACING
+
+#include "klib/klib.h"
 extern "C"
 {
 #include "external/acpica/source/include/acpi.h"
 }
-#include "klib/klib.h"
+#include "processor/processor.h"
 #include "processor/timing/timing.h"
+#include "processor/x64/processor-x64-int.h"
+#include "mem/mem.h"
 
-char *exception_message_buf;
-const unsigned int em_buf_len = 1000;
+extern "C" UINT32 acpi_interrupt_handler();
+extern "C" void asm_acpi_interrupt_handler();
 
+namespace
+{
+  char *exception_message_buf;
+  const unsigned int em_buf_len = 1000;
+
+  bool acpi_int_handler_installed = false;
+  ACPI_OSD_HANDLER irq_handler;
+  void *irq_context;
+}
 
 // There are no actions needed to initialize the OSL, so just return.
 ACPI_STATUS AcpiOsInitialize(void)
@@ -262,7 +272,7 @@ void AcpiOsReleaseMutex(ACPI_MUTEX Handle)
   klib_mutex *mutex = (klib_mutex *)Handle;
   ASSERT(mutex != nullptr);
 
-  klib_synch_mutex_release(*mutex);
+  klib_synch_mutex_release(*mutex, false);
   KL_TRC_EXIT;
 }
 
@@ -276,16 +286,11 @@ void *AcpiOsAllocate(ACPI_SIZE Size)
   return (void *)(new char[Size]);
 }
 
-/*void *AcpiOsAllocateZeroed(ACPI_SIZE Size)
-{
-
-}*/
-
 void AcpiOsFree(void * Memory)
 {
   KL_TRC_ENTRY;
   ASSERT(Memory != nullptr);
-  delete (char *)Memory;
+  delete[] (char *)Memory;
   KL_TRC_EXIT;
 }
 
@@ -334,10 +339,26 @@ void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Size)
 ACPI_STATUS AcpiOsGetPhysicalAddress(void *LogicalAddress, ACPI_PHYSICAL_ADDRESS *PhysicalAddress)
 {
   KL_TRC_ENTRY;
-  INCOMPLETE_CODE(AcpiOsGetPhysicalAddress);
+
+  ACPI_STATUS ret = AE_OK;
+  void *translated;
+
+  if ((LogicalAddress == nullptr) || (PhysicalAddress == nullptr))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid parameters given\n");
+    ret = AE_BAD_PARAMETER;
+  }
+  else
+  {
+    translated = mem_get_phys_addr(LogicalAddress);
+    *PhysicalAddress = reinterpret_cast<ACPI_PHYSICAL_ADDRESS>(translated);
+
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Translated ", LogicalAddress, " into ", translated, "\n");
+  }
+
   KL_TRC_EXIT;
 
-  return AE_OK;
+  return ret;
 }
 
 /*
@@ -345,16 +366,61 @@ ACPI_STATUS AcpiOsGetPhysicalAddress(void *LogicalAddress, ACPI_PHYSICAL_ADDRESS
  */
 ACPI_STATUS AcpiOsInstallInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER ServiceRoutine, void *Context)
 {
+  // Dispute the naming in the ACPICA headers, it looks as though InterruptNumber is actually IRQ number.
   KL_TRC_ENTRY;
-  INCOMPLETE_CODE(AcpiOsInstallInterruptHandler);
+
+  ACPI_STATUS ret = AE_OK;
+
+  ASSERT(!acpi_int_handler_installed);
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Interrupt number: ", InterruptNumber, "\n");
+
+  if (InterruptNumber > 15)
+  {
+    ASSERT(false);
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Tried to use an interrupt number that we've reserved\n");
+    ret = AE_BAD_PARAMETER;
+  }
+  else
+  {
+    acpi_int_handler_installed = true;
+    irq_handler = ServiceRoutine;
+    irq_context = Context;
+
+    proc_configure_idt_entry(InterruptNumber + IRQ_BASE, 0, (void *)asm_acpi_interrupt_handler, 0);
+
+    proc_mp_signal_all_processors(PROC_IPI_MSGS::RELOAD_IDT);
+  }
+
   KL_TRC_EXIT;
-  return AE_OK;
+  return ret;
 }
 
 ACPI_STATUS AcpiOsRemoveInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER ServiceRoutine)
 {
   KL_TRC_ENTRY;
-  INCOMPLETE_CODE(AcpiOsRemoveInterruptHandler);
+  ACPI_STATUS ret = AE_OK;
+
+  ASSERT(acpi_int_handler_installed);
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Interrupt number: ", InterruptNumber, "\n");
+
+  if (InterruptNumber > 15)
+  {
+    ASSERT(false);
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Tried to use an interrupt number that we've reserved\n");
+    ret = AE_BAD_PARAMETER;
+  }
+  else
+  {
+    proc_configure_idt_entry(InterruptNumber + IRQ_BASE, 0, (void *)asm_proc_def_irq_handler, 0);
+
+    proc_mp_signal_all_processors(PROC_IPI_MSGS::RELOAD_IDT);
+
+    acpi_int_handler_installed = false;
+    irq_handler = nullptr;
+    irq_context = nullptr;
+
+  }
+
   KL_TRC_EXIT;
   return AE_OK;
 }
@@ -508,15 +574,20 @@ ACPI_STATUS AcpiOsWritePciConfiguration(ACPI_PCI_ID *PciId, UINT32 Reg, UINT64 V
 BOOLEAN AcpiOsReadable(void *Pointer, ACPI_SIZE Length)
 {
   KL_TRC_ENTRY;
+
+  unsigned long vp = reinterpret_cast<unsigned long>(Pointer);
+
+  bool res = (mem_get_phys_addr(reinterpret_cast<void *>(vp)) != nullptr) &&
+             (mem_get_phys_addr(reinterpret_cast<void *>(vp + Length)) != nullptr);
+
   KL_TRC_EXIT;
-  return TRUE;
+  return res ? TRUE : FALSE;
 }
 
 BOOLEAN AcpiOsWritable(void *Pointer, ACPI_SIZE Length)
 {
-  KL_TRC_ENTRY;
-  KL_TRC_EXIT;
-  return TRUE;
+  // For the time being, memory that is readable is writable.
+  return AcpiOsReadable(Pointer, Length);
 }
 
 UINT64 AcpiOsGetTimer(void)
@@ -686,4 +757,14 @@ void AcpiOsTracePoint(ACPI_TRACE_EVENT_TYPE Type, BOOLEAN Begin, UINT8 *Aml, cha
   KL_TRC_ENTRY;
   panic("ACPI trace point called");
   KL_TRC_EXIT;
+}
+
+/// @brief Handles interrupt generated by the ACPICA system by sending them to the nominated handler.
+UINT32 acpi_interrupt_handler()
+{
+  KL_TRC_TRACE(TRC_LVL::FLOW, "ACPI interrupt hit\n");
+  ASSERT(acpi_int_handler_installed);
+  ASSERT(irq_handler != nullptr);
+
+  return irq_handler(irq_context);
 }

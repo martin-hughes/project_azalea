@@ -103,8 +103,8 @@ void proc_configure_global_int_ctrlrs()
     // already (since the PIC is attached to the processor)
     ASSERT(proc_x64_ioapic_get_count() > 0);
 
-    // Remap what would have been called IRQ 0-15 into interrupts 32-47. Point them all towards the BSP for now.
-    proc_x64_ioapic_remap_interrupts(0, 32, bsp_apic_id);
+    // Remap what would have been called IRQ 0-15 into interrupts 80-95. Point them all towards the BSP for now.
+    proc_x64_ioapic_remap_interrupts(0, IRQ_BASE, bsp_apic_id);
   }
 
   // Some more stuff too, but I don't know what yet.

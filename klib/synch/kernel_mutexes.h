@@ -26,6 +26,6 @@ struct klib_mutex
 
 void klib_synch_mutex_init(klib_mutex &mutex);
 SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, unsigned long max_wait);
-void klib_synch_mutex_release(klib_mutex &mutex);
+void klib_synch_mutex_release(klib_mutex &mutex, const bool disregard_owner);
 
 #endif

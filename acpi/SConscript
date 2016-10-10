@@ -1,8 +1,9 @@
 # ACPI library. Incorporates necessary parts of ACPICA
 
 Import('env')
-obj = env.Library("acpi", [ "acpi.cpp", 
-                            "acpi_osl.cpp", 
+obj = env.Library("acpi", [ "acpi.cpp",
+                            "acpi_interrupt.asm",
+                            "acpi_osl.cpp",
                             "acpi_output.cpp",
                           ])
 Return ("obj") 
