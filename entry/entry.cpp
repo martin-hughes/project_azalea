@@ -12,6 +12,12 @@
 #include "object_mgr/object_mgr.h"
 #include "system_tree/system_tree.h"
 
+#include "devices/block/ata/ata.h"
+#include "devices/block/proxy/block_proxy.h"
+#include "system_tree/fs/fat/fat_fs.h"
+
+#include <memory>
+
 // Rough boot steps:
 //
 // main() function:
@@ -25,20 +31,20 @@
 //
 // Kernel wake-up task (kernel_start()):
 // - Bring other processors in to the task scheduling loop
+// - Permit full ACPI.
+// - Load the user-mode "init" task (currently done by temporary code)
 
+extern "C" int main();
 void kernel_start();
-//void dummy_proc();
-
-// This one calls int 49
-//const unsigned char dummy_prog[] = { 0xCD, 0x31, 0xB8, 0x02, 0x00, 0x00, 0x00, 0xEB, 0xF7 };
-
-// This one just loops.
-//const unsigned char dummy_prog[] = { 0xB8, 0x02, 0x00, 0x00, 0x00, 0xEB, 0xF9 };
-
-// This one calls syscall
-const unsigned char dummy_prog[] = { 0x0F, 0x05, 0x0F, 0x05, 0x0F, 0x05, 0xB8, 0x02, 0x00, 0x00, 0x00, 0x0F, 0x05, 0xEB, 0xF7 };
 
 typedef void (*fn_ptr)();
+
+// Temporary procedures and storage while the kernel is being developed. Eventually, the full kernel start procedure
+// will cause these to become unused.
+void setup_initial_fs();
+// Some variables to support loading a filesystem.
+generic_ata_device *first_hdd;
+fat_filesystem *first_fs;
 
 // Main kernel entry point. This is called by an assembly-language loader that
 // should do as little as possible. On x64, this involves setting up a simple
@@ -89,7 +95,31 @@ void kernel_start()
   status = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
   ASSERT(status == AE_OK);
 
-  //task_create_new_process(dummy_proc, false);
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Code below here is not intended to be part of the permanent kernel start procedure, but will sit here until the //
+  // kernel is more well-developed.                                                                                  //
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  setup_initial_fs();
+  ASSERT(first_fs != nullptr);
+
+  // Load "testprog" from the disk.
+  ASSERT(system_tree()->add_branch("root", first_fs) == ERR_CODE::NO_ERROR);
+  ISystemTreeLeaf *disk_prog;
+  IBasicFile *test_prog_file;
+  unsigned long prog_size;
+  unsigned long bytes_read;
+  ASSERT(system_tree()->get_leaf("root\\testprog", &disk_prog) == ERR_CODE::NO_ERROR);
+
+  test_prog_file = reinterpret_cast<IBasicFile*>(disk_prog);
+  test_prog_file->get_file_size(prog_size);
+  KL_TRC_DATA("Test prog size", prog_size);
+
+  unsigned char *test_prog = new unsigned char[prog_size];
+  ASSERT(test_prog_file->read_bytes(0, prog_size, test_prog, prog_size, bytes_read) == ERR_CODE::NO_ERROR);
+  ASSERT(bytes_read == prog_size);
+
+  KL_TRC_DATA("First bytes of program", *((unsigned long *)test_prog));
 
   // Create a new user mode process.
   fn_ptr user_proc = (fn_ptr)0x200000;
@@ -106,7 +136,7 @@ void kernel_start()
   KL_TRC_TRACE(TRC_LVL::FLOW, "First map complete\n");
 
   // Copy the simple test program in to it.
-  kl_memcpy((void *)dummy_prog, kernel_virtual_page, sizeof(dummy_prog));
+  kl_memcpy((void *)test_prog, kernel_virtual_page, sizeof(test_prog));
   KL_TRC_TRACE(TRC_LVL::FLOW, "Program copied\n");
 
   // No need to access it from the kernel any more
@@ -117,6 +147,8 @@ void kernel_start()
   mem_map_range(physical_page, (void *)0x200000, 1, new_proc);
   KL_TRC_TRACE(TRC_LVL::FLOW, "User mode map complete, starting now.\n");
 
+  delete[] test_prog;
+
   // Process should be good to go!
   task_start_process(new_proc);
 
@@ -126,11 +158,37 @@ void kernel_start()
   }
 }
 
-/*void dummy_proc()
+// Configure the filesystem of the (presumed) boot device as part of System Tree.
+const unsigned int base_reg_a = 0x1F0;
+void setup_initial_fs()
 {
-  KL_TRC_TRACE((TRC_LVL_FLOW, "Entered dummy proc\n"));
-  while (1)
+  KL_TRC_ENTRY;
+
+  first_hdd = new generic_ata_device(base_reg_a, true);
+  std::unique_ptr<unsigned char[]> sector_buffer(new unsigned char[512]);
+
+  kl_memset(sector_buffer.get(), 0, 512);
+  if (first_hdd->read_blocks(0, 1, sector_buffer.get(), 512) != ERR_CODE::NO_ERROR)
   {
-    //Spin forever.
+    panic("Disk read failed :(\n");
   }
-}*/
+
+  // Confirm that we've loaded a valid MBR
+  KL_TRC_TRACE(TRC_LVL::EXTRA, (unsigned long)sector_buffer[510], " ", (unsigned long)sector_buffer[511], "\n");
+  ASSERT((sector_buffer[510] == 0x55) && (sector_buffer[511] == 0xAA));
+
+  unsigned int start_sector;
+  unsigned int sector_count;
+
+  // Parse the MBR to find the first partition.
+  kl_memcpy(sector_buffer.get() + 454, &start_sector, 4);
+  kl_memcpy(sector_buffer.get() + 458, &sector_count, 4);
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "First partition: ", (unsigned long)start_sector, " -> +", (unsigned long)sector_count, "\n");
+  block_proxy_device *pd = new block_proxy_device(first_hdd, start_sector, sector_count);
+
+  // Initialise the filesystem based on that information
+  first_fs = new fat_filesystem(pd);
+
+  KL_TRC_EXIT;
+}

@@ -27,22 +27,6 @@ protected:
 
   /// Stores the child leaves of this branch.
   kl_rb_tree<kl_string, ISystemTreeLeaf *> child_leaves;
-  
-  /// @brief Splits a child's path name into the part referring to a child of this branch, and the remainder.
-  ///
-  /// Paths in System Tree are delimited by a \ character, so if `name_to_split` is of the form `[branch]\[rest]`, this
-  /// function returns `[branch]` in `first_part` and `[rest]` in `second_part`.
-  ///
-  /// If there are no backslashes in `name_to_split` then `first_part` is set equal to `name_to_split` and
-  /// `second_part` is set equal to "".
-  ///
-  /// @param[in] name_to_split The path to split as described above.
-  ///
-  /// @param[out] first_part The part of the path given that refers to a child branch of this one, split as described
-  ///                        above.
-  ///
-  /// @param[out] second_part The remainder of the path, as desribed above.
-  void split_name(const kl_string name_to_split, kl_string &first_part, kl_string &second_part) const;
 };
 
 #endif

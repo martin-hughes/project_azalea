@@ -54,8 +54,8 @@ Being a hobby project, there are some fairly specific requirements for this proj
 
 - An x64 compatible processor. A recent Intel one should work.
 - **Maximum** 1GB of RAM. This is a limitation of the memory manager.
-- For compilation, A Linux machine running python 2.6 or better, GCC 5.4 or better, Scons, and NASM (Note: It may be
-possible to do this on the new Windows Subsystem for Linux, this is untested)
+- For compilation, A Linux machine running python 2.6 or better, GCC 5.4 or better, clang 3.8.0 or better, Scons, and
+NASM (Note: It may be possible to do this on the new Windows Subsystem for Linux, this is untested)
 - Optionally, doxygen for generating detailed code documentation. 
 
 The project is routinely tested in qemu-system-x86_64 and Virtual Box, and very rarely on real hardware. Real hardware

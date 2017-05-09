@@ -1,0 +1,5 @@
+# Ramdisk driver.
+
+Import('env')
+obj = env.Library("dev-ramdisk", [ "ramdisk.cpp" ])
+Return ("obj") 

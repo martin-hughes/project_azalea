@@ -1,0 +1,5 @@
+# Generic ATA device driver.
+
+Import('env')
+obj = env.Library("dev-ata", [ "ata.cpp" ])
+Return ("obj") 

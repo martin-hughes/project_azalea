@@ -56,6 +56,13 @@ void kl_memcpy(const void *from, void *to, unsigned long len)
   unsigned long from_end = (unsigned long)from + len;
   unsigned long to_end = (unsigned long)to + len;
 
+  // If length is zero, don't bother doing anything - we might as well bail out now. This also avoids any of the checks
+  // below triggering.
+  if (len == 0)
+  {
+    return;
+  }
+
   // Make sure that the copying doesn't wrap.
   ASSERT(from_end > (unsigned long)from);
   ASSERT(to_end > (unsigned long)to);

@@ -614,7 +614,7 @@ void AcpiOsPrintf(const char *Format, ...)
   KL_TRC_ENTRY;
   va_list args;
 
-  va_start(args, *Format);
+  va_start(args, Format);
   AcpiOsVprintf(Format, args);
   va_end(args);
 

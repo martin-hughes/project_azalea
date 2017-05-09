@@ -109,6 +109,7 @@ asm_proc_install_idt:
     push r14
     push r15
     mov rdi, [rsp + 128]
+    mov rsi, [rsp + 136]
     call %1
     pop r15
     pop r14

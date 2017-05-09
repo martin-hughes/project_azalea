@@ -27,6 +27,12 @@ enum class ERR_CODE
 
   /// The requested operation is not supported for some reason.
   INVALID_OP,
+
+  /// The device is not able to fulfil the request because it has failed.
+  DEVICE_FAILED,
+
+  /// There is a generic error dealing with storage, for example, the filesystem is corrupt.
+  STORAGE_ERROR,
 };
 
 #endif

@@ -1,4 +1,5 @@
 #include "memory.h"
+#include "klib/panic/panic.h"
 
 // This file contains definitions for the operators new and delete. They refer to kmalloc / kfree directly.
 
@@ -15,7 +16,7 @@ void *operator new[](unsigned long size)
   return kmalloc(size);
 }
 
-void operator delete (void *unlucky)
+void operator delete(void *unlucky) noexcept
 {
   kfree(unlucky);
 }
@@ -25,9 +26,17 @@ void operator delete (void *unlucky, unsigned long)
   kfree(unlucky);
 }
 
-void operator delete[] (void *unlucky)
+void operator delete[](void *unlucky) noexcept
 {
   kfree(unlucky);
+}
+
+namespace std
+{
+void __throw_bad_alloc()
+{
+  panic("Bad allocation!");
+}
 }
 
 #endif

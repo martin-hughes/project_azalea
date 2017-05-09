@@ -22,6 +22,10 @@ test_programs = [
             '#test/dummy_libs/_tracing/SConscript',
             '#test/test_core/SConscript',
             '#external/SConscript-GoogleTest',
+            
+            # Devices for testing
+            '#devices/block/ramdisk/SConscript',
+            '#devices/block/proxy/SConscript',
            ],
     libs = [ "pthread" ]),
   ]

@@ -7,14 +7,14 @@
 system_tree_simple_branch::system_tree_simple_branch()
 {
   KL_TRC_ENTRY;
-  
+
   KL_TRC_EXIT;
 }
 
 system_tree_simple_branch::~system_tree_simple_branch()
 {
   KL_TRC_ENTRY;
-  
+
   KL_TRC_EXIT;
 }
 
@@ -27,7 +27,7 @@ ERR_CODE system_tree_simple_branch::get_child_type(const kl_string &name, CHILD_
   kl_string direct_child;
   kl_string lower_child;
   ISystemTreeBranch *child_branch;
-  
+
   split_pos = name.find("\\");
 
   if (name == "")
@@ -45,8 +45,8 @@ ERR_CODE system_tree_simple_branch::get_child_type(const kl_string &name, CHILD_
     if (!this->child_branches.contains(direct_child))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Child branch not found anyway\n");
-      type == CHILD_TYPE::NOT_FOUND;
-      ret_code == ERR_CODE::NOT_FOUND;
+      type = CHILD_TYPE::NOT_FOUND;
+      ret_code = ERR_CODE::NOT_FOUND;
     }
     else
     {
@@ -69,7 +69,7 @@ ERR_CODE system_tree_simple_branch::get_child_type(const kl_string &name, CHILD_
     type = CHILD_TYPE::NOT_FOUND;
     ret_code = ERR_CODE::NOT_FOUND;
   }
-  
+
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Name searched for: ", name, "\n");
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Type: ", static_cast<unsigned int>(type), "\n");
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Error code: ", static_cast<unsigned int>(ret_code), "\n");
@@ -85,7 +85,7 @@ ERR_CODE system_tree_simple_branch::get_branch(const kl_string &name, ISystemTre
   ERR_CODE ret_code = ERR_CODE::NO_ERROR;
   kl_string our_part;
   kl_string child_part;
-  
+
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Looking for branch with name ", name, "to store in ", *branch, "\n");
 
   this->split_name(name, our_part, child_part);
@@ -148,7 +148,7 @@ ERR_CODE system_tree_simple_branch::get_leaf(const kl_string &name, ISystemTreeL
     }
     else
     {
-      ret_code == ERR_CODE::NOT_FOUND;
+      ret_code = ERR_CODE::NOT_FOUND;
       *leaf = nullptr;
     }
   }
@@ -284,7 +284,7 @@ ERR_CODE system_tree_simple_branch::rename_child(const kl_string &old_name, cons
     KL_TRC_TRACE(TRC_LVL::FLOW, "Working a subdirectory: ", child_branch, "\n");
 
     // We don't support moving anything between two different branches. This prevents (e.g.) files being moved into the
-    // part of the tree for devices. Other types of branch object are free to support inter-child-branch moves of 
+    // part of the tree for devices. Other types of branch object are free to support inter-child-branch moves of
     // course.
     if (new_name.substr(0, old_dir_split) != child_branch)
     {
@@ -373,7 +373,7 @@ ERR_CODE system_tree_simple_branch::delete_child(const kl_string &name)
   else
   {
     split_pos = name.find("\\");
-    
+
     if (split_pos == kl_string::npos)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Deleting a direct child\n");
@@ -408,20 +408,4 @@ ERR_CODE system_tree_simple_branch::delete_child(const kl_string &name)
   KL_TRC_EXIT;
 
   return rt;
-}
-
-void system_tree_simple_branch::split_name(const kl_string name_to_split, kl_string &first_part, kl_string &second_part) const
-{
-  unsigned long split_pos = name_to_split.find("\\");
-
-  if (split_pos == kl_string::npos)
-  {
-    first_part = name_to_split;
-    second_part = "";
-  }
-  else
-  {
-    first_part = name_to_split.substr(0, split_pos);
-    second_part = name_to_split.substr(split_pos + 1, kl_string::npos);
-  }
 }

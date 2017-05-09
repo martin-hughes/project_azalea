@@ -1,7 +1,7 @@
 // Exception handlers for the kernel.
 // Page faults are handled in interrupts-x64.cpp
 
-//#define ENABLE_TRACING
+#define ENABLE_TRACING
 
 #include "processor/x64/processor-x64-int.h"
 #include "klib/klib.h"
@@ -41,29 +41,30 @@ void proc_device_not_avail_fault_handler()
   panic("Device not available");
 }
 
-void proc_double_fault_abort_handler(unsigned long err_code)
+void proc_double_fault_abort_handler(unsigned long err_code, unsigned long rip)
 {
   panic("Double-fault");
 }
 
-void proc_invalid_tss_fault_handler(unsigned long err_code)
+void proc_invalid_tss_fault_handler(unsigned long err_code, unsigned long rip)
 {
   panic("Invalid TSS");
 }
 
-void proc_seg_not_present_fault_handler(unsigned long err_code)
+void proc_seg_not_present_fault_handler(unsigned long err_code, unsigned long rip)
 {
   panic("Segment not present");
 }
 
-void proc_ss_fault_handler(unsigned long err_code)
+void proc_ss_fault_handler(unsigned long err_code, unsigned long rip)
 {
   panic("Stack selector fault");
 }
 
-void proc_gen_prot_fault_handler(unsigned long err_code)
+void proc_gen_prot_fault_handler(unsigned long err_code, unsigned long rip)
 {
   KL_TRC_DATA("GPF. Error code", err_code);
+  KL_TRC_DATA("RIP", rip);
   panic("General protection fault");
 }
 
@@ -72,7 +73,7 @@ void proc_fp_except_fault_handler()
   panic("Floating point exception fault");
 }
 
-void proc_align_check_fault_handler(unsigned long err_code)
+void proc_align_check_fault_handler(unsigned long err_code, unsigned long rip)
 {
   panic("Alignment check fault");
 }
@@ -92,7 +93,7 @@ void proc_virt_except_fault_handler()
   panic("Virtualization exception");
 }
 
-void proc_security_fault_handler(unsigned long err_code)
+void proc_security_fault_handler(unsigned long err_code, unsigned long rip)
 {
   panic("Security fault");
 }

@@ -8,7 +8,9 @@ env = Environment()
 defaults.setup_kernel_build_env(env)
 
 # List of required components.
-dependencies_in = ['#entry/SConscript',
+dependencies_in = [
+                   # Core components
+                   '#entry/SConscript',
                    '#processor/SConscript-generic',
                    '#processor/SConscript-x64',
                    '#klib/memory/SConscript',
@@ -25,6 +27,14 @@ dependencies_in = ['#entry/SConscript',
                    '#external/vsnprintf/Sconscript',
                    '#object_mgr/SConscript',
                    '#system_tree/SConscript',
+                   
+                   # Devices
+                   '#devices/block/ramdisk/SConscript',
+                   '#devices/block/ata/SConscript',
+                   '#devices/block/proxy/SConscript',
+                   
+                   # Filesystems
+                   '#system_tree/fs/fat/SConscript',
                   ]
                    
 # Build components.

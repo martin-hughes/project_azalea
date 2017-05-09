@@ -67,19 +67,19 @@ extern "C" void proc_invalid_opcode_fault_handler();
 extern "C" void asm_proc_device_not_avail_fault_handler(); // 7
 extern "C" void proc_device_not_avail_fault_handler();
 extern "C" void asm_proc_double_fault_abort_handler(); // 8
-extern "C" void proc_double_fault_abort_handler(unsigned long err_code);
+extern "C" void proc_double_fault_abort_handler(unsigned long err_code, unsigned long rip);
 extern "C" void asm_proc_invalid_tss_fault_handler(); // 10
-extern "C" void proc_invalid_tss_fault_handler(unsigned long err_code);
+extern "C" void proc_invalid_tss_fault_handler(unsigned long err_code, unsigned long rip);
 extern "C" void asm_proc_seg_not_present_fault_handler(); // 11
-extern "C" void proc_seg_not_present_fault_handler(unsigned long err_code);
+extern "C" void proc_seg_not_present_fault_handler(unsigned long err_code, unsigned long rip);
 extern "C" void asm_proc_ss_fault_handler(); // 12
-extern "C" void proc_ss_fault_handler(unsigned long err_code);
+extern "C" void proc_ss_fault_handler(unsigned long err_code, unsigned long rip);
 extern "C" void asm_proc_gen_prot_fault_handler(); // 13
-extern "C" void proc_gen_prot_fault_handler(unsigned long err_code);
+extern "C" void proc_gen_prot_fault_handler(unsigned long err_code, unsigned long rip);
 extern "C" void asm_proc_fp_except_fault_handler(); // 16
 extern "C" void proc_fp_except_fault_handler();
 extern "C" void asm_proc_align_check_fault_handler(); // 17
-extern "C" void proc_align_check_fault_handler(unsigned long err_code);
+extern "C" void proc_align_check_fault_handler(unsigned long err_code, unsigned long rip);
 extern "C" void asm_proc_machine_check_abort_handler(); // 18
 extern "C" void proc_machine_check_abort_handler();
 extern "C" void asm_proc_simd_fpe_fault_handler(); // 19
@@ -87,7 +87,7 @@ extern "C" void proc_simd_fpe_fault_handler();
 extern "C" void asm_proc_virt_except_fault_handler(); // 20
 extern "C" void proc_virt_except_fault_handler();
 extern "C" void asm_proc_security_fault_handler(); // 30
-extern "C" void proc_security_fault_handler(unsigned long err_code);
+extern "C" void proc_security_fault_handler(unsigned long err_code, unsigned long rip);
 
 // Helper functions
 void *proc_x64_allocate_stack();

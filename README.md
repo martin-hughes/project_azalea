@@ -1,4 +1,4 @@
-#Project Azalea - Welcome
+# Project Azalea - Welcome
 
 Project Azalea is an attempt to create a complete, but basic, OS kernel and enough tools that a user can interact with
 it. It's not big or fancy, it was started as a plaything for the author but he thought it might be interesting or

@@ -5,13 +5,16 @@
 Import('env')
 
 obj = [ ]
-files = [ "klib/math/maths_tests.cpp",
+files = [ "devices/block/proxy/proxy_tests.cpp",
+          "devices/block/ramdisk/ramdisk_tests.cpp", 
           
           "klib/data_structures/ds_tests.cpp",
           "klib/data_structures/ds_1.cpp",
           "klib/data_structures/ds_2.cpp",
           "klib/data_structures/ds_3.cpp",
           "klib/data_structures/ds_4.cpp",
+          
+          "klib/math/maths_tests.cpp",
           
           "klib/memory/memory_tests.cpp",
           "klib/memory/memory_1.cpp",

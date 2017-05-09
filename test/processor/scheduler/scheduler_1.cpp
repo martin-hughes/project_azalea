@@ -32,7 +32,7 @@ void scheduler_test_1()
   thread_a = task_get_next_thread();
   cout << "Thread A: " << thread_a << endl;
   ASSERT(thread_a != nullptr);
-  for (i = 0; i < 10; i++);
+  for (i = 0; i < 10; i++)
   {
     ASSERT(thread_a == task_get_next_thread());
   }
@@ -52,7 +52,7 @@ void scheduler_test_1()
 
   // Permit the first thread to run again, now we should get that repeatedly.
   thread_a->permit_running = true;
-  for (i = 0; i < 10; i++);
+  for (i = 0; i < 10; i++)
   {
     ASSERT(thread_a == task_get_next_thread());
   }

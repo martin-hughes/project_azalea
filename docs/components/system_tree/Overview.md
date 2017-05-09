@@ -56,7 +56,7 @@ tree.
 - Unlike Linux, System Tree uses the \ character for its path separator (hopefully allowing / to be used in normal
   filenames)
 - Unlike Windows, System Tree is case sensitive throughout (Windows does support a case sensitive file system, but they
-  choose not to make it case insensitive in behaviour)
+  choose to make it case insensitive in behaviour)
 
 ## Restrictions
 

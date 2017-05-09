@@ -1,0 +1,5 @@
+# Proxy block device driver.
+
+Import('env')
+obj = env.Library("dev-block-proxy", [ "block_proxy.cpp" ])
+Return ("obj") 

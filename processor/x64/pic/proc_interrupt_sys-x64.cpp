@@ -185,6 +185,10 @@ void proc_send_ipi(unsigned int apic_dest,
     case APIC_TYPES::X2APIC:
       panic("X2 APIC mode not yet supported");
       break;
+
+    default:
+      // This line will never be called, but it appeases clang.
+      panic("Only APIC/X2APIC supported");
   }
 
   KL_TRC_EXIT;

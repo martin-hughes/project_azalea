@@ -23,6 +23,8 @@ enum class CHILD_TYPE
 /// derived class how to implement this in a way that suits it best - for example, the implementation of an on-disk
 /// filesystem would not necessarily match that of a virtual "proc"-like tree.
 ///
+/// Some functionality that would be useful for all System Tree branches is included here.
+///
 /// It is not necessary for deriving classes to re-document the members of this interface unless there is anything
 /// interesting to say.
 class ISystemTreeBranch
@@ -97,6 +99,36 @@ public:
   ///
   /// @return An appropriate choice from `ERR_CODE`
   virtual ERR_CODE delete_child(const kl_string &name) = 0;
+
+  /// @brief Splits a child's path name into the part referring to a child of this branch, and the remainder.
+  ///
+  /// Paths in System Tree are delimited by a \ character, so if `name_to_split` is of the form `[branch]\[rest]`, this
+  /// function returns `[branch]` in `first_part` and `[rest]` in `second_part`.
+  ///
+  /// If there are no backslashes in `name_to_split` then `first_part` is set equal to `name_to_split` and
+  /// `second_part` is set equal to "".
+  ///
+  /// @param[in] name_to_split The path to split as described above.
+  ///
+  /// @param[out] first_part The part of the path given that refers to a child branch of this one, split as described
+  ///                        above.
+  ///
+  /// @param[out] second_part The remainder of the path, as described above.
+  void split_name(const kl_string name_to_split, kl_string &first_part, kl_string &second_part) const
+  {
+    unsigned long split_pos = name_to_split.find("\\");
+
+    if (split_pos == kl_string::npos)
+    {
+      first_part = name_to_split;
+      second_part = "";
+    }
+    else
+    {
+      first_part = name_to_split.substr(0, split_pos);
+      second_part = name_to_split.substr(split_pos + 1, kl_string::npos);
+    }
+  }
 };
 
 #endif

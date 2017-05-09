@@ -57,7 +57,7 @@ template <typename p, typename... args_t> void kl_trc_output_argument(p param, a
   }
   else
   {
-    kl_trc_output_argument(param);
+    kl_trc_output_argument((char const *)param);
   }
   kl_trc_output_argument(params...);
 }

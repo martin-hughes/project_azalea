@@ -1,0 +1,9 @@
+# FAT12/16/32 Filesystem Library.
+
+Import('env')
+files = [ "fat_fs.cpp",
+          "fat_folder.cpp",
+          "fat_file.cpp",
+        ]
+obj = env.Library("fat_fs", files)
+Return ("obj") 
