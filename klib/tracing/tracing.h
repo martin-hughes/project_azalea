@@ -65,7 +65,8 @@ T kl_trc_output_single_arg(T param)
   return param;
 }
 
-template<typename T = kl_string, typename = typename std::enable_if<std::is_same<T, kl_string>::value>::type, typename B = void, typename C = void, typename D = void, typename E = void>
+template<typename T = kl_string, typename = typename std::enable_if<std::is_same<T, kl_string>::value>::type,
+    typename B = void, typename C = void, typename D = void, typename E = void>
 T kl_trc_output_single_arg(T& param)
 {
   kl_trc_output_kl_string_argument(param);
