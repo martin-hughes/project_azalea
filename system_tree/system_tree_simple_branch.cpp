@@ -322,7 +322,7 @@ ERR_CODE system_tree_simple_branch::rename_child(const kl_string &old_name, cons
     intermediate = this->get_child_type(old_name, ct);
     if (intermediate != ERR_CODE::NO_ERROR)
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Error ", static_cast<unsigned int>intermediate,
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Error ", static_cast<unsigned int>(intermediate),
                    " occurred while looking for child\n");
       rt = intermediate;
     }

@@ -1,8 +1,6 @@
-// KLib Kernel tracing library. In the live version of the kernel, these
-// currently do nothing.
+// KLib Kernel tracing library. In the live version of the kernel, these will do nothing.
 
 #include "tracing.h"
-#include "tracing_internal.h"
 
 // Only one of these can be defined at a time, or duplicate definitions will occur.
 // Note that tracing by serial port assumes the normal port values for COM1, and seizes it completely! (Which may be
@@ -10,11 +8,11 @@
 //#define KL_TRACE_BY_MAGIC_PORT
 #define KL_TRACE_BY_SERIAL_PORT
 
-
-#ifdef KL_TRACE_BY_SERIAL_PORT
-
 #include "processor/x64/processor-x64-int.h"
 const unsigned short TRC_COM1_BASE_PORT = 0x3F8;
+const unsigned short TRC_MAGIC_PORT = 0xE9;
+
+#ifdef KL_TRACE_BY_SERIAL_PORT
 
 bool kl_trc_serial_port_ready()
 {
@@ -22,6 +20,20 @@ bool kl_trc_serial_port_ready()
 }
 
 #endif
+
+void kl_trc_char(unsigned char c)
+{
+#ifdef KL_TRACE_BY_SERIAL_PORT
+  while (!kl_trc_serial_port_ready())
+  {
+    //spin!
+  }
+  asm_proc_write_port(TRC_COM1_BASE_PORT, (unsigned long)c, 8);
+#endif
+#ifdef KL_TRACE_BY_MAGIC_PORT
+  asm_proc_write_port(TRC_MAGIC_PORT, (unsigned long)c, 8);
+#endif
+}
 
 void kl_trc_init_tracing()
 {
@@ -40,12 +52,12 @@ void kl_trc_init_tracing()
 #endif
 }
 
-void kl_trc_output_argument(unsigned long value)
+void kl_trc_output_int_argument(unsigned long value)
 {
   char buf[19] = "0x0000000000000000";
   char temp = 0;
 
-  for (int i=0; i < 16; i++)
+  for (int i = 0; i < 16; i++)
   {
     temp = (char)(value & 0x0F);
     if (temp < 10)
@@ -60,30 +72,22 @@ void kl_trc_output_argument(unsigned long value)
     value >>= 4;
   }
 
-  kl_trc_output_argument((char const *)buf);
+  kl_trc_output_str_argument((char const *)buf);
 }
 
-void kl_trc_output_argument(char const *str)
+void kl_trc_output_str_argument(char const *str)
 {
-#ifdef KL_TRACE_BY_SERIAL_PORT
-  while(*str != 0)
+  while (*str != 0)
   {
-    while(!kl_trc_serial_port_ready())
-    {
-      //spin!
-    }
-
-    asm_proc_write_port(TRC_COM1_BASE_PORT, *str, 8);
+    kl_trc_char(*str);
     str++;
   }
-#endif
-#ifdef KL_TRACE_BY_MAGIC_PORT
-  asm_trc_dbg_port_output_string(str);
-#endif
 }
 
-void kl_trc_output_argument()
+void kl_trc_output_kl_string_argument(kl_string &str)
 {
-  // This function is called when there are no more arguments for kl_trc_output_argument, so it doesn't need to do
-  // anything
+  for (unsigned long x = 0; x < str.length(); x++)
+  {
+    kl_trc_char(str[x]);
+  }
 }

@@ -13,14 +13,22 @@ void kl_trc_init_tracing()
   // TODO: Implement more interesting tracing.
 }
 
-void kl_trc_output_argument(char const *str)
+void kl_trc_output_str_argument(char const *str)
 {
   cout << str;
 }
 
-void kl_trc_output_argument(unsigned long value)
+void kl_trc_output_int_argument(unsigned long value)
 {
   cout << hex << value;
+}
+
+void kl_trc_output_kl_string_argument(kl_string &str)
+{
+  for (int x = 0; x < str.length(); x++)
+  {
+    cout << str[x];
+  }
 }
 
 void kl_trc_output_argument()

@@ -2,6 +2,7 @@
 #define _KLIB_TRACING_H
 
 #include <type_traits>
+#include "klib/data_structures/string.h"
 
 //#define ENABLE_TRACING
 
@@ -37,29 +38,65 @@ enum class TRC_LVL
 // allow for compile-time removal of tracing calls in the release build.
 void kl_trc_init_tracing();
 
-template <typename... args_t> void kl_trc_trace(TRC_LVL lvl, args_t... params);
-template <typename p, typename... args_t> void kl_trc_output_argument(p param, args_t... params);
-//template <typename p> void kl_trc_output_argument(p param);
-void kl_trc_output_argument(char const *str);
-void kl_trc_output_argument(unsigned long value);
-void kl_trc_output_argument();
+template<typename ... args_t> void kl_trc_trace(TRC_LVL lvl, args_t ... params);
+template<typename p, typename ... args_t> void kl_trc_output_arguments(p param, args_t ... params);
+template<typename p> void kl_trc_output_arguments(p param);
+void kl_trc_output_arguments();
 
-template <typename... args_t> void kl_trc_trace(TRC_LVL lvl, args_t... params)
+//template <typename p> void kl_trc_output_argument(p param);
+void kl_trc_output_str_argument(char const *str);
+void kl_trc_output_int_argument(unsigned long value);
+void kl_trc_output_kl_string_argument(kl_string &str);
+
+// Template to output integral types
+template<typename T = unsigned long, typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
+T kl_trc_output_single_arg(T param)
 {
-  kl_trc_output_argument(params...);
+  kl_trc_output_int_argument((unsigned long)param);
+  return param;
 }
 
-template <typename p, typename... args_t> void kl_trc_output_argument(p param, args_t... params)
+// Templates to output string types
+template<typename T = char const *, typename = typename std::enable_if<std::is_pointer<T>::value, T>::type,
+    typename = typename std::enable_if<std::is_same<T, char const *>::value>::type, typename X = void>
+T kl_trc_output_single_arg(T param)
 {
-  if (std::is_integral<p>::value)
-  {
-    kl_trc_output_argument((unsigned long)param);
-  }
-  else
-  {
-    kl_trc_output_argument((char const *)param);
-  }
-  kl_trc_output_argument(params...);
+  kl_trc_output_str_argument(param);
+  return param;
+}
+
+template<typename T = kl_string, typename = typename std::enable_if<std::is_same<T, kl_string>::value>::type, typename B = void, typename C = void, typename D = void, typename E = void>
+T kl_trc_output_single_arg(T& param)
+{
+  kl_trc_output_kl_string_argument(param);
+  return param;
+}
+
+// Template to output all other pointers
+template<typename T, typename = typename std::enable_if<std::is_pointer<T>::value, T>::type,
+    typename = typename std::enable_if<!std::is_same<T, char const *>::value>::type, typename X = void,
+    typename Y = void>
+T kl_trc_output_single_arg(T param)
+{
+  kl_trc_output_int_argument((unsigned long)param);
+  return param;
+}
+
+// The actual tracing function. Notice that lvl is ignored for the time being!
+template<typename ... args_t> void kl_trc_trace(TRC_LVL lvl, args_t ... params)
+{
+  kl_trc_output_arguments(params...);
+}
+
+template<typename p, typename ... args_t> void kl_trc_output_arguments(p param, args_t ... params)
+{
+  kl_trc_output_single_arg(param);
+  kl_trc_output_arguments(params...);
+}
+
+template<typename p> void kl_trc_output_arguments(p param)
+{
+  kl_trc_output_single_arg(param);
 }
 
 #endif

@@ -34,6 +34,9 @@ files = [ "devices/block/proxy/proxy_tests.cpp",
           "system_tree/system_tree_tests.cpp",
           "system_tree/system_tree_1.cpp",
           "system_tree/system_tree_2.cpp",
+          
+          "tracing/tracing_tests.cpp",
+          "tracing/tracing_1.cpp",
         ]
 
 for f in files:

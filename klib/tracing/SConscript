@@ -1,5 +1,5 @@
 # Klib Kernel Tracing library.
 
 Import('env')
-obj = env.Library("klib-tracing", [ "tracing.cpp", "x64/x64_debug_port.asm", ])
+obj = env.Library("klib-tracing", [ "tracing.cpp", ])
 Return ("obj") 
