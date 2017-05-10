@@ -51,9 +51,19 @@ asm_syscall_x64_prepare:
 GLOBAL asm_syscall_x64_syscall
 EXTERN syscall_x64_kernel_syscall
 EXTERN kernel_syscall_stack_ptrs
+EXTERN syscall_pointers
+EXTERN syscall_max_idx
 asm_syscall_x64_syscall:
   ; Stop interrupts while we're fiddling with the stack, to avoid bad corruptions.
   cli
+
+  ; Save the registers that the calling convention says must be preserved
+  push rbx
+  push rbp
+  push r12
+  push r13
+  push r14
+  push r15
 
   ; Figure out which processor we're dealing with
   mov rbx, 0
@@ -65,12 +75,12 @@ asm_syscall_x64_syscall:
   shr bx, 1
 
   ; Switch to kernel stack, saving the user mode one.
-  mov rdx, kernel_syscall_stack_ptrs
-  mov rdx, [rdx]
-  add rdx, rbx
-  mov rdx, [rdx]
+  mov r12, kernel_syscall_stack_ptrs
+  mov r12, [r12]
+  add r12, rbx
+  mov r12, [r12]
   mov rbx, rsp
-  mov rsp, rdx
+  mov rsp, r12
 
   sti
 
@@ -80,9 +90,30 @@ asm_syscall_x64_syscall:
   push rcx
   push r11
 
-  ; Do more stuff than this! Like set up the arguments and stuff.
-  mov rbx, syscall_x64_kernel_syscall
-  call rbx
+  ; Confirm that the requested system call is within the boundaries of the index table:
+  mov r12, syscall_max_idx
+  mov r12, [r12]
+
+  cmp rax, r12
+  ja invalid_syscall_idx
+
+
+  ; The call index requested fits within the table. Extract the function's address and call it. Move R10 into RCX to
+  ; fulfil the change between kernel interface ABI and x64 C function call ABI.
+  mov r12, syscall_pointers
+  shl rax, 3
+  add rax, r12
+
+  mov rcx, r10
+  call [rax]
+
+  jmp end_of_syscall
+
+  invalid_syscall_idx:
+  ; The requested index was too large. The error code for this is 2 - as defined in klib/misc/error_codes.h.
+  mov rax, 2
+
+  end_of_syscall:
 
   ; Put the RIP and R11 back again.
   pop r11
@@ -94,6 +125,14 @@ asm_syscall_x64_syscall:
   ; Restore the stack.
   pop rbx
   mov rsp, rbx
+
+  ; Restore the registers that must be preserved by the calling convention.
+  pop r15
+  pop r14
+  pop r13
+  pop r12
+  pop rbp
+  pop rbx
 
   ; Carry on! Manually encode a "64-bit operands" (REX.W) prefix because:
   ; 1 - otherwise sysret thinks it's jumping back to 32-bit code, and hilarity ensues

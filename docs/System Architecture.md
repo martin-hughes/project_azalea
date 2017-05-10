@@ -74,6 +74,10 @@ Provides the system call interface. One day this will probably migrate to being 
 there are no system calls in the system call interface. But you can call the `syscall` ASM instruction and have it
 work!
 
+The system call binary interface similar to the Linux one - the call number is passed in RAX, then the arguments in
+RDI, RSI, RDX, R10, R8, and R9, then the stack as needed. The return value is passed in RAX. Only RBP, RBX, and R12–R15
+are preserved.
+
 ## External components
 
 ### ACPICA

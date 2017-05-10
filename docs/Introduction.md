@@ -67,10 +67,16 @@ To get the system running from its current state, do the following:
 
 - Get a copy of the code on your system, using your favourite method
 - Follow the instructions in `extras/configure_disk_images.txt`
+- Make sure there is a file called 'testprog' in the root of the mounted disk image.
 - From the root directory, execute `python build_support/build_script.py`
 - Execute `build_support/start_test_machine.sh`
 
-The system should now start! If you get a blue screen, that's a bug. Don't be surprised if not much actually happens.
+The system should now start! If your 'testprog' is naughty, you will get a blue screen of death. But any other time you
+see the blue screen it's a bug - please let me know!
+
+What's this 'testprog' thing? It's a flat binary file that will be loaded at address 0x200000 and then executed in user
+mode. There is an example in `extras/simple_um_prog.asm` which is assembled using `extras/compile_test_prog.sh`. Use
+the resulting 'simple_prog' file as 'testprog'.
 
 ## Contributing
 

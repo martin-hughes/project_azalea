@@ -136,7 +136,7 @@ void kernel_start()
   KL_TRC_TRACE(TRC_LVL::FLOW, "First map complete\n");
 
   // Copy the simple test program in to it.
-  kl_memcpy((void *)test_prog, kernel_virtual_page, sizeof(test_prog));
+  kl_memcpy((void *)test_prog, kernel_virtual_page, prog_size);
   KL_TRC_TRACE(TRC_LVL::FLOW, "Program copied\n");
 
   // No need to access it from the kernel any more

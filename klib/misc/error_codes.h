@@ -8,7 +8,12 @@ enum class ERR_CODE
 
   /// Something has not provided a meaningful error code. This shouldn't be seen in our code! However, converting from
   /// boolean false to ERR_CODE doesn't provide an error code but there is some use to it, so UNKNOWN is the result.
-  UNKNOWN,
+  UNKNOWN = 1,
+
+  /// The system call requested had an invalid index number. Do not change this value without checking that the various
+  /// system call interfaces return the updated value. (NB: "various" - at the moment, the only system call interface
+  /// is x64)
+  SYSCALL_INVALID_IDX = 2,
 
   /// The object was not found.
   NOT_FOUND,

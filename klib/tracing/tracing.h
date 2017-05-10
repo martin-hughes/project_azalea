@@ -42,6 +42,7 @@ template<typename ... args_t> void kl_trc_trace(TRC_LVL lvl, args_t ... params);
 template<typename p, typename ... args_t> void kl_trc_output_arguments(p param, args_t ... params);
 template<typename p> void kl_trc_output_arguments(p param);
 void kl_trc_output_arguments();
+void kl_trc_char(unsigned char c);
 
 //template <typename p> void kl_trc_output_argument(p param);
 void kl_trc_output_str_argument(char const *str);
