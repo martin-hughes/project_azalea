@@ -1,0 +1,7 @@
+# Executable Processes Library.
+
+Import('env')
+files = [ "process_gen.cpp",
+        ]
+obj = env.Library("process", files)
+Return ("obj") 

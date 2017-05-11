@@ -11,6 +11,7 @@
 #include "acpi/acpi_if.h"
 #include "object_mgr/object_mgr.h"
 #include "system_tree/system_tree.h"
+#include "system_tree/process/process.h"
 
 #include "devices/block/ata/ata.h"
 #include "devices/block/proxy/block_proxy.h"
@@ -36,8 +37,6 @@
 
 extern "C" int main();
 void kernel_start();
-
-typedef void (*fn_ptr)();
 
 // Temporary procedures and storage while the kernel is being developed. Eventually, the full kernel start procedure
 // will cause these to become unused.
@@ -87,6 +86,7 @@ void kernel_start()
                "\n");
 
   ACPI_STATUS status;
+  task_process *initial_proc;
 
   // kernel_start() runs on the BSP. Bring up the APs so they are ready to take on any threads created below.
   proc_mp_start_aps();
@@ -102,55 +102,13 @@ void kernel_start()
 
   setup_initial_fs();
   ASSERT(first_fs != nullptr);
-
-  // Load "testprog" from the disk.
   ASSERT(system_tree()->add_branch("root", first_fs) == ERR_CODE::NO_ERROR);
-  ISystemTreeLeaf *disk_prog;
-  IBasicFile *test_prog_file;
-  unsigned long prog_size;
-  unsigned long bytes_read;
-  ASSERT(system_tree()->get_leaf("root\\testprog", &disk_prog) == ERR_CODE::NO_ERROR);
 
-  test_prog_file = reinterpret_cast<IBasicFile*>(disk_prog);
-  test_prog_file->get_file_size(prog_size);
-  KL_TRC_DATA("Test prog size", prog_size);
-
-  unsigned char *test_prog = new unsigned char[prog_size];
-  ASSERT(test_prog_file->read_bytes(0, prog_size, test_prog, prog_size, bytes_read) == ERR_CODE::NO_ERROR);
-  ASSERT(bytes_read == prog_size);
-
-  KL_TRC_DATA("First bytes of program", *((unsigned long *)test_prog));
-
-  // Create a new user mode process.
-  fn_ptr user_proc = (fn_ptr)0x200000;
-  task_process *new_proc;
-  new_proc = task_create_new_process(user_proc, false);
-  ASSERT(new_proc != nullptr);
-
-  // Allocate it some memory for the code to go in, and allow the kernel to access it.
-  void *physical_page = mem_allocate_physical_pages(1);
-  void *kernel_virtual_page = mem_allocate_virtual_range(1);
-  KL_TRC_DATA("Physical page to use", (unsigned long)physical_page);
-  KL_TRC_DATA("Kernel virtual page", (unsigned long)kernel_virtual_page);
-  mem_map_range(physical_page, kernel_virtual_page, 1);
-  KL_TRC_TRACE(TRC_LVL::FLOW, "First map complete\n");
-
-  // Copy the simple test program in to it.
-  kl_memcpy((void *)test_prog, kernel_virtual_page, prog_size);
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Program copied\n");
-
-  // No need to access it from the kernel any more
-  mem_unmap_range(kernel_virtual_page, 1);
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Kernel space unmapped\n");
-
-  // In the context of the program, set up the virtual page allocation. The process starts at 2MB.
-  mem_map_range(physical_page, (void *)0x200000, 1, new_proc);
-  KL_TRC_TRACE(TRC_LVL::FLOW, "User mode map complete, starting now.\n");
-
-  delete[] test_prog;
+  initial_proc = proc_load_binary_file("root\\testprog");
+  ASSERT(initial_proc != nullptr);
 
   // Process should be good to go!
-  task_start_process(new_proc);
+  task_start_process(initial_proc);
 
   while (1)
   {

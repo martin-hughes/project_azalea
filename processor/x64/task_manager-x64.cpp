@@ -30,6 +30,8 @@ const unsigned long DEF_SS_USER = 0x20;
 
 const unsigned int TM_INTERRUPT_NUM = IRQ_BASE;
 
+const unsigned long DEF_USER_MODE_STACK_PAGE = 0x000000F000000000;
+
 /// @brief Create a new x64 execution context
 ///
 /// Create an entire x64 execution context that will cause entry_point to be executed within new_thread. This must only
@@ -43,13 +45,21 @@ const unsigned int TM_INTERRUPT_NUM = IRQ_BASE;
 void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thread)
 {
   task_x64_exec_context *new_context;
-  unsigned long *stack_addr;
+
+  // The address of the stack for this process, as seen by the kernel.
+  unsigned long *kernel_stack_addr;
+
+  // The value about to go into RSP when the process is running. (That is, for a user-mode process, this will be a user
+  // mode address, not a kernel mode one.)
+  unsigned long rsp_of_stack;
+
   task_process *parent_process;
   mem_process_info *memmgr_data;
   process_x64_data *memmgr_x64_data;
   unsigned long new_flags;
   unsigned long new_cs;
   unsigned long new_ss;
+  void *kernel_stack_page = nullptr;
 
   KL_TRC_ENTRY;
 
@@ -70,16 +80,16 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
 
   // Allocate a whole 2MB for the stack. The stack grows downwards, so position the expected stack pointer near to the
   // end of the page.
-  stack_addr = static_cast<unsigned long *>(proc_x64_allocate_stack());
-  stack_addr -= req_stack_entries;
-  KL_TRC_DATA("Stack address", (unsigned long)stack_addr);
-
   if (parent_process->kernel_mode)
   {
+    // The kernel has a fairly well-defined way of generating stacks for itself, no need to fiddle with page maps.
     KL_TRC_TRACE(TRC_LVL::FLOW, "Creating a kernel mode exec context.\n");
     new_flags = DEF_RFLAGS_KERNEL;
     new_cs = DEF_CS_KERNEL;
     new_ss = DEF_SS_KERNEL;
+
+    kernel_stack_addr = static_cast<unsigned long *>(proc_x64_allocate_stack());
+    rsp_of_stack = reinterpret_cast<unsigned long>(kernel_stack_addr);
   }
   else
   {
@@ -88,17 +98,45 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
     // The +3s below add the RPL (ring 3) to the CS/SS selectors, which don't otherwise contain them.
     new_cs = DEF_CS_USER + 3;
     new_ss = DEF_SS_USER + 3;
+
+    // We need the user mode process's stack to be visible to it in user-mode, but we also need to be able to access it
+    // now. So, allocate a single page, but map it in both kernel and user space.
+    kernel_stack_page = mem_allocate_virtual_range(1);
+    unsigned long ksp_ulong = reinterpret_cast<unsigned long>(kernel_stack_page);
+    void *physical_backing = mem_allocate_physical_pages(1);
+    mem_map_range(physical_backing, kernel_stack_page, 1);
+    mem_map_range(physical_backing, reinterpret_cast<void *>(DEF_USER_MODE_STACK_PAGE), 1, parent_process);
+
+    // For the time being, all user-mode processes start with the same stack address. It's important that the offset
+    // within the page is kept the same for both user and kernel addresses.
+    kernel_stack_addr = reinterpret_cast<unsigned long *>(ksp_ulong + MEM_PAGE_SIZE - 8);
+    rsp_of_stack = reinterpret_cast<unsigned long>(DEF_USER_MODE_STACK_PAGE + MEM_PAGE_SIZE - 8);
   }
 
-  stack_addr[STACK_EFLAGS_OFFSET] = new_flags;
-  stack_addr[STACK_RIP_OFFSET] = (unsigned long)entry_point;
-  stack_addr[STACK_CS_OFFSET] = new_cs;
-  stack_addr[STACK_RFLAGS_OFFSET] = new_flags;
-  stack_addr[STACK_RSP_OFFSET] = (unsigned long)stack_addr + (req_stack_entries * sizeof(unsigned long));
-  stack_addr[STACK_SS_OFFSET] = new_ss;
-  stack_addr[STACK_RCX_OFFSET] = 0x1234;
+  // As above, both kernel and (potentially) user mode versions of the stack address need offsetting by the same
+  // amount. These look different because kernel_stack_addr is a pointer, but rsp_of_stack is not. The effect is the
+  // same for both though.
+  kernel_stack_addr -= req_stack_entries;
+  rsp_of_stack -= (req_stack_entries * sizeof(unsigned long));
+  kernel_stack_addr[STACK_EFLAGS_OFFSET] = new_flags;
+  kernel_stack_addr[STACK_RIP_OFFSET] = (unsigned long)entry_point;
+  kernel_stack_addr[STACK_CS_OFFSET] = new_cs;
+  kernel_stack_addr[STACK_RFLAGS_OFFSET] = new_flags;
+  kernel_stack_addr[STACK_RSP_OFFSET] = rsp_of_stack + (req_stack_entries * sizeof(unsigned long));
+  kernel_stack_addr[STACK_SS_OFFSET] = new_ss;
+  kernel_stack_addr[STACK_RCX_OFFSET] = 0x1234;
 
-  new_context->stack_ptr = (void *)stack_addr;
+  if (!parent_process->kernel_mode)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Unmapping kernel addresses of user-mode stack\n");
+    ASSERT(kernel_stack_page != nullptr);
+    mem_unmap_range(kernel_stack_page, 1);
+  }
+
+  new_context->stack_ptr = (void *)rsp_of_stack;
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA,  "Final kernel stack address", kernel_stack_addr, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA,  "Final RSP address", rsp_of_stack, "\n");
 
   KL_TRC_EXIT;
   return (void *)new_context;
