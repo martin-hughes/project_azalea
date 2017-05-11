@@ -2,6 +2,7 @@
 
 //#define ENABLE_TRACING
 
+#include "syscall.h"
 #include "syscall/syscall_kernel.h"
 #include "syscall/syscall_kernel-int.h"
 #include "klib/klib.h"
@@ -23,7 +24,7 @@ const unsigned long syscall_max_idx = (sizeof(syscall_pointers) / sizeof(void *)
 ///
 /// return ERR_CODE::INVALID_PARAM if either of the parameters isn't valid.
 ///        ERR_CODE::NO_ERROR otherwise (even if no output was actually made).
-ERR_CODE syscall_debug_output(unsigned char *msg, unsigned long length)
+ERR_CODE syscall_debug_output(const char *msg, unsigned long length)
 {
   KL_TRC_ENTRY;
 

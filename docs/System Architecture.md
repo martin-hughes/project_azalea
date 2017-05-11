@@ -71,8 +71,10 @@ However, at the moment there aren't any users, or any functions to control acces
 ### System call interface (syscall)
 
 Provides the system call interface. One day this will probably migrate to being a Major Component, but at the moment
-there are no system calls in the system call interface. But you can call the `syscall` ASM instruction and have it
-work!
+there are so few system calls working that it's pointless. A list of system calls can be found in `syscall/syscall.h`.
+
+There are two parts to the system call library - the kernel side and the user side. Both are contained in the `syscall`
+directory, and which is which should be self-explanatory. Don't attempt to compile both into one project!
 
 The system call binary interface similar to the Linux one - the call number is passed in RAX, then the arguments in
 RDI, RSI, RDX, R10, R8, and R9, then the stack as needed. The return value is passed in RAX. Only RBP, RBX, and R12–R15

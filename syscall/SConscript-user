@@ -1,0 +1,6 @@
+# Kernel system call library - user facing side.
+
+Import('env')
+files = ["x64/syscall_user_low-x64.asm"]
+obj = env.Library("syscall_user", files)
+Return ("obj") 

@@ -12,47 +12,47 @@ ENTRY(pre_main)
 
 SECTIONS
 {
-    . = 0x0000000000100000;
-    .pretext : 
-    {
-        *(.pretext)
-    }
-    . = 0xFFFFFFFF00100000 + SIZEOF(.pretext);
-    . = ALIGN(1024);
-    start_loc = . - 0xFFFFFFFF00000000;
-	.text : AT ( start_loc )
-	{
-		*(.text)
-	}
-    . = ALIGN(1024);
-    start_loc = . - 0xFFFFFFFF00000000;
-	.data : AT ( start_loc )
-	{
-		*(.data)
-	}
-    . = ALIGN(1024);
-    start_loc = . - 0xFFFFFFFF00000000;
-	.init_array : AT ( start_loc )
-	{
-	    *(.init_array)
-	}
-    . = ALIGN(1024);
-    start_loc = . - 0xFFFFFFFF00000000;
-	.bss : AT ( start_loc )
-	{
-		*(.bss)
-		*(COMMON)
-	}
-    . = ALIGN(1024);
-    start_loc = . - 0xFFFFFFFF00000000;
-	.rodata : AT ( start_loc )
-	{
-	    *(.rodata)
-	}
-    . = ALIGN(1024);
-    start_loc = . - 0xFFFFFFFF00000000;
-	.eh_frame : AT ( start_loc )
-	{
-	    *(.eh_frame)
-	}
+  . = 0x0000000000100000;
+  .pretext : 
+  {
+      *(.pretext)
+  }
+  . = 0xFFFFFFFF00100000 + SIZEOF(.pretext);
+  . = ALIGN(1024);
+  start_loc = . - 0xFFFFFFFF00000000;
+  .text : AT ( start_loc )
+  {
+    *(.text)
+  }
+  . = ALIGN(1024);
+  start_loc = . - 0xFFFFFFFF00000000;
+  .data : AT ( start_loc )
+  {
+    *(.data)
+  }
+  . = ALIGN(1024);
+  start_loc = . - 0xFFFFFFFF00000000;
+  .init_array : AT ( start_loc )
+  {
+      *(.init_array)
+  }
+  . = ALIGN(1024);
+  start_loc = . - 0xFFFFFFFF00000000;
+  .bss : AT ( start_loc )
+  {
+    *(.bss)
+    *(COMMON)
+  }
+  . = ALIGN(1024);
+  start_loc = . - 0xFFFFFFFF00000000;
+  .rodata : AT ( start_loc )
+  {
+      *(.rodata)
+  }
+  . = ALIGN(1024);
+  start_loc = . - 0xFFFFFFFF00000000;
+  .eh_frame : AT ( start_loc )
+  {
+      *(.eh_frame)
+  }
 }

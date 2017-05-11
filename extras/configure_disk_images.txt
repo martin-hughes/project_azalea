@@ -1,4 +1,8 @@
 1: Copy kernel_disc_image_example.vdi to kernel_disc_image.vdi AND kernel_disc_image_nonlive.vdi.
+
 2: In fstab, add:
 {path}/kernel_disc_image.vdi {directory to mount in - ~/disk_mount ideally} vfat loop,noauto,users,rw,offset=40448 0 0
+
+ - Note that if you don't use ~/disk_mount, it is necessary to alter build_support/copy_image.sh to match.
+
 3: Test.
