@@ -5,7 +5,7 @@ Firstly, thank you for offering to contribute! I'm very flattered. A couple of t
 - Since this is a hobby project, there might be some elements I'd prefer to implement myself - for the fun of it.
   Please don't be offended if you find one of those.
   
-- Having said that, bug fixes are _always_ welcome. :simple_smile:
+- Having said that, bug fixes are _always_ welcome. :smiley:
   
-- There are some loose [coding standards](./extras/Coding Standards.txt) that I'd prefer to try and stick to. I've not
+- There are some loose [coding standards](extras/Coding%20Standards.txt) that I'd prefer to try and stick to. I've not
   always done a terribly good job I realise, so I'll try not to be too pedantic.
