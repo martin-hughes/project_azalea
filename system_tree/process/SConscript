@@ -2,6 +2,7 @@
 
 Import('env')
 files = [ "process_gen.cpp",
+          "process_elf.cpp",
         ]
 obj = env.Library("process", files)
 Return ("obj") 

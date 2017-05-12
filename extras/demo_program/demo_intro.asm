@@ -2,9 +2,9 @@
 SEGMENT .pretext
 
 EXTERN main
-GLOBAL pre_main
+GLOBAL _start
 
-pre_main:
+_start:
   call main
 
 loop:

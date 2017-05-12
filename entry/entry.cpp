@@ -104,7 +104,7 @@ void kernel_start()
   ASSERT(first_fs != nullptr);
   ASSERT(system_tree()->add_branch("root", first_fs) == ERR_CODE::NO_ERROR);
 
-  initial_proc = proc_load_binary_file("root\\testprog");
+  initial_proc = proc_load_elf_file("root\\testprog");
   ASSERT(initial_proc != nullptr);
 
   // Process should be good to go!

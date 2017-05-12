@@ -516,8 +516,10 @@ page_table_entry mem_decode_page_table_entry(unsigned long encoded)
 ///
 /// @param virtual_addr The virtual address to decode. Need not point at a page boundary.
 ///
+/// @param context The process context to do this decoding in. If nullptr is supplied, use the current context.
+///
 /// @return The physical address backing virtual_addr, or nullptr if no physical RAM backs virtual_addr
-void *mem_get_phys_addr(void *virtual_addr)
+void *mem_get_phys_addr(void *virtual_addr, task_process *context)
 {
   KL_TRC_ENTRY;
 
@@ -525,7 +527,7 @@ void *mem_get_phys_addr(void *virtual_addr)
   unsigned long pml4_entry_idx;
   unsigned long page_dir_ptr_entry_idx;
   unsigned long page_dir_entry_idx;
-  unsigned long *table_addr = get_pml4_table_addr();
+  unsigned long *table_addr = get_pml4_table_addr(context);
   unsigned long *encoded_entry;
   void *table_phys_addr;
   unsigned long offset;

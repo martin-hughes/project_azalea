@@ -7,7 +7,7 @@ import defaults
 env = Environment()
 defaults.setup_kernel_build_env(env)
 
-env['LINKFLAGS'] = "-T build_support/demo_program.ld --start-group"
+env['LINKFLAGS'] = "--start-group"
 env['LINK'] = 'ld -Map output/demo_program.map'
 
 # List of required components.
