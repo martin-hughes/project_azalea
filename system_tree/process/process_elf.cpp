@@ -53,7 +53,8 @@ task_process *proc_load_elf_file(kl_string binary_name)
 
   // Check the file will fit into a single page. This means we know the copy below has enough space.
   // There's no technical reason why it must fit in one page, but it makes it easier for the time being.
-  new_prog_file = reinterpret_cast<IBasicFile*>(disk_prog);
+  new_prog_file = dynamic_cast<IBasicFile*>(disk_prog);
+  ASSERT(new_prog_file != nullptr);
   new_prog_file->get_file_size(prog_size);
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Binary file size ", prog_size, "\n");
   ASSERT(prog_size < MEM_PAGE_SIZE);

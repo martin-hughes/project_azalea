@@ -8,7 +8,7 @@
 class ISystemTreeLeaf
 {
 public:
-  ~ISystemTreeLeaf() {};
+  virtual ~ISystemTreeLeaf() {};
 };
 
 #endif
