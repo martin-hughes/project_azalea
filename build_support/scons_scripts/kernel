@@ -25,6 +25,7 @@ dependencies_in = [
                    '#acpi/SConscript',
                    '#external/SConscript-ACPICA',
                    '#external/vsnprintf/Sconscript',
+                   '#external/SConscript-libcxxrt',
                    '#object_mgr/SConscript',
                    '#system_tree/SConscript',
                    '#system_tree/process/SConscript',

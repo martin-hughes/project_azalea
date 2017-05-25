@@ -33,6 +33,12 @@
  * modified) versions of this file, nor is leaving this notice intact mandatory.
  */
 
+/* Copyright (c) 2016 Martin Hughes.
+ *
+ * My changes to this file are simply to make it easier to include within Project Azalea. They can be used for any
+ * purpose, without additional restrictions.
+ */
+
 /*
  * History
  *
