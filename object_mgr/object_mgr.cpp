@@ -98,12 +98,13 @@ void om_correlate_object(void *object_ptr, GEN_HANDLE handle)
 ///
 /// @param handle The handle to retrieve the corresponding object for
 ///
-/// @return A pointer to the object stored in OM.
+/// @return A pointer to the object stored in OM. nullptr if the handle does not correspond to an object in OM.
 void *om_retrieve_object(GEN_HANDLE handle)
 {
   KL_TRC_ENTRY;
 
   object_data *found_object;
+  void *object_ptr;
 
   ASSERT(om_initialized);
 
@@ -113,11 +114,18 @@ void *om_retrieve_object(GEN_HANDLE handle)
   found_object = om_int_retrieve_object(handle);
   klib_synch_spinlock_unlock(om_main_lock);
 
-  ASSERT(found_object != nullptr);
-
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Found object", found_object->object_ptr, "\n");
+  if (found_object != nullptr)
+  {
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Found object", found_object->object_ptr, "\n");
+    object_ptr = found_object->object_ptr;
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Didn't find object\n");
+    object_ptr = nullptr;
+  }
   KL_TRC_EXIT;
-  return found_object->object_ptr;
+  return object_ptr;
 }
 
 /// @brief Remove an object from OM and destroy the handle
@@ -184,7 +192,11 @@ object_data *om_int_retrieve_object(GEN_HANDLE handle)
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Handle to retrieve: ", handle, "\n");
 
-  found_object = om_main_store->search(handle);
+  if (om_main_store->contains(handle))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Object exists.\n");
+    found_object = om_main_store->search(handle);
+  }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Found item: ", found_object, "\n");
   KL_TRC_EXIT;

@@ -158,6 +158,12 @@ void proc_page_fault_handler(unsigned long fault_code, unsigned long fault_addr,
   KL_TRC_TRACE(TRC_LVL::EXTRA, "fault code: ", fault_code, "\n");
   KL_TRC_TRACE(TRC_LVL::EXTRA, "CR2 (bad mem address): ", fault_addr, "\n");
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Instruction pointer: ", fault_instruction, "\n");
+  if ((fault_code & 0x10) == 0)
+  {
+    // The fault wasn't caused by an instruction fetch, ergo we should be able to read & print the instruction...
+    KL_TRC_TRACE(TRC_LVL::EXTRA,
+                 "Instruction bytes x8: ", *(reinterpret_cast<unsigned long *>(fault_instruction)), "\n");
+  }
   KL_TRC_EXIT;
   panic("Page fault!");
 }

@@ -91,3 +91,67 @@ void kl_trc_output_kl_string_argument(kl_string &str)
     kl_trc_char(str[x]);
   }
 }
+
+void kl_trc_output_err_code_argument(ERR_CODE ec)
+{
+  const char *msg = nullptr;
+  switch(ec)
+  {
+    case ERR_CODE::NO_ERROR:
+      msg = "No error";
+      break;
+
+    case ERR_CODE::UNKNOWN:
+      msg = "Unknown error";
+      break;
+
+    case ERR_CODE::SYSCALL_INVALID_IDX:
+      msg = "Invalid system call number";
+      break;
+
+    case ERR_CODE::NOT_FOUND:
+      msg = "Not found";
+      break;
+
+    case ERR_CODE::WRONG_TYPE:
+      msg = "Wrong type";
+      break;
+
+    case ERR_CODE::ALREADY_EXISTS:
+      msg = "Already exists";
+      break;
+
+    case ERR_CODE::INVALID_NAME:
+      msg = "Invalid name";
+      break;
+
+    case ERR_CODE::INVALID_PARAM:
+      msg = "Invalid Parameter";
+      break;
+
+    case ERR_CODE::INVALID_OP:
+      msg = "Invalid operation";
+      break;
+
+    case ERR_CODE::DEVICE_FAILED:
+      msg = "Device failed";
+      break;
+
+    case ERR_CODE::STORAGE_ERROR:
+      msg = "Storage error";
+      break;
+
+    default:
+      break;
+  }
+
+  if (msg != nullptr)
+  {
+    kl_trc_output_str_argument(msg);
+  }
+  else
+  {
+    kl_trc_output_str_argument("Unknown code: ");
+    kl_trc_output_int_argument((unsigned long)(ec));
+  }
+}

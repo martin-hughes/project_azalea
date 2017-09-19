@@ -1,7 +1,7 @@
 // Exception handlers for the kernel.
 // Page faults are handled in interrupts-x64.cpp
 
-#define ENABLE_TRACING
+//#define ENABLE_TRACING
 
 #include "processor/x64/processor-x64-int.h"
 #include "klib/klib.h"
@@ -63,8 +63,15 @@ void proc_ss_fault_handler(unsigned long err_code, unsigned long rip)
 
 void proc_gen_prot_fault_handler(unsigned long err_code, unsigned long rip)
 {
-  KL_TRC_DATA("GPF. Error code", err_code);
-  KL_TRC_DATA("RIP", rip);
+  KL_TRC_TRACE(TRC_LVL::ERROR, "GPF. Error code: ", err_code, "\n");
+  KL_TRC_TRACE(TRC_LVL::ERROR, "RIP: ", rip, "\n");
+  if (rip != 0)
+  {
+    KL_TRC_TRACE(TRC_LVL::ERROR,
+                 "Instruction bytes * 8: ",
+                 reinterpret_cast<unsigned long>(*reinterpret_cast<unsigned long *>(rip)),
+                 "\n");
+  }
   panic("General protection fault");
 }
 

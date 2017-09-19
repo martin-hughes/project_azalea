@@ -2,12 +2,43 @@
 
 extern "C" int main();
 
-const char message[] = "Hello, world!\n";
+unsigned char message[100] = "Couldn't load file...\n";
+const char filename[] = "root\\text.txt";
 
 int main()
 {
-  while (1)
+  unsigned long message_len = 22;
+  GEN_HANDLE handle;
+  ERR_CODE result;
+  unsigned long bytes_read;
+
+  syscall_debug_output("Hello!\n", 7);
+
+  result = syscall_open_handle(filename, sizeof(filename), &handle);
+  if (result != ERR_CODE::NO_ERROR)
   {
-    syscall_debug_output(message, 14);
+    syscall_debug_output("Couldn't open handle\n", 21);
   }
+
+  result = syscall_read_handle(handle, 0, 5, message, 100, &bytes_read);
+  if (result != ERR_CODE::NO_ERROR)
+  {
+    syscall_debug_output("Couldn't read from handle\n", 26);
+  }
+
+  syscall_debug_output((const char *)message, message_len);
+
+  result = syscall_close_handle(handle);
+  if (result != ERR_CODE::NO_ERROR)
+  {
+    syscall_debug_output("Couldn't close handle\n", 22);
+  }
+
+  result = syscall_read_handle(handle, 0, 1, message, 100, &bytes_read);
+  if (result == ERR_CODE::NO_ERROR)
+  {
+    syscall_debug_output("Could read from handle!!\n", 25);
+  }
+
+  return 0;
 }

@@ -3,6 +3,7 @@
 
 #include <type_traits>
 #include "klib/data_structures/string.h"
+#include "klib/misc/error_codes.h"
 
 //#define ENABLE_TRACING
 
@@ -48,6 +49,7 @@ void kl_trc_char(unsigned char c);
 void kl_trc_output_str_argument(char const *str);
 void kl_trc_output_int_argument(unsigned long value);
 void kl_trc_output_kl_string_argument(kl_string &str);
+void kl_trc_output_err_code_argument(ERR_CODE ec);
 
 // Template to output integral types
 template<typename T = unsigned long, typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
@@ -81,6 +83,15 @@ template<typename T, typename = typename std::enable_if<std::is_pointer<T>::valu
 T kl_trc_output_single_arg(T param)
 {
   kl_trc_output_int_argument((unsigned long)param);
+  return param;
+}
+
+// Template to output ERR_CODE results
+template<typename T, typename = typename std::enable_if<std::is_same<T, ERR_CODE>::value>::type,
+    typename B = void, typename C = void, typename D = void, typename E = void, typename F = void>
+T kl_trc_output_single_arg(T param)
+{
+  kl_trc_output_err_code_argument(param);
   return param;
 }
 

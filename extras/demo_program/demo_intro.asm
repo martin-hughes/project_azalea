@@ -8,5 +8,4 @@ _start:
   call main
 
 loop:
-  hlt
   jmp loop

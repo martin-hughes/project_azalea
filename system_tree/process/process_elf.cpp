@@ -3,7 +3,7 @@
 ///
 /// Much like all of the code in this folder, it will eventually be folded into System Tree.
 
-#define ENABLE_TRACING
+//#define ENABLE_TRACING
 
 #include "klib/klib.h"
 #include "system_tree/system_tree.h"
@@ -62,13 +62,14 @@ task_process *proc_load_elf_file(kl_string binary_name)
   // Load the entire file into a buffer - it'll make it easier to process, but slower.
   load_buffer = new unsigned char[prog_size];
   ASSERT(new_prog_file->read_bytes(0, prog_size, load_buffer, prog_size, bytes_read) == ERR_CODE::NO_ERROR);
+  ASSERT(bytes_read == prog_size);
 
   // Check that this is a valid ELF64 file.
   file_header = reinterpret_cast<elf64_file_header *>(load_buffer);
-  ASSERT((file_header->ident[0] == 0x7f) &&
-         (file_header->ident[1] == 'E') &&
-         (file_header->ident[2] == 'L') &&
-         (file_header->ident[3] == 'F'));
+  ASSERT((file_header->ident[0] == 0x7f)
+         && (file_header->ident[1] == 'E')
+         && (file_header->ident[2] == 'L')
+         && (file_header->ident[3] == 'F'));
   ASSERT(file_header->ident[4] == 2); // 64-bit ELF.
   ASSERT(file_header->ident[5] == 1); // Little-endian.
   ASSERT(file_header->ident[6] == 1); // ELF version 1.
@@ -84,6 +85,7 @@ task_process *proc_load_elf_file(kl_string binary_name)
   // to.
   fn_ptr start_addr_ptr = reinterpret_cast<fn_ptr>(file_header->entry_addr);
   new_proc = task_create_new_process(start_addr_ptr, false);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Created new process with entry point ", start_addr_ptr, "\n");
 
   // The kernel does writes in its own address space, to avoid accidentally trampling over the current process.
   // Allocate an address to use for that.
@@ -101,6 +103,7 @@ task_process *proc_load_elf_file(kl_string binary_name)
     // At the moment, this is the only type that we'll load.
     if (prog_header->type == 1) //LOAD type
     {
+      KL_TRC_TRACE(TRC_LVL::EXTRA, "---------------\n");
       KL_TRC_TRACE(TRC_LVL::FLOW, "Loading section\n");
       ASSERT(prog_header->req_phys_addr < 0x8000000000000000L);
 
@@ -110,6 +113,7 @@ task_process *proc_load_elf_file(kl_string binary_name)
       unsigned long bytes_to_zero = 0;
       unsigned long bytes_written = 0;
       void *write_ptr;
+      void *read_ptr;
 
       end_addr = prog_header->req_virt_addr + prog_header->size_in_mem;
       copy_end_addr = prog_header->req_virt_addr + prog_header->size_in_file;
@@ -130,7 +134,7 @@ task_process *proc_load_elf_file(kl_string binary_name)
 
       offset = prog_header->req_virt_addr % MEM_PAGE_SIZE;
 
-      for(unsigned long this_page = page_start_addr; this_page < end_addr; this_page += MEM_PAGE_SIZE)
+      for (unsigned long this_page = page_start_addr; this_page < end_addr; this_page += MEM_PAGE_SIZE)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Writing on another page: ", this_page, "\n");
 
@@ -153,16 +157,27 @@ task_process *proc_load_elf_file(kl_string binary_name)
         if (bytes_written < prog_header->size_in_file)
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "Writing data\n");
+
+          // In this copy, fill up until the end of the page.
           copy_length = MEM_PAGE_SIZE - offset;
-          if (this_page + copy_length > copy_end_addr)
+
+          // However, if that is greater than the end of the required copying then only copy the actually required
+          // number of bytes.
+          if (this_page + offset + copy_length > copy_end_addr)
           {
-            copy_length = copy_end_addr - this_page;
+            KL_TRC_TRACE(TRC_LVL::FLOW, "Adjusting length\n");
+            copy_length = copy_end_addr - this_page - offset;
           }
-          KL_TRC_TRACE(TRC_LVL::EXTRA, "Length to copy now: ", copy_length, "\n");
 
           write_ptr = reinterpret_cast<void *>(reinterpret_cast<unsigned long>(kernel_write_window) + offset);
+          read_ptr = reinterpret_cast<void *>(reinterpret_cast<unsigned long>(load_buffer)
+                                              + prog_header->file_offset
+                                              + bytes_written);
+          KL_TRC_TRACE(TRC_LVL::EXTRA, "Copy data:\n----------\n");
           KL_TRC_TRACE(TRC_LVL::EXTRA, "Write pointer: ", write_ptr, "\n");
-          kl_memcpy(load_buffer + prog_header->file_offset + bytes_written, write_ptr, copy_length);
+          KL_TRC_TRACE(TRC_LVL::EXTRA, "Read pointer: ", read_ptr, "\n");
+          KL_TRC_TRACE(TRC_LVL::EXTRA, "Length: ", copy_length, "\n");
+          kl_memcpy(read_ptr, write_ptr, copy_length);
           bytes_written += copy_length;
           offset += copy_length;
 

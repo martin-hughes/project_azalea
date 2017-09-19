@@ -9,6 +9,7 @@
 #define KLIB_DEBUG
 #endif
 
+#include "klib/misc/kernel_types.h"
 #include "klib/misc/error_codes.h"
 #include "klib/data_structures/lists.h"
 #include "klib/data_structures/binary_tree.h"

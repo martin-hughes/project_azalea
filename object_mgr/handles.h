@@ -1,7 +1,7 @@
 #ifndef __HANDLE_MGR_H
 #define __HANDLE_MGR_H
 
-typedef unsigned long GEN_HANDLE;
+#include "klib/misc/kernel_types.h"
 
 void hm_gen_init();
 

@@ -116,9 +116,9 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(unsigned long start,
         // The (next_cluster - 2) might seem a bit odd, but in FAT the clusters start being numbered from 2 - indicies
         // 0 and 1 have a special meaning. next_cluster is guaranteed to be 2 or greater by the call to
         // is_normal_cluster_number, above.
-        ec = _parent->_storage->read_blocks(((next_cluster - 2) * sectors_per_cluster)
-                                            + sector_offset
-                                            + _parent->first_data_sector,
+        unsigned long start_sector = ((next_cluster - 2) * sectors_per_cluster) + i + _parent->first_data_sector;
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Reading sector: ", start_sector, "\n");
+        ec = _parent->_storage->read_blocks(start_sector,
                                             1,
                                             sector_buffer.get(),
                                             bytes_per_sector);
