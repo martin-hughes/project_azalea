@@ -17,7 +17,8 @@ const void *syscall_pointers[] =
     { (void *)syscall_debug_output,
       (void *)syscall_open_handle,
       (void *)syscall_close_handle,
-      (void *)syscall_read_handle, };
+      (void *)syscall_read_handle,
+      (void *)syscall_get_handle_data_len};
 
 const unsigned long syscall_max_idx = (sizeof(syscall_pointers) / sizeof(void *)) - 1;
 
@@ -38,8 +39,8 @@ bool syscall_is_um_address(const void *addr)
 ///
 /// @param length The number of bytes to output. Maximum 1024.
 ///
-/// return ERR_CODE::INVALID_PARAM if either of the parameters isn't valid.
-///        ERR_CODE::NO_ERROR otherwise (even if no output was actually made).
+/// @return ERR_CODE::INVALID_PARAM if either of the parameters isn't valid.
+///         ERR_CODE::NO_ERROR otherwise (even if no output was actually made).
 ERR_CODE syscall_debug_output(const char *msg, unsigned long length)
 {
   KL_TRC_ENTRY;
@@ -80,7 +81,7 @@ ERR_CODE syscall_debug_output(const char *msg, unsigned long length)
 ///
 /// @param[out] handle The handle for the calling process to use.
 ///
-/// return A suitable ERR_CODE value.
+/// @return A suitable ERR_CODE value.
 ERR_CODE syscall_open_handle(const char *path, unsigned long path_len, GEN_HANDLE *handle)
 {
   ERR_CODE result;
@@ -140,7 +141,7 @@ ERR_CODE syscall_open_handle(const char *path, unsigned long path_len, GEN_HANDL
 ///
 /// @param[in] handle The handle to close.
 ///
-/// return A suitable ERR_CODE value.
+/// @return A suitable ERR_CODE value.
 ERR_CODE syscall_close_handle(GEN_HANDLE handle)
 {
   KL_TRC_ENTRY;
@@ -195,7 +196,7 @@ ERR_CODE syscall_close_handle(GEN_HANDLE handle)
 ///
 /// @param[out] bytes_read The number of bytes actually read in this request.
 ///
-/// return A suitable ERR_CODE value.
+/// @return A suitable ERR_CODE value.
 ERR_CODE syscall_read_handle(GEN_HANDLE handle,
                              unsigned long start_offset,
                              unsigned long bytes_to_read,
@@ -251,6 +252,61 @@ ERR_CODE syscall_read_handle(GEN_HANDLE handle,
         result = file->read_bytes(0, bytes_to_read, buffer, buffer_size, *bytes_read);
 
         KL_TRC_TRACE(TRC_LVL::FLOW, "bytes read: ", *bytes_read, "\n");
+      }
+    }
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+/// @brief Return the number of bytes of data that could be read from a file, pipe or whatever other object.
+///
+/// The number of bytes that can be read depends on the handle type, but could be:
+/// - The number of bytes in a file,
+/// - The number of bytes waiting in a pipe,
+/// - Any other indication for the maximum number of bytes available to syscall_read_handle().
+///
+/// @param[in] handle The handle to assess the size of.
+///
+/// @param[out] data_length The number of available bytes as described above.
+///
+/// @return A suitable ERR_CODE value.
+ERR_CODE syscall_get_handle_data_len(GEN_HANDLE handle, unsigned long *data_length)
+{
+  KL_TRC_ENTRY;
+
+  ERR_CODE result;
+
+  if ((data_length == nullptr) || !SYSCALL_IS_UM_ADDRESS(data_length))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "data_length ptr not valid.\n");
+    result = ERR_CODE::INVALID_PARAM;
+  }
+  else
+  {
+    ISystemTreeLeaf *leaf = reinterpret_cast<ISystemTreeLeaf *>(om_retrieve_object(handle));
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved leaf ", leaf, " from OM\n");
+    if (leaf == nullptr)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Leaf object not found - bad handle\n");
+      result = ERR_CODE::INVALID_PARAM;
+    }
+    else
+    {
+      IBasicFile *file = dynamic_cast<IBasicFile *>(leaf);
+      if (file == nullptr)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Leaf is not a file, so can't tell size.\n");
+        result = ERR_CODE::INVALID_OP;
+      }
+      else
+      {
+        file->get_file_size(*data_length);
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved data length: ", *data_length, "\n");
+        result = ERR_CODE::NO_ERROR;
       }
     }
   }

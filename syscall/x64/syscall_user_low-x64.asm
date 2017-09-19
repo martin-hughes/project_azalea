@@ -19,3 +19,4 @@ GENERIC_SYSCALL 0, syscall_debug_output
 GENERIC_SYSCALL 1, syscall_open_handle
 GENERIC_SYSCALL 2, syscall_close_handle
 GENERIC_SYSCALL 3, syscall_read_handle
+GENERIC_SYSCALL 4, syscall_get_handle_data_len

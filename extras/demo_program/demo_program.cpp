@@ -11,6 +11,7 @@ int main()
   GEN_HANDLE handle;
   ERR_CODE result;
   unsigned long bytes_read;
+  unsigned long file_size;
 
   syscall_debug_output("Hello!\n", 7);
 
@@ -20,7 +21,18 @@ int main()
     syscall_debug_output("Couldn't open handle\n", 21);
   }
 
-  result = syscall_read_handle(handle, 0, 5, message, 100, &bytes_read);
+  result = syscall_get_handle_data_len(handle, &file_size);
+  if (result != ERR_CODE::NO_ERROR)
+  {
+    syscall_debug_output("Couldn't determine size, assume 10.\n", 36);
+    file_size = 10;
+  }
+  if (file_size > 100)
+  {
+    file_size = 100;
+  }
+
+  result = syscall_read_handle(handle, 0, file_size, message, 100, &bytes_read);
   if (result != ERR_CODE::NO_ERROR)
   {
     syscall_debug_output("Couldn't read from handle\n", 26);

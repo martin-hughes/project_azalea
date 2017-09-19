@@ -13,5 +13,6 @@ extern "C" ERR_CODE syscall_read_handle(GEN_HANDLE handle,
                                         unsigned char *buffer,
                                         unsigned long buffer_size,
                                         unsigned long *bytes_read);
+extern "C" ERR_CODE syscall_get_handle_data_len(GEN_HANDLE handle, unsigned long *data_length);
 
 #endif
