@@ -22,11 +22,15 @@ const void *syscall_pointers[] =
 
 const unsigned long syscall_max_idx = (sizeof(syscall_pointers) / sizeof(void *)) - 1;
 
-bool syscall_is_um_address(const void *addr)
+namespace
 {
-  unsigned long addr_l = reinterpret_cast<unsigned long>(addr);
-  return !(addr_l & 0x8000000000000000ULL);
+  bool syscall_is_um_address(const void *addr)
+  {
+    unsigned long addr_l = reinterpret_cast<unsigned long>(addr);
+    return !(addr_l & 0x8000000000000000ULL);
+  }
 }
+
 #define SYSCALL_IS_UM_ADDRESS(x) syscall_is_um_address(reinterpret_cast<const void *>((x)))
 
 /// Write desired output to the system debug output
@@ -148,7 +152,7 @@ ERR_CODE syscall_close_handle(GEN_HANDLE handle)
 
   ERR_CODE result = ERR_CODE::UNKNOWN;
 
-  void *obj = om_retrieve_object(handle);
+  ISystemTreeLeaf *obj = om_retrieve_object(handle);
   if (obj == nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Object not found!\n");
@@ -159,11 +163,8 @@ ERR_CODE syscall_close_handle(GEN_HANDLE handle)
     KL_TRC_TRACE(TRC_LVL::FLOW, "Found object: ", obj, " - destroying\n");
     om_remove_object(handle);
 
-    // This conversion relies on the only objects being stored in the om being from SystemTree - which might not always
-    // be true.
-    ISystemTreeLeaf *obj_leaf = reinterpret_cast<ISystemTreeLeaf *>(obj);
-    delete obj_leaf;
-    obj_leaf = nullptr;
+    delete obj;
+    obj = nullptr;
 
     result = ERR_CODE::NO_ERROR;
   }
@@ -226,7 +227,7 @@ ERR_CODE syscall_read_handle(GEN_HANDLE handle,
   else
   {
     // Parameters check out, try to read.
-    ISystemTreeLeaf *leaf = reinterpret_cast<ISystemTreeLeaf *>(om_retrieve_object(handle));
+    ISystemTreeLeaf *leaf = om_retrieve_object(handle);
     KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved leaf ", leaf, " from OM\n");
     if (leaf == nullptr)
     {
@@ -287,7 +288,7 @@ ERR_CODE syscall_get_handle_data_len(GEN_HANDLE handle, unsigned long *data_leng
   }
   else
   {
-    ISystemTreeLeaf *leaf = reinterpret_cast<ISystemTreeLeaf *>(om_retrieve_object(handle));
+    ISystemTreeLeaf *leaf = om_retrieve_object(handle);
     KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved leaf ", leaf, " from OM\n");
     if (leaf == nullptr)
     {

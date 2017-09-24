@@ -8,6 +8,7 @@
 #include "klib/synch/kernel_locks.h"
 #include "mem/mem.h"
 #include "object_mgr/handles.h"
+#include "system_tree/system_tree_leaf.h"
 
 // Main kernel interface to processor specific functions. Includes the task management system.
 
@@ -19,52 +20,54 @@ typedef GEN_HANDLE THREAD_ID;
 
 /// Structure to hold information about a process. All information is stored here, to be accessed by the various
 /// components as needed. This removes the need for per-component lookup tables for each process.
-struct task_process
+class task_process : public ISystemTreeLeaf
 {
-    /// A unique ID number for this process
-    PROCESS_ID process_id;
+public:
+  /// A unique ID number for this process
+  PROCESS_ID process_id;
 
-    /// Refer ourself back to the process list.
-    klib_list_item process_list_item;
+  /// Refer ourself back to the process list.
+  klib_list_item process_list_item;
 
-    /// A list of all child threads.
-    klib_list child_threads;
+  /// A list of all child threads.
+  klib_list child_threads;
 
-    /// A pointer to the memory manager's information for this task.
-    mem_process_info *mem_info;
+  /// A pointer to the memory manager's information for this task.
+  mem_process_info *mem_info;
 
-    /// Is the process running in kernel mode?
-    bool kernel_mode;
+  /// Is the process running in kernel mode?
+  bool kernel_mode;
 };
 
 /// Structure to hold information about a thread.
-struct task_thread
+class task_thread : public ISystemTreeLeaf
 {
-    /// A unique ID number for this thread
-    THREAD_ID thread_id;
+public:
+  /// A unique ID number for this thread
+  THREAD_ID thread_id;
 
-    /// This thread's parent process. The process defines the address space, permissions, etc.
-    task_process *parent_process;
+  /// This thread's parent process. The process defines the address space, permissions, etc.
+  task_process *parent_process;
 
-    /// An entry for the parent's thread list.
-    klib_list_item process_list_item;
+  /// An entry for the parent's thread list.
+  klib_list_item process_list_item;
 
-    /// A pointer to the thread's execution context. This is processor specific, so no specific structure can
-    /// be pointed to. Only processor-specific code should access this field.
-    void *execution_context;
+  /// A pointer to the thread's execution context. This is processor specific, so no specific structure can
+  /// be pointed to. Only processor-specific code should access this field.
+  void *execution_context;
 
-    /// Is the thread running? It will only be considered for execution if so.
-    volatile bool permit_running;
+  /// Is the thread running? It will only be considered for execution if so.
+  volatile bool permit_running;
 
-    /// A pointer to the next thread. In normal operation, these form a cycle of threads, and the task manager is able
-    /// to manipulate this cycle without breaking the chain.
-    task_thread *next_thread;
+  /// A pointer to the next thread. In normal operation, these form a cycle of threads, and the task manager is able
+  /// to manipulate this cycle without breaking the chain.
+  task_thread *next_thread;
 
-    /// A lock used by the task manager to claim ownership of this thread. It has several meanings:
-    /// - The task manager might be about to manipulate the thread cycle, so the scheduler should avoid scheduling this
-    ///   thread
-    /// - The scheduler might be running this thread, in which case no other processor should run it as well
-    kernel_spinlock cycle_lock;
+  /// A lock used by the task manager to claim ownership of this thread. It has several meanings:
+  /// - The task manager might be about to manipulate the thread cycle, so the scheduler should avoid scheduling this
+  ///   thread
+  /// - The scheduler might be running this thread, in which case no other processor should run it as well
+  kernel_spinlock cycle_lock;
 };
 
 /// @brief Processor-specific information.

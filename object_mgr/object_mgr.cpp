@@ -20,9 +20,10 @@ namespace
   kernel_spinlock om_main_lock;
 
   bool om_initialized = false;
+
+  object_data *om_int_retrieve_object(GEN_HANDLE handle);
 }
 
-object_data *om_int_retrieve_object(GEN_HANDLE handle);
 
 /// @brief Initialise the object manager system
 void om_gen_init()
@@ -46,7 +47,7 @@ void om_gen_init()
 /// @param object_ptr A pointer to the object to store in OM
 ///
 /// @return A handle that correlates to object_ptr
-GEN_HANDLE om_store_object(void *object_ptr)
+GEN_HANDLE om_store_object(ISystemTreeLeaf *object_ptr)
 {
   KL_TRC_ENTRY;
 
@@ -72,7 +73,7 @@ GEN_HANDLE om_store_object(void *object_ptr)
 /// @param object_ptr A pointer to the object to be stored
 ///
 /// @param handle The handle that should refer to object_ptr
-void om_correlate_object(void *object_ptr, GEN_HANDLE handle)
+void om_correlate_object(ISystemTreeLeaf *object_ptr, GEN_HANDLE handle)
 {
   KL_TRC_ENTRY;
 
@@ -99,12 +100,12 @@ void om_correlate_object(void *object_ptr, GEN_HANDLE handle)
 /// @param handle The handle to retrieve the corresponding object for
 ///
 /// @return A pointer to the object stored in OM. nullptr if the handle does not correspond to an object in OM.
-void *om_retrieve_object(GEN_HANDLE handle)
+ISystemTreeLeaf *om_retrieve_object(GEN_HANDLE handle)
 {
   KL_TRC_ENTRY;
 
   object_data *found_object;
-  void *object_ptr;
+  ISystemTreeLeaf *object_ptr;
 
   ASSERT(om_initialized);
 
@@ -173,35 +174,38 @@ void om_decorrelate_object(GEN_HANDLE handle)
   KL_TRC_EXIT;
 }
 
-/// @brief Retrieve all object data from OM
-///
-/// This function is internal to OM. It retrieves the underlying data structure storing a given object in OM. This
-/// function contains no locking - **appropriate serialisation MUST be used**, only one function can call this one at a
-/// time
-///
-/// @param handle The handle to retrieve data for
-///
-/// @return The underlying object data in OM.
-object_data *om_int_retrieve_object(GEN_HANDLE handle)
+namespace
 {
-  KL_TRC_ENTRY;
-
-  object_data *found_object = nullptr;
-
-  ASSERT(om_initialized);
-
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Handle to retrieve: ", handle, "\n");
-
-  if (om_main_store->contains(handle))
+  /// @brief Retrieve all object data from OM
+  ///
+  /// This function is internal to OM. It retrieves the underlying data structure storing a given object in OM. This
+  /// function contains no locking - **appropriate serialisation MUST be used**, only one function can call this one at
+  /// a time.
+  ///
+  /// @param handle The handle to retrieve data for
+  ///
+  /// @return The underlying object data in OM.
+  object_data *om_int_retrieve_object(GEN_HANDLE handle)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Object exists.\n");
-    found_object = om_main_store->search(handle);
+    KL_TRC_ENTRY;
+
+    object_data *found_object = nullptr;
+
+    ASSERT(om_initialized);
+
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Handle to retrieve: ", handle, "\n");
+
+    if (om_main_store->contains(handle))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Object exists.\n");
+      found_object = om_main_store->search(handle);
+    }
+
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Found item: ", found_object, "\n");
+    KL_TRC_EXIT;
+
+    return found_object;
   }
-
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Found item: ", found_object, "\n");
-  KL_TRC_EXIT;
-
-  return found_object;
 }
 
 

@@ -1,6 +1,4 @@
-// Dummy version of the klib-panic library, for use by the test code. Rather
-// than aborting the whole system, raise an assertion - this can be picked up
-// by the test code and failures can be handled gracefully.
+// Dummy version of the klib-tracing library, for use by the test code. Simply outputs to the console.
 
 #include "klib/tracing/tracing.h"
 #include "test/test_core/test.h"

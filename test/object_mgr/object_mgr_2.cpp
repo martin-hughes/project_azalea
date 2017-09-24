@@ -8,10 +8,12 @@ using namespace std;
 
 const unsigned int NUM_OBJECTS = 5;
 
+class simple_object : public ISystemTreeLeaf { };
+
 // A very simple test of the handle manager.
 void object_mgr_test_2()
 {
-  int objects[NUM_OBJECTS];
+  simple_object objects[NUM_OBJECTS];
   GEN_HANDLE handles[NUM_OBJECTS];
 
   cout << "Object Manager - Simple tests" << endl;

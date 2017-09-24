@@ -4,7 +4,7 @@
 // Stores and object and related data in the object manager.
 struct object_data
 {
-  void *object_ptr;
+  ISystemTreeLeaf *object_ptr;
   GEN_HANDLE handle;
 };
 
