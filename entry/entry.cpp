@@ -16,6 +16,7 @@
 #include "devices/block/ata/ata.h"
 #include "devices/block/proxy/block_proxy.h"
 #include "system_tree/fs/fat/fat_fs.h"
+#include "system_tree/fs/pipe/pipe_fs.h"
 
 #include <memory>
 
@@ -37,6 +38,7 @@
 
 extern "C" int main();
 void kernel_start();
+void simple_terminal();
 
 // Temporary procedures and storage while the kernel is being developed. Eventually, the full kernel start procedure
 // will cause these to become unused.
@@ -107,6 +109,10 @@ void kernel_start()
   initial_proc = proc_load_elf_file("root\\testprog");
   ASSERT(initial_proc != nullptr);
 
+  // Start a simple terminal process.
+  task_process *term = task_create_new_process(simple_terminal, true);
+  task_start_process(term);
+
   // Process should be good to go!
   task_start_process(initial_proc);
 
@@ -147,6 +153,69 @@ void setup_initial_fs()
 
   // Initialise the filesystem based on that information
   first_fs = new fat_filesystem(pd);
+
+  KL_TRC_EXIT;
+}
+
+// A simple text based terminal outputting on the main display (output only right now.)
+void simple_terminal()
+{
+  KL_TRC_ENTRY;
+
+  ISystemTreeLeaf *leaf;
+  IReadable *reader;
+  const unsigned long buffer_size = 10;
+  unsigned char buffer[buffer_size];
+  unsigned long bytes_read;
+  unsigned char *display_ptr;
+
+  const unsigned int width = 80;
+  const unsigned int height = 25;
+  const unsigned int bytes_per_char = 2;
+
+  unsigned int cur_offset = 0;
+
+  // Set up the input pipe
+  ISystemTreeBranch *pipes_br = new system_tree_simple_branch();
+  ASSERT(system_tree()->add_branch("pipes", pipes_br) == ERR_CODE::NO_ERROR);
+  ASSERT(pipes_br->add_branch("terminal", new pipe_branch()) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->get_leaf("pipes\\terminal\\read", &leaf) == ERR_CODE::NO_ERROR);
+  reader = dynamic_cast<IReadable *>(leaf);
+  ASSERT(reader != nullptr);
+
+  // Map and then clear the display
+  display_ptr = reinterpret_cast<unsigned char *>(mem_allocate_virtual_range(1));
+  mem_map_range(nullptr, display_ptr, 1);
+  display_ptr += 0xB8000;
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Clearing screen\n");
+  for (int i = 0; i < width * height * bytes_per_char; i += 2)
+  {
+    display_ptr[i] = 0;
+    display_ptr[i + 1] = 0x0f;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Beginning terminal\n");
+  while(1)
+  {
+    if (reader->read_bytes(0, buffer_size, buffer, buffer_size, bytes_read) == ERR_CODE::NO_ERROR)
+    {
+      for (int i = 0; i < bytes_read; i++)
+      {
+        display_ptr[cur_offset * 2] = buffer[i];
+
+        cur_offset++;
+        if (cur_offset > (width * height))
+        {
+          cur_offset = 0;
+        }
+      }
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to read\n");
+    }
+  }
 
   KL_TRC_EXIT;
 }

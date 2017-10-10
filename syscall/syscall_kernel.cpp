@@ -18,7 +18,8 @@ const void *syscall_pointers[] =
       (void *)syscall_open_handle,
       (void *)syscall_close_handle,
       (void *)syscall_read_handle,
-      (void *)syscall_get_handle_data_len};
+      (void *)syscall_get_handle_data_len,
+      (void *)syscall_write_handle,};
 
 const unsigned long syscall_max_idx = (sizeof(syscall_pointers) / sizeof(void *)) - 1;
 
@@ -236,7 +237,7 @@ ERR_CODE syscall_read_handle(GEN_HANDLE handle,
     }
     else
     {
-      IBasicFile *file = dynamic_cast<IBasicFile *>(leaf);
+      IReadable *file = dynamic_cast<IReadable *>(leaf);
       if (file == nullptr)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Leaf is not a file, so can't be read.\n");
@@ -308,6 +309,93 @@ ERR_CODE syscall_get_handle_data_len(GEN_HANDLE handle, unsigned long *data_leng
         file->get_file_size(*data_length);
         KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved data length: ", *data_length, "\n");
         result = ERR_CODE::NO_ERROR;
+      }
+    }
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+/// @brief Write data to the associated object
+///
+/// Provided that "writing data" is meaningful to this System Tree object, write data from the provided buffer to the
+/// object.
+///
+/// The calling process is responsible for managing the memory allocated to the buffer. The copy is complete before the
+/// system call returns, so the calling process may free the buffer immediately.
+///
+/// @param[in] handle The handle of the object to write data to.
+///
+/// @param[in] start_offset How many bytes after the start of the file/pipe data/whatever to begin writing
+///
+/// @param[in] bytes_to_write The number of bytes to write to the object, if possible.
+///
+/// @param[in] buffer The address of a buffer to write the data from.
+///
+/// @param[in] buffer_size The size of the buffer provided. The buffer must be sufficiently large to contain the data
+///                        requested. Otherwise the write request is truncated to this length.
+///
+/// @param[out] bytes_read The number of bytes actually written in this request.
+///
+/// @return A suitable ERR_CODE value.
+ERR_CODE syscall_write_handle(GEN_HANDLE handle,
+                              unsigned long start_offset,
+                              unsigned long bytes_to_write,
+                              unsigned char *buffer,
+                              unsigned long buffer_size,
+                              unsigned long *bytes_written)
+{
+  KL_TRC_ENTRY;
+
+  ERR_CODE result;
+
+  if ((buffer == nullptr) || !SYSCALL_IS_UM_ADDRESS(buffer))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "buffer is invalid\n");
+    result = ERR_CODE::INVALID_PARAM;
+  }
+  else if ((bytes_written == nullptr) || !SYSCALL_IS_UM_ADDRESS(bytes_written))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "bytes_read is invalid\n");
+    result = ERR_CODE::INVALID_PARAM;
+  }
+  else if (buffer_size == 0)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "buffer_size is invalid\n");
+    result = ERR_CODE::INVALID_PARAM;
+  }
+  else
+  {
+    // Parameters check out, try to read.
+    ISystemTreeLeaf *leaf = om_retrieve_object(handle);
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved leaf ", leaf, " from OM\n");
+    if (leaf == nullptr)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Leaf object not found - bad handle\n");
+      result = ERR_CODE::INVALID_PARAM;
+    }
+    else
+    {
+      IWritable *file = dynamic_cast<IWritable *>(leaf);
+      if (file == nullptr)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Leaf is not writable.\n");
+        result = ERR_CODE::INVALID_OP;
+      }
+      else
+      {
+        if (bytes_to_write > buffer_size)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Trimming bytes_to_write to max buffer length\n");
+          bytes_to_write = buffer_size;
+        }
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Going to attempt a read on file: ", file, "\n");
+        result = file->write_bytes(0, bytes_to_write, buffer, buffer_size, *bytes_written);
+
+        KL_TRC_TRACE(TRC_LVL::FLOW, "bytes written: ", *bytes_written, "\n");
       }
     }
   }

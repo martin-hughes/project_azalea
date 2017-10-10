@@ -173,6 +173,15 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(unsigned long start,
   return ec;
 }
 
+ERR_CODE fat_filesystem::fat_file::write_bytes(unsigned long start,
+                                               unsigned long length,
+                                               const unsigned char *buffer,
+                                               unsigned long buffer_length,
+                                               unsigned long &bytes_written)
+{
+  return ERR_CODE::INVALID_OP;
+}
+
 ERR_CODE fat_filesystem::fat_file::get_file_size(unsigned long &file_size)
 {
   KL_TRC_ENTRY;

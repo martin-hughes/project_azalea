@@ -1,0 +1,7 @@
+# Pipe pseudo-filesystem Library.
+
+Import('env')
+files = [ "pipe_fs.cpp",
+        ]
+obj = env.Library("pipe_fs", files)
+Return ("obj") 

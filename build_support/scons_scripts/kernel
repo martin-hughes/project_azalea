@@ -37,6 +37,7 @@ dependencies_in = [
                    
                    # Filesystems
                    '#system_tree/fs/fat/SConscript',
+                   '#system_tree/fs/pipe/SConscript',
                   ]
                    
 # Build components.

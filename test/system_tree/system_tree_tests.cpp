@@ -15,3 +15,8 @@ TEST(SystemTreeTest, SimpleTree)
 {
   system_tree_test_2();
 }
+
+TEST(SystemTreeTest, GeneralPipes)
+{
+  system_tree_test_3_pipes();
+}

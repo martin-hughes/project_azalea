@@ -2,15 +2,21 @@
 
 #include "tracing.h"
 
-// Only one of these can be defined at a time, or duplicate definitions will occur.
-// Note that tracing by serial port assumes the normal port values for COM1, and seizes it completely! (Which may be
-// undesirable)
-//#define KL_TRACE_BY_MAGIC_PORT
-#define KL_TRACE_BY_SERIAL_PORT
+// The destination of tracing is controlled by defining one of the following possible flags at compile time.
+// The flag itself is currently passed directly to the compiler.
+// - KL_TRACE_BY_MAGIC_PORT - traces to the qemu magic CPU port 0xE9
+// - KL_TRACE_BY_SERIAL_PORT - traces to COM1
+// - KL_TRACE_BY_STDOUT - traces to stdout. Given that stdout doesn't really exist in the kernel environment it should
+//   be fairly easy to understand that this only works in the test code!
 
 #include "processor/x64/processor-x64-int.h"
 const unsigned short TRC_COM1_BASE_PORT = 0x3F8;
 const unsigned short TRC_MAGIC_PORT = 0xE9;
+
+#ifdef KL_TRACE_BY_STDOUT
+#include <iostream>
+using namespace std;
+#endif
 
 #ifdef KL_TRACE_BY_SERIAL_PORT
 
@@ -32,6 +38,9 @@ void kl_trc_char(unsigned char c)
 #endif
 #ifdef KL_TRACE_BY_MAGIC_PORT
   asm_proc_write_port(TRC_MAGIC_PORT, (unsigned long)c, 8);
+#endif
+#ifdef KL_TRACE_BY_STDOUT
+  cout << c;
 #endif
 }
 

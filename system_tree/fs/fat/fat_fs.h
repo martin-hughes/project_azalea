@@ -154,6 +154,12 @@ public:
                           unsigned long buffer_length,
                           unsigned long &bytes_read);
 
+    virtual ERR_CODE write_bytes(unsigned long start,
+                                 unsigned long length,
+                                 const unsigned char *buffer,
+                                 unsigned long buffer_length,
+                                 unsigned long &bytes_written);
+
     virtual ERR_CODE get_file_size(unsigned long &file_size);
 
     protected:

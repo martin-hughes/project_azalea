@@ -1,5 +1,0 @@
-# Dummy tracing library. Used heavily by the test code.
-
-Import('env')
-obj = env.Library("test-dummy-tracing", [ "tracing.dummy.cpp" ])
-Return ("obj")

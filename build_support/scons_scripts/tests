@@ -13,19 +13,20 @@ test_programs = [
             '#klib/memory/SConscript',
             '#klib/misc/SConscript',
             '#klib/synch/SConscript',
+            '#klib/tracing/SConscript',
             '#processor/Sconscript-generic',
             '#object_mgr/SConscript',
             '#system_tree/SConscript',
             '#test/SConscript-main',
             '#test/dummy_libs/core_mem/SConscript',
             '#test/dummy_libs/panic/SConscript',
-            '#test/dummy_libs/_tracing/SConscript',
             '#test/test_core/SConscript',
             '#external/SConscript-GoogleTest',
             
             # Devices for testing
             '#devices/block/ramdisk/SConscript',
             '#devices/block/proxy/SConscript',
+            '#system_tree/fs/pipe/SConscript',
            ],
     libs = [ "pthread" ]),
   ]
