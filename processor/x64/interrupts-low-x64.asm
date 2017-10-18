@@ -141,12 +141,6 @@ GLOBAL asm_proc_def_irq_handler
 asm_proc_def_irq_handler:
   DEF_INT_HANDLER end_of_irq_ack_fn_wrapper
 
-; If this interrupt handler is called, panic.
-GLOBAL asm_proc_panic_interrupt_handler
-EXTERN proc_panic_interrupt_handler
-asm_proc_panic_interrupt_handler:
-    DEF_INT_HANDLER proc_panic_interrupt_handler
-
 ; Call the page fault handler.
 GLOBAL asm_proc_page_fault_handler
 EXTERN proc_page_fault_handler
