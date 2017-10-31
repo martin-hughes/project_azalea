@@ -15,17 +15,11 @@
 // Definition of a possible entry point:
 typedef void (* ENTRY_PROC)();
 
-typedef GEN_HANDLE PROCESS_ID;
-typedef GEN_HANDLE THREAD_ID;
-
 /// Structure to hold information about a process. All information is stored here, to be accessed by the various
 /// components as needed. This removes the need for per-component lookup tables for each process.
 class task_process : public ISystemTreeLeaf
 {
 public:
-  /// A unique ID number for this process
-  PROCESS_ID process_id;
-
   /// Refer ourself back to the process list.
   klib_list_item process_list_item;
 
@@ -43,9 +37,6 @@ public:
 class task_thread : public ISystemTreeLeaf
 {
 public:
-  /// A unique ID number for this thread
-  THREAD_ID thread_id;
-
   /// This thread's parent process. The process defines the address space, permissions, etc.
   task_process *parent_process;
 
@@ -68,6 +59,11 @@ public:
   ///   thread
   /// - The scheduler might be running this thread, in which case no other processor should run it as well
   kernel_spinlock cycle_lock;
+
+  // This item is used to associate the thread with the list of threads waiting for a mutex, semaphore or other
+  // synchronization primitive. The list itself is owned by that primitive, but this item must be initialized with the
+  // rest of this structure.
+  klib_list_item synch_list_item;
 };
 
 /// @brief Processor-specific information.
@@ -135,14 +131,8 @@ void task_destroy_thread(task_thread *unlucky_thread);
 // Destroy a process (and by definition, all threads within it) immediately.
 void task_destroy_process(task_process *unlucky_process);
 
-// Return the current tasks' IDs.
-THREAD_ID task_current_thread_id();
-PROCESS_ID task_current_process_id();
-
 // Return information about a specific task. This is intended to allow the various components to access their data,
 // without having to store a parallel task list internally.
-task_process *task_get_process_data(PROCESS_ID proc_id);
-task_thread *task_get_thread_data(THREAD_ID thread_id);
 task_thread *task_get_cur_thread();
 
 // Start and stop threads and processes

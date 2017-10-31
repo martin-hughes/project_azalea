@@ -111,6 +111,8 @@ void mem_x64_pml4_deallocate(process_x64_data &proc_data)
 ///
 /// **It is the caller's responsibility to make sure that no other PML4 changes before this function returns.**
 /// Otherwise some PML4s might have the new data and others not, or the newer changes might be obliterated entirely.
+/// This is currently achieved by a lock in mem_map_virtual_page, which is the only function that directly edits PML4
+/// tables.
 ///
 /// @param updated_pml4_table The PML4 that has changed. All others will be made to be the same as this.
 void mem_x64_pml4_synchronize(void *updated_pml4_table)

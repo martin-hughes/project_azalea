@@ -30,7 +30,7 @@ void synch_test_1()
   while (!lock_locked)
   {
     // Spin! Wait for the lock to be locked, otherwise there's a chance that the next statement will lock the lock
-    // immediately, this invalidating the test.
+    // immediately, thus invalidating the test.
   }
   klib_synch_spinlock_lock(main_lock);
   ASSERT(!lock_locked);

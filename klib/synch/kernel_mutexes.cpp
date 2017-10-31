@@ -28,16 +28,22 @@ void klib_synch_mutex_init(klib_mutex &mutex)
 // The return values should be self-explanatory.
 SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, unsigned long max_wait)
 {
-  KL_TRC_ENTRY;
-
   SYNC_ACQ_RESULT res = SYNC_ACQ_TIMEOUT;
   klib_synch_spinlock_lock(mutex.access_lock);
+  KL_TRC_ENTRY;
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Acquiring mutex ", &mutex, " in thread ", task_get_cur_thread(), "\n");
 
-  if (mutex.mutex_locked == false)
+  if ((mutex.mutex_locked == true) && (mutex.owner_thread == task_get_cur_thread()))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Mutex already owned\n");
+    res = SYNC_ACQ_ALREADY_OWNED;
+  }
+  else if (mutex.mutex_locked == false)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Mutex unlocked, so acquire now.\n");
     mutex.mutex_locked = true;
     mutex.owner_thread = task_get_cur_thread();
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Locked in: ", task_get_cur_thread(), " (", mutex.owner_thread, ")\n");
     res = SYNC_ACQ_ACQUIRED;
   }
   else if (max_wait == 0)
@@ -51,14 +57,13 @@ SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, unsigned long max_wa
 
     // Wait for the mutex to become free. Add this thread to the list of waiting threads, then suspend this thread.
     task_thread *this_thread = task_get_cur_thread();
-    klib_list_item *item = new klib_list_item;
+    ASSERT(this_thread != nullptr);
+    ASSERT(!klib_list_item_is_in_any_list(&this_thread->synch_list_item));
+    ASSERT(this_thread->synch_list_item.item == this_thread);
 
     ASSERT(mutex.owner_thread != nullptr);
 
-    klib_list_item_initialize(item);
-    item->item = (void *)this_thread;
-
-    klib_list_add_tail(&mutex.waiting_threads_list, item);
+    klib_list_add_tail(&mutex.waiting_threads_list, &this_thread->synch_list_item);
 
     // To avoid marking this thread as not being scheduled before freeing the lock - which would deadlock anyone else
     // trying to use this mutex, stop scheduling for the time being.
@@ -80,6 +85,8 @@ SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, unsigned long max_wa
     ASSERT(mutex.mutex_locked);
     ASSERT(mutex.owner_thread == this_thread);
 
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Acquired mutex: ", &mutex, " in thread ", task_get_cur_thread(), " (", this_thread, ")\n");
+
     res = SYNC_ACQ_ACQUIRED;
   }
   else
@@ -88,8 +95,14 @@ SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, unsigned long max_wa
     INCOMPLETE_CODE("Mutex timed wait");
   }
 
-  klib_synch_spinlock_unlock(mutex.access_lock);
+  if (res == SYNC_ACQ_ACQUIRED)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Mutex locked? ", mutex.mutex_locked, " Owner: ", mutex.owner_thread, "\n");
+    KL_TRC_TRACE(TRC_LVL::FLOW, "This thread: ", task_get_cur_thread(), "\n");
+    ASSERT(mutex.mutex_locked && (mutex.owner_thread == task_get_cur_thread()));
+  }
   KL_TRC_EXIT;
+  klib_synch_spinlock_unlock(mutex.access_lock);
 
   return res;
 }
@@ -97,15 +110,15 @@ SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, unsigned long max_wa
 // Release the mutex. If a thread is waiting for it, it will be permitted to run.
 void klib_synch_mutex_release(klib_mutex &mutex, const bool disregard_owner)
 {
+  klib_synch_spinlock_lock(mutex.access_lock);
   KL_TRC_ENTRY;
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Releasing mutex ", &mutex, " from thread ", task_get_cur_thread(), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Owner thread: ", mutex.owner_thread, "\n");
 
   klib_list_item *next_owner;
-  task_thread *owner_thread = mutex.owner_thread;
-
-  klib_synch_spinlock_lock(mutex.access_lock);
 
   ASSERT(mutex.mutex_locked);
-  ASSERT((disregard_owner) || (owner_thread == task_get_cur_thread()));
+  ASSERT((disregard_owner) || (mutex.owner_thread == task_get_cur_thread()));
 
   next_owner = mutex.waiting_threads_list.head;
   if (next_owner == nullptr)
@@ -121,11 +134,8 @@ void klib_synch_mutex_release(klib_mutex &mutex, const bool disregard_owner)
     mutex.owner_thread = (task_thread *)(next_owner->item);
     klib_list_remove(next_owner);
     task_start_thread((task_thread *)(next_owner->item));
-    delete next_owner;
-    next_owner = nullptr;
   }
 
-  klib_synch_spinlock_unlock(mutex.access_lock);
-
   KL_TRC_EXIT;
+  klib_synch_spinlock_unlock(mutex.access_lock);
 }

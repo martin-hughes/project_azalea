@@ -16,7 +16,7 @@ typedef processor_info_generic<processor_info_x64> processor_info;
 extern processor_info *proc_info_block;
 extern unsigned int processor_count;
 
-enum class PROC_X64_MSRS
+enum class PROC_X64_MSRS : unsigned long
 {
   IA32_APIC_BASE = 0x1b,
   IA32_MTRRCAP = 0xfe,
@@ -35,6 +35,8 @@ enum class PROC_X64_MSRS
   IA32_MTRR_FIX4K_F8000 = 0x26F,
   IA32_PAT = 0x277,
   IA32_MTRR_DEF_TYPE = 0x2FF,
+
+  IA32_KERNEL_GS_BASE = 0xC0000102,
 };
 
 unsigned long proc_read_msr(PROC_X64_MSRS msr);

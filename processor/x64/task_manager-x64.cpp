@@ -7,6 +7,7 @@
 
 #include "processor/processor.h"
 #include "processor/processor-int.h"
+#include "processor/x64/processor-x64.h"
 #include "processor/x64/processor-x64-int.h"
 #include "mem/x64/mem-x64-int.h"
 #include "processor/x64/pic/pic.h"
@@ -190,6 +191,11 @@ task_x64_exec_context *task_int_swap_task(unsigned long stack_ptr, unsigned long
   KL_TRC_DATA("Stack pointer", (unsigned long)next_context->stack_ptr);
   KL_TRC_DATA("Computed RIP of new thread", *(((unsigned long *)next_context->stack_ptr)+STACK_RIP_OFFSET));
 
+  // Save the thread structure's address in IA32_KERNEL_GS_BASE in order that the processor can uniquely identify the
+  // thread without having to look in a list (which is subject to threads moving between processors whilst looking in
+  // the list.
+  proc_write_msr(PROC_X64_MSRS::IA32_KERNEL_GS_BASE, reinterpret_cast<unsigned long>(next_thread));
+
   // Only processor 0 directly receives timer interrupts. In order to trigger scheduling on all other processors, send
   // them an IPI for the correct vector.
   if (proc_mp_this_proc_id() == 0)
@@ -242,4 +248,21 @@ void task_yield()
   proc_send_ipi(0, PROC_IPI_SHORT_TARGET::SELF, PROC_IPI_INTERRUPT::FIXED, TM_INTERRUPT_NUM, true);
 
   KL_TRC_EXIT;
+}
+
+/// @brief Return pointer to the currently executing thread
+///
+/// @return The task_thread object of the executing thread on this processor, or NULL if we haven't got that far yet.
+task_thread *task_get_cur_thread()
+{
+  KL_TRC_ENTRY;
+
+  unsigned int proc_id;
+
+  task_thread *ret_thread;
+  ret_thread = reinterpret_cast<task_thread *>(proc_read_msr(PROC_X64_MSRS::IA32_KERNEL_GS_BASE));
+
+  KL_TRC_EXIT;
+
+  return ret_thread;
 }

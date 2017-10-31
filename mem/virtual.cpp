@@ -51,7 +51,7 @@ unsigned int initial_list_items_used;
 // necessary to store the thread ID of the owning thread as well, so that the thread doesn't try to claim a lock it
 // already owns.
 static kernel_spinlock vmm_lock;
-static unsigned long vmm_user_thread_id;
+static task_thread *vmm_user_thread_id;
 
 // Support function declarations
 void mem_vmm_initialize();
@@ -662,10 +662,10 @@ bool mem_vmm_lock()
 {
   KL_TRC_ENTRY;
 
-  if (vmm_user_thread_id != task_current_thread_id())
+  if (vmm_user_thread_id != task_get_cur_thread())
   {
     klib_synch_spinlock_lock(vmm_lock);
-    vmm_user_thread_id = task_current_thread_id();
+    vmm_user_thread_id = task_get_cur_thread();
     return true;
   }
 

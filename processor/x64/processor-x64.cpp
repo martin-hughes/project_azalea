@@ -22,6 +22,10 @@ void proc_gen_init()
   // to make sure.
   asm_proc_stop_interrupts();
 
+  // Set the current task to 0, since tasking isn't started yet and we don't want to accidentally believe we're running
+  // a thread that doesn't exist.
+  proc_write_msr(PROC_X64_MSRS::IA32_KERNEL_GS_BASE, 0);
+
   // Fill in the GDT, and select an appropriate set of segments. The TSS descriptor and segment will
   // come later.
   asm_proc_load_gdt();

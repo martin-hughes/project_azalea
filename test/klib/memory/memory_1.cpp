@@ -12,9 +12,12 @@
 
 using namespace std;
 
-const unsigned int PASSES = 5;
-const unsigned int SIZES_TO_TRY[] = {4, 8, 9, 63, 64, 65, 255, 1023, 262144};
-const unsigned int NUM_SIZES = sizeof(SIZES_TO_TRY) / sizeof(unsigned int);
+namespace
+{
+  const unsigned int PASSES = 5;
+  const unsigned int SIZES_TO_TRY[] = {4, 8, 9, 63, 64, 65, 255, 1023, 262144};
+  const unsigned int NUM_SIZES = sizeof(SIZES_TO_TRY) / sizeof(unsigned int);
+}
 
 void memory_test_1_try_size(unsigned int size);
 

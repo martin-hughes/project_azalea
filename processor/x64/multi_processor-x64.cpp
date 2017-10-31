@@ -188,6 +188,11 @@ void proc_mp_ap_startup()
 
   ASSERT(proc_num != 0);
 
+  // Set the current task to 0, since tasking isn't started yet and we don't want to accidentally believe we're running
+  // a thread that doesn't exist.
+  proc_write_msr(PROC_X64_MSRS::IA32_KERNEL_GS_BASE, 0);
+
+  // Perform generic setup tasks - the names should be self explanatory.
   asm_proc_install_idt();
   mem_x64_pat_init();
   asm_syscall_x64_prepare();

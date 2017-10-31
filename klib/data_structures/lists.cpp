@@ -229,3 +229,9 @@ unsigned long klib_list_get_length(klib_list *list_obj)
 
   return count;
 }
+
+bool klib_list_item_is_in_any_list(klib_list_item *list_item_obj)
+{
+  ASSERT(list_item_obj != nullptr);
+  return (list_item_obj->list_obj != nullptr);
+}

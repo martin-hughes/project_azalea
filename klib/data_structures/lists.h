@@ -29,3 +29,4 @@ unsigned long klib_list_get_length(klib_list *list_obj);
 
 bool klib_list_is_valid(klib_list *list_obj);
 bool klib_list_is_empty(klib_list *list_obj);
+bool klib_list_item_is_in_any_list(klib_list_item *list_obj);

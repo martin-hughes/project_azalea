@@ -39,6 +39,7 @@
 #include "klib/misc/assert.h"
 #include "klib/tracing/tracing.h"
 #include "klib/synch/kernel_locks.h"
+#include "klib/synch/kernel_mutexes.h"
 
 static_assert(sizeof(unsigned long) == 8, "Unsigned long must be 8 bytes");
 
@@ -50,6 +51,11 @@ struct slab_header
   unsigned long allocation_count;
 };
 
+// The assertion below ensures that the size of slab_header hasn't changed. If it does, the number of available chunks
+// and their offsets within the NUM_CHUNKS_PER_SLAB and FIRST_OFFSET_IN_SLAB will need updating.
+static_assert(sizeof(slab_header) == 40,
+              "If this assert fails, make sure to re-run chunk_sizer.py and update memory.cpp");
+
 //------------------------------------------------------------------------------
 // Allocator control variables. The chunk sizes and offsets are calculated by
 // hand, based on the header being 40 bytes, 1 bit per bitmap entry with the
@@ -58,22 +64,35 @@ struct slab_header
 //
 // (There's a chunk_sizer.py script in /build_support that can help with this.)
 //------------------------------------------------------------------------------
-const unsigned int CHUNK_SIZES[] = {8, 64, 256, 1024, 262144};
-const unsigned int NUM_CHUNKS_PER_SLAB[] = {258041, 32703, 8187, 2047, 7};
-const unsigned int FIRST_OFFSET_IN_SLAB[] = {32824, 4160, 1280, 1024, 262144};
-const unsigned int NUM_SLAB_LISTS =
-    (sizeof(CHUNK_SIZES) / sizeof(CHUNK_SIZES[0]));
-const unsigned int MAX_CHUNK_SIZE = CHUNK_SIZES[NUM_SLAB_LISTS - 1];
-const unsigned int FIRST_BITMAP_ENTRY_OFFSET = 40;
-const unsigned int MAX_FREE_SLABS = 5;
+namespace
+{
+  const unsigned int CHUNK_SIZES[] = {8, 64, 256, 1024, 262144};
+  const unsigned int NUM_CHUNKS_PER_SLAB[] = {258041, 32703, 8187, 2047, 7};
+  const unsigned int FIRST_OFFSET_IN_SLAB[] = {32824, 4160, 1280, 1024, 262144};
+  const unsigned int NUM_SLAB_LISTS =
+      (sizeof(CHUNK_SIZES) / sizeof(CHUNK_SIZES[0]));
+  const unsigned int MAX_CHUNK_SIZE = CHUNK_SIZES[NUM_SLAB_LISTS - 1];
+  const unsigned int FIRST_BITMAP_ENTRY_OFFSET = 40;
+  const unsigned int MAX_FREE_SLABS = 5;
 
-kernel_spinlock slabs_list_lock;
-PTR_LIST free_slabs_list[NUM_SLAB_LISTS];
-PTR_LIST partial_slabs_list[NUM_SLAB_LISTS];
-PTR_LIST full_slabs_list[NUM_SLAB_LISTS];
+  // This is currently redundant since the addition of the mutex system, below. It remains in place to (hopefully!)
+  // simplify a removal of the mutex in a later update of the allocator.
+  kernel_spinlock slabs_list_lock;
+  PTR_LIST free_slabs_list[NUM_SLAB_LISTS];
+  PTR_LIST partial_slabs_list[NUM_SLAB_LISTS];
+  PTR_LIST full_slabs_list[NUM_SLAB_LISTS];
 
-bool allocator_initialized = false;
-bool allocator_initializing = false;
+  // Allowing two threads to run kmalloc or kfree at once is a bad idea - the code is not thread safe. As a simple, and
+  // hopefully temporary, fix we put a mutex around kmalloc and kfree. A normal spinlock is insufficient, since the
+  // called function trees of both kmalloc and kfree include both kmalloc and kfree.
+  klib_mutex allocator_gen_lock;
+
+  bool allocator_initialized = false;
+  bool allocator_initializing = false;
+}
+
+static_assert(FIRST_BITMAP_ENTRY_OFFSET == sizeof(slab_header),
+              "Make sure you have correctly set up chunk sizes, etc.");
 
 //------------------------------------------------------------------------------
 // Helper function declarations.
@@ -107,13 +126,24 @@ void *kmalloc(unsigned int mem_size)
   slab_header *slab_header_ptr;
   int required_pages;
   unsigned long proportion_used;
+  SYNC_ACQ_RESULT res;
+  bool release_mutex_at_end = true;
 
-  // Make sure the one-time-only initialisation of the system is complete.
+  // Make sure the one-time-only initialisation of the system is complete. This set of ifs and asserts isn't meant to
+  // provide full thread safety, instead it is meant to prevent any accidental circular recursion starting.
   if (!allocator_initialized)
   {
     ASSERT(!allocator_initializing);
     init_allocator_system();
     ASSERT(allocator_initialized);
+  }
+
+  res = klib_synch_mutex_acquire(allocator_gen_lock, MUTEX_MAX_WAIT);
+  ASSERT((res == SYNC_ACQ_ACQUIRED) || (res == SYNC_ACQ_ALREADY_OWNED));
+  if (res == SYNC_ACQ_ALREADY_OWNED)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Don't release mutex\n");
+    release_mutex_at_end = false;
   }
 
   // Figure out the index of all the chunk lists to use.
@@ -131,6 +161,11 @@ void *kmalloc(unsigned int mem_size)
   if (slab_idx >= NUM_SLAB_LISTS)
   {
     required_pages = ((mem_size - 1) / MEM_PAGE_SIZE) + 1;
+    if (release_mutex_at_end)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Releasing mutex from kmalloc 1\n");
+      klib_synch_mutex_release(allocator_gen_lock, false);
+    }
     KL_TRC_DATA("Big allocation. Pages needed", required_pages);
     KL_TRC_EXIT;
     return mem_allocate_pages(required_pages);
@@ -206,6 +241,12 @@ void *kmalloc(unsigned int mem_size)
     klib_synch_spinlock_unlock(slabs_list_lock);
   }
 
+  if (release_mutex_at_end)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Releasing mutex from kmalloc 2\n");
+    klib_synch_mutex_release(allocator_gen_lock, false);
+  }
+
   KL_TRC_EXIT;
 
   return return_addr;
@@ -220,7 +261,7 @@ void kfree(void *mem_block)
 {
   KL_TRC_ENTRY;
 
-  unsigned long mem_ptr_num = (unsigned long)mem_block;
+  unsigned long mem_ptr_num = reinterpret_cast<unsigned long>(mem_block);
   slab_header *slab_ptr;
   klib_list *list_ptr;
   unsigned long list_ptr_base_num_a;
@@ -234,7 +275,18 @@ void kfree(void *mem_block)
   unsigned int bitmap_bit;
   unsigned long bitmap_mask;
   unsigned long free_slabs;
+  bool release_mutex_at_end = true;
+  SYNC_ACQ_RESULT res;
 
+  ASSERT(allocator_initialized);
+
+  res = klib_synch_mutex_acquire(allocator_gen_lock, MUTEX_MAX_WAIT);
+  ASSERT((res == SYNC_ACQ_ACQUIRED) || (res == SYNC_ACQ_ALREADY_OWNED));
+  if (res == SYNC_ACQ_ALREADY_OWNED)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Don't release mutex\n");
+    release_mutex_at_end = false;
+  }
 
   // First, decide whether this is a "large allocation" or not. If it's a large allocation, the address being freed
   // will lie on a memory page boundary.
@@ -324,6 +376,12 @@ void kfree(void *mem_block)
     }
   }
 
+  if (release_mutex_at_end)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Releasing mutex from kfree\n");
+    klib_synch_mutex_release(allocator_gen_lock, false);
+  }
+
   KL_TRC_EXIT;
 }
 
@@ -372,6 +430,7 @@ void init_allocator_system()
   }
 
   klib_synch_spinlock_init(slabs_list_lock);
+  klib_synch_mutex_init(allocator_gen_lock);
 
   allocator_initialized = true;
   allocator_initializing = false;

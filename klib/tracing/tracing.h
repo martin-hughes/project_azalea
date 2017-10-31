@@ -7,6 +7,10 @@
 
 //#define ENABLE_TRACING
 
+#ifdef KL_TRACE_INCLUDE_TID
+#include "pthread.h"
+#endif
+
 enum class TRC_LVL
 {
   EXTRA = 10,
@@ -98,6 +102,10 @@ T kl_trc_output_single_arg(T param)
 // The actual tracing function. Notice that lvl is ignored for the time being!
 template<typename ... args_t> void kl_trc_trace(TRC_LVL lvl, args_t ... params)
 {
+#ifdef KL_TRACE_INCLUDE_TID
+  kl_trc_output_single_arg (pthread_self());
+  kl_trc_output_single_arg (": ");
+#endif
   kl_trc_output_arguments(params...);
 }
 

@@ -12,7 +12,7 @@ test_programs = [
             '#klib/data_structures/SConscript',
             '#klib/memory/SConscript',
             '#klib/misc/SConscript',
-            '#klib/synch/SConscript',
+            '#klib/synch/SConscript-spinlocks',
             '#klib/tracing/SConscript',
             '#processor/Sconscript-generic',
             '#object_mgr/SConscript',
@@ -20,6 +20,7 @@ test_programs = [
             '#test/SConscript-main',
             '#test/dummy_libs/core_mem/SConscript',
             '#test/dummy_libs/panic/SConscript',
+            '#test/dummy_libs/synch/Sconscript',
             '#test/test_core/SConscript',
             '#external/SConscript-GoogleTest',
             

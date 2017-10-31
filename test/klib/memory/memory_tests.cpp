@@ -15,3 +15,8 @@ TEST(KlibMemoryTest, FuzzTests)
 {
   memory_test_2();
 }
+
+TEST(KlibMemoryTest, MultiThreadFuzzTest)
+{
+  memory_test_3_mt_fuzz();
+}

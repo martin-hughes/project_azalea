@@ -1,6 +1,6 @@
 // x64 specific functions for the kernel to manage its system call interface.
 
-#define ENABLE_TRACING
+//#define ENABLE_TRACING
 
 #include "syscall/x64/syscall_kernel-x64.h"
 #include "klib/klib.h"

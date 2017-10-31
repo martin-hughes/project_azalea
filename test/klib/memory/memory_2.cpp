@@ -1,8 +1,7 @@
-// Klib-memory test script 1.
+// Klib-memory test script 2.
 //
-// Simple allocation tests, testing various sizes of allocation and free.
-// More complex tests to prove that the allocator works as expected are covered
-// by later tests.
+// Contains two tests that fuzz the Klib allocator by randomly allocating and deallocating blocks of RAM. One does this
+// single-threaded, the other multi-threaded.
 
 #include <iostream>
 #include <vector>
@@ -15,32 +14,66 @@
 
 using namespace std;
 
-struct allocation
+namespace
 {
-  void *ptr;
-  unsigned long size;
-};
+  struct allocation
+  {
+    void *ptr;
+    unsigned long size;
+  };
 
-typedef std::vector<allocation> allocation_list;
+  typedef std::vector<allocation> allocation_list;
 
-const unsigned long MAX_ALLOCATIONS = 1000;
-const unsigned long MAX_SINGLE_CHUNK = 262144;
-const unsigned long ITERATIONS = 1000000;
+  const unsigned long MAX_ALLOCATIONS = 1000;
+  const unsigned long MAX_SINGLE_CHUNK = 262144;
+  const unsigned long ITERATIONS = 1000000;
 
-allocation_list completed_allocations;
-unsigned long allocation_count;
+  const unsigned long NUM_THREADS = 2;
+
+  pthread_t test_threads[NUM_THREADS];
+}
+
+void *memory_test_fuzz_allocation_thread(void *);
 
 void memory_test_2()
 {
   test_only_reset_allocator();
 
+  memory_test_fuzz_allocation_thread(nullptr);
+}
+
+void memory_test_3_mt_fuzz()
+{
+  test_only_reset_allocator();
+
+  // Ensure that the allocator is initialized before starting the test. This prevents both threads attempting to
+  // initialize it at the same time. The allocator doesn't protect against this because it is guaranteed to be
+  // initialized before multi-tasking begins in the kernel.
+  void *temp = kmalloc(8);
+  kfree(temp);
+
   srand (time(nullptr));
 
+  for (int i = 0; i < NUM_THREADS; i++)
+  {
+    pthread_create(&test_threads[i], nullptr, &memory_test_fuzz_allocation_thread, nullptr);
+  }
+
+  for (int i = 0; i < NUM_THREADS; i++)
+  {
+    pthread_join(test_threads[i], nullptr);
+  }
+}
+
+void *memory_test_fuzz_allocation_thread(void *)
+{
   bool allocate = false;
   float proportion;
   unsigned long bytes_to_allocate;
   unsigned long dealloc_idx;
   allocation this_allocation;
+  unsigned long allocation_count = 0;
+  allocation_list completed_allocations;
 
   for (int i = 0; i < ITERATIONS; i++)
   {
@@ -62,6 +95,14 @@ void memory_test_2()
       // Decide how much to allocate.
       proportion = (float)rand() / RAND_MAX;
       bytes_to_allocate = (unsigned long)(proportion * MAX_SINGLE_CHUNK);
+      if (bytes_to_allocate > MAX_SINGLE_CHUNK)
+      {
+        bytes_to_allocate = MAX_SINGLE_CHUNK;
+      }
+      if (bytes_to_allocate == 0)
+      {
+        bytes_to_allocate = 1;
+      }
 
       // Then allocate it. Store it in the list so it can be deallocated later
       // on.
@@ -87,4 +128,6 @@ void memory_test_2()
       kfree(this_allocation.ptr);
     }
   }
+
+  return nullptr;
 }

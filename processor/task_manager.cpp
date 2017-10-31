@@ -130,7 +130,6 @@ task_process *task_create_new_process(ENTRY_PROC entry_point,
   klib_list_initialize(&new_process->child_threads);
   new_process->process_list_item.item = (void *)new_process;
   new_process->kernel_mode = kernel_mode;
-  new_process->process_id = om_store_object(new_process);
   if (mem_info != nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "mem_info provided\n");
@@ -175,11 +174,12 @@ task_thread *task_create_new_thread(ENTRY_PROC entry_point, task_process *parent
   new_thread->parent_process = parent_process;
 
   klib_list_item_initialize(&new_thread->process_list_item);
+  klib_list_item_initialize(&new_thread->synch_list_item);
+  new_thread->synch_list_item.item = new_thread;
   new_thread->process_list_item.item = (void *)new_thread;
   klib_list_add_tail(&parent_process->child_threads, &new_thread->process_list_item);
   new_thread->execution_context = task_int_create_exec_context(entry_point, new_thread);
   new_thread->permit_running = false;
-  new_thread->thread_id = om_store_object(new_thread);
 
   klib_synch_spinlock_init(new_thread->cycle_lock);
 
@@ -337,117 +337,6 @@ task_thread *task_get_next_thread()
   KL_TRC_EXIT;
 
   return next_thread;
-}
-
-/// @brief Return pointer to the currently executing thread
-///
-/// @return The task_thread object of the executing thread on this processor, or NULL if we haven't got that far yet.
-task_thread *task_get_cur_thread()
-{
-  KL_TRC_ENTRY;
-
-  unsigned int proc_id;
-
-  task_thread *ret_thread;
-  if (current_threads == nullptr)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "No threads running yet, return NULL\n");
-    ret_thread = nullptr;
-  }
-  else
-  {
-    proc_id = proc_mp_this_proc_id();
-    KL_TRC_DATA("Getting thread for processor ID", proc_id);
-    ret_thread = current_threads[proc_id];
-    KL_TRC_DATA("Returning thread", (unsigned long)ret_thread);
-  }
-
-  KL_TRC_EXIT;
-
-  return ret_thread;
-}
-
-/// @brief Return the thread ID of the currently executing thread
-///
-/// @return The thread ID of the currently executing thread, or 0 if we haven't begun tasking yet.
-THREAD_ID task_current_thread_id()
-{
-  KL_TRC_ENTRY;
-
-  task_thread *thread = task_get_cur_thread();
-  THREAD_ID ti;
-
-  if (thread == nullptr)
-  {
-    ti = 0;
-  }
-  else
-  {
-    ti = thread->thread_id;
-  }
-
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Returning thread ID: ", ti, "\n");
-
-  KL_TRC_EXIT;
-  return ti;
-}
-
-/// @brief Return the process ID of the currently executing thread
-///
-/// @return The process ID of the currently executing thread, or 0 if we haven't begun tasking yet.
-PROCESS_ID task_current_process_id()
-{
-  KL_TRC_ENTRY;
-
-  task_thread *thread = task_get_cur_thread();
-  PROCESS_ID pi;
-
-  if (thread == nullptr)
-  {
-    pi = 0;
-  }
-  else
-  {
-    ASSERT(thread->parent_process != nullptr);
-    pi = thread->parent_process->process_id;
-  }
-
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Returning process ID: ", pi, "\n");
-
-  KL_TRC_EXIT;
-  return pi;
-}
-
-/// @brief Get the task_process block matching a given process ID
-///
-/// @param proc_id The process ID to return the data block for
-///
-/// @return The task_process data block
-task_process *task_get_process_data(PROCESS_ID proc_id)
-{
-  task_process *ret_proc;
-  KL_TRC_ENTRY;
-  ret_proc = (task_process *)om_retrieve_object(proc_id);
-
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Process ID ", proc_id, " correlates to data block ", ret_proc, "\n");
-  KL_TRC_EXIT;
-  return ret_proc;
-}
-
-/// @brief Get the task_thread block matching a given thread ID
-///
-/// @param thread_id The thread ID to return the data block for
-///
-/// @return The task_thread data block
-task_thread *task_get_thread_data(THREAD_ID thread_id)
-{
-  task_thread *ret_thread;
-  KL_TRC_ENTRY;
-  ret_thread = (task_thread *)om_retrieve_object(thread_id);
-
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Thread ID ", thread_id, " correlates to data block ", ret_thread, "\n");
-  KL_TRC_EXIT;
-  return ret_thread;
 }
 
 /// @brief Start executing all threads within the given process
