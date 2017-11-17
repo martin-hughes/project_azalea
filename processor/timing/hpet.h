@@ -5,6 +5,8 @@ bool time_hpet_exists();
 void time_hpet_init();
 
 void time_hpet_stall(unsigned long wait_in_ns);
+unsigned long time_hpet_cur_value();
+unsigned long time_hpet_compute_wait(unsigned long wait_in_ns);
 
 /*
 000-007h General Capabilities and ID Register Read Only

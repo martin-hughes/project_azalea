@@ -58,8 +58,8 @@ const unsigned short *pure_64_nmi_idt_entry = reinterpret_cast<const unsigned sh
 
 static proc_mp_ipi_msg_state *inter_proc_signals = nullptr;
 
-extern "C" unsigned long asm_proc_pure64_nmi_trampoline_start;
-extern "C" unsigned long asm_proc_pure64_nmi_trampoline_end;
+extern "C" unsigned long asm_ap_trampoline_start;
+extern "C" unsigned long asm_ap_trampoline_end;
 
 static_assert(sizeof(unsigned short) == 2, "Sizeof short must be two");
 
@@ -78,21 +78,22 @@ void proc_mp_init()
   acpi_table_madt *madt_table;
   acpi_subtable_header *subtable;
   acpi_madt_local_apic *lapic_table;
-  unsigned int procs_found = 0;
+  unsigned int procs_saved = 0;
   unsigned long pure64_nmi_handler_loc;
   unsigned int trampoline_length;
-
-  processor_count = *boot_info_cpu_cores_active;
-  KL_TRC_DATA("Number of processors", processor_count);
-
-  proc_info_block = new processor_info[processor_count];
-  inter_proc_signals = new proc_mp_ipi_msg_state[processor_count];
-  kernel_syscall_stack_ptrs = new void *[processor_count];
+  unsigned long start_time;
+  unsigned long wait_offset;
+  unsigned long end_time;
 
   retval = AcpiGetTable((ACPI_STRING)table_name, 0, (ACPI_TABLE_HEADER **)&madt_table);
   ASSERT(retval == AE_OK);
   ASSERT(madt_table->Header.Length > sizeof(acpi_table_madt));
 
+  // Assume that the number of processors is equal to the number of LAPIC tables.
+  processor_count = 0;
+
+  // The first time through this loop, simply count the number of LAPICs, in order that we can allocate the correct
+  // storage space.
   subtable = acpi_init_subtable_ptr((void *)madt_table, sizeof(acpi_table_madt));
   while(((unsigned long)subtable - (unsigned long)madt_table) < madt_table->Header.Length)
   {
@@ -100,19 +101,40 @@ void proc_mp_init()
 
     if (subtable->Type == SUBTABLE_LAPIC_TYPE)
     {
-      ASSERT(procs_found < processor_count);
+      processor_count++;
+    }
+
+    subtable = acpi_advance_subtable_ptr(subtable);
+  }
+
+  KL_TRC_DATA("Number of processors", processor_count);
+
+  proc_info_block = new processor_info[processor_count];
+  inter_proc_signals = new proc_mp_ipi_msg_state[processor_count];
+  kernel_syscall_stack_ptrs = new void *[processor_count];
+
+  // The second time around, save their details.
+  subtable = acpi_init_subtable_ptr((void *)madt_table, sizeof(acpi_table_madt));
+  while(((unsigned long)subtable - (unsigned long)madt_table) < madt_table->Header.Length)
+  {
+    KL_TRC_DATA("Found a new table of type", (unsigned long)subtable->Type);
+
+    if (subtable->Type == SUBTABLE_LAPIC_TYPE)
+    {
+      // This really should never hit, unless the ACPI tables change under us!
+      ASSERT(procs_saved < processor_count);
 
       lapic_table = (acpi_madt_local_apic *)subtable;
 
-      proc_info_block[procs_found].processor_id = procs_found;
-      proc_info_block[procs_found].processor_running = false;
-      proc_info_block[procs_found].platform_data.lapic_id = lapic_table->Id;
+      proc_info_block[procs_saved].processor_id = procs_saved;
+      proc_info_block[procs_saved].processor_running = false;
+      proc_info_block[procs_saved].platform_data.lapic_id = lapic_table->Id;
 
-      KL_TRC_DATA("Our processor ID", procs_found);
+      KL_TRC_DATA("Our processor ID", procs_saved);
       KL_TRC_DATA("ACPI proc ID", (unsigned long)lapic_table->ProcessorId);
       KL_TRC_DATA("LAPIC ID", (unsigned long)lapic_table->Id);
 
-      procs_found++;
+      procs_saved++;
     }
 
     subtable = acpi_advance_subtable_ptr(subtable);
@@ -123,7 +145,8 @@ void proc_mp_init()
   proc_conf_local_int_controller();
   proc_configure_global_int_ctrlrs();
 
-  ASSERT(procs_found == processor_count);
+  // This really should never hit, unless the ACPI tables change under us!
+  ASSERT(procs_saved == processor_count);
 
   // Fill in the inter-processor signal control codes. We have to fill in a valid signal, even though it isn't actually
   // being sent, so pick an arbitrary one. Processors should be protected from acting on it through the value of
@@ -137,38 +160,66 @@ void proc_mp_init()
 
     // Generate a stack for syscall to use. Remember that the stack grows downwards from the end of the allocation.
     kernel_syscall_stack_ptrs[i] = proc_x64_allocate_stack();
-
   }
-
-  // The processors have been left halted with interrupts disabled by the bootloader. Short of a full reset of them the
-  // only way to signal the APs is by NMI, but at the moment that handler calls Pure64 code. Cheat by redirecting it to
-  // our handler. Start by finding exactly where the Pure64 NMI handler is.
-  pure64_nmi_handler_loc = (unsigned long)pure_64_nmi_idt_entry[0] |
-                           ((unsigned long)pure_64_nmi_idt_entry[3] << 16) |
-                           ((unsigned long)pure_64_nmi_idt_entry[4] << 32) |
-                           ((unsigned long)pure_64_nmi_idt_entry[5] << 48);
-  KL_TRC_DATA("Pure64 NMI Handler location", pure64_nmi_handler_loc);
-
-  // The address that has just been calculated assumes that physical and virtual addresses are equal, but we've loaded
-  // in the higher half...
-  pure64_nmi_handler_loc |= 0xFFFFFFFF00000000;
-
-  // There's a short trampoline written in assembly language that is simply copied straight over the Pure64 NMI
-  // handler.
-  trampoline_length = reinterpret_cast<unsigned long>(&asm_proc_pure64_nmi_trampoline_end) -
-                      reinterpret_cast<unsigned long>(&asm_proc_pure64_nmi_trampoline_start);
-  KL_TRC_DATA("Trampoline start", reinterpret_cast<unsigned long>(&asm_proc_pure64_nmi_trampoline_start));
-  KL_TRC_DATA("Trampoline length", trampoline_length);
-
-  kl_memcpy(reinterpret_cast<void *>(&asm_proc_pure64_nmi_trampoline_start),
-            reinterpret_cast<void *>(pure64_nmi_handler_loc),
-            trampoline_length);
 
   // Recreate the GDT so that it is long enough to contain TSS descriptors for all processors
   proc_recreate_gdt(processor_count);
 
-  // The first processor is definitely running already!
-  proc_info_block[0].processor_running = true;
+  // Copy the real mode startup point to a suitable location = 0x1000 should be good (SIPI vector number 1).
+  trampoline_length = reinterpret_cast<unsigned long>(&asm_ap_trampoline_end) -
+                      reinterpret_cast<unsigned long>(&asm_ap_trampoline_start);
+  KL_TRC_DATA("Trampoline start", reinterpret_cast<unsigned long>(&asm_ap_trampoline_start));
+  KL_TRC_DATA("Trampoline length", trampoline_length);
+  kl_memcpy(reinterpret_cast<void *>(&asm_ap_trampoline_start),
+            reinterpret_cast<void *>(0x1000),
+            trampoline_length);
+
+  // Signal all of the processors to wake up. They will then suspend themselves, awaiting a RESUME IPI message.
+  wait_offset = time_get_system_timer_offset(1000000000); // How many HPET units is a 1-second wait?
+  for (int i = 0; i < processor_count; i++)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Looking at processor ", i, "\n");
+    if (proc_info_block[i].platform_data.lapic_id == proc_x64_apic_get_local_id() )
+    {
+      // This is the current processor. We know it is running.
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Current processor!\n");
+      proc_info_block[i].processor_running = true;
+    }
+    else
+    {
+      // Boot that processor. To do this, send an INIT IPI, wait for 10ms, then send the STARTUP IPI. Make sure it
+      // starts within a reasonable timeframe.
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Send INIT.\n");
+      proc_send_ipi(proc_info_block[i].platform_data.lapic_id,
+                    PROC_IPI_SHORT_TARGET::NONE,
+                    PROC_IPI_INTERRUPT::INIT,
+                    0,
+                    true);
+      KL_TRC_TRACE(TRC_LVL::FLOW, "INIT sent\n");
+
+      // 10ms wait.
+      time_stall_process(10000000);
+
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Send SIPI.\n");
+      proc_send_ipi(proc_info_block[i].platform_data.lapic_id,
+                    PROC_IPI_SHORT_TARGET::NONE,
+                    PROC_IPI_INTERRUPT::STARTUP,
+                    1, // Vector 1 indicates an entry point of 0x1000
+                    true);
+
+      // Wait for a maximum of 1-second for the processor to wake up.
+      start_time = time_get_system_timer_count();
+      end_time = start_time + wait_offset;
+
+      while ((time_get_system_timer_count() < end_time) || (proc_info_block[i].processor_running == false))
+      {
+        // Keep waiting.
+      }
+
+      // We could probably handle this slightly more gracefully...
+      ASSERT(proc_info_block[i].processor_running);
+    }
+  }
 
   // The APs have had their NMI handlers overwritten, ready to go. They are triggered in to life by proc_mp_start_aps()
   // Now all interrupt controllers needed for the BSP are good to go. Enable interrupts.
@@ -182,6 +233,8 @@ void proc_mp_init()
 /// When this function is complete, the AP it is running on will be able to participate fully in the scheduling system.
 void proc_mp_ap_startup()
 {
+  asm_proc_enable_fp_math();
+
   KL_TRC_ENTRY;
 
   unsigned int proc_num = proc_mp_this_proc_id();
@@ -202,24 +255,11 @@ void proc_mp_ap_startup()
 
   proc_info_block[proc_num].processor_running = true;
 
-  // Signal completion to the signalling processor.
-  if (inter_proc_signals[proc_num].msg_being_sent == PROC_IPI_MSGS::RESUME)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Expected startup message received\n");
-    ASSERT(inter_proc_signals[proc_num].msg_control_state == PROC_MP_X64_MSG_STATE::MSG_WAITING);
-    inter_proc_signals[proc_num].msg_control_state = PROC_MP_X64_MSG_STATE::ACKNOWLEDGED;
-  }
-  else
-  {
-    ASSERT(inter_proc_signals[proc_num].msg_control_state == PROC_MP_X64_MSG_STATE::NO_MSG);
-  }
-
-  // Starting interrupts ought to enable the processor to schedule work. If it doesn't start within a second, then
-  // something has gone wrong.
   asm_proc_start_interrupts();
 
+  // No need to do anything else until the task manager is kicked in to life.
   KL_TRC_TRACE(TRC_LVL::FLOW, "Waiting for scheduling\n");
-  time_stall_process(1000000000);
+  time_stall_process(2000000000);
   panic("Failed to start AP");
 
   KL_TRC_EXIT;

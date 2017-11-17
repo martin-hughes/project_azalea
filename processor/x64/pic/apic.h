@@ -82,7 +82,8 @@ struct apic_registers
 
   unsigned int lvt_cmci __attribute__ ((aligned (16))); // Offset 0x2F0: CMCI (RW)
 
-  unsigned int lvt_interrupt_command_1 __attribute__ ((aligned (16))); // Offset 0x300: Interrupt command bits 0-31 (RW)
+  // Offset 0x300: Interrupt command bits 0-31 (RW)
+  volatile unsigned int lvt_interrupt_command_1 __attribute__ ((aligned (16)));
   unsigned int lvt_interrupt_command_2 __attribute__ ((aligned (16))); // Offset 0x310: Interrupt command bit 32-63 (RW)
 
   unsigned int lvt_timer __attribute__ ((aligned (16))); // Offset 0x320: Timer register (RW)

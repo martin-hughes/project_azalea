@@ -3,6 +3,8 @@
 Import('env')
 files = ["timing/timing.cpp",
          "timing/hpet.cpp",
+         "x64/ap_startup-rm.asm",
+         "x64/ap_startup-x86.asm",
          "x64/ap_startup-x64.asm",
          "x64/control-x64.asm",
          "x64/gdt-x64.cpp",

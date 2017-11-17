@@ -1,5 +1,5 @@
 OUTPUT_FORMAT("binary")
-ENTRY(pre_main)
+ENTRY(pre_main_32)
 
 /******************************************************************************
  * Throughout this script we realign the position counter, and then calculate *
@@ -13,11 +13,26 @@ ENTRY(pre_main)
 SECTIONS
 {
   . = 0x0000000000100000;
-  .pretext : 
+  
+  /*******************************************************************************************************************
+  /* BSP 32-bit entry point from multiboot. Must be first, to ensure the entry point can be found by the multiboot   *
+   * loader.                                                                                                         *
+   *******************************************************************************************************************/
+  .pretext_32 :
+  {
+      *(.pretext_32)
+  }
+  . = ALIGN(4096);
+  start_loc = .;
+  
+  /*******************************************************************************************************************
+   * All other code that must be linked against lower memory (e.g. AP entry point, long mode initialization).        *
+   *******************************************************************************************************************/
+  .pretext : AT ( start_loc )
   {
       *(.pretext)
   }
-  . = 0xFFFFFFFF00100000 + SIZEOF(.pretext);
+  . = 0xFFFFFFFF00000000 + .;
   . = ALIGN(1024);
   start_loc = . - 0xFFFFFFFF00000000;
   .text : AT ( start_loc )

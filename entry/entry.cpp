@@ -18,6 +18,8 @@
 #include "system_tree/fs/fat/fat_fs.h"
 #include "system_tree/fs/pipe/pipe_fs.h"
 
+#include "entry/multiboot.h"
+
 #include <memory>
 
 // Rough boot steps:
@@ -36,7 +38,7 @@
 // - Permit full ACPI.
 // - Load the user-mode "init" task (currently done by temporary code)
 
-extern "C" int main();
+extern "C" int main(unsigned int magic_number, multiboot_hdr *mb_header);
 void kernel_start();
 void simple_terminal();
 
@@ -47,13 +49,28 @@ void setup_initial_fs();
 generic_ata_device *first_hdd;
 fat_filesystem *first_fs;
 
-// Main kernel entry point. This is called by an assembly-language loader that
-// should do as little as possible. On x64, this involves setting up a simple
-// page mapping, since the kernel is linked higher-half but loaded at 1MB, then kicking the task manager in to life.
-int main()
+// Main kernel entry point. This is called by an assembly-language loader that should do as little as possible. On x64,
+// this involves setting up a simple page mapping, since the kernel is linked higher-half but loaded at 1MB, then
+// kicking the task manager in to life.
+int main(unsigned int magic_number, multiboot_hdr *mb_header)
 {
+  // The kernel needs the information table provided by the multiboot loader in order to function properly.
+  if (magic_number != MULTIBOOT_CONSTANT)
+  {
+    panic("Not booted by a multiboot compliant loader");
+  }
+  ASSERT(mb_header != nullptr);
+  // Check that the memory map flag is set.
+  ASSERT((mb_header->flags && (1 << 6)) != 0);
+
+  // Gather details about the memory map in advance of giving them to the memory manager.
+  unsigned long e820_map_addr = mb_header->mmap_addr;
+  e820_pointer e820_ptr;
+  e820_ptr.table_ptr = reinterpret_cast<e820_record *>(e820_map_addr);
+  e820_ptr.table_length = mb_header->mmap_length;
+
   proc_gen_init();
-  mem_gen_init();
+  mem_gen_init(&e820_ptr);
   hm_gen_init();
   om_gen_init();
   system_tree_init();
@@ -62,10 +79,10 @@ int main()
 
   acpi_init_table_system();
 
+  time_gen_init();
   proc_mp_init();
   syscall_gen_init();
 
-  time_gen_init();
   task_gen_init(kernel_start);
 
   // If the kernel gets back to here, just run in a loop. The task manager will soon kick in.
@@ -89,9 +106,6 @@ void kernel_start()
 
   ACPI_STATUS status;
   task_process *initial_proc;
-
-  // kernel_start() runs on the BSP. Bring up the APs so they are ready to take on any threads created below.
-  proc_mp_start_aps();
 
   // Bring the ACPI system up to full readiness.
   status = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);

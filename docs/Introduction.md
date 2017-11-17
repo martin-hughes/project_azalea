@@ -50,13 +50,24 @@ Sorry if you hate it.
 
 ## Requirements
 
-Being a hobby project, there are some fairly specific requirements for this project to work:
+Being a hobby project, there are some fairly specific requirements for this project to run:
 
 - An x64 compatible processor. A recent Intel one should work.
 - **Maximum** 1GB of RAM. This is a limitation of the memory manager.
-- For compilation, A Linux machine running python 2.6 or better, GCC 5.4 or better, clang 3.8.0 or better, Scons, and
-NASM (Note: It may be possible to do this on the new Windows Subsystem for Linux, this is untested)
-- Optionally, doxygen for generating detailed code documentation. 
+
+To compile the system, you will need the following tools installed:
+- Python 2.6 or later
+- GCC 5.4 or later
+- Clang 3.8.0 or later
+- SCons
+- NASM
+- Qemu - the default test script runs on qemu, and qemu-nbd is required to create disk images from scratch (which is 
+  optional)
+- Virtualbox - Required to generate disk images from scratch (optional) and can be used as a test system.
+- GRUB2 2.02 beta 2 or later - Required to generate disk images from scratch. (optional)
+- Doxygen - Only needed to generate documentation. (optional)
+
+Compilation has been tested using Ubuntu 16.04. It may work on the Windows Subsystem for Linux, but is untested.
 
 The project is routinely tested in qemu-system-x86_64 and Virtual Box, and very rarely on real hardware. Real hardware
 bugs would be interesting to hear about!
@@ -66,7 +77,8 @@ bugs would be interesting to hear about!
 To get the system running from its current state, do the following:
 
 - Get a copy of the code on your system, using your favourite method
-- Follow the instructions in `extras/configure_disk_images.txt`
+- Follow the instructions in `extras/configure_disk_images.txt`. Remember to mount the disk image whenever necessary
+(e.g. after a reboot)
 - From the root directory, execute `python build_support/build_script.py`
 - Execute `build_support/start_test_machine.sh`
 

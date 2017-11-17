@@ -15,9 +15,10 @@ hpet_hardware_cfg_block *hpet_config = nullptr;
 void time_hpet_set_flag(unsigned long &hpet_reg, const unsigned long flag);
 void time_hpet_clear_flag(unsigned long &hpet_reg, const unsigned long flag);
 bool time_hpet_get_flag(unsigned long &hpet_reg, const unsigned long flag);
-unsigned long time_hpet_compute_wait(unsigned long wait_in_ns);
 
-// Use ACPI to determine whether a HPET exists in this system.
+/// @brief Use ACPI to determine whether a HPET exists in this system.
+///
+/// @return True if a HPET exists, false otherwise.
 bool time_hpet_exists()
 {
   KL_TRC_ENTRY;
@@ -34,9 +35,11 @@ bool time_hpet_exists()
   return hpet_exists;
 }
 
-// Initialize the HPET according to our requirements - the first channel for the multi-tasking interrupt, the second
-// for internal use. It is assumed that time_hpet_exists() would return true when this function is called, otherwise it
-// may panic.
+/// @brief Initialize the HPET.
+///
+/// Initialize the HPET according to our requirements - the first channel for the multi-tasking interrupt, the second
+/// for internal use. It is assumed that time_hpet_exists() would return true when this function is called, otherwise
+/// it may panic.
 void time_hpet_init()
 {
   KL_TRC_ENTRY;
@@ -123,6 +126,12 @@ void time_hpet_init()
   KL_TRC_EXIT;
 }
 
+/// @brief Set the specified flag in a HPET register without affecting the rest.
+///
+/// @param hpet_reg The register to set the value in
+///
+/// @param flag The flag to set - ideally only one bit should be set, but the system will probably respond correctly if
+///             multiple bits are set (no guarantees!)
 void time_hpet_set_flag(unsigned long &hpet_reg, const unsigned long flag)
 {
   KL_TRC_ENTRY;
@@ -137,6 +146,12 @@ void time_hpet_set_flag(unsigned long &hpet_reg, const unsigned long flag)
   KL_TRC_EXIT;
 }
 
+/// @brief Clear the specified flag in a HPET register without affecting the rest.
+///
+/// @param hpet_reg The register to set the value in
+///
+/// @param flag The flag to clear - ideally only one bit should be set, but the system will probably respond correctly
+///             if multiple bits are set (no guarantees!)
 void time_hpet_clear_flag(unsigned long &hpet_reg, const unsigned long flag)
 {
   KL_TRC_ENTRY;
@@ -151,6 +166,13 @@ void time_hpet_clear_flag(unsigned long &hpet_reg, const unsigned long flag)
   KL_TRC_EXIT;
 }
 
+/// @brief Determine whether the specified bit is set in a HPET register
+///
+/// @param hpet_register The register to consider.
+///
+/// @param flag The flag to consider. Undefined behaviour results if anything other than exactly one bit is set.
+///
+/// @return True if the flag is set, false otherwise.
 bool time_hpet_get_flag(unsigned long &hpet_reg, const unsigned long flag)
 {
   KL_TRC_ENTRY;
@@ -165,11 +187,17 @@ bool time_hpet_get_flag(unsigned long &hpet_reg, const unsigned long flag)
   return result;
 }
 
-// Compute the value to be written to a HPET timer for the specified wait.
-// Makes two assumptions:
-// -1: That the wait period is small enough not to overflow the computed result (otherwise the return value is
-//     incorrect)
-// -2: That the timer's counter starts at zero (the caller can simply add the current value if desired)
+/// @brief How long is a wait in HPET timer units?
+///
+/// Compute the value to be written to a HPET timer for the specified wait.
+/// Makes two assumptions:
+/// -1: That the wait period is small enough not to overflow the computed result (otherwise the return value is
+///     incorrect)
+/// -2: That the timer's counter starts at zero (the caller can simply add the current value if desired)
+///
+/// @param wait_in_ns How long is the desired wait, in nanoseconds
+///
+/// @return The number of HPET timer units corresponding to the desired wait.
 unsigned long time_hpet_compute_wait(unsigned long wait_in_ns)
 {
   KL_TRC_ENTRY;
@@ -189,6 +217,12 @@ unsigned long time_hpet_compute_wait(unsigned long wait_in_ns)
   return result;
 }
 
+/// @brief Stall the process for the specified period.
+///
+/// Keeps running this process in a tight loop, but doesn't do anything to prevent the normal operation of the
+/// scheduler!
+///
+/// @param wait_in_ns The number of nanoseconds to stall for.
 void time_hpet_stall(unsigned long wait_in_ns)
 {
   KL_TRC_ENTRY;
@@ -213,4 +247,15 @@ void time_hpet_stall(unsigned long wait_in_ns)
   KL_TRC_DATA("Actual end count", cur_count);
 
   KL_TRC_EXIT;
+}
+
+/// @brief Return the current value of the HPET counter.
+///
+/// @return The current value of the main HPET counter.
+unsigned long time_hpet_cur_value()
+{
+  KL_TRC_ENTRY;
+  KL_TRC_EXIT;
+
+  return hpet_config->main_counter_val;
 }

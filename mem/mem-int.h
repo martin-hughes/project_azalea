@@ -1,8 +1,9 @@
 #ifndef _MEM_INTERNAL_H
 #define _MEM_INTERNAL_H
 
-void mem_init_gen_phys_sys();
-void mem_gen_phys_pages_bitmap(unsigned long *bitmap_loc,
+void mem_init_gen_phys_sys(e820_pointer *e820_ptr);
+void mem_gen_phys_pages_bitmap(e820_pointer *e820_ptr,
+                               unsigned long *bitmap_loc,
                                unsigned long max_num_pages);
 
 

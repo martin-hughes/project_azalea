@@ -38,14 +38,16 @@ namespace
 /// @brief Initialise the physical memory management subsystem.
 ///
 /// **This function must only be called once**
-void mem_init_gen_phys_sys()
+void mem_init_gen_phys_sys(e820_pointer *e820_ptr)
 {
   KL_TRC_ENTRY;
 
   unsigned long mask;
 
+  ASSERT((e820_ptr != nullptr) && (e820_ptr->table_ptr != nullptr));
+
   // Fill in the free pages bitmap appropriately.
-  mem_gen_phys_pages_bitmap(phys_pages_alloc_bitmap, MAX_SUPPORTED_PAGES);
+  mem_gen_phys_pages_bitmap(e820_ptr, phys_pages_alloc_bitmap, MAX_SUPPORTED_PAGES);
 
   kl_memcpy(phys_pages_alloc_bitmap, phys_pages_exist_bitmap, sizeof(phys_pages_alloc_bitmap));
 

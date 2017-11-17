@@ -17,10 +17,16 @@
 /// until after the memory manager is running.
 void proc_gen_init()
 {
+  // Don't do any tracing in this function, since the tracing functions may rely on floating point math, and that isn't
+  // enabled yet.
+
   // Interrupts should have been left disabled by the bootloader, but since
   // we're about to fiddle with the GDT, IDT and such, it's probably best
   // to make sure.
   asm_proc_stop_interrupts();
+
+  // Enable the floating point units as well as SSE.
+  asm_proc_enable_fp_math();
 
   // Set the current task to 0, since tasking isn't started yet and we don't want to accidentally believe we're running
   // a thread that doesn't exist.

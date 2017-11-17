@@ -19,6 +19,9 @@ void time_gen_init();
 void time_sleep_process(unsigned long wait_in_ns);
 void time_stall_process(unsigned long wait_in_ns);
 
+unsigned long time_get_system_timer_count();
+unsigned long time_get_system_timer_offset(unsigned long wait_in_ns);
+
 const unsigned int time_task_mgr_int_period_ns = 100000;
 
 #endif

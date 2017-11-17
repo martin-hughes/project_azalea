@@ -6,8 +6,6 @@
 // memory functions should be used to allocate or deallocate specific amounts of
 // memory.
 
-void mem_gen_init();
-
 // A structure to contain information specific to a single process.
 // In future, this will be able to track things like allocation counts and so
 // on, but for now it just contains the x64 specific data.
@@ -29,7 +27,27 @@ enum MEM_CACHE_MODES
   MEM_WRITE_BACK = 6,
 };
 
+#pragma pack(push,1)
+struct e820_record
+{
+  unsigned int size;
+  unsigned long start_addr;
+  unsigned long length;
+  unsigned int memory_type;
+};
+#pragma pack(pop)
+
+static_assert(sizeof(e820_record) == 24, "e820 record size wrong");
+
+struct e820_pointer
+{
+  e820_record *table_ptr;
+  unsigned int table_length;
+};
+
 struct task_process;
+
+void mem_gen_init(e820_pointer *e820_ptr);
 
 void *mem_allocate_physical_pages(unsigned int num_pages);
 void *mem_allocate_virtual_range(unsigned int num_pages);

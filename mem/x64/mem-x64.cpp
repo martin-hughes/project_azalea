@@ -45,7 +45,7 @@ void *mem_get_next_4kb_page();
 /// @brief Initialise the entire memory management subsystem.
 ///
 /// This function is required across all platforms. However, the bulk of it is x64 specific, so it lives here.
-void mem_gen_init()
+void mem_gen_init(e820_pointer *e820_ptr)
 {
   KL_TRC_ENTRY;
 
@@ -53,7 +53,7 @@ void mem_gen_init()
   unsigned long temp_offset;
 
   // Initialise the physical memory subsystem. This will call back to x64- specific code later.
-  mem_init_gen_phys_sys();
+  mem_init_gen_phys_sys(e820_ptr);
 
   // Configure the x64 PAT system, so that caching works as expected.
   mem_x64_pat_init();
@@ -91,25 +91,41 @@ void mem_gen_init()
 ///
 /// @param max_num_pages The maximum number of pages the physical memory manager can deal with. IF the number of pages
 ///                      available to the system exceeds this, the system will crash.
-void mem_gen_phys_pages_bitmap(unsigned long *bitmap_loc, unsigned long max_num_pages)
+void mem_gen_phys_pages_bitmap(e820_pointer *e820_ptr, unsigned long *bitmap_loc, unsigned long max_num_pages)
 {
   KL_TRC_ENTRY;
 
   // Spin through the E820 memory map and look at the ranges to determine whether they're usable or not.
-  const e820_record *cur_record = e820_memory_map;
+  const e820_record *cur_record;
   unsigned long start_addr;
   unsigned long end_addr;
   unsigned long number_of_pages;
+  unsigned long bytes_read = 0;
 
   static_assert(sizeof(e820_record) == 24, "E820 record struct has been wrongly edited");
+
+  ASSERT(e820_ptr != nullptr);
+  ASSERT(bitmap_loc != nullptr);
+  ASSERT(e820_ptr->table_ptr != nullptr);
+  ASSERT(e820_ptr->table_length >= sizeof(e820_record));
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "E820 Map Location: ", e820_ptr->table_ptr, "\n");
+  KL_TRC_TRACE(TRC_LVL::FLOW, "E820 Map Length: ", e820_ptr->table_length, "\n");
+
+  cur_record = e820_ptr->table_ptr;
 
   // Set the bitmap to 0 - i.e. unallocated.
   kl_memset(bitmap_loc, 0, max_num_pages / 8);
 
-  while ((cur_record->start_addr != 0) ||
+  while (((cur_record->start_addr != 0) ||
          (cur_record->length != 0) ||
-         (cur_record->memory_type != 0))
+         (cur_record->memory_type != 0)) &&
+         (bytes_read < e820_ptr->table_length))
   {
+    KL_TRC_TRACE(TRC_LVL::FLOW,
+                 "Record. Start: ", cur_record->start_addr,
+                 ", length: ", cur_record->length,
+                 ", type: ", cur_record->memory_type, "\n");
     // Only type 1 memory is usable. If we've found some, round the start and end addresses to 2MB boundaries. Always
     // ignore the first 2MB of RAM - we've already loaded the kernel in to there and it has some crazy stuff in anyway.
     if (cur_record->memory_type == 1)
@@ -144,6 +160,7 @@ void mem_gen_phys_pages_bitmap(unsigned long *bitmap_loc, unsigned long max_num_
       }
     }
     cur_record++;
+    bytes_read += sizeof(e820_record);
   }
 
   KL_TRC_EXIT;

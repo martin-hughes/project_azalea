@@ -84,3 +84,21 @@ asm_proc_write_port:
 
   apwp_done:
   ret
+
+GLOBAL asm_proc_enable_fp_math
+asm_proc_enable_fp_math:
+  ; Disable emulation (i.e. use the real floating point unit) and set monitor flag on.
+  mov rax, cr0
+  bts rax, 1
+  btr rax, 2
+  mov cr0, rax
+
+  ; Enable SSE intructions and SIMD floating point exceptions.
+  mov rax, cr4
+  bts rax, 9
+  bts rax, 10
+  mov cr4, rax
+
+  finit
+
+  ret
