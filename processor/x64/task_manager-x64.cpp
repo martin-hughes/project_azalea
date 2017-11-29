@@ -53,6 +53,7 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
   // The value about to go into RSP when the process is running. (That is, for a user-mode process, this will be a user
   // mode address, not a kernel mode one.)
   unsigned long rsp_of_stack;
+  unsigned long working_addr;
 
   task_process *parent_process;
   mem_process_info *memmgr_data;
@@ -114,6 +115,7 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
     rsp_of_stack = reinterpret_cast<unsigned long>(DEF_USER_MODE_STACK_PAGE + MEM_PAGE_SIZE - 8);
   }
 
+  // Fill in the execution context part of the stack.
   // As above, both kernel and (potentially) user mode versions of the stack address need offsetting by the same
   // amount. These look different because kernel_stack_addr is a pointer, but rsp_of_stack is not. The effect is the
   // same for both though.
@@ -127,6 +129,21 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
   kernel_stack_addr[STACK_SS_OFFSET] = new_ss;
   kernel_stack_addr[STACK_RCX_OFFSET] = 0x1234;
 
+  // Move the rsp_of_stack pointer down to provide space for the FPU storage space. It is moved down by 512 bytes,
+  // and then rounded down to the next 16-byte boundary. rsp_of_stack doesn't need to change, since we store it later.
+  working_addr = reinterpret_cast<unsigned long>(kernel_stack_addr);
+  working_addr -= 512;
+  working_addr = working_addr & 0xFFFFFFFFFFFFFFF0;
+
+  // Simply clear the FPU storage space
+  kl_memset(reinterpret_cast<void *>(working_addr), 0, 512);
+
+  // Move the stack 16-bytes further down. The next value in the stack is the stack pointer above the FPU storage
+  // space - it may be 8-byte aligned. Then there's another 8 bytes of blank space.
+  working_addr -= 16;
+  kernel_stack_addr = reinterpret_cast<unsigned long *>(working_addr);
+  *kernel_stack_addr = rsp_of_stack;
+
   if (!parent_process->kernel_mode)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Unmapping kernel addresses of user-mode stack\n");
@@ -134,7 +151,7 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
     mem_unmap_range(kernel_stack_page, 1);
   }
 
-  new_context->stack_ptr = (void *)rsp_of_stack;
+  new_context->stack_ptr = (void *)((rsp_of_stack - 528) & 0xFFFFFFFFFFFFFFF0);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA,  "Final kernel stack address", kernel_stack_addr, "\n");
   KL_TRC_TRACE(TRC_LVL::EXTRA,  "Final RSP address", rsp_of_stack, "\n");

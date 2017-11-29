@@ -15,7 +15,7 @@ asm_proc_mp_ap_startup:
   cli
   hlt
 
-ALIGN 8
+ALIGN 16
 temp_64_bit_stack:
   ; This only needs to be small - it is needed for as long as it takes to finish proc_mp_ap_startup, since after that
   ; the stack will either be the one in use when an interrupt hits, or the one given by the TR.

@@ -153,7 +153,8 @@ void *proc_x64_allocate_stack()
   KL_TRC_ENTRY;
 
   void *new_stack = kmalloc(MEM_PAGE_SIZE);
-  new_stack = reinterpret_cast<void *>(reinterpret_cast<unsigned long>(new_stack) + MEM_PAGE_SIZE - 8);
+  new_stack = reinterpret_cast<void *>(reinterpret_cast<unsigned long>(new_stack) + MEM_PAGE_SIZE - 16);
+  ASSERT((reinterpret_cast<unsigned long>(new_stack) & 0x0F) == 0);
 
   KL_TRC_DATA("Issuing new stack", reinterpret_cast<unsigned long>(new_stack));
 

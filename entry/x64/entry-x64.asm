@@ -9,10 +9,11 @@ EXTERN main
 GLOBAL pre_main_64
 pre_main_64:
 
-; Adjust stack pointer to point at upper memory.
+; Adjust stack pointer to point at upper memory, and align it to 16-byte boundary.
 mov rax, rsp
 mov rbx, 0xFFFFFFFF00000000
 or rax, rbx
+and rax, qword 0xFFFFFFFFFFFFFFF0
 mov rsp, rax
 
 ; Compute virtual address that can be edited to affect mapping of virtual address 0xFFFFFFFFFFFE0000.

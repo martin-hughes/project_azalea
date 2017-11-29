@@ -15,8 +15,8 @@ def _setup_default_env(env):
   
 def setup_kernel_build_env(env):
     _setup_default_env(env)
-    env['CXXFLAGS'] = '-mno-red-zone -nostdlib -mstackrealign -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=gnu++14 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
-    env['CFLAGS'] = '-mno-red-zone -nostdlib -mstackrealign -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
+    env['CXXFLAGS'] = '-mno-red-zone -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=gnu++14 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
+    env['CFLAGS'] = '-mno-red-zone -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
     env['LINKFLAGS'] = "-T build_support/kernel_stage.ld --start-group"
     env['LINK'] = 'ld -Map output/kernel_map.map'
     

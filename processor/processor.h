@@ -17,9 +17,8 @@ typedef void (* ENTRY_PROC)();
 
 /// Structure to hold information about a process. All information is stored here, to be accessed by the various
 /// components as needed. This removes the need for per-component lookup tables for each process.
-class task_process : public ISystemTreeLeaf
+struct task_process
 {
-public:
   /// Refer ourself back to the process list.
   klib_list_item process_list_item;
 
@@ -34,9 +33,8 @@ public:
 };
 
 /// Structure to hold information about a thread.
-class task_thread : public ISystemTreeLeaf
+struct task_thread
 {
-public:
   /// This thread's parent process. The process defines the address space, permissions, etc.
   task_process *parent_process;
 

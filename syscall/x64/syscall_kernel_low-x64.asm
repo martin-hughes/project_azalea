@@ -84,8 +84,13 @@ asm_syscall_x64_syscall:
 
   sti
 
+  sub rsp, 512
+  and rsp, qword 0xFFFFFFFFFFFFFFF0
+  fxsave64 [rsp]
+  sub rsp, 8
+
   ; Save RCX (which is the stored RIP) and R11 (which is the stored RFLAGS), as well as RBX which is the address of the
-  ; user-mode stack.
+  ; user-mode stack. Three pushes, in combination with the 8 bytes above, ensure the stack is still 16-byte aligned.
   push rbx
   push rcx
   push r11
@@ -96,7 +101,6 @@ asm_syscall_x64_syscall:
 
   cmp rax, r12
   ja invalid_syscall_idx
-
 
   ; The call index requested fits within the table. Extract the function's address and call it. Move R10 into RCX to
   ; fulfil the change between kernel interface ABI and x64 C function call ABI.
@@ -115,15 +119,18 @@ asm_syscall_x64_syscall:
 
   end_of_syscall:
 
-  ; Put the RIP and R11 back again.
+  ; Put the RIP and R11 back again. Restore the FPU state.
   pop r11
   pop rcx
+  pop rbx
+
+  add rsp, 8
+  fxrstor [rsp]
 
   ; Stop interrupts, because otherwise they might get called with the user stack (which is bad)
   cli
 
   ; Restore the stack.
-  pop rbx
   mov rsp, rbx
 
   ; Restore the registers that must be preserved by the calling convention.
