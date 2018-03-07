@@ -21,3 +21,8 @@ GENERIC_SYSCALL 2, syscall_close_handle
 GENERIC_SYSCALL 3, syscall_read_handle
 GENERIC_SYSCALL 4, syscall_get_handle_data_len
 GENERIC_SYSCALL 5, syscall_write_handle
+GENERIC_SYSCALL 6, syscall_register_for_mp
+GENERIC_SYSCALL 7, syscall_send_message
+GENERIC_SYSCALL 8, syscall_receive_message_details
+GENERIC_SYSCALL 9, syscall_receive_message_body
+GENERIC_SYSCALL 10, syscall_message_complete

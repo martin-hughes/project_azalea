@@ -9,6 +9,8 @@
 #include "mem/mem.h"
 #include "object_mgr/handles.h"
 #include "system_tree/system_tree_leaf.h"
+#include "klib/data_structures/string.h"
+#include "klib/synch/kernel_messages.h"
 
 // Main kernel interface to processor specific functions. Includes the task management system.
 
@@ -30,6 +32,25 @@ struct task_process
 
   /// Is the process running in kernel mode?
   bool kernel_mode;
+
+  /// The process's queue of waiting messages.
+  msg_msg_queue message_queue;
+
+  /// Does this process accept messages? Messages can't be sent to the process unless this flag is true. Accepting
+  /// messages is optional as not all processes will need the capability to receive messages.
+  bool accepts_msgs;
+
+  /// Lock to control the message queue.
+  kernel_spinlock message_lock;
+
+  /// The message currently being handled by the process. Invalid if no message is being handled.
+  klib_message_hdr cur_msg;
+
+  /// Is a message currently being handled by the receiving process?
+  bool msg_outstanding;
+
+  /// The number of messages currently waiting for this process.
+  unsigned long msg_queue_len;
 };
 
 /// Structure to hold information about a thread.

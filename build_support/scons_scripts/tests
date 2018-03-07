@@ -12,6 +12,7 @@ test_programs = [
             '#klib/data_structures/SConscript',
             '#klib/memory/SConscript',
             '#klib/misc/SConscript',
+            '#klib/synch/SConscript-messages',
             '#klib/synch/SConscript-spinlocks',
             '#klib/tracing/SConscript',
             '#processor/Sconscript-generic',

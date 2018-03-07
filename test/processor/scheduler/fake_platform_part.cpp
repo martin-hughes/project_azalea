@@ -1,6 +1,10 @@
 #include "processor/processor.h"
 
-unsigned long fake_ptr_target = 5;
+namespace
+{
+  unsigned long fake_ptr_target = 5;
+  task_thread *fake_cur_thread = nullptr;
+}
 
 unsigned int proc_mp_proc_count()
 {
@@ -35,4 +39,14 @@ mem_process_info *mem_task_get_task0_entry()
 void task_install_task_switcher()
 {
   // Nothing to do.
+}
+
+task_thread *task_get_cur_thread()
+{
+  return fake_cur_thread;
+}
+
+void test_only_set_cur_thread(task_thread *thread)
+{
+  fake_cur_thread = thread;
 }

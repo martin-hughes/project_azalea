@@ -21,6 +21,7 @@ dependencies_in = [
                    '#klib/data_structures/SConscript',
                    '#klib/tracing/SConscript',
                    '#klib/synch/SConscript',
+                   '#klib/synch/SConscript-messages',
                    '#klib/synch/SConscript-spinlocks',
                    '#syscall/SConscript-kernel',
                    '#acpi/SConscript',

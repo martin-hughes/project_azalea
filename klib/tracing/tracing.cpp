@@ -150,6 +150,22 @@ void kl_trc_output_err_code_argument(ERR_CODE ec)
       msg = "Storage error";
       break;
 
+    case ERR_CODE::SYNC_MSG_INCOMPLETE:
+      msg = "Incomplete IPC message";
+      break;
+
+    case ERR_CODE::SYNC_MSG_NOT_ACCEPTED:
+      msg = "IPC messages not accepted";
+      break;
+
+    case ERR_CODE::SYNC_MSG_QUEUE_EMPTY:
+      msg = "No messages waiting";
+      break;
+
+    case ERR_CODE::SYNC_MSG_MISMATCH:
+      msg = "Message handling fault";
+      break;
+
     default:
       break;
   }

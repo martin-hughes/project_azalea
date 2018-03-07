@@ -15,24 +15,29 @@
 // The indicies of the pointers in this table MUST match the indicies given in syscall_user_low-x64.asm!
 const void *syscall_pointers[] =
     { (void *)syscall_debug_output,
+
+      // Handle management.
       (void *)syscall_open_handle,
       (void *)syscall_close_handle,
       (void *)syscall_read_handle,
       (void *)syscall_get_handle_data_len,
-      (void *)syscall_write_handle,};
+      (void *)syscall_write_handle,
+
+      // Message passing.
+      (void *)syscall_register_for_mp,
+      (void *)syscall_send_message,
+      (void *)syscall_receive_message_details,
+      (void *)syscall_receive_message_body,
+      (void *)syscall_message_complete,  
+    };
 
 const unsigned long syscall_max_idx = (sizeof(syscall_pointers) / sizeof(void *)) - 1;
 
-namespace
+bool syscall_is_um_address(const void *addr)
 {
-  bool syscall_is_um_address(const void *addr)
-  {
-    unsigned long addr_l = reinterpret_cast<unsigned long>(addr);
-    return !(addr_l & 0x8000000000000000ULL);
-  }
+  unsigned long addr_l = reinterpret_cast<unsigned long>(addr);
+  return !(addr_l & 0x8000000000000000ULL);
 }
-
-#define SYSCALL_IS_UM_ADDRESS(x) syscall_is_um_address(reinterpret_cast<const void *>((x)))
 
 /// Write desired output to the system debug output
 ///

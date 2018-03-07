@@ -141,6 +141,10 @@ task_process *task_create_new_process(ENTRY_PROC entry_point,
     new_process->mem_info = mem_task_create_task_entry();
   }
 
+  // New processes don't accept messages by default, since not all processes need the ability to receive and handle
+  // them.
+  new_process->accepts_msgs = false;
+
   KL_TRC_TRACE(TRC_LVL::FLOW, "Checks complete, adding process to list\n");
   klib_list_add_head(&process_list, &new_process->process_list_item);
 

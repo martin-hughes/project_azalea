@@ -38,6 +38,19 @@ enum class ERR_CODE
 
   /// There is a generic error dealing with storage, for example, the filesystem is corrupt.
   STORAGE_ERROR,
+
+  /// The process wants to retrieve another message, before completing the previous one.
+  SYNC_MSG_INCOMPLETE,
+
+  /// The intended recipient process doesn't accept IPC messages, or if trying to receive messages then this process
+  /// does not accept messages.
+  SYNC_MSG_NOT_ACCEPTED,
+
+  /// There are no messages waiting
+  SYNC_MSG_QUEUE_EMPTY,
+
+  /// The process has tried to mark the wrong message as complete, or no message was being processed.
+  SYNC_MSG_MISMATCH,
 };
 
 #endif

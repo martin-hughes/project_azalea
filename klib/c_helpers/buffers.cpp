@@ -128,3 +128,18 @@ char kl_memcmp(const void *a, const void *b, unsigned long len)
 
   return 0;
 }
+
+// Don't include memmove in the test code, it just causes wobblies.
+#ifndef AZALEA_TEST_CODE
+void *memmove(void *dest, const void *src, unsigned long length)
+{
+  char *temp = new char[length];
+
+  kl_memcpy(src, temp, length);
+  kl_memcpy(temp, dest, length);
+
+  delete[] temp;
+
+  return dest;
+}
+#endif
