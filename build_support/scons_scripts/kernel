@@ -36,6 +36,7 @@ dependencies_in = [
                    '#devices/block/ramdisk/SConscript',
                    '#devices/block/ata/SConscript',
                    '#devices/block/proxy/SConscript',
+                   '#devices/legacy/ps2/SConscript',
                    
                    # Filesystems
                    '#system_tree/fs/fat/SConscript',

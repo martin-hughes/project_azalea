@@ -1,0 +1,92 @@
+#ifndef DEVICE_PS2_CONTROLLER_HEADER
+#define DEVICE_PS2_CONTROLLER_HEADER
+
+#include "devices/device_interface.h"
+#include "klib/misc/error_codes.h"
+#include "klib/data_structures/string.h"
+
+const unsigned long PS2_DATA_PORT = 0x60;
+const unsigned long PS2_COMMAND_PORT = 0x64;
+
+enum class PS2_DEV_TYPE
+{
+  NONE_CONNECTED,
+  UNKNOWN,
+
+  MOUSE_STANDARD,
+  MOUSE_WITH_WHEEL,
+  MOUSE_5_BUTTON,
+
+  KEYBOARD_MF2,
+};
+
+class gen_ps2_controller_device: public IDevice
+{
+public:
+  // Generic device management functions.
+  gen_ps2_controller_device();
+  virtual ~gen_ps2_controller_device();
+
+  virtual const kl_string device_name();
+  virtual DEV_STATUS get_device_status();
+
+  // Types used throughout.
+  union ps2_status_register
+  {
+    struct
+    {
+      unsigned char output_buffer_status :1; // 0 = no data waiting, 1 = data waiting.
+      unsigned char input_buffer_status :1; // 1 = data waiting to transmit, 0 = no data waiting.
+      unsigned char system_flag :1;
+      unsigned char command_data_flag :1;
+      unsigned char keyboard_lock :1;           // This field is system specific, but is apparently most commonly this.
+      unsigned char device_two_out_buf_full :1; // This field is system specific, but is apparently most commonly this.
+      unsigned char timeout_error :1;
+      unsigned char parity_error :1;
+    } flags;
+    unsigned char raw;
+  };
+
+  union ps2_config_register
+  {
+    struct
+    {
+      unsigned char first_port_interrupt_enabled :1; // 1 = enabled, 0 = disabled.
+      unsigned char second_port_interrupt_enabled :1; // As above.
+      unsigned char system_flag :1; // Should always be set to 1.
+      unsigned char zero_flag :1; // Should always be set to zero.
+      unsigned char first_port_clock_disable :1; // 1 = clock disabled, 0 = enabled.
+      unsigned char second_port_clock_disable :1; // As above.
+      unsigned char first_port_translation :1; // 1 = translation enabled.
+      unsigned char second_zero_flag :1; // Must be zero.
+    } flags;
+    unsigned char raw;
+  };
+
+  // PS/2 device interactions.
+  ERR_CODE send_ps2_command(unsigned char command,
+                            bool needs_second_byte,
+                            unsigned char second_byte,
+                            bool expect_response,
+                            unsigned char &response);
+
+  ps2_status_register read_status();
+
+  ERR_CODE send_byte(unsigned char data, bool second_channel = false);
+  ERR_CODE read_byte(unsigned char &data);
+
+protected:
+  const kl_string _name;
+  DEV_STATUS _status;
+  bool _dual_channel;
+
+  PS2_DEV_TYPE _chan_1_dev_type;
+  PS2_DEV_TYPE _chan_2_dev_type;
+
+  PS2_DEV_TYPE identify_device(bool second_channel);
+};
+
+static_assert(sizeof(gen_ps2_controller_device::ps2_status_register) == 1, "Incorrect packing of ps2_status_register");
+static_assert(sizeof(gen_ps2_controller_device::ps2_config_register) == 1, "Incorrect packing of ps2_config_register");
+
+#endif

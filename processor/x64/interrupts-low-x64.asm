@@ -161,15 +161,59 @@ asm_proc_install_idt:
     iretq
 %endmacro
 
+%macro DEF_IRQ_HANDLER 2
+    cli
+    pushf
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+    push rbp
+    push r8
+    push r9
+    push r10
+    push r11
+    push r12
+    push r13
+    push r14
+    push r15
+
+    ALIGN_STACK_AND_SAVE
+
+    mov rdi, %1
+    call %2
+
+    call end_of_irq_ack_fn_wrapper
+
+    RESTORE_ORIG_STACK
+
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rbp
+    pop rdi
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    popf
+    sti
+    iretq
+%endmacro
+
 ; A default interrupt handler.
 GLOBAL asm_proc_def_interrupt_handler
 EXTERN proc_def_interrupt_handler
 asm_proc_def_interrupt_handler:
     DEF_INT_HANDLER proc_def_interrupt_handler
-
-GLOBAL asm_proc_def_irq_handler
-asm_proc_def_irq_handler:
-  DEF_INT_HANDLER end_of_irq_ack_fn_wrapper
 
 ; Call the page fault handler.
 GLOBAL asm_proc_page_fault_handler
@@ -216,6 +260,71 @@ asm_proc_page_fault_handler:
     sti
     iretq
 
+; Define the IRQ handlers
+EXTERN proc_handle_irq
+GLOBAL asm_proc_handle_irq_0
+asm_proc_handle_irq_0:
+    DEF_IRQ_HANDLER 0, proc_handle_irq
+
+GLOBAL asm_proc_handle_irq_1
+asm_proc_handle_irq_1:
+    DEF_IRQ_HANDLER 1, proc_handle_irq
+
+GLOBAL asm_proc_handle_irq_2
+asm_proc_handle_irq_2:
+    DEF_IRQ_HANDLER 2, proc_handle_irq
+
+GLOBAL asm_proc_handle_irq_3
+asm_proc_handle_irq_3:
+    DEF_IRQ_HANDLER 3, proc_handle_irq
+
+GLOBAL asm_proc_handle_irq_4
+asm_proc_handle_irq_4:
+    DEF_IRQ_HANDLER 4, proc_handle_irq
+
+GLOBAL asm_proc_handle_irq_5
+asm_proc_handle_irq_5:
+    DEF_IRQ_HANDLER 5, proc_handle_irq
+
+GLOBAL asm_proc_handle_irq_6
+asm_proc_handle_irq_6:
+    DEF_IRQ_HANDLER 6, proc_handle_irq
+
+GLOBAL asm_proc_handle_irq_7
+asm_proc_handle_irq_7:
+    DEF_IRQ_HANDLER 7, proc_handle_irq
+
+GLOBAL asm_proc_handle_irq_8
+asm_proc_handle_irq_8:
+    DEF_IRQ_HANDLER 8, proc_handle_irq
+
+GLOBAL asm_proc_handle_irq_9
+asm_proc_handle_irq_9:
+    DEF_IRQ_HANDLER 9, proc_handle_irq
+
+GLOBAL asm_proc_handle_irq_10
+asm_proc_handle_irq_10:
+    DEF_IRQ_HANDLER 10, proc_handle_irq
+
+GLOBAL asm_proc_handle_irq_11
+asm_proc_handle_irq_11:
+    DEF_IRQ_HANDLER 11, proc_handle_irq
+
+GLOBAL asm_proc_handle_irq_12
+asm_proc_handle_irq_12:
+    DEF_IRQ_HANDLER 12, proc_handle_irq
+
+GLOBAL asm_proc_handle_irq_13
+asm_proc_handle_irq_13:
+    DEF_IRQ_HANDLER 13, proc_handle_irq
+
+GLOBAL asm_proc_handle_irq_14
+asm_proc_handle_irq_14:
+    DEF_IRQ_HANDLER 14, proc_handle_irq
+
+GLOBAL asm_proc_handle_irq_15
+asm_proc_handle_irq_15:
+    DEF_IRQ_HANDLER 15, proc_handle_irq
 
 ; Define the exception handlers:
 

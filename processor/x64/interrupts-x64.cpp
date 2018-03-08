@@ -45,11 +45,9 @@ void proc_configure_idt()
     {
       proc_configure_idt_entry(i, 0, (void *)asm_proc_def_interrupt_handler, 0);
     }
-    else
-    {
-      proc_configure_idt_entry(i, 0, (void *)asm_proc_def_irq_handler, 0);
-    }
   }
+
+  // Configure the Intel-defined exception handlers.
   proc_configure_idt_entry(0,  0, (void *)asm_proc_div_by_zero_fault_handler, 0);
   proc_configure_idt_entry(1,  0, (void *)asm_proc_debug_fault_handler, 0);
   proc_configure_idt_entry(2,  0, (void *)asm_proc_nmi_int_handler, 1);
@@ -70,6 +68,24 @@ void proc_configure_idt()
   proc_configure_idt_entry(19, 0, (void *)asm_proc_simd_fpe_fault_handler, 0);
   proc_configure_idt_entry(20, 0, (void *)asm_proc_virt_except_fault_handler, 0);
   proc_configure_idt_entry(30, 0, (void *)asm_proc_security_fault_handler, 0);
+
+  // Configure a bunch of IRQ handlers.
+  proc_configure_idt_entry(32, 0, (void *)asm_proc_handle_irq_0, 0);
+  proc_configure_idt_entry(33, 0, (void *)asm_proc_handle_irq_1, 0);
+  proc_configure_idt_entry(34, 0, (void *)asm_proc_handle_irq_2, 0);
+  proc_configure_idt_entry(35, 0, (void *)asm_proc_handle_irq_3, 0);
+  proc_configure_idt_entry(36, 0, (void *)asm_proc_handle_irq_4, 0);
+  proc_configure_idt_entry(37, 0, (void *)asm_proc_handle_irq_5, 0);
+  proc_configure_idt_entry(38, 0, (void *)asm_proc_handle_irq_6, 0);
+  proc_configure_idt_entry(39, 0, (void *)asm_proc_handle_irq_7, 0);
+  proc_configure_idt_entry(40, 0, (void *)asm_proc_handle_irq_8, 0);
+  proc_configure_idt_entry(41, 0, (void *)asm_proc_handle_irq_9, 0);
+  proc_configure_idt_entry(42, 0, (void *)asm_proc_handle_irq_10, 0);
+  proc_configure_idt_entry(43, 0, (void *)asm_proc_handle_irq_11, 0);
+  proc_configure_idt_entry(44, 0, (void *)asm_proc_handle_irq_12, 0);
+  proc_configure_idt_entry(45, 0, (void *)asm_proc_handle_irq_13, 0);
+  proc_configure_idt_entry(46, 0, (void *)asm_proc_handle_irq_14, 0);
+  proc_configure_idt_entry(47, 0, (void *)asm_proc_handle_irq_15, 0);
 
   // Load the new IDT.
   asm_proc_install_idt();

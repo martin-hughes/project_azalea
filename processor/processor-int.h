@@ -24,5 +24,6 @@ extern "C" task_x64_exec_context *task_int_swap_task(unsigned long stack_ptr, un
 void task_install_task_switcher();
 void task_platform_init();
 
+extern "C" void proc_handle_irq(unsigned char irq_number);
 
 #endif

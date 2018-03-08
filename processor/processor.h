@@ -12,6 +12,8 @@
 #include "klib/data_structures/string.h"
 #include "klib/synch/kernel_messages.h"
 
+#include "devices/device_interface.h"
+
 // Main kernel interface to processor specific functions. Includes the task management system.
 
 // Definition of a possible entry point:
@@ -175,5 +177,8 @@ void task_resume_scheduling();
 
 unsigned long proc_read_port(const unsigned long port_id, const unsigned char width);
 void proc_write_port(const unsigned long port_id, const unsigned long value, const unsigned char width);
+
+void proc_register_irq_handler(unsigned char irq_number, IIrqReceiver *receiver);
+void proc_unregister_irq_handler(unsigned char irq_number, IIrqReceiver *receiver);
 
 #endif /* PROCESSOR_H_ */

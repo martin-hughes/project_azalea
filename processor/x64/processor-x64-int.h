@@ -27,7 +27,6 @@ void proc_recreate_gdt(unsigned int num_procs);
 extern "C" void asm_proc_stop_interrupts();
 extern "C" void asm_proc_start_interrupts();
 extern "C" void asm_proc_def_interrupt_handler();
-extern "C" void asm_proc_def_irq_handler();
 extern "C" void proc_def_interrupt_handler();
 void proc_configure_idt();
 void proc_configure_idt_entry(unsigned int interrupt_num, int req_priv_lvl, void *fn_pointer, unsigned char ist_num);
@@ -48,6 +47,24 @@ extern "C" void proc_mp_ap_startup();
 extern "C" void asm_proc_page_fault_handler();
 extern "C" void proc_page_fault_handler(unsigned long fault_code, unsigned long fault_addr, unsigned long fault_instruction);
 extern "C" void asm_task_switch_interrupt();
+
+// IRQ handlers
+extern "C" void asm_proc_handle_irq_0();
+extern "C" void asm_proc_handle_irq_1();
+extern "C" void asm_proc_handle_irq_2();
+extern "C" void asm_proc_handle_irq_3();
+extern "C" void asm_proc_handle_irq_4();
+extern "C" void asm_proc_handle_irq_5();
+extern "C" void asm_proc_handle_irq_6();
+extern "C" void asm_proc_handle_irq_7();
+extern "C" void asm_proc_handle_irq_8();
+extern "C" void asm_proc_handle_irq_9();
+extern "C" void asm_proc_handle_irq_10();
+extern "C" void asm_proc_handle_irq_11();
+extern "C" void asm_proc_handle_irq_12();
+extern "C" void asm_proc_handle_irq_13();
+extern "C" void asm_proc_handle_irq_14();
+extern "C" void asm_proc_handle_irq_15();
 
 // Exception handlers:
 extern "C" void asm_proc_div_by_zero_fault_handler();  // 0
