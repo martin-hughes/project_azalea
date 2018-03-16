@@ -48,12 +48,21 @@ void proc_stop_this_proc()
   asm_proc_stop_this_proc();
 }
 
-/// @brief Stop interrupts.
+/// @brief Stop interrupts on this processor.
 ///
-///This should only be used when preparing to panic, to prevent any race conditions.
+/// This function should be called with care - make sure to call `proc_start_interrupts` ASAP afterwards.
 void proc_stop_interrupts()
 {
   asm_proc_stop_interrupts();
+}
+
+/// @brief Start interrupts on this processor.
+///
+/// Care should be exercised when using this function. Do not start interrupts when you were not responsible for them
+/// being stopped in the first place.
+void proc_start_interrupts()
+{
+  asm_proc_start_interrupts();
 }
 
 /// @brief Read from a processor I/O port.

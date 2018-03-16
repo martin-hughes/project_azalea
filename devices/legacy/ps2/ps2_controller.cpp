@@ -9,40 +9,10 @@
 #include "klib/klib.h"
 #include "ps2_controller.h"
 
-namespace
-{
-  // Controller command and response constants.
-  const unsigned char READ_CONFIG = 0x20;
-  const unsigned char WRITE_CONFIG = 0x60;
-  const unsigned char SELF_TEST = 0xAA;
-  const unsigned char SELF_TEST_SUCCESS = 0x55;
-  const unsigned char DEV_1_PORT_TEST = 0xAB;
-  const unsigned char DEV_2_PORT_TEST = 0xA9;
-
-  const unsigned char PORT_TEST_SUCCESS = 0x00;
-
-  const unsigned char DISABLE_DEV_1 = 0xAD;
-  const unsigned char ENABLE_DEV_1 = 0xAE;
-
-  const unsigned char DISABLE_DEV_2 = 0xA7;
-  const unsigned char ENABLE_DEV_2 = 0xA8;
-
-  const unsigned char DEV_2_NEXT = 0xD4;
-
-  // General device command and response constants.
-  const unsigned char DEV_RESET = 0xFF;
-  const unsigned char DEV_IDENTIFY = 0xF2;
-  const unsigned char DEV_ENABLE_SCANNING = 0xF4;
-  const unsigned char DEV_DISABLE_SCANNING = 0xF5;
-  const unsigned char DEV_CMD_ACK = 0xFA;
-  const unsigned char DEV_CMD_RESEND = 0xFE;
-  const unsigned char DEV_CMD_FAILED = 0xFC;
-
-  const unsigned char DEV_SELF_TEST_OK = 0xAA;
-}
-
 gen_ps2_controller_device::gen_ps2_controller_device() :
-  _name("Generic PS/2 controller")
+  _name("Generic PS/2 controller"),
+  chan_1_dev(nullptr),
+  chan_2_dev(nullptr)
 {
   KL_TRC_ENTRY;
 
@@ -71,8 +41,8 @@ gen_ps2_controller_device::gen_ps2_controller_device() :
   unsigned char response;
 
   // 1 - Disable both connected devices.
-  send_ps2_command(DISABLE_DEV_1, false, 0, false, response);
-  send_ps2_command(DISABLE_DEV_2, false, 0, false, response);
+  send_ps2_command(PS2_CONST::DISABLE_DEV_1, false, 0, false, response);
+  send_ps2_command(PS2_CONST::DISABLE_DEV_2, false, 0, false, response);
 
   // 2 - Flush the controller output buffer. Do this by reading the data port until the buffer is reported empty.
   while (this->read_status().flags.output_buffer_status != 0)
@@ -82,15 +52,15 @@ gen_ps2_controller_device::gen_ps2_controller_device() :
 
   // 3 - Set the controller configuration
   ps2_config_register config;
-  send_ps2_command(READ_CONFIG, false, 0, true, config.raw);
+  send_ps2_command(PS2_CONST::READ_CONFIG, false, 0, true, config.raw);
   config.flags.first_port_interrupt_enabled = 0;
   config.flags.second_port_interrupt_enabled = 0;
   config.flags.first_port_translation = 0;
-  send_ps2_command(WRITE_CONFIG, true, config.raw, false, response);
+  send_ps2_command(PS2_CONST::WRITE_CONFIG, true, config.raw, false, response);
 
   // 4 - Self-test the controller. If it fails, don't continue.
-  send_ps2_command(SELF_TEST, false, 0, true, response);
-  if (response != SELF_TEST_SUCCESS)
+  send_ps2_command(PS2_CONST::SELF_TEST, false, 0, true, response);
+  if (response != PS2_CONST::SELF_TEST_SUCCESS)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "PS/2 self-test failed\n");
     _status = DEV_STATUS::FAILED;
@@ -106,65 +76,65 @@ gen_ps2_controller_device::gen_ps2_controller_device() :
     else
     {
       // No point doing these tests if we already know the controller is single-channel.
-      send_ps2_command(ENABLE_DEV_2, false, 0, false, response);
-      send_ps2_command(READ_CONFIG, false, 0, true, config.raw);
+      send_ps2_command(PS2_CONST::ENABLE_DEV_2, false, 0, false, response);
+      send_ps2_command(PS2_CONST::READ_CONFIG, false, 0, true, config.raw);
       if (config.flags.second_port_clock_disable == 1)
       {
         _dual_channel = false;
       }
-      send_ps2_command(DISABLE_DEV_2, false, 0, false, response);
+      send_ps2_command(PS2_CONST::DISABLE_DEV_2, false, 0, false, response);
     }
 
     // 6 - Perform interface tests
-    send_ps2_command(DEV_1_PORT_TEST, false, 0, true, response);
-    if (response == PORT_TEST_SUCCESS)
+    send_ps2_command(PS2_CONST::DEV_1_PORT_TEST, false, 0, true, response);
+    if (response == PS2_CONST::PORT_TEST_SUCCESS)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Test of channel 1 successful\n");
 
-      send_ps2_command(DEV_2_PORT_TEST, false, 0, true, response);
-      if (response != PORT_TEST_SUCCESS)
+      send_ps2_command(PS2_CONST::DEV_2_PORT_TEST, false, 0, true, response);
+      if (response != PS2_CONST::PORT_TEST_SUCCESS)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Test of channel 2 failed, revert to single channel\n");
         _dual_channel = false;
       }
 
       // 7 & 8 - Enable and reset the devices - device 1.
-      send_ps2_command(ENABLE_DEV_1, false, 0, false, response);
-      send_byte(DEV_RESET, false);
+      send_ps2_command(PS2_CONST::ENABLE_DEV_1, false, 0, false, response);
+      send_byte(PS2_CONST::DEV_RESET, false);
       read_byte(response);
 
-      if (response == DEV_SELF_TEST_OK)
+      if (response == PS2_CONST::DEV_SELF_TEST_OK)
       {
         read_byte(response);
       }
-      if (response != DEV_CMD_ACK)
+      if (response != PS2_CONST::DEV_CMD_ACK)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Device one failed to reset\n");
         _status = DEV_STATUS::FAILED;
       }
 
-      send_byte(DEV_DISABLE_SCANNING, false);
+      send_byte(PS2_CONST::DEV_DISABLE_SCANNING, false);
       read_byte(response);
 
       // 7 & 8 - device 2.
       if (_dual_channel)
       {
-        send_ps2_command(ENABLE_DEV_2, false, 0, false, response);
+        send_ps2_command(PS2_CONST::ENABLE_DEV_2, false, 0, false, response);
 
-        send_byte(DEV_RESET, true);
+        send_byte(PS2_CONST::DEV_RESET, true);
         read_byte(response);
 
-        if (response == DEV_SELF_TEST_OK)
+        if (response == PS2_CONST::DEV_SELF_TEST_OK)
         {
           read_byte(response);
         }
-        if (response != DEV_CMD_ACK)
+        if (response != PS2_CONST::DEV_CMD_ACK)
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "Device one failed to reset\n");
           _status = DEV_STATUS::FAILED;
         }
 
-        send_byte(DEV_DISABLE_SCANNING, true);
+        send_byte(PS2_CONST::DEV_DISABLE_SCANNING, true);
         read_byte(response);
       }
 
@@ -173,6 +143,13 @@ gen_ps2_controller_device::gen_ps2_controller_device() :
       if (_dual_channel)
       {
         _chan_2_dev_type = this->identify_device(true);
+      }
+
+      // Construct and enable child devices.
+      chan_1_dev = this->instantiate_device(false, _chan_1_dev_type);
+      if (_dual_channel)
+      {
+        chan_2_dev = this->instantiate_device(true, _chan_2_dev_type);
       }
     }
     else
@@ -303,7 +280,7 @@ ERR_CODE gen_ps2_controller_device::send_byte(unsigned char data, bool second_ch
     }
     else
     {
-      proc_write_port(PS2_COMMAND_PORT, DEV_2_NEXT, 8);
+      proc_write_port(PS2_COMMAND_PORT, PS2_CONST::DEV_2_NEXT, 8);
     }
   }
 
@@ -353,10 +330,10 @@ PS2_DEV_TYPE gen_ps2_controller_device::identify_device(bool second_channel)
   PS2_DEV_TYPE dev_type = PS2_DEV_TYPE::NONE_CONNECTED;
   unsigned char response;
 
-  send_byte(DEV_IDENTIFY, second_channel);
+  send_byte(PS2_CONST::DEV_IDENTIFY, second_channel);
   read_byte(response);
 
-  if (response == DEV_CMD_ACK)
+  if (response == PS2_CONST::DEV_CMD_ACK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Identify command successful\n");
     read_byte(response);
@@ -405,4 +382,53 @@ PS2_DEV_TYPE gen_ps2_controller_device::identify_device(bool second_channel)
 
   KL_TRC_EXIT;
   return dev_type;
+}
+
+gen_ps2_device *gen_ps2_controller_device::instantiate_device(bool second_channel, PS2_DEV_TYPE dev_type)
+{
+  KL_TRC_ENTRY;
+
+  gen_ps2_device *res;
+
+  switch(dev_type)
+  {
+    case PS2_DEV_TYPE::KEYBOARD_MF2:
+      res = new ps2_keyboard_device(this, second_channel);
+      break;
+
+    case PS2_DEV_TYPE::MOUSE_5_BUTTON:
+    case PS2_DEV_TYPE::MOUSE_STANDARD:
+    case PS2_DEV_TYPE::MOUSE_WITH_WHEEL:
+      res = new ps2_mouse_device(this, second_channel);
+      break;
+
+    default:
+      res = new gen_ps2_device(this, second_channel);
+  }
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Returning: ", res, "\n");
+  KL_TRC_EXIT;
+
+  return res;
+}
+
+gen_ps2_controller_device::ps2_config_register gen_ps2_controller_device::read_config()
+{
+  KL_TRC_ENTRY;
+
+  ps2_config_register config;
+  send_ps2_command(PS2_CONST::READ_CONFIG, false, 0, true, config.raw);
+
+  KL_TRC_EXIT;
+
+  return config;
+}
+
+void gen_ps2_controller_device::write_config(gen_ps2_controller_device::ps2_config_register reg)
+{
+  KL_TRC_ENTRY;
+  unsigned char response;
+
+  send_ps2_command(PS2_CONST::WRITE_CONFIG, true, reg.raw, false, response);
+  KL_TRC_EXIT;
 }

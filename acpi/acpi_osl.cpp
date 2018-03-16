@@ -23,7 +23,8 @@ public:
   AcpiIrqHandler(ACPI_OSD_HANDLER irq_handler, void *irq_context);
   virtual ~AcpiIrqHandler() { };
 
-  virtual bool handle_irq(unsigned char irq_number);
+  virtual bool handle_irq_fast(unsigned char irq_number);
+  virtual void handle_irq_slow(unsigned char irq_number) { };
 
 private:
   ACPI_OSD_HANDLER _irq_handler;
@@ -769,11 +770,11 @@ AcpiIrqHandler::AcpiIrqHandler(ACPI_OSD_HANDLER irq_handler, void *irq_context) 
 {
 }
 
-bool AcpiIrqHandler::handle_irq(unsigned char irq_number)
+bool AcpiIrqHandler::handle_irq_fast(unsigned char irq_number)
 {
   // If ACPI IRQs start to give grief then note that this function returns a UINT and maybe it had some purpose after
   // all...
   _irq_handler(_irq_context);
 
-  return true;
+  return false;
 }

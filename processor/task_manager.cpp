@@ -65,6 +65,7 @@ void task_gen_init(ENTRY_PROC kern_start_proc)
   task_process *first_process;
   unsigned int number_of_procs = proc_mp_proc_count();
   task_thread *new_idle_thread;
+  task_thread *irq_slowpath_thread;
 
   klib_synch_spinlock_init(thread_cycle_lock);
 
@@ -81,6 +82,11 @@ void task_gen_init(ENTRY_PROC kern_start_proc)
   KL_TRC_DATA("First process at", (unsigned long)first_process);
   ASSERT(first_process != nullptr);
   task_start_process(first_process);
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Creating the IRQ handling thread\n");
+  irq_slowpath_thread = task_create_new_thread(proc_irq_slowpath_thread, first_process);
+  ASSERT(irq_slowpath_thread != nullptr);
+  task_start_thread(irq_slowpath_thread);
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Creating per-process info\n");
   KL_TRC_DATA("Number of processors", number_of_procs);

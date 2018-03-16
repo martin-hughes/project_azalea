@@ -15,10 +15,10 @@ class TestIrqHandler : public IIrqReceiver
 {
 public:
   TestIrqHandler();
-  virtual bool handle_irq(unsigned char irq_number);
+  virtual bool handle_irq_fast(unsigned char irq_number);
+  virtual void handle_irq_slow();
 
   bool irq_fired;
-  bool allow_continue;
 };
 
 TEST(ProcessorTests, IrqHandling)
@@ -55,22 +55,21 @@ TEST(ProcessorTests, IrqHandling)
   a.irq_fired = false;
   b.irq_fired = false;
 
-  // Now check that the termination works properly
-  b.allow_continue = false;
-  proc_handle_irq(1);
-  ASSERT_TRUE(b.irq_fired);
-  b.irq_fired = false;
-  ASSERT_FALSE(a.irq_fired);
-
   // Finally, tidy up.
   proc_unregister_irq_handler(1, &a);
   proc_unregister_irq_handler(1, &b);
 }
 
-TestIrqHandler::TestIrqHandler() : irq_fired(false), allow_continue(true) {}
+TestIrqHandler::TestIrqHandler() : irq_fired(false) {}
 
-bool TestIrqHandler::handle_irq(unsigned char irq_number)
+bool TestIrqHandler::handle_irq_fast(unsigned char irq_number)
 {
   this->irq_fired = true;
-  return this->allow_continue;
+  return false;
+}
+
+// There's no test that the slow path IRQ handler gets fired, sadly.
+void TestIrqHandler::handle_irq_slow()
+{
+
 }

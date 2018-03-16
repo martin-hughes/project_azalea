@@ -1,5 +1,7 @@
 # Generic PS/2 controller device driver.
 
 Import('env')
-obj = env.Library("dev-ps2", [ "ps2_controller.cpp" ])
-Return ("obj") 
+obj = env.Library("dev-ps2", [ "ps2_controller.cpp",
+                               "ps2_device.cpp",
+                             ])
+Return ("obj")

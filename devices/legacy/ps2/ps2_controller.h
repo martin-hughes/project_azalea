@@ -4,6 +4,7 @@
 #include "devices/device_interface.h"
 #include "klib/misc/error_codes.h"
 #include "klib/data_structures/string.h"
+#include "devices/legacy/ps2/ps2_device.h"
 
 const unsigned long PS2_DATA_PORT = 0x60;
 const unsigned long PS2_COMMAND_PORT = 0x64;
@@ -19,6 +20,39 @@ enum class PS2_DEV_TYPE
 
   KEYBOARD_MF2,
 };
+
+// Constants useful to any PS/2 device.
+namespace PS2_CONST
+{
+  // Controller command and response constants.
+  const unsigned char READ_CONFIG = 0x20;
+  const unsigned char WRITE_CONFIG = 0x60;
+  const unsigned char SELF_TEST = 0xAA;
+  const unsigned char SELF_TEST_SUCCESS = 0x55;
+  const unsigned char DEV_1_PORT_TEST = 0xAB;
+  const unsigned char DEV_2_PORT_TEST = 0xA9;
+
+  const unsigned char PORT_TEST_SUCCESS = 0x00;
+
+  const unsigned char DISABLE_DEV_1 = 0xAD;
+  const unsigned char ENABLE_DEV_1 = 0xAE;
+
+  const unsigned char DISABLE_DEV_2 = 0xA7;
+  const unsigned char ENABLE_DEV_2 = 0xA8;
+
+  const unsigned char DEV_2_NEXT = 0xD4;
+
+  // General device command and response constants.
+  const unsigned char DEV_RESET = 0xFF;
+  const unsigned char DEV_IDENTIFY = 0xF2;
+  const unsigned char DEV_ENABLE_SCANNING = 0xF4;
+  const unsigned char DEV_DISABLE_SCANNING = 0xF5;
+  const unsigned char DEV_CMD_ACK = 0xFA;
+  const unsigned char DEV_CMD_RESEND = 0xFE;
+  const unsigned char DEV_CMD_FAILED = 0xFC;
+
+  const unsigned char DEV_SELF_TEST_OK = 0xAA;
+}
 
 class gen_ps2_controller_device: public IDevice
 {
@@ -72,8 +106,15 @@ public:
 
   ps2_status_register read_status();
 
+  ps2_config_register read_config();
+  void write_config(ps2_config_register reg);
+
   ERR_CODE send_byte(unsigned char data, bool second_channel = false);
   ERR_CODE read_byte(unsigned char &data);
+
+  gen_ps2_device *chan_1_dev;
+  gen_ps2_device *chan_2_dev;
+
 
 protected:
   const kl_string _name;
@@ -84,6 +125,7 @@ protected:
   PS2_DEV_TYPE _chan_2_dev_type;
 
   PS2_DEV_TYPE identify_device(bool second_channel);
+  gen_ps2_device *instantiate_device(bool second_channel, PS2_DEV_TYPE dev_type);
 };
 
 static_assert(sizeof(gen_ps2_controller_device::ps2_status_register) == 1, "Incorrect packing of ps2_status_register");

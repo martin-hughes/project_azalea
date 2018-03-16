@@ -27,7 +27,6 @@ files = [ "devices/block/proxy/proxy_tests.cpp",
           "object_mgr/object_mgr_1.cpp",
           "object_mgr/object_mgr_2.cpp",
 
-          "processor/scheduler/scheduler_tests.cpp",
           "processor/scheduler/scheduler_1.cpp",
           "processor/scheduler/fake_platform_part.cpp",
           "processor/irq_handler.cpp",

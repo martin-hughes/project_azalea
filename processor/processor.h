@@ -131,9 +131,10 @@ void proc_stop_other_procs();
 // Stop all processors, including this one. The system will completely stop.
 void proc_stop_all_procs();
 
-// Stop interrupts on this processor. This should only be used in preparation
-// for a panic.
+// Stop / start interrupts on this processor. It's not advisable for most code to call these functions, due to the
+// performance impact.
 void proc_stop_interrupts();
+void proc_start_interrupts();
 
 // Initialise the task management system and start it.
 void task_gen_init(ENTRY_PROC kern_start_proc);

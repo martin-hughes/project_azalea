@@ -25,5 +25,6 @@ void task_install_task_switcher();
 void task_platform_init();
 
 extern "C" void proc_handle_irq(unsigned char irq_number);
+void proc_irq_slowpath_thread();
 
 #endif
