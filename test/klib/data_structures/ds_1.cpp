@@ -7,7 +7,7 @@ using namespace std;
 
 // Use these in the tests, it's simpler than allocating and destroying them.
 const unsigned int num_demo_items = 5;
-klib_list_item demo_items[num_demo_items];
+klib_list_item<unsigned int *> demo_items[num_demo_items];
 
 // Create a new list, add and delete items, check the list is still valid.
 void data_structures_test_1()
@@ -22,7 +22,7 @@ void data_structures_test_1()
   }
 
   // Test the empty list.
-  klib_list list_root;
+  klib_list<unsigned int *> list_root;
   klib_list_initialize(&list_root);
   ASSERT(klib_list_is_valid(&list_root));
   ASSERT(klib_list_is_empty(&list_root));

@@ -20,7 +20,7 @@ struct page_table_entry
 
 struct process_x64_data
 {
-  klib_list_item pml4_list_item;
+  klib_list_item<process_x64_data *> pml4_list_item;
 
   unsigned long pml4_phys_addr;
   unsigned long pml4_virt_addr;

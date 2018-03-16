@@ -16,7 +16,7 @@
 #include "processor/processor.h"
 
 static bool pml4_system_initialized = false;
-static klib_list pml4_table_list;
+static klib_list<process_x64_data *> pml4_table_list;
 static char pml4_copy_buffer[PML4_LENGTH / 2];
 static unsigned long known_pml4s;
 static kernel_spinlock pml4_copylock;
@@ -36,7 +36,7 @@ void mem_x64_pml4_init_sys(process_x64_data &task0_data)
   ASSERT(!pml4_system_initialized);
   klib_list_initialize(&pml4_table_list);
   klib_list_item_initialize(&task0_data.pml4_list_item);
-  task0_data.pml4_list_item.item = (void *)&task0_data;
+  task0_data.pml4_list_item.item = &task0_data;
   klib_list_add_head(&pml4_table_list, &task0_data.pml4_list_item);
   known_pml4s = 1;
   klib_synch_spinlock_init(pml4_copylock);
@@ -63,7 +63,7 @@ void mem_x64_pml4_allocate(process_x64_data &new_proc_data)
   klib_synch_spinlock_lock(pml4_copylock);
 
   klib_list_item_initialize(&new_proc_data.pml4_list_item);
-  new_proc_data.pml4_list_item.item = (void *)&new_proc_data;
+  new_proc_data.pml4_list_item.item = &new_proc_data;
   klib_list_add_tail(&pml4_table_list, &new_proc_data.pml4_list_item);
 
   // Simply allocate a 4096 byte table. KLIB will make sure this is in the kernel's address space automatically.
@@ -120,7 +120,7 @@ void mem_x64_pml4_synchronize(void *updated_pml4_table)
   KL_TRC_ENTRY;
 
   unsigned char *updated_kernel_section;
-  klib_list_item *list_item;
+  klib_list_item<process_x64_data *> *list_item;
   process_x64_data *proc_data;
   unsigned char *pml4_destination;
   unsigned long updated_pml4s = 0;

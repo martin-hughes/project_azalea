@@ -29,7 +29,6 @@
 
 /// Whether or not the Virtual Memory Manager is initialised.
 static bool vmm_initialized = false;
-static klib_list vmm_range_data_list;
 
 struct vmm_range_data
 {
@@ -37,12 +36,13 @@ struct vmm_range_data
   unsigned long number_of_pages;
   bool allocated;
 };
+static klib_list<vmm_range_data *> vmm_range_data_list;
 
 // Use these arrays for the initial startup of the memory manager. If there isn't a predefined space we get in to a
 // chicken-and-egg state - how does the memory manager allocate memory for itself?
 
 const unsigned int NUM_INITIAL_RANGES = 64;
-klib_list_item initial_range_list[NUM_INITIAL_RANGES];
+klib_list_item<vmm_range_data *> initial_range_list[NUM_INITIAL_RANGES];
 vmm_range_data initial_range_data[NUM_INITIAL_RANGES];
 unsigned int initial_ranges_used;
 unsigned int initial_list_items_used;
@@ -55,16 +55,16 @@ static task_thread *vmm_user_thread_id;
 
 // Support function declarations
 void mem_vmm_initialize();
-klib_list_item *mem_vmm_split_range(klib_list_item *item_to_split,
-                                    unsigned int number_of_pages_reqd);
-klib_list_item *mem_vmm_get_suitable_range(unsigned int num_pages);
-void mem_vmm_resolve_merges(klib_list_item *start_point);
+klib_list_item<vmm_range_data *> *mem_vmm_split_range(klib_list_item<vmm_range_data *> *item_to_split,
+                                                      unsigned int number_of_pages_reqd);
+klib_list_item<vmm_range_data *> *mem_vmm_get_suitable_range(unsigned int num_pages);
+void mem_vmm_resolve_merges(klib_list_item<vmm_range_data *> *start_point);
 void mem_vmm_allocate_specific_range(unsigned long start_addr,
                                      unsigned int num_pages);
 
-klib_list_item *mem_vmm_allocate_list_item();
+klib_list_item<vmm_range_data *> *mem_vmm_allocate_list_item();
 vmm_range_data *mem_vmm_allocate_range_item();
-void mem_vmm_free_list_item (klib_list_item *item);
+void mem_vmm_free_list_item (klib_list_item<vmm_range_data *> *item);
 void mem_vmm_free_range_item(vmm_range_data *item);
 bool mem_vmm_lock();
 void mem_vmm_unlock();
@@ -94,7 +94,7 @@ void *mem_allocate_virtual_range(unsigned int num_pages)
 {
   KL_TRC_ENTRY;
 
-  klib_list_item *selected_list_item;
+  klib_list_item<vmm_range_data *> *selected_list_item;
   vmm_range_data *selected_range_data;
   bool acquired_lock;
 
@@ -159,7 +159,7 @@ void mem_deallocate_virtual_range(void *start, unsigned int num_pages)
 {
   KL_TRC_ENTRY;
 
-  klib_list_item *cur_list_item;
+  klib_list_item<vmm_range_data *> *cur_list_item;
   vmm_range_data *cur_range_data;
   unsigned int actual_num_pages;
   bool acquired_lock;
@@ -216,7 +216,7 @@ void mem_vmm_initialize()
 {
   KL_TRC_ENTRY;
 
-  klib_list_item *root_item;
+  klib_list_item<vmm_range_data *> *root_item;
   vmm_range_data *root_data;
   unsigned long free_pages;
   unsigned long used_pages;
@@ -286,12 +286,12 @@ void mem_vmm_initialize()
 /// @brief Return the smallest range still available that is still larger than or equal to num_pages.
 ///
 /// @param num_pages The minimum number of pages required in the range.
-klib_list_item *mem_vmm_get_suitable_range(unsigned int num_pages)
+klib_list_item<vmm_range_data *> *mem_vmm_get_suitable_range(unsigned int num_pages)
 {
   KL_TRC_ENTRY;
 
-  klib_list_item *cur_range_item;
-  klib_list_item *selected_range_item = nullptr;
+  klib_list_item<vmm_range_data *> *cur_range_item;
+  klib_list_item<vmm_range_data *> *selected_range_item = nullptr;
   vmm_range_data *cur_range;
   vmm_range_data *selected_range = nullptr;
 
@@ -340,12 +340,12 @@ klib_list_item *mem_vmm_get_suitable_range(unsigned int num_pages)
 ///
 /// @return A range item of the correct size (or larger) The caller need not clean this up, it lives in the list of
 ///         ranges.
-klib_list_item *mem_vmm_split_range(klib_list_item *item_to_split,
-                                    unsigned int number_of_pages_reqd)
+klib_list_item<vmm_range_data *> *mem_vmm_split_range(klib_list_item<vmm_range_data *> *item_to_split,
+                                                      unsigned int number_of_pages_reqd)
 {
   KL_TRC_ENTRY;
 
-  klib_list_item *second_half_of_split;
+  klib_list_item<vmm_range_data *> *second_half_of_split;
   vmm_range_data *old_range_data;
   vmm_range_data *new_range_data;
 
@@ -356,7 +356,7 @@ klib_list_item *mem_vmm_split_range(klib_list_item *item_to_split,
 
   // Add the new range to the list of ranges after the old one. We'll always
   // pass back the first half of the pair.
-  second_half_of_split->item = (void *)new_range_data;
+  second_half_of_split->item = new_range_data;
   klib_list_add_after(item_to_split, second_half_of_split);
 
   old_range_data = (vmm_range_data *)item_to_split->item;
@@ -386,19 +386,19 @@ klib_list_item *mem_vmm_split_range(klib_list_item *item_to_split,
 /// more merges can occur.
 ///
 /// @param start_point A newly freed range.
-void mem_vmm_resolve_merges(klib_list_item *start_point)
+void mem_vmm_resolve_merges(klib_list_item<vmm_range_data *> *start_point)
 {
   KL_TRC_ENTRY;
 
   vmm_range_data *this_data;
-  klib_list_item *partner_item;
+  klib_list_item<vmm_range_data *> *partner_item;
   vmm_range_data *partner_data;
   bool first_half_of_pair;
   unsigned long next_block_size;
 
-  klib_list_item *survivor_item;
+  klib_list_item<vmm_range_data *> *survivor_item;
   vmm_range_data *survivor_data;
-  klib_list_item *released_item;
+  klib_list_item<vmm_range_data *> *released_item;
   vmm_range_data *released_data;
 
   ASSERT (start_point != nullptr);
@@ -472,7 +472,7 @@ void mem_vmm_allocate_specific_range(unsigned long start_addr,
 {
   KL_TRC_ENTRY;
 
-  klib_list_item *cur_item;
+  klib_list_item<vmm_range_data *> *cur_item;
   vmm_range_data *cur_data;
   unsigned long end_addr;
   unsigned int rounded_num_pages = round_to_power_two(num_pages);
@@ -545,11 +545,11 @@ void mem_vmm_allocate_specific_range(unsigned long start_addr,
 /// Note the similarity with #mem_vmm_allocate_range_item.
 ///
 /// @return An allocated list item. This muse be passed to #mem_vmm_free_list_item to destroy it.
-klib_list_item *mem_vmm_allocate_list_item()
+klib_list_item<vmm_range_data *> *mem_vmm_allocate_list_item()
 {
   KL_TRC_ENTRY;
 
-  klib_list_item *ret_item;
+  klib_list_item<vmm_range_data *> *ret_item;
 
   // Use one of the preallocated "initial_range_list" items if any are left.
   // There should be enough to last until VMM is fully initialised, at which
@@ -557,7 +557,7 @@ klib_list_item *mem_vmm_allocate_list_item()
   if (initial_list_items_used >= NUM_INITIAL_RANGES)
   {
     ASSERT(vmm_initialized);
-    ret_item = (klib_list_item *)kmalloc(sizeof(klib_list_item));
+    ret_item = reinterpret_cast<klib_list_item<vmm_range_data *> *>(kmalloc(sizeof(klib_list_item<vmm_range_data *>)));
   }
   else
   {
@@ -611,7 +611,7 @@ vmm_range_data *mem_vmm_allocate_range_item()
 /// Note the similarity with #mem_vmm_free_range_item.
 ///
 /// @param item The item to free
-void mem_vmm_free_list_item (klib_list_item *item)
+void mem_vmm_free_list_item (klib_list_item<vmm_range_data *> *item)
 {
   KL_TRC_ENTRY;
 

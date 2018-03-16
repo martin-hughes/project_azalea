@@ -7,7 +7,6 @@
 #include "acpi/acpi_if.h"
 
 static unsigned long ioapic_count = 0;
-static klib_list ioapic_list;
 
 const unsigned char SUBTABLE_IOAPIC_TYPE = 1;
 
@@ -22,6 +21,8 @@ struct ioapic_data
   unsigned int apic_addr;
   unsigned int gs_interrupt_base;
 };
+
+static klib_list<ioapic_data *> ioapic_list;
 
 void proc_x64_ioapic_add_ioapic(acpi_madt_io_apic *table);
 
@@ -75,11 +76,11 @@ void proc_x64_ioapic_add_ioapic(acpi_madt_io_apic *table)
   unsigned long ioapic_offset;
   unsigned long virtual_addr;
 
-  klib_list_item *new_item = new klib_list_item;
+  klib_list_item<ioapic_data *> *new_item = new klib_list_item<ioapic_data *>;
   ioapic_data *data = new ioapic_data;
 
   klib_list_item_initialize(new_item);
-  new_item->item = (void *)data;
+  new_item->item = data;
 
   data->apic_id = table->Id;
   data->apic_addr = table->Address;
@@ -118,14 +119,14 @@ void proc_x64_ioapic_remap_interrupts(unsigned int ioapic_num, unsigned char bas
 
   ASSERT(ioapic_num == 0);
 
-  klib_list_item *first_item;
+  klib_list_item<ioapic_data *> *first_item;
   ioapic_data *ioapic;
 
   first_item = ioapic_list.head;
   ASSERT(first_item != nullptr);
   ASSERT(first_item->item != nullptr);
 
-  ioapic = (ioapic_data *)first_item->item;
+  ioapic = first_item->item;
 
   // Remap all the IRQs supported by this IOAPIC. Except for IRQ2 - make that into IRQ0. This is a bit of an ugly hack,
   // but it comes about because the HPET signals IRQ0 on a legacy PIC, but input 2 on a IOAPIC. This hack then stops

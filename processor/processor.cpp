@@ -30,23 +30,23 @@ namespace
   };
 
   const unsigned char MAX_IRQ = 16;
-  klib_list irq_handlers[MAX_IRQ] = { { nullptr, nullptr },
-                                      { nullptr, nullptr },
-                                      { nullptr, nullptr },
-                                      { nullptr, nullptr },
-                                      { nullptr, nullptr },
-                                      { nullptr, nullptr },
-                                      { nullptr, nullptr },
-                                      { nullptr, nullptr },
-                                      { nullptr, nullptr },
-                                      { nullptr, nullptr },
-                                      { nullptr, nullptr },
-                                      { nullptr, nullptr },
-                                      { nullptr, nullptr },
-                                      { nullptr, nullptr },
-                                      { nullptr, nullptr },
-                                      { nullptr, nullptr }
-                                      };
+  klib_list<proc_irq_handler *> irq_handlers[MAX_IRQ] = { { nullptr, nullptr },
+                                                          { nullptr, nullptr },
+                                                          { nullptr, nullptr },
+                                                          { nullptr, nullptr },
+                                                          { nullptr, nullptr },
+                                                          { nullptr, nullptr },
+                                                          { nullptr, nullptr },
+                                                          { nullptr, nullptr },
+                                                          { nullptr, nullptr },
+                                                          { nullptr, nullptr },
+                                                          { nullptr, nullptr },
+                                                          { nullptr, nullptr },
+                                                          { nullptr, nullptr },
+                                                          { nullptr, nullptr },
+                                                          { nullptr, nullptr },
+                                                          { nullptr, nullptr }
+                                                          };
 }
 
 /// @brief Register an IRQ handler
@@ -65,14 +65,14 @@ void proc_register_irq_handler(unsigned char irq_number, IIrqReceiver *receiver)
   ASSERT(receiver != nullptr);
   ASSERT(irq_number < MAX_IRQ);
 
-  klib_list_item *new_item = new klib_list_item;
+  klib_list_item<proc_irq_handler *> *new_item = new klib_list_item<proc_irq_handler *>;
   klib_list_item_initialize(new_item);
 
   proc_irq_handler *new_handler = new proc_irq_handler;
   new_handler->receiver = receiver;
   new_handler->slow_path_reqd = false;
 
-  new_item->item = reinterpret_cast<void *>(new_handler);
+  new_item->item = new_handler;
 
   klib_list_add_tail(&irq_handlers[irq_number], new_item);
 
@@ -95,14 +95,14 @@ void proc_unregister_irq_handler(unsigned char irq_number, IIrqReceiver *receive
   ASSERT(!klib_list_is_empty(&irq_handlers[irq_number]));
 
   bool found_receiver = false;
-  klib_list_item *cur_item;
+  klib_list_item<proc_irq_handler *> *cur_item;
   proc_irq_handler *item;
 
   cur_item = irq_handlers[irq_number].head;
 
   while(cur_item != nullptr)
   {
-    item = reinterpret_cast<proc_irq_handler *>(cur_item->item);
+    item = cur_item->item;
     ASSERT(item != nullptr);
     if (item->receiver == receiver)
     {
@@ -136,13 +136,13 @@ void proc_handle_irq(unsigned char irq_number)
 
   ASSERT(irq_number < MAX_IRQ);
 
-  klib_list_item *cur_item = irq_handlers[irq_number].head;
+  klib_list_item<proc_irq_handler *> *cur_item = irq_handlers[irq_number].head;
   proc_irq_handler *handler;
 
   while (cur_item != nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Receiver: ", cur_item->item, "\n");
-    handler = reinterpret_cast<proc_irq_handler *>(cur_item->item);
+    handler = cur_item->item;
     ASSERT(handler != nullptr);
 
     if (handler->receiver->handle_irq_fast(irq_number))
@@ -163,7 +163,7 @@ void proc_handle_irq(unsigned char irq_number)
 /// If a slow IRQ handler is outstanding, it is called.
 void proc_irq_slowpath_thread()
 {
-  klib_list_item *cur_item;
+  klib_list_item<proc_irq_handler *> *cur_item;
   proc_irq_handler *item;
 
   while(1)
@@ -174,7 +174,7 @@ void proc_irq_slowpath_thread()
 
       while(cur_item != nullptr)
       {
-        item = reinterpret_cast<proc_irq_handler *>(cur_item->item);
+        item = cur_item->item;
         ASSERT(item != nullptr);
         if (item->slow_path_reqd == true)
         {

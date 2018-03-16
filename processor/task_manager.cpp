@@ -20,7 +20,7 @@
 #include "object_mgr/object_mgr.h"
 
 // This is a list of all processes known to the system.
-klib_list process_list;
+klib_list<task_process *> process_list;
 
 // The threads each processor is currently running. After initialisation, this points to an array of size equal to the
 // number of processors.
@@ -134,7 +134,7 @@ task_process *task_create_new_process(ENTRY_PROC entry_point,
   KL_TRC_DATA("New process CB at", (unsigned long)new_process);
   klib_list_item_initialize(&new_process->process_list_item);
   klib_list_initialize(&new_process->child_threads);
-  new_process->process_list_item.item = (void *)new_process;
+  new_process->process_list_item.item = new_process;
   new_process->kernel_mode = kernel_mode;
   if (mem_info != nullptr)
   {
@@ -186,7 +186,7 @@ task_thread *task_create_new_thread(ENTRY_PROC entry_point, task_process *parent
   klib_list_item_initialize(&new_thread->process_list_item);
   klib_list_item_initialize(&new_thread->synch_list_item);
   new_thread->synch_list_item.item = new_thread;
-  new_thread->process_list_item.item = (void *)new_thread;
+  new_thread->process_list_item.item = new_thread;
   klib_list_add_tail(&parent_process->child_threads, &new_thread->process_list_item);
   new_thread->execution_context = task_int_create_exec_context(entry_point, new_thread);
   new_thread->permit_running = false;
@@ -357,7 +357,7 @@ void task_start_process(task_process *process)
   KL_TRC_ENTRY;
 
   task_thread *next_thread = nullptr;
-  klib_list_item *next_item = nullptr;
+  klib_list_item<task_thread *> *next_item = nullptr;
 
   KL_TRC_DATA("Process address", (unsigned long)process);
 
@@ -385,7 +385,7 @@ void task_stop_process(task_process *process)
   KL_TRC_ENTRY;
 
   task_thread *next_thread = nullptr;
-  klib_list_item *next_item = nullptr;
+  klib_list_item<task_thread *> *next_item = nullptr;
 
   KL_TRC_DATA("Process address", (unsigned long)process);
 

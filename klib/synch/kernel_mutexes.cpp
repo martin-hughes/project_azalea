@@ -115,7 +115,7 @@ void klib_synch_mutex_release(klib_mutex &mutex, const bool disregard_owner)
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Releasing mutex ", &mutex, " from thread ", task_get_cur_thread(), "\n");
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Owner thread: ", mutex.owner_thread, "\n");
 
-  klib_list_item *next_owner;
+  klib_list_item<task_thread *> *next_owner;
 
   ASSERT(mutex.mutex_locked);
   ASSERT((disregard_owner) || (mutex.owner_thread == task_get_cur_thread()));
@@ -131,9 +131,9 @@ void klib_synch_mutex_release(klib_mutex &mutex, const bool disregard_owner)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Getting next owner from the head of list\n");
     KL_TRC_DATA("Next owner is", (unsigned long)next_owner->item);
-    mutex.owner_thread = (task_thread *)(next_owner->item);
+    mutex.owner_thread = next_owner->item;
     klib_list_remove(next_owner);
-    task_start_thread((task_thread *)(next_owner->item));
+    task_start_thread(next_owner->item);
   }
 
   KL_TRC_EXIT;

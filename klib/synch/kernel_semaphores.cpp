@@ -57,12 +57,12 @@ SYNC_ACQ_RESULT klib_synch_semaphore_wait(klib_semaphore &semaphore, unsigned lo
 
     // Wait for the semaphore to become free. Add this thread to the list of waiting threads, then suspend this thread.
     task_thread *this_thread = task_get_cur_thread();
-    klib_list_item *item = new klib_list_item;
+    klib_list_item<task_thread *> *item = new klib_list_item<task_thread *>;
 
     ASSERT(semaphore.cur_user_count == semaphore.max_users);
 
     klib_list_item_initialize(item);
-    item->item = (void *)this_thread;
+    item->item = this_thread;
 
     klib_list_add_tail(&semaphore.waiting_threads_list, item);
 
@@ -99,7 +99,7 @@ void klib_synch_semaphore_clear(klib_semaphore &semaphore)
 {
   KL_TRC_ENTRY;
 
-  klib_list_item *next_owner;
+  klib_list_item<task_thread *> *next_owner;
 
   klib_synch_spinlock_lock(semaphore.access_lock);
 

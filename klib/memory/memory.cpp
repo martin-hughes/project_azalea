@@ -43,8 +43,8 @@
 
 static_assert(sizeof(unsigned long) == 8, "Unsigned long must be 8 bytes");
 
-typedef klib_list PTR_LIST;
-typedef klib_list_item PTR_LIST_ITEM;
+typedef klib_list<void *> PTR_LIST;
+typedef klib_list_item<void *> PTR_LIST_ITEM;
 struct slab_header
 {
   PTR_LIST_ITEM list_entry;
@@ -263,7 +263,7 @@ void kfree(void *mem_block)
 
   unsigned long mem_ptr_num = reinterpret_cast<unsigned long>(mem_block);
   slab_header *slab_ptr;
-  klib_list *list_ptr;
+  klib_list<void *> *list_ptr;
   unsigned long list_ptr_base_num_a;
   unsigned long list_ptr_base_num_b;
   unsigned int chunk_size_idx;

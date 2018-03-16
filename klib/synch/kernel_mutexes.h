@@ -18,7 +18,7 @@ struct klib_mutex
   task_thread *owner_thread;
 
   // Which processes are waiting to grab this mutex?
-  klib_list waiting_threads_list;
+  klib_list<task_thread *> waiting_threads_list;
 
   // This lock is used to synchronize access to the fields in this structure.
   kernel_spinlock access_lock;

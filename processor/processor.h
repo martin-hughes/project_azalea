@@ -19,15 +19,18 @@
 // Definition of a possible entry point:
 typedef void (* ENTRY_PROC)();
 
+// Forward declare task_thread since task_process and task_thread refer to each other in a cycle.
+struct task_thread;
+
 /// Structure to hold information about a process. All information is stored here, to be accessed by the various
 /// components as needed. This removes the need for per-component lookup tables for each process.
 struct task_process
 {
   /// Refer ourself back to the process list.
-  klib_list_item process_list_item;
+  klib_list_item<task_process *> process_list_item;
 
   /// A list of all child threads.
-  klib_list child_threads;
+  klib_list<task_thread *> child_threads;
 
   /// A pointer to the memory manager's information for this task.
   mem_process_info *mem_info;
@@ -62,7 +65,7 @@ struct task_thread
   task_process *parent_process;
 
   /// An entry for the parent's thread list.
-  klib_list_item process_list_item;
+  klib_list_item<task_thread *> process_list_item;
 
   /// A pointer to the thread's execution context. This is processor specific, so no specific structure can
   /// be pointed to. Only processor-specific code should access this field.
@@ -84,7 +87,7 @@ struct task_thread
   // This item is used to associate the thread with the list of threads waiting for a mutex, semaphore or other
   // synchronization primitive. The list itself is owned by that primitive, but this item must be initialized with the
   // rest of this structure.
-  klib_list_item synch_list_item;
+  klib_list_item<task_thread *> synch_list_item;
 };
 
 /// @brief Processor-specific information.
