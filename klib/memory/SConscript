@@ -1,5 +1,0 @@
-# Klib Memory library.
-
-Import('env')
-obj = env.Library("klib-memory", [ "memory.cpp", "mem_operators.cpp" ])
-Return ("obj") 

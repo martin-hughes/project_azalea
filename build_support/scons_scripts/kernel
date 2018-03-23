@@ -10,38 +10,38 @@ defaults.setup_kernel_build_env(env)
 # List of required components.
 dependencies_in = [
                    # Core components
-                   '#entry/SConscript',
-                   '#processor/SConscript-generic',
-                   '#processor/SConscript-x64',
-                   '#klib/memory/SConscript',
-                   '#klib/panic/SConscript',
-                   '#mem/SConscript',
-                   '#klib/c_helpers/SConscript',
-                   '#klib/misc/SConscript',
-                   '#klib/data_structures/SConscript',
-                   '#klib/tracing/SConscript',
-                   '#klib/synch/SConscript',
-                   '#klib/synch/SConscript-messages',
-                   '#klib/synch/SConscript-spinlocks',
-                   '#syscall/SConscript-kernel',
-                   '#acpi/SConscript',
+                   '#kernel/entry/SConscript',
+                   '#kernel/processor/SConscript-generic',
+                   '#kernel/processor/SConscript-x64',
+                   '#kernel/klib/memory/SConscript',
+                   '#kernel/klib/panic/SConscript',
+                   '#kernel/mem/SConscript',
+                   '#kernel/klib/c_helpers/SConscript',
+                   '#kernel/klib/misc/SConscript',
+                   '#kernel/klib/data_structures/SConscript',
+                   '#kernel/klib/tracing/SConscript',
+                   '#kernel/klib/synch/SConscript',
+                   '#kernel/klib/synch/SConscript-messages',
+                   '#kernel/klib/synch/SConscript-spinlocks',
+                   '#kernel/syscall/SConscript-kernel',
+                   '#kernel/acpi/SConscript',
                    '#external/SConscript-ACPICA',
                    '#external/vsnprintf/Sconscript',
                    '#external/SConscript-libcxxrt',
-                   '#object_mgr/SConscript',
-                   '#system_tree/SConscript',
-                   '#system_tree/process/SConscript',
+                   '#kernel/object_mgr/SConscript',
+                   '#kernel/system_tree/SConscript',
+                   '#kernel/system_tree/process/SConscript',
 
                    # Devices
-                   '#devices/block/ramdisk/SConscript',
-                   '#devices/block/ata/SConscript',
-                   '#devices/block/proxy/SConscript',
-                   '#devices/legacy/ps2/SConscript',
-                   '#devices/generic/SConscript',
+                   '#kernel/devices/block/ramdisk/SConscript',
+                   '#kernel/devices/block/ata/SConscript',
+                   '#kernel/devices/block/proxy/SConscript',
+                   '#kernel/devices/legacy/ps2/SConscript',
+                   '#kernel/devices/generic/SConscript',
 
                    # Filesystems
-                   '#system_tree/fs/fat/SConscript',
-                   '#system_tree/fs/pipe/SConscript',
+                   '#kernel/system_tree/fs/fat/SConscript',
+                   '#kernel/system_tree/fs/pipe/SConscript',
                   ]
 
 # Build components.
@@ -50,7 +50,7 @@ dependencies_out = [ ]
 for dep in dependencies_in:
   # Transform the name so that the intermediate files end up in output/kernel/... and remove the SConscript part of the
   # path.
-  out_dir = os.path.join('output', 'kernel', dep.strip('#'))
+  out_dir = os.path.join('output', dep.strip('#'))
   out_dir = os.path.dirname(out_dir)
   dep_out = SConscript(dep, 'env', variant_dir=out_dir, duplicate=0)
   dependencies_out.append(dep_out)

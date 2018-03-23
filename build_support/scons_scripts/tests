@@ -7,28 +7,28 @@ class test_script:
     self.libs = libs
 
 test_programs = [
-  test_script(name = 'main-tests', 
-    deps = ['#klib/c_helpers/SConscript',
-            '#klib/data_structures/SConscript',
-            '#klib/memory/SConscript',
-            '#klib/misc/SConscript',
-            '#klib/synch/SConscript-messages',
-            '#klib/synch/SConscript-spinlocks',
-            '#klib/tracing/SConscript',
-            '#processor/Sconscript-generic',
-            '#object_mgr/SConscript',
-            '#system_tree/SConscript',
+  test_script(name = 'main-tests',
+    deps = ['#kernel/klib/c_helpers/SConscript',
+            '#kernel/klib/data_structures/SConscript',
+            '#kernel/klib/memory/SConscript',
+            '#kernel/klib/misc/SConscript',
+            '#kernel/klib/synch/SConscript-messages',
+            '#kernel/klib/synch/SConscript-spinlocks',
+            '#kernel/klib/tracing/SConscript',
+            '#kernel/processor/Sconscript-generic',
+            '#kernel/object_mgr/SConscript',
+            '#kernel/system_tree/SConscript',
             '#test/SConscript-main',
             '#test/dummy_libs/core_mem/SConscript',
             '#test/dummy_libs/panic/SConscript',
             '#test/dummy_libs/synch/Sconscript',
             '#test/test_core/SConscript',
             '#external/SConscript-GoogleTest',
-            
+
             # Devices for testing
-            '#devices/block/ramdisk/SConscript',
-            '#devices/block/proxy/SConscript',
-            '#system_tree/fs/pipe/SConscript',
+            '#kernel/devices/block/ramdisk/SConscript',
+            '#kernel/devices/block/proxy/SConscript',
+            '#kernel/system_tree/fs/pipe/SConscript',
            ],
     libs = [ "pthread" ]),
   ]
@@ -36,16 +36,16 @@ test_programs = [
 import os
 import defaults
 
-def build_test_script(script):  
+def build_test_script(script):
   # Build components.
   dependencies_out = [ ]
-  
+
   for dep in script.deps:
     out_dir = os.path.join('output', 'test', dep.strip('#'))
     out_dir = os.path.dirname(out_dir)
     dep_out = SConscript(dep, 'env', variant_dir=out_dir, duplicate=0)
     dependencies_out.append(dep_out)
-  
+
   env['LIBS'] = env['LIBS'] + script.libs
   env.Program("output/%s" % script.name, dependencies_out)
 

@@ -1,5 +1,0 @@
-# Klib Panic library.
-
-Import('env')
-obj = env.Library("klib-panic", [ "panic.cpp" ])
-Return ("obj") 

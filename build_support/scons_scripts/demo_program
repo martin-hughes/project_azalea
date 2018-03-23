@@ -12,10 +12,10 @@ env['LINK'] = 'ld -Map output/demo_program.map'
 
 # List of required components.
 dependencies_in = [# Core components
-                   '#extras/demo_program/SConscript',
-                   '#syscall/SConscript-user',
+                   '#user/demo_program/SConscript',
+                   '#kernel/syscall/SConscript-user',
                   ]
-                   
+
 # Build components.
 dependencies_out = [ ]
 

@@ -1,0 +1,10 @@
+# Kernel Object Manager library.
+
+files = ["handles.cpp",
+         "object_mgr.cpp",
+         "object_type.cpp",
+        ]
+
+Import('env')
+obj = env.Library("object_mgr", files)
+Return ("obj")  

@@ -1,0 +1,6 @@
+# Klib Data Structures library.
+
+Import('env')
+obj = env.Library("klib-data-structures", [ "string.cpp",
+                                          ])
+Return ("obj")
