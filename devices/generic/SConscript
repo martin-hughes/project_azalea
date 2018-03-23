@@ -1,0 +1,6 @@
+# Generic drivers.
+
+Import('env')
+obj = env.Library("dev-generic", [ "gen_keyboard.cpp",
+                                 ])
+Return ("obj")

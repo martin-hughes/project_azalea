@@ -2,6 +2,7 @@
 #define KLIB_MSG_PASSING
 
 #include "klib/misc/error_codes.h"
+#include "klib/synch/kernel_messages_ext.h"
 #include <queue>
 
 struct task_process;

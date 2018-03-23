@@ -15,6 +15,7 @@
 
 #include "devices/block/ata/ata.h"
 #include "devices/block/proxy/block_proxy.h"
+#include "devices/legacy/ps2/ps2_controller.h"
 #include "system_tree/fs/fat/fat_fs.h"
 #include "system_tree/fs/pipe/pipe_fs.h"
 
@@ -48,6 +49,7 @@ void setup_initial_fs();
 // Some variables to support loading a filesystem.
 generic_ata_device *first_hdd;
 fat_filesystem *first_fs;
+gen_ps2_controller_device *ps2_controller;
 
 // Main kernel entry point. This is called by an assembly-language loader that should do as little as possible. On x64,
 // this involves setting up a simple page mapping, since the kernel is linked higher-half but loaded at 1MB, then
@@ -116,6 +118,10 @@ void kernel_start()
   // kernel is more well-developed.                                                                                  //
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+  // Enable the PS/2 controller.
+  ps2_controller = new gen_ps2_controller_device();
+
+  // Setup a basic file system.
   setup_initial_fs();
   ASSERT(first_fs != nullptr);
   ASSERT(system_tree()->add_branch("root", first_fs) == ERR_CODE::NO_ERROR);
@@ -127,8 +133,16 @@ void kernel_start()
   task_process *term = task_create_new_process(simple_terminal, true);
   task_start_process(term);
 
+  ps2_keyboard_device *keyboard = dynamic_cast<ps2_keyboard_device *>(ps2_controller->chan_1_dev);
+
   // Process should be good to go!
   task_start_process(initial_proc);
+
+  if (keyboard != nullptr)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Setting up keyboard messages\n");
+    keyboard->recipient = initial_proc;
+  }
 
   while (1)
   {
@@ -171,7 +185,7 @@ void setup_initial_fs()
   KL_TRC_EXIT;
 }
 
-// A simple text based terminal outputting on the main display (output only right now.)
+// A simple text based terminal outputting on the main display.
 void simple_terminal()
 {
   KL_TRC_ENTRY;
@@ -212,6 +226,7 @@ void simple_terminal()
   KL_TRC_TRACE(TRC_LVL::FLOW, "Beginning terminal\n");
   while(1)
   {
+    // Write any pending output data.
     if (reader->read_bytes(0, buffer_size, buffer, buffer_size, bytes_read) == ERR_CODE::NO_ERROR)
     {
       for (int i = 0; i < bytes_read; i++)

@@ -3,5 +3,6 @@
 Import('env')
 obj = env.Library("dev-ps2", [ "ps2_controller.cpp",
                                "ps2_device.cpp",
+                               "ps2_scancodes.cpp",
                              ])
 Return ("obj")

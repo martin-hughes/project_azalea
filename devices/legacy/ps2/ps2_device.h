@@ -7,6 +7,7 @@
 #include "devices/device_interface.h"
 #include "klib/misc/error_codes.h"
 #include "klib/data_structures/string.h"
+#include "devices/generic/gen_keyboard.h"
 
 class gen_ps2_controller_device;
 class task_process;
@@ -54,6 +55,12 @@ public:
   // Process that should receive key press messages. This is only intended to be temporary, until the driver structure
   // gets a bit more flesh in it.
   task_process *recipient;
+
+protected:
+  special_keys _spec_keys_down;
+  bool _next_key_is_release;
+  bool _next_key_is_special;
+  unsigned int _pause_seq_chars;
 };
 
 #endif
