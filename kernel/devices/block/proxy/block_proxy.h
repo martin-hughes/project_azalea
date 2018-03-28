@@ -2,7 +2,7 @@
 #define DEVICE_BLOCK_PROXY_HEADER
 
 #include "devices/block/block_interface.h"
-#include "klib/misc/error_codes.h"
+#include "user_interfaces/error_codes.h"
 #include "klib/data_structures/string.h"
 
 class block_proxy_device: public IBlockDevice

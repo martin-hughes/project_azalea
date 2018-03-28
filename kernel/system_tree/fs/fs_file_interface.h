@@ -1,7 +1,7 @@
 #ifndef FS_FILE_INTFACE_H
 #define FS_FILE_INTFACE_H
 
-#include "klib/misc/error_codes.h"
+#include "user_interfaces/error_codes.h"
 
 /// @brief Interface for all objects that support arbitrarily sized reads.
 class IReadable

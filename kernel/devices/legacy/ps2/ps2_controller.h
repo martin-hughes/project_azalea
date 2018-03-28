@@ -2,7 +2,7 @@
 #define DEVICE_PS2_CONTROLLER_HEADER
 
 #include "devices/device_interface.h"
-#include "klib/misc/error_codes.h"
+#include "user_interfaces/error_codes.h"
 #include "klib/data_structures/string.h"
 #include "devices/legacy/ps2/ps2_device.h"
 

@@ -1,6 +1,6 @@
 /// @file Message passing functions part of the syscall interface.
 
-#include "syscall.h"
+#include "user_interfaces/syscall.h"
 #include "syscall/syscall_kernel.h"
 #include "syscall/syscall_kernel-int.h"
 #include "klib/klib.h"
@@ -51,7 +51,7 @@ ERR_CODE syscall_register_for_mp()
 /// @param[in] message_ptr A buffer containing the message to be sent. Must be at least as long as message_len.
 ///
 /// @return A suitable error code.
-ERR_CODE syscall_send_message(unsigned long target_proc_id, 
+ERR_CODE syscall_send_message(unsigned long target_proc_id,
                               unsigned long message_id,
                               unsigned long message_len,
                               const char *message_ptr)
@@ -95,7 +95,7 @@ ERR_CODE syscall_send_message(unsigned long target_proc_id,
     // It feels a lot like we should stop using raw pointers as IDs...
     res = msg_send_to_process(reinterpret_cast<task_process *>(target_proc_id), msg);
   }
-  
+
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
 
@@ -142,7 +142,7 @@ ERR_CODE syscall_receive_message_details(unsigned long &sending_proc_id,
       message_len = msg.msg_length;
     }
   }
-  
+
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
 
@@ -199,7 +199,7 @@ ERR_CODE syscall_receive_message_body(char *message_buffer, unsigned long buffer
       kl_memcpy(msg.msg_contents, message_buffer, restricting_size);
     }
   }
-  
+
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
 
@@ -241,7 +241,7 @@ ERR_CODE syscall_message_complete()
       KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to retrieve_message\n");
     }
   }
-  
+
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
 

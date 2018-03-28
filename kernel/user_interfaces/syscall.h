@@ -1,8 +1,8 @@
 #ifndef __AZALEA_SYSCALL_USER_H
 #define __AZALEA_SYSCALL_USER_H
 
-#include "klib/misc/error_codes.h"
-#include "klib/misc/kernel_types.h"
+#include "error_codes.h"
+#include "kernel_types.h"
 
 extern "C" ERR_CODE syscall_debug_output(const char *msg, unsigned long length);
 
@@ -25,7 +25,7 @@ extern "C" ERR_CODE syscall_write_handle(GEN_HANDLE handle,
 
 // Message passing.
 extern "C" ERR_CODE syscall_register_for_mp();
-extern "C" ERR_CODE syscall_send_message(unsigned long target_proc_id, 
+extern "C" ERR_CODE syscall_send_message(unsigned long target_proc_id,
                                          unsigned long message_id,
                                          unsigned long message_len,
                                          const char *message_ptr);

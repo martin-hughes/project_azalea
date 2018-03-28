@@ -1,8 +1,8 @@
 #ifndef KLIB_MSG_PASSING
 #define KLIB_MSG_PASSING
 
-#include "klib/misc/error_codes.h"
-#include "klib/synch/kernel_messages_ext.h"
+#include "user_interfaces/error_codes.h"
+#include "user_interfaces/messages.h"
 #include <queue>
 
 struct task_process;

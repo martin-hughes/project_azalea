@@ -1,7 +1,7 @@
-#ifndef __KERNEL_MESSAGES_EXT_H
-#define __KERNEL_MESSAGES_EXT_H
+#ifndef __USER_INTFACE_MESSAGES_H
+#define __USER_INTFACE_MESSAGES_H
 
-#include "devices/generic/gen_keyboard.h"
+#include "./keyboard.h"
 
 // System-defined message IDs:
 const unsigned long SM_KEYDOWN = 1;

@@ -2,7 +2,7 @@
 
 //#define ENABLE_TRACING
 
-#include "syscall.h"
+#include "user_interfaces/syscall.h"
 #include "syscall/syscall_kernel.h"
 #include "syscall/syscall_kernel-int.h"
 #include "klib/klib.h"
@@ -28,7 +28,7 @@ const void *syscall_pointers[] =
       (void *)syscall_send_message,
       (void *)syscall_receive_message_details,
       (void *)syscall_receive_message_body,
-      (void *)syscall_message_complete,  
+      (void *)syscall_message_complete,
     };
 
 const unsigned long syscall_max_idx = (sizeof(syscall_pointers) / sizeof(void *)) - 1;

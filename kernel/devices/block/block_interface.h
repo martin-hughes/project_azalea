@@ -2,7 +2,7 @@
 #define BLOCK_DEVICE_INTFACE_HEADER
 
 #include "devices/device_interface.h"
-#include "klib/misc/error_codes.h"
+#include "user_interfaces/error_codes.h"
 
 class IBlockDevice : public IDevice
 {

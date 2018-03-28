@@ -2,7 +2,7 @@
 #define DEVICE_RAMDISK_HEADER
 
 #include "devices/block/block_interface.h"
-#include "klib/misc/error_codes.h"
+#include "user_interfaces/error_codes.h"
 #include "klib/data_structures/string.h"
 
 class ramdisk_device: public IBlockDevice

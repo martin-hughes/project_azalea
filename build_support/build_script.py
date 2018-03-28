@@ -1,40 +1,73 @@
-# Build script for the Project Azalea Kernel
-#
-# It wouldn't be totally unreasonable to make this a shell script, but one day it might have to think for itself!
+# Build script for all of Project Azalea.
 
 import os
 
-BUILD_CMD = "scons -Q -f build_support/scons_scripts/kernel"
-BUILD_DEMO_CMD = "scons -Q -f build_support/scons_scripts/demo_program"
-BUILD_TEST_CMD = "scons -Q -f build_support/scons_scripts/tests"
-DISASM_CMD = "ndisasm -b64 -a -p intel %(in)s > %(out)s"
-LINKED_OUTPUT = "output/kernel64.sys"
-ASM_OUTPUT = "output/kernel64.asm"
-IMAGE_CMD = "bash build_support/copy_image.sh"
+config = {
+  'build_command' : 'scons -Q -f {build_script}',
+  'disasm_command' : 'ndisasm -b64 -a -p intel {output_file} > {disassembly}'
+}
+
+class gen_build_element:
+  def __init__ (self, name):
+    self.name = name
+
+  def build(self):
+    pass
+
+class scons_build_element(gen_build_element):
+  def __init__ (self, name, build_script, output_filename = None, disassembly = None):
+    gen_build_element.__init__(self, name)
+
+    self.name = name
+    self.build_script = build_script
+    self.output_filename = output_filename
+    self.disassembly = disassembly
+
+  def build(self):
+    print ('Building: %s...' % self.name)
+    build_cmd = config['build_command'].format(build_script = self.build_script)
+    os.system(build_cmd)
+
+    if (self.disassembly is not None) and (self.output_filename is not None):
+      print ('Disassembling...')
+      disasm_cmd = config['disasm_command'].format(output_file = self.output_filename, disassembly = self.disassembly)
+      os.system(disasm_cmd)
+
+
+class shell_script_build_element(gen_build_element):
+  def __init__ (self, name, command):
+    gen_build_element.__init__(self, name)
+
+    self.command = command
+
+  def build(self):
+    print ('Building: %s...' % self.name)
+    os.system(self.command)
+
+kernel_element = scons_build_element('Main Kernel',
+                                     'build_support/scons_scripts/kernel',
+                                     'output/kernel64.sys',
+                                     'output/kernel64.asm')
+
+demo_prog_element = scons_build_element('Demo program',
+                                        'build_support/scons_scripts/demo_program',
+                                        'output/testprog',
+                                        'output/testprog.asm')
+
+unit_tests_element = scons_build_element('Unit tests', 'build_support/scons_scripts/tests')
+
+image_build_element = shell_script_build_element('Disk image', 'bash build_support/copy_image.sh')
+
+build_order = [
+               kernel_element,
+               demo_prog_element,
+               unit_tests_element,
+               image_build_element,
+              ]
 
 def main():
-  # Build pass
-  print "Building kernel..."
-  os.system(BUILD_CMD)
+  for component in build_order:
+    component.build()
 
-  # Disassembly pass
-  cmd_dict = {"in" : LINKED_OUTPUT,
-              "out": ASM_OUTPUT}
-  disasm_cmd = DISASM_CMD % cmd_dict
-  print "Disassembling..."
-  os.system(disasm_cmd)
-  
-  print "Building demo program"
-  os.system(BUILD_DEMO_CMD)
-  cmd_dict = {"in" : "output/testprog",
-              "out" : "output/testprog.asm"}
-  os.system (DISASM_CMD % cmd_dict)
-  
-  print "Preparing disk image"
-  os.system(IMAGE_CMD)
-  
-  print "Building tests..."
-  os.system(BUILD_TEST_CMD)
-  
 if __name__ == "__main__":
   main()

@@ -2,7 +2,7 @@
 #define DEVICE_ATA_HEADER
 
 #include "devices/block/block_interface.h"
-#include "klib/misc/error_codes.h"
+#include "user_interfaces/error_codes.h"
 #include "klib/data_structures/string.h"
 
 class generic_ata_device: public IBlockDevice

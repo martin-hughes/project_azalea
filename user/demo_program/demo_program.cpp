@@ -1,5 +1,5 @@
-#include "syscall/syscall.h"
-#include "klib/synch/kernel_messages_ext.h"
+#include "user_interfaces/syscall.h"
+#include "user_interfaces/messages.h"
 
 extern "C" int main();
 
