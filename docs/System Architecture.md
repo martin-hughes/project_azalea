@@ -21,7 +21,7 @@ There are several main components, and some more minor ones, all described below
 
 The memory manager is responsible for controlling both the physical and virtual memory available to the kernel, and
 mapping between the two. It usefully provides large allocations of both, but for small or short-lived objects it is
-better to use the `kmalloc` and `kfree` functions provided by the [Kernel Support Library](#kernel-support-library)  
+better to use the `kmalloc` and `kfree` functions provided by the [Kernel Support Library](#kernel-support-library)
 
 ### Processor controller (processor)
 
@@ -47,7 +47,7 @@ example:
 
 - Management of small memory allocations
 - Basic data structures
-- Synchronisation primatives
+- Synchronisation primitives
 - Kernel debug tracing
 - The all-important `panic()`
 
@@ -77,7 +77,7 @@ There are two parts to the system call library - the kernel side and the user si
 directory, and which is which should be self-explanatory. Don't attempt to compile both into one project!
 
 The system call binary interface similar to the Linux one - the call number is passed in RAX, then the arguments in
-RDI, RSI, RDX, R10, R8, and R9, then the stack as needed. The return value is passed in RAX. Only RBP, RBX, and R12–R15
+RDI, RSI, RDX, R10, R8, and R9, then the stack as needed. The return value is passed in RAX. Only RBP, RBX, and R12-R15
 are preserved.
 
 ## External components
@@ -88,6 +88,19 @@ ACPICA is a standard library for dealing with ACPI-compliant systems. It provide
 managing the ACPI tables right through power management.
 
 More information can be found on their [website](https://www.acpica.org/)
+
+### Googletest
+
+The Google Test Framework is used to manage the unit tests, which are contained in the `test` directory.
+
+The homepage is hosted on [GitHub](https://github.com/google/googletest)
+
+### libcxxrt
+
+This library is used to provide some C++ language functionality that isn't built in to the compiler. Project Azalea
+currently only uses the type information and dynamic casting parts of this library.
+
+It can be found [here](https://github.com/pathscale/libcxxrt)
 
 ### vsnprintf
 

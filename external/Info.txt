@@ -1,18 +1,20 @@
 This folder contains libraries and source code imported from other projects.
 
-In all cases the licences are compatible with Project Azalea's.
+In all cases the licences are compatible with Project Azalea's. Note that if you choose to distribute Azalea in binary
+form you will become responsible for displaying the various copyright and licensing notices that are required by these
+subcomponents.
 
-ACPICA: 
+ACPICA:
 -------
 
 ACPICA can be downloaded from https://acpica.org/downloads, and licensing information can be found on the same website.
 The BSD licensed version is used here - copyright and licence information can be found in each of the source code
 files.
- 
+
 GoogleTest:
 -----------
 
-Provided on GitHub at https://github.com/google/googletest. Permissively licensed - see 
+Provided on GitHub at https://github.com/google/googletest. Permissively licensed - see
 googletest/googletest/LICENSE.txt for details.
 
 GRUB:

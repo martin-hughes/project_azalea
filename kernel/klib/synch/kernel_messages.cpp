@@ -29,9 +29,9 @@ namespace
 
 /// @brief Register a new message type and generate an ID for it.
 ///
-/// @param msg_name[in] The human name of the new message. This must not already be in use.
+/// @param[in] msg_name The human name of the new message. This must not already be in use.
 ///
-/// @param new_id_number[in] The ID number for the new message. This number is passed with the message structure to
+/// @param[in] new_id_number The ID number for the new message. This number is passed with the message structure to
 ///                          save sending the message name string. The ID number must also not previously be in use.
 ///
 /// @return A suitable error code.
@@ -45,7 +45,7 @@ ERR_CODE msg_register_msg_id(kl_string msg_name, message_id_number new_id_number
     msg_name_id_map = new kl_rb_tree<kl_string, message_id_number>;
     msg_id_name_map = new kl_rb_tree<message_id_number, kl_string>;
   }
-  
+
   if (msg_name_id_map->contains(msg_name))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Message name already in use\n");
@@ -70,15 +70,15 @@ ERR_CODE msg_register_msg_id(kl_string msg_name, message_id_number new_id_number
 
 /// @brief Get the ID number associated with a given message type.
 ///
-/// @param msg_name[in] The message type name to look up.
+/// @param[in] msg_name The message type name to look up.
 ///
-/// @param id_number[out] The ID number associated with the message type being looked up.
+/// @param[out] id_number The ID number associated with the message type being looked up.
 ///
 /// @return A suitable error code.
 ERR_CODE msg_get_msg_id(kl_string msg_name, message_id_number &id_number)
 {
   KL_TRC_ENTRY;
-  
+
   ERR_CODE res = ERR_CODE::NO_ERROR;
 
   if (msg_name_id_map == nullptr)
@@ -105,15 +105,15 @@ ERR_CODE msg_get_msg_id(kl_string msg_name, message_id_number &id_number)
 
 /// @brief Get the name associated with a given message type ID number.
 ///
-/// @param id_num[in] The ID number to look up the friendly name of.
+/// @param[in] id_num The ID number to look up the friendly name of.
 ///
-/// @param msg_name[out] The human-friendly name corresponding to this message ID.
+/// @param[out] msg_name The human-friendly name corresponding to this message ID.
 ///
 /// @return A suitable error code.
 ERR_CODE msg_get_msg_name(message_id_number id_num, kl_string &msg_name)
 {
   KL_TRC_ENTRY;
-  
+
   ERR_CODE res = ERR_CODE::NO_ERROR;
 
   if (msg_name_id_map == nullptr)
@@ -247,7 +247,7 @@ ERR_CODE msg_send_to_process(task_process *proc, klib_message_hdr &msg)
 /// cleaning up the buffer containing the message, not the sender or recipient. The buffer will not be accessible after
 /// the message has been declared completed.
 ///
-/// @param msg[out] A message header that will be filled in with details of the next message in this process's message
+/// @param[out] msg A message header that will be filled in with details of the next message in this process's message
 ///                 queue.
 ///
 /// @return A suitable error code.
@@ -306,7 +306,7 @@ ERR_CODE msg_retrieve_next_msg(klib_message_hdr &msg)
 /// responsible for cleaning up the buffer containing the message, not the sender or recipient. The buffer will not be
 /// accessible after the message has been declared completed.
 ///
-/// @param msg[out] A message header that will be filled in with details of the current message in this process's
+/// @param[out] msg A message header that will be filled in with details of the current message in this process's
 ///                 message queue.
 ///
 /// @return A suitable error code.

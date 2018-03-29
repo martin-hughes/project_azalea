@@ -86,6 +86,8 @@ void mem_gen_init(e820_pointer *e820_ptr)
 ///
 /// The number of physical pages in the system cannot exceed max_num_pages, or the system will crash.
 ///
+/// @param e820_ptr Pointer to an E820 table given to us by the bootloader (or other means)
+///
 /// @param bitmap_loc Where the physical memory manager (which is not platform-specific) requires the bitmap to be
 ///                   stored.
 ///

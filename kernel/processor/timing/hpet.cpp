@@ -168,7 +168,7 @@ void time_hpet_clear_flag(unsigned long &hpet_reg, const unsigned long flag)
 
 /// @brief Determine whether the specified bit is set in a HPET register
 ///
-/// @param hpet_register The register to consider.
+/// @param hpet_reg The register to consider.
 ///
 /// @param flag The flag to consider. Undefined behaviour results if anything other than exactly one bit is set.
 ///

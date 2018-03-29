@@ -343,7 +343,7 @@ ERR_CODE syscall_get_handle_data_len(GEN_HANDLE handle, unsigned long *data_leng
 /// @param[in] buffer_size The size of the buffer provided. The buffer must be sufficiently large to contain the data
 ///                        requested. Otherwise the write request is truncated to this length.
 ///
-/// @param[out] bytes_read The number of bytes actually written in this request.
+/// @param[out] bytes_written The number of bytes actually written in this request.
 ///
 /// @return A suitable ERR_CODE value.
 ERR_CODE syscall_write_handle(GEN_HANDLE handle,

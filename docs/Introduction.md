@@ -22,7 +22,7 @@ This project contains a very simple kernel written for a 64-bit Intel processor.
 running fully independent, pre-emptively scheduled tasks on multiple processors. However, while it has a system call
 interface, there are no system calls within it, so the system doesn't do anything interesting at the moment.
 
-The project is a product of the author's curiousity, and is only really meant as an experimental system. You might find
+The project is a product of the author's curiosity, and is only really meant as an experimental system. You might find
 it interesting to see how the author resolved a problem that you had, or you might be interested in writing a specific
 component of kernel code without having to start from scratch. You might not.
 
@@ -61,7 +61,7 @@ To compile the system, you will need the following tools installed:
 - Clang 3.8.0 or later
 - SCons
 - NASM
-- Qemu - the default test script runs on qemu, and qemu-nbd is required to create disk images from scratch (which is 
+- Qemu - the default test script runs on qemu, and qemu-nbd is required to create disk images from scratch (which is
   optional)
 - Virtualbox - Required to generate disk images from scratch (optional) and can be used as a test system.
 - GRUB2 2.02 beta 2 or later - Required to generate disk images from scratch. (optional)
@@ -82,9 +82,13 @@ To get the system running from its current state, do the following:
 - From the root directory, execute `python build_support/build_script.py`
 - Execute `build_support/start_test_machine.sh`
 
-The system should now start! Assuming that everything went well, you will see "Hello World" being printed on stdout -
-note: not the emulated system's screen, your host's terminal stdout - which is the demo program's only capability at
-the moment. If something goes wrong, you will get a blue screen of death - which is a bug so please let me know!
+The system should now start! Assuming that everything went well, you will see two things:
+
+- Various messages printed to the host machine's stdout. You can enable or disable these by defining (or not)
+  ENABLE_TRACING in a file.
+- A message printed to the display of the emulated machine.
+
+If something goes wrong, you will get a blue screen of death - which is a bug so please let me know!
 
 The system will start a program called 'testprog' from the root of its disk image and run it in user mode. At the
 moment, 'testprog' is compiled from the source in `extras/demo_program` as part of the main build script.
