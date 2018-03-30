@@ -2,9 +2,9 @@
 
 files = ["handles.cpp",
          "object_mgr.cpp",
-         "object_type.cpp",
+         "ref_counter.cpp",
         ]
 
 Import('env')
 obj = env.Library("object_mgr", files)
-Return ("obj")  
+Return ("obj")

@@ -7,12 +7,14 @@
 /// When an object is said to be "stored in OM" it does not mean that the object is in any way copied into OM. OM
 /// simply stores a reference to the object (a pointer at the moment) which continues to live where it did before.
 ///
-/// At the moment, this is implemented using the very slow method of a linked list. This is because I'm lazy.
+/// Handles within OM are unique to a thread - attempting to use a handle in a thread other than the one it was
+/// correlated in will cause the object lookup to fail.
 
 #include "klib/klib.h"
 #include "handles.h"
 #include "object_mgr.h"
 #include "object_type.h"
+#include "processor/processor.h"
 
 namespace
 {
@@ -47,7 +49,7 @@ void om_gen_init()
 /// @param object_ptr A pointer to the object to store in OM
 ///
 /// @return A handle that correlates to object_ptr
-GEN_HANDLE om_store_object(ISystemTreeLeaf *object_ptr)
+GEN_HANDLE om_store_object(IRefCounted *object_ptr)
 {
   KL_TRC_ENTRY;
 
@@ -73,11 +75,14 @@ GEN_HANDLE om_store_object(ISystemTreeLeaf *object_ptr)
 /// @param object_ptr A pointer to the object to be stored
 ///
 /// @param handle The handle that should refer to object_ptr
-void om_correlate_object(ISystemTreeLeaf *object_ptr, GEN_HANDLE handle)
+void om_correlate_object(IRefCounted *object_ptr, GEN_HANDLE handle)
 {
   KL_TRC_ENTRY;
 
   ASSERT(om_initialized);
+
+  // Acquire a reference to the object for the duration of the time it is stored in OM.
+  object_ptr->ref_acquire();
 
   object_data *new_object = new object_data;
 
@@ -87,6 +92,7 @@ void om_correlate_object(ISystemTreeLeaf *object_ptr, GEN_HANDLE handle)
 
   new_object->object_ptr = object_ptr;
   new_object->handle = handle;
+  new_object->owner_thread = task_get_cur_thread();
 
   klib_synch_spinlock_lock(om_main_lock);
   om_main_store->insert(handle, new_object);
@@ -100,12 +106,12 @@ void om_correlate_object(ISystemTreeLeaf *object_ptr, GEN_HANDLE handle)
 /// @param handle The handle to retrieve the corresponding object for
 ///
 /// @return A pointer to the object stored in OM. nullptr if the handle does not correspond to an object in OM.
-ISystemTreeLeaf *om_retrieve_object(GEN_HANDLE handle)
+IRefCounted *om_retrieve_object(GEN_HANDLE handle)
 {
   KL_TRC_ENTRY;
 
   object_data *found_object;
-  ISystemTreeLeaf *object_ptr;
+  IRefCounted *object_ptr;
 
   ASSERT(om_initialized);
 
@@ -119,6 +125,12 @@ ISystemTreeLeaf *om_retrieve_object(GEN_HANDLE handle)
   {
     KL_TRC_TRACE(TRC_LVL::EXTRA, "Found object", found_object->object_ptr, "\n");
     object_ptr = found_object->object_ptr;
+
+    if (found_object->owner_thread != task_get_cur_thread())
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Object in incorrect thread\n");
+      object_ptr = nullptr;
+    }
   }
   else
   {
@@ -153,6 +165,8 @@ void om_remove_object(GEN_HANDLE handle)
 /// Removes the correlation between a handle and object, but does not deallocate the handle It is up to the caller to
 /// manage the lifetime of both the object and handle.
 ///
+/// This function will fail and panic if the correlation is not legitimate.
+///
 /// @param handle The handle for the object to remove.
 void om_decorrelate_object(GEN_HANDLE handle)
 {
@@ -166,6 +180,10 @@ void om_decorrelate_object(GEN_HANDLE handle)
 
   klib_synch_spinlock_lock(om_main_lock);
   found_object = om_int_retrieve_object(handle);
+  ASSERT(found_object != nullptr);
+  ASSERT(found_object->object_ptr != nullptr);
+  ASSERT(found_object->owner_thread == task_get_cur_thread());
+  found_object->object_ptr->ref_release();
   om_main_store->remove(handle);
   klib_synch_spinlock_unlock(om_main_lock);
 
@@ -181,6 +199,8 @@ namespace
   /// This function is internal to OM. It retrieves the underlying data structure storing a given object in OM. This
   /// function contains no locking - **appropriate serialisation MUST be used**, only one function can call this one at
   /// a time.
+  ///
+  /// This function does not check that the handle is valid in this thread, that is up to the caller.
   ///
   /// @param handle The handle to retrieve data for
   ///

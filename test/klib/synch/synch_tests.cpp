@@ -5,7 +5,7 @@
 #include "klib/data_structures/string.h"
 #include "processor/processor.h"
 
-// defined in fake_platform_part.cpp
+// defined in processor.dummy.cpp
 void test_only_set_cur_thread(task_thread *thread);
 
 class KlibSynchTest : public ::testing::Test
@@ -42,7 +42,7 @@ TEST(KlibSynchTest, MessagePassing1)
 
   klib_list_initialize(&proc_a.child_threads);
   klib_list_initialize(&proc_b.child_threads);
-  
+
   klib_list_item_initialize(&thread_a.process_list_item);
   klib_list_item_initialize(&thread_b.process_list_item);
   thread_a.process_list_item.item = &thread_a;
@@ -101,7 +101,7 @@ TEST(KlibSynchTest, MessagePassing1)
 
   res = msg_retrieve_cur_msg(second_recv_msg);
   ASSERT_EQ(res, ERR_CODE::NO_ERROR);
-  
+
   ASSERT_EQ(send_msg.msg_contents, second_recv_msg.msg_contents);
   ASSERT_EQ(send_msg.msg_length, second_recv_msg.msg_length);
   ASSERT_EQ(send_msg.msg_id, second_recv_msg.msg_id);

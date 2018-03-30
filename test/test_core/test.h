@@ -7,14 +7,6 @@
 #include "klib/tracing/tracing.h"
 #include "klib/panic/panic.h"
 
-typedef void (*test_entry_ptr)();
-
-struct single_test
-{
-  const test_entry_ptr entry_point;
-  const char *test_name;
-};
-
 class assertion_failure
 {
 public:
@@ -24,8 +16,5 @@ public:
 private:
   const char *_reason;
 };
-
-extern single_test test_list[];
-extern unsigned int number_of_tests;
 
 #endif

@@ -5,7 +5,9 @@
 Import('env')
 
 obj = [ ]
-files = [ "devices/block/proxy/proxy_tests.cpp",
+files = [ "dummy_libs/processor/processor.dummy.cpp",
+
+          "devices/block/proxy/proxy_tests.cpp",
           "devices/block/ramdisk/ramdisk_tests.cpp",
 
           "klib/data_structures/ds_tests.cpp",
@@ -23,12 +25,10 @@ files = [ "devices/block/proxy/proxy_tests.cpp",
           "klib/synch/synch_tests.cpp",
           "klib/synch/synch_1.cpp",
 
-          "object_mgr/object_mgr_tests.cpp",
           "object_mgr/object_mgr_1.cpp",
           "object_mgr/object_mgr_2.cpp",
 
           "processor/scheduler/scheduler_1.cpp",
-          "processor/scheduler/fake_platform_part.cpp",
           "processor/irq_handler.cpp",
 
           "system_tree/system_tree_tests.cpp",

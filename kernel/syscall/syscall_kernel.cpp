@@ -128,8 +128,12 @@ ERR_CODE syscall_open_handle(const char *path, unsigned long path_len, GEN_HANDL
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Successfully got leaf object: ", leaf, "\n");
 
-      new_handle = om_store_object(leaf);
+      new_handle = om_store_object(dynamic_cast<IRefCounted *>(leaf));
       *handle = new_handle;
+
+      // This code abandons its view on this object and leaves it in OM. Since we're not using it any more, but we
+      // don't want to delete it, we just release our reference to it and let it live on!
+      leaf->ref_release();
 
       KL_TRC_TRACE(TRC_LVL::EXTRA, "Correlated to handle ", new_handle, "\n");
     }
@@ -158,7 +162,7 @@ ERR_CODE syscall_close_handle(GEN_HANDLE handle)
 
   ERR_CODE result = ERR_CODE::UNKNOWN;
 
-  ISystemTreeLeaf *obj = om_retrieve_object(handle);
+  ISystemTreeLeaf *obj = dynamic_cast<ISystemTreeLeaf *>(om_retrieve_object(handle));
   if (obj == nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Object not found!\n");
@@ -167,10 +171,10 @@ ERR_CODE syscall_close_handle(GEN_HANDLE handle)
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Found object: ", obj, " - destroying\n");
-    om_remove_object(handle);
 
-    delete obj;
+    // Don't delete the object, let the reference counting mechanism take care of it as needed.
     obj = nullptr;
+    om_remove_object(handle);
 
     result = ERR_CODE::NO_ERROR;
   }
@@ -233,7 +237,7 @@ ERR_CODE syscall_read_handle(GEN_HANDLE handle,
   else
   {
     // Parameters check out, try to read.
-    ISystemTreeLeaf *leaf = om_retrieve_object(handle);
+    ISystemTreeLeaf *leaf = dynamic_cast<ISystemTreeLeaf *>(om_retrieve_object(handle));
     KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved leaf ", leaf, " from OM\n");
     if (leaf == nullptr)
     {
@@ -294,7 +298,7 @@ ERR_CODE syscall_get_handle_data_len(GEN_HANDLE handle, unsigned long *data_leng
   }
   else
   {
-    ISystemTreeLeaf *leaf = om_retrieve_object(handle);
+    ISystemTreeLeaf *leaf = dynamic_cast<ISystemTreeLeaf *>(om_retrieve_object(handle));
     KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved leaf ", leaf, " from OM\n");
     if (leaf == nullptr)
     {
@@ -375,7 +379,7 @@ ERR_CODE syscall_write_handle(GEN_HANDLE handle,
   else
   {
     // Parameters check out, try to read.
-    ISystemTreeLeaf *leaf = om_retrieve_object(handle);
+    ISystemTreeLeaf *leaf = dynamic_cast<ISystemTreeLeaf *>(om_retrieve_object(handle));
     KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved leaf ", leaf, " from OM\n");
     if (leaf == nullptr)
     {
