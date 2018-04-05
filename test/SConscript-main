@@ -6,6 +6,7 @@ Import('env')
 
 obj = [ ]
 files = [ "dummy_libs/processor/processor.dummy.cpp",
+          "dummy_libs/devices/virt_disk/virt_disk.cpp",
 
           "devices/block/proxy/proxy_tests.cpp",
           "devices/block/ramdisk/ramdisk_tests.cpp",
@@ -31,10 +32,10 @@ files = [ "dummy_libs/processor/processor.dummy.cpp",
           "processor/scheduler/scheduler_1.cpp",
           "processor/irq_handler.cpp",
 
-          "system_tree/system_tree_tests.cpp",
           "system_tree/system_tree_1.cpp",
           "system_tree/system_tree_2.cpp",
           "system_tree/system_tree_3_pipes.cpp",
+          "system_tree/system_tree_4_fat.cpp",
 
           "tracing/tracing_tests.cpp",
           "tracing/tracing_1.cpp",

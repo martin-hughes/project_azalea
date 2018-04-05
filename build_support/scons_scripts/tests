@@ -29,8 +29,9 @@ test_programs = [
             '#kernel/devices/block/ramdisk/SConscript',
             '#kernel/devices/block/proxy/SConscript',
             '#kernel/system_tree/fs/pipe/SConscript',
+            '#kernel/system_tree/fs/fat/SConscript',
            ],
-    libs = [ "pthread" ]),
+    libs = [ "pthread", "boost_iostreams" ]),
   ]
 
 import os

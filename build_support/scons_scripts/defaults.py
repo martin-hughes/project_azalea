@@ -23,7 +23,7 @@ def setup_kernel_build_env(env):
 
 def setup_test_build_env(env):
     _setup_default_env(env)
-    env['CXXFLAGS'] = '-g -O0 -std=gnu++14 -fsanitize=address -fsanitize=leak -D AZALEA_TEST_CODE -D KL_TRACE_BY_STDOUT'
+    env['CXXFLAGS'] = '-g -O0 -std=gnu++14 -fsanitize=address -fsanitize=leak -Wunknown-pragmas -D AZALEA_TEST_CODE -D KL_TRACE_BY_STDOUT'
     env['LINKFLAGS'] = '-L/usr/lib/llvm-3.8/lib/clang/3.8.0/lib/linux -Wl,--start-group'
     env['LIBS'] = [ 'clang_rt.asan-x86_64' ]
     env.AppendENVPath('CPATH', "#/external/googletest/googletest/include")

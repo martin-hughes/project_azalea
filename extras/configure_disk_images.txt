@@ -6,22 +6,16 @@ Or use the provided example disk image extras/example_disk_image.vdi.
 The first method requires extra tooling to be installed, but is obviously customisable. Either way will suffice though.
 Copy the disk image of choice to the project root directory as kernel_disc_image.vdi.
 
-Configure a mounting point for the disk image - the code assumes ~/disk_mount. Again there are two ways.
+Configure a mounting point for the disk image - the code assumes ~/disk_mount - as follows:
 
-Method 1: Less robust, less typing: 
-- In fstab, add:
-{path}/kernel_disc_image.vdi {full path of ~/disk_mount} vfat loop,noauto,users,rw,offset=40448 0 0
-- Before compiling execute `mount ~/disk_mount`
-
-Method 2: More robust. 
 - Add the following to fstab:
 /dev/nbd0p1 {full path of ~/disk_mount} vfat noauto,users,rw 0 0
 - Before compiling for the first time each day execute:
  - sudo modprobe nbd
  - qemu-nbd -c /dev/nbd0 ./kernel_disc_image.vdi
  - mount ~/disk_mount
- 
-Method two is preferable, since qemu-nbd natively understands the VDI format whereas the offset loopback hack of method
-one will break if the VDI isn't exactly as expected. It does however require qemu to be installed.
+
+Of course, any other method that causes the first partition of the virtual disk to be mounted in the place the build
+script will write to is probably acceptable.
 
 Don't forget to test thoroughly!

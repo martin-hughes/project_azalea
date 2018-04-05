@@ -53,12 +53,12 @@ void IRefCounted::ref_release()
   {
     this->_ref_counter--;
   }
+  klib_synch_spinlock_unlock(this->_ref_counter_lock);
 
   if (this->_ref_counter == 0)
   {
     this->ref_counter_zero();
   }
-  klib_synch_spinlock_unlock(this->_ref_counter_lock);
 
   KL_TRC_EXIT;
 }

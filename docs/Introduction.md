@@ -55,12 +55,13 @@ Being a hobby project, there are some fairly specific requirements for this proj
 - An x64 compatible processor. A recent Intel one should work.
 - **Maximum** 1GB of RAM. This is a limitation of the memory manager.
 
-To compile the system, you will need the following tools installed:
+To compile the system, you will need the following tools and libraries installed:
 - Python 2.6 or later
 - GCC 5.4 or later
 - Clang 3.8.0 or later
 - SCons
 - NASM
+- Boost iostreams - only used in the test scripts.
 - Qemu - the default test script runs on qemu, and qemu-nbd is required to create disk images from scratch (which is
   optional)
 - Virtualbox - Required to generate disk images from scratch (optional) and can be used as a test system.

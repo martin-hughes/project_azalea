@@ -3,10 +3,12 @@
 
 // KLIB Variable Arguments List support. Relies heavily on the GCC builtins!
 
-// Ordinarily we'd not check against WIN32, but putting this here allows the tests code to be built in Visual Studio,
-// and I find debugging in Visual Studio much easier than Eclipse!
+// If we allow the vargs macros to be defined other than just for the main Azalea kernel then any accidental inclusion
+// of klib in the test code causes duplicate definition errors.
 #ifndef WIN32
 #ifndef _WIN64
+#ifndef _LINUX
+#ifndef AZALEA_TEST_CODE
 
 typedef __builtin_va_list       va_list;
 
@@ -22,6 +24,8 @@ typedef __builtin_va_list       va_list;
 #define va_end(ap) \
         __builtin_va_end(ap)
 
+#endif
+#endif
 #endif
 #endif
 

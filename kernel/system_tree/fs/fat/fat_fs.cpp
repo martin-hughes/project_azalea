@@ -173,19 +173,21 @@ FAT_TYPE determine_fat_type(fat32_bpb &bpb)
 
   FAT_TYPE ret;
 
+  ASSERT(bpb.shared.bytes_per_sec != 0);
   unsigned long root_dir_sectors = (((unsigned long)bpb.shared.root_entry_cnt * 32)
                                     + ((unsigned long)bpb.shared.bytes_per_sec - 1))
                                    / bpb.shared.bytes_per_sec;
 
   unsigned long fat_size;
-  fat_size = bpb.shared.fat_size_16 == 0 ? bpb.fat_size_32 : bpb.shared.fat_size_16;
+  fat_size = (bpb.shared.fat_size_16 == 0) ? bpb.fat_size_32 : bpb.shared.fat_size_16;
 
   unsigned long total_sectors;
-  total_sectors = bpb.shared.total_secs_16 == 0 ? bpb.shared.total_secs_32 : bpb.shared.total_secs_16;
+  total_sectors = (bpb.shared.total_secs_16 == 0) ? bpb.shared.total_secs_32 : bpb.shared.total_secs_16;
 
   unsigned long private_sectors = bpb.shared.rsvd_sec_cnt + (bpb.shared.num_fats * fat_size) + root_dir_sectors;
   unsigned long data_sectors = total_sectors - private_sectors;
 
+  ASSERT(bpb.shared.secs_per_cluster != 0);
   unsigned long cluster_count = data_sectors / bpb.shared.secs_per_cluster;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Final count of clusters: ", cluster_count, "\n");
@@ -309,6 +311,11 @@ ERR_CODE fat_filesystem::get_dir_entry(const kl_string &name,
     INCOMPLETE_CODE("Only deals with root directory just now");
   }
   ret_code = this->_storage->read_blocks(sector_to_look_at, 1, this->_buffer.get(), ASSUMED_SECTOR_SIZE);
+
+  if (ret_code != ERR_CODE::NO_ERROR)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Read error: ", ret_code, "\n");
+  }
 
   while (continue_looking && (ret_code == ERR_CODE::NO_ERROR))
   {

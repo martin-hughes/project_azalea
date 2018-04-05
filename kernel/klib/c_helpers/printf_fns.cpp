@@ -2,6 +2,8 @@
 // No direct printf type function is exposed - the kernel doesn't output anything directly.
 
 #include "klib/klib.h"
+
+#ifndef AZALEA_TEST_CODE
 #include "external/vsnprintf/vsnprintf.h"
 
 int klib_snprintf(char *out_str, int max_out_len, const char *fmt, ...)
@@ -31,3 +33,4 @@ int klib_vsnprintf(char *out_str, int max_out_len, const char *fmt, va_list args
   KL_TRC_EXIT;
   return retval;
 }
+#endif

@@ -1,10 +1,7 @@
-#include "test/system_tree/system_tree_tests.h"
-#include "test/test_core/test.h"
 #include "system_tree/system_tree.h"
 #include "system_tree/fs/pipe/pipe_fs.h"
 
 #include "gtest/gtest.h"
-#include <iostream>
 
 using namespace std;
 
@@ -12,7 +9,7 @@ const unsigned long pipe_size = 1 << 10;
 const unsigned long buffer_size = 50;
 
 // A simple test of the pipes objects within ST.
-void system_tree_test_3_pipes()
+TEST(SystemTreeTest, GeneralPipes)
 {
   pipe_branch pipe_obj;
   pipe_branch::pipe_read_leaf *reader;
