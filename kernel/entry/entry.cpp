@@ -82,8 +82,12 @@ int main(unsigned int magic_number, multiboot_hdr *mb_header)
   acpi_init_table_system();
 
   time_gen_init();
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Time started\n");
   proc_mp_init();
+  KL_TRC_TRACE(TRC_LVL::FLOW, "MP started\n");
   syscall_gen_init();
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Starting tasking\n");
 
   task_gen_init(kernel_start);
 
@@ -131,9 +135,11 @@ void kernel_start()
 
   // Start a simple terminal process.
   task_process *term = task_create_new_process(simple_terminal, true);
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Starting terminal\n");
   task_start_process(term);
 
   ps2_keyboard_device *keyboard = dynamic_cast<ps2_keyboard_device *>(ps2_controller->chan_1_dev);
+  ASSERT(keyboard != nullptr);
 
   // Process should be good to go!
   task_start_process(initial_proc);
@@ -205,6 +211,8 @@ void simple_terminal()
 
   // Set up the input pipe
   ISystemTreeBranch *pipes_br = new system_tree_simple_branch();
+  ASSERT(pipes_br != nullptr);
+  ASSERT(system_tree() != nullptr);
   ASSERT(system_tree()->add_branch("pipes", pipes_br) == ERR_CODE::NO_ERROR);
   ASSERT(pipes_br->add_branch("terminal", new pipe_branch()) == ERR_CODE::NO_ERROR);
   ASSERT(system_tree()->get_leaf("pipes\\terminal\\read", &leaf) == ERR_CODE::NO_ERROR);

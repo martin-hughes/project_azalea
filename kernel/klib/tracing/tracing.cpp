@@ -166,6 +166,10 @@ void kl_trc_output_err_code_argument(ERR_CODE ec)
       msg = "Message handling fault";
       break;
 
+    case ERR_CODE::OUT_OF_RESOURCE:
+      msg = "Out of resource";
+      break;
+
     default:
       break;
   }

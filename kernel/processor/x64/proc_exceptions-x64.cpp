@@ -1,7 +1,7 @@
 // Exception handlers for the kernel.
 // Page faults are handled in interrupts-x64.cpp
 
-//#define ENABLE_TRACING
+#define ENABLE_TRACING
 
 #include "processor/x64/processor-x64-int.h"
 #include "klib/klib.h"
@@ -65,13 +65,13 @@ void proc_gen_prot_fault_handler(unsigned long err_code, unsigned long rip)
 {
   KL_TRC_TRACE(TRC_LVL::ERROR, "GPF. Error code: ", err_code, "\n");
   KL_TRC_TRACE(TRC_LVL::ERROR, "RIP: ", rip, "\n");
-  if (rip != 0)
+  /*if (rip != 0)
   {
     KL_TRC_TRACE(TRC_LVL::ERROR,
                  "Instruction bytes * 8: ",
                  reinterpret_cast<unsigned long>(*reinterpret_cast<unsigned long *>(rip)),
                  "\n");
-  }
+  }*/
   panic("General protection fault");
 }
 
@@ -103,4 +103,27 @@ void proc_virt_except_fault_handler()
 void proc_security_fault_handler(unsigned long err_code, unsigned long rip)
 {
   panic("Security fault");
+}
+
+/// @brief Handles page faults
+///
+/// Proper docs to follow when the system makes actual use of page faults.
+///
+/// @param fault_code See the Intel manual for more
+/// @param fault_addr See the Intel manual for more
+/// @param fault_instruction See the Intel manual for more
+void proc_page_fault_handler(unsigned long fault_code, unsigned long fault_addr, unsigned long fault_instruction)
+{
+  KL_TRC_ENTRY;
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "fault code: ", fault_code, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "CR2 (bad mem address): ", fault_addr, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Instruction pointer: ", fault_instruction, "\n");
+  if ((fault_code & 0x10) == 0)
+  {
+    // The fault wasn't caused by an instruction fetch, ergo we should be able to read & print the instruction...
+    KL_TRC_TRACE(TRC_LVL::EXTRA,
+                 "Instruction bytes x8: ", *(reinterpret_cast<unsigned long *>(fault_instruction)), "\n");
+  }
+  KL_TRC_EXIT;
+  panic("Page fault!");
 }

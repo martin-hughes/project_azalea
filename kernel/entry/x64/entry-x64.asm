@@ -26,7 +26,6 @@ or rax, rbx
 mov rbx, working_table_va_entry_addr
 mov [rbx], rax
 
-; Jump in to the kernel proper. This indirect jump is necessary because of the way the .pretext segment is linked to be
-; in lower memory, but the other segments are linked for upper memory. Direct jumps don't work for such a long jump.
+; Call the kernel proper.
 mov rax, main
-jmp rax
+call rax

@@ -9,6 +9,8 @@
 #include "processor/x64/pic/pic.h"
 #include "processor/x64/pic/apic.h"
 #include "processor/x64/pic/ioapic-x64.h"
+#include "processor/processor.h"
+#include "processor/x64/processor-x64.h"
 #include "processor/x64/processor-x64-int.h"
 #include "klib/klib.h"
 

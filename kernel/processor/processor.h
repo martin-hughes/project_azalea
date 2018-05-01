@@ -8,9 +8,11 @@
 #include "klib/synch/kernel_locks.h"
 #include "mem/mem.h"
 #include "object_mgr/handles.h"
+#include "object_mgr/ref_counter.h"
 #include "system_tree/system_tree_leaf.h"
 #include "klib/data_structures/string.h"
 #include "klib/synch/kernel_messages.h"
+#include "processor/synch_objects.h"
 
 #include "devices/device_interface.h"
 
@@ -20,12 +22,13 @@
 typedef void (* ENTRY_PROC)();
 
 // Forward declare task_thread since task_process and task_thread refer to each other in a cycle.
-struct task_thread;
+class task_thread;
 
 /// Structure to hold information about a process. All information is stored here, to be accessed by the various
 /// components as needed. This removes the need for per-component lookup tables for each process.
-struct task_process
+class task_process : public IRefCounted
 {
+public:
   /// Refer ourself back to the process list.
   klib_list_item<task_process *> process_list_item;
 
@@ -56,11 +59,23 @@ struct task_process
 
   /// The number of messages currently waiting for this process.
   unsigned long msg_queue_len;
+
+protected:
+  void ref_counter_zero();
 };
 
-/// Structure to hold information about a thread.
-struct task_thread
+/// @brief Class to hold information about a thread.
+///
+/// At present, the thread class has no real internal logic. This is all delegated to function-based code in
+/// task_manager.cpp as it comes from a very early point in the project.
+///
+/// task_thread derives from WaitObject, but doesn't change the default logic of that class. The WaitObject is
+/// signalled when the thread is scheduled for destruction.
+class task_thread : public IRefCounted, public WaitObject
 {
+public:
+  void destroy_thread();
+
   /// This thread's parent process. The process defines the address space, permissions, etc.
   task_process *parent_process;
 
@@ -73,6 +88,14 @@ struct task_thread
 
   /// Is the thread running? It will only be considered for execution if so.
   volatile bool permit_running;
+
+  /// Should the scheduler release it's acquisition of this thread? The thread will delete itself when no-one is
+  /// interested in it any more. This should only be set by task_destroy_thread().
+  bool release_thread;
+
+  /// Has the thread been destroyed? Various operations are not permitted on a destroyed thread. This object will
+  /// continue to exist until all references to it have been released.
+  bool thread_destroyed;
 
   /// A pointer to the next thread. In normal operation, these form a cycle of threads, and the task manager is able
   /// to manipulate this cycle without breaking the chain.
@@ -88,6 +111,9 @@ struct task_thread
   // synchronization primitive. The list itself is owned by that primitive, but this item must be initialized with the
   // rest of this structure.
   klib_list_item<task_thread *> synch_list_item;
+
+protected:
+  void ref_counter_zero();
 };
 
 /// @brief Processor-specific information.
@@ -184,5 +210,9 @@ void proc_write_port(const unsigned long port_id, const unsigned long value, con
 
 void proc_register_irq_handler(unsigned char irq_number, IIrqReceiver *receiver);
 void proc_unregister_irq_handler(unsigned char irq_number, IIrqReceiver *receiver);
+
+#ifdef AZALEA_TEST_CODE
+void test_only_reset_task_mgr();
+#endif
 
 #endif /* PROCESSOR_H_ */

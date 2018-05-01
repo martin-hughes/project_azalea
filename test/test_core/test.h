@@ -17,4 +17,8 @@ private:
   const char *_reason;
 };
 
+// defined in processor.dummy.cpp
+class task_thread;
+void test_only_set_cur_thread(task_thread *thread);
+
 #endif

@@ -8,6 +8,7 @@ GLOBAL asm_proc_mp_ap_startup
 asm_proc_mp_ap_startup:
   ; Set up a suitable stack, then call the main code.
   mov rax, temp_64_bit_stack_end
+  and rax, qword 0xFFFFFFFFFFFFFFF0
   mov rsp, rax
 
   mov rax, proc_mp_ap_startup
@@ -22,5 +23,6 @@ temp_64_bit_stack:
 
   times 4096 db 0
 
+ALIGN 16
 temp_64_bit_stack_end:
-  times 8 db 0
+  times 16 db 0

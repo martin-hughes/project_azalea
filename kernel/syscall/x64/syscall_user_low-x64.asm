@@ -26,3 +26,25 @@ GENERIC_SYSCALL 7, syscall_send_message
 GENERIC_SYSCALL 8, syscall_receive_message_details
 GENERIC_SYSCALL 9, syscall_receive_message_body
 GENERIC_SYSCALL 10, syscall_message_complete
+
+; Process & thread control
+GENERIC_SYSCALL 11, syscall_create_process
+GENERIC_SYSCALL 12, syscall_start_process
+GENERIC_SYSCALL 13, syscall_stop_process
+GENERIC_SYSCALL 14, syscall_destroy_process
+GENERIC_SYSCALL 15, syscall_exit_process
+
+GENERIC_SYSCALL 16, syscall_create_thread
+GENERIC_SYSCALL 17, syscall_start_thread
+GENERIC_SYSCALL 18, syscall_stop_thread
+GENERIC_SYSCALL 19, syscall_destroy_thread
+GENERIC_SYSCALL 20, syscall_exit_thread
+
+; Memory control
+GENERIC_SYSCALL 21, syscall_allocate_backing_memory
+GENERIC_SYSCALL 22, syscall_release_backing_memory
+GENERIC_SYSCALL 23, syscall_map_memory
+GENERIC_SYSCALL 24, syscall_unmap_memory
+
+; Thread synchronization
+GENERIC_SYSCALL 25, syscall_wait_for_object

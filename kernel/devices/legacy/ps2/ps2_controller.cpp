@@ -336,7 +336,10 @@ PS2_DEV_TYPE gen_ps2_controller_device::identify_device(bool second_channel)
   if (response == PS2_CONST::DEV_CMD_ACK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Identify command successful\n");
-    read_byte(response);
+    while (response == PS2_CONST::DEV_CMD_ACK)
+    {
+      read_byte(response);
+    }
 
     KL_TRC_TRACE(TRC_LVL::EXTRA, "Identification response:", response, "\n");
 
@@ -344,30 +347,35 @@ PS2_DEV_TYPE gen_ps2_controller_device::identify_device(bool second_channel)
     switch (response)
     {
       case 0x00:
+        KL_TRC_TRACE(TRC_LVL::FLOW, "ID: Standard mouse\n");
         dev_type = PS2_DEV_TYPE::MOUSE_STANDARD;
         break;
 
       case 0x03:
+        KL_TRC_TRACE(TRC_LVL::FLOW, "ID: Wheel mouse\n");
         dev_type = PS2_DEV_TYPE::MOUSE_WITH_WHEEL;
         break;
 
       case 0x04:
+        KL_TRC_TRACE(TRC_LVL::FLOW, "ID: 5-button mouse\n");
         dev_type = PS2_DEV_TYPE::MOUSE_5_BUTTON;
         break;
 
       case 0xAB:
         // Could be one of a couple of keyboard types.
         read_byte(response);
-        KL_TRC_TRACE(TRC_LVL::EXTRA, "Second response: ", response, "\n");
+        KL_TRC_TRACE(TRC_LVL::EXTRA, "Some type of keyboard. Second response: ", response, "\n");
         switch(response)
         {
           case 0x41:
           case 0xC1:
           case 0x83:
+          KL_TRC_TRACE(TRC_LVL::FLOW, "ID: MF2 Keyboard\n");
             dev_type = PS2_DEV_TYPE::KEYBOARD_MF2;
             break;
 
           default:
+            KL_TRC_TRACE(TRC_LVL::FLOW, "ID: Unknown keyboard\n");
             dev_type = PS2_DEV_TYPE::UNKNOWN;
             break;
         }

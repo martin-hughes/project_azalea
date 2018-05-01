@@ -31,6 +31,7 @@ files = [ "dummy_libs/processor/processor.dummy.cpp",
 
           "processor/scheduler/scheduler_1.cpp",
           "processor/irq_handler.cpp",
+          "processor/synch_objects.cpp",
 
           "system_tree/system_tree_1.cpp",
           "system_tree/system_tree_2.cpp",

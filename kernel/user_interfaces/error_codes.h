@@ -51,6 +51,9 @@ enum class ERR_CODE
 
   /// The process has tried to mark the wrong message as complete, or no message was being processed.
   SYNC_MSG_MISMATCH,
+
+  /// We've run out of the relevant resource, be it RAM or whatever.
+  OUT_OF_RESOURCE,
 };
 
 #endif

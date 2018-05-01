@@ -8,12 +8,12 @@ ENTRY(pre_main_32)
  * to calculate the load address of the next section leaves you out of sync   *
  * with what LD is doing. Fortunately, it seems like forcing the alignment to *
  * 1kb boundaries stops LD doing this. Maybe a smaller alignment would work.  *
- ******************************************************************************/ 
+ ******************************************************************************/
 
 SECTIONS
 {
   . = 0x0000000000100000;
-  
+
   /*******************************************************************************************************************
   /* BSP 32-bit entry point from multiboot. Must be first, to ensure the entry point can be found by the multiboot   *
    * loader.                                                                                                         *
@@ -24,7 +24,7 @@ SECTIONS
   }
   . = ALIGN(4096);
   start_loc = .;
-  
+
   /*******************************************************************************************************************
    * All other code that must be linked against lower memory (e.g. AP entry point, long mode initialization).        *
    *******************************************************************************************************************/
@@ -69,5 +69,14 @@ SECTIONS
   .eh_frame : AT ( start_loc )
   {
       *(.eh_frame)
+  }
+
+  . = ALIGN(1024);
+  start_loc = . - 0xFFFFFFFF00000000;
+  asm_ap_trampoline_addr = .;
+  . = 0x1000;
+  .pretext_16 : AT ( start_loc )
+  {
+      *(.pretext_16)
   }
 }

@@ -1,3 +1,4 @@
+#include "test/test_core/test.h"
 #include "test/object_mgr/object_mgr_tests.h"
 #include "system_tree/system_tree_leaf.h"
 #include "object_mgr/handles.h"
@@ -13,9 +14,6 @@ class simple_object : public ISystemTreeLeaf
 public:
   virtual ~simple_object() {}
 };
-
-// defined in processor.dummy.cpp
-void test_only_set_cur_thread(task_thread *thread);
 
 // A very simple test of the handle manager.
 TEST(ObjectManagerTest, StoreAndRetrieve)

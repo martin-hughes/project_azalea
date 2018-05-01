@@ -3,6 +3,7 @@
 Import('env')
 files = [ "task_manager.cpp",
           "processor.cpp",
+          "synch_objects.cpp",
         ]
 obj = env.Library("processor_generic", files)
 Return ("obj")

@@ -103,6 +103,7 @@ TEST(SchedulerTest, SimpleTests)
   }
 
   test_only_reset_om();
+  test_only_reset_task_mgr();
 }
 
 

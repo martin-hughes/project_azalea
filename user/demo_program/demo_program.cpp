@@ -1,7 +1,9 @@
 #include "user_interfaces/syscall.h"
 #include "user_interfaces/messages.h"
+#include "user_interfaces/system_properties.h"
 
 extern "C" int main();
+void second_thread();
 
 unsigned char message[100] = "Couldn't load file...\n";
 const char filename[] = "root\\text.txt";
@@ -29,6 +31,12 @@ MESSAGE(msg_pchar, "Printable character message\n");
 MESSAGE(msg_didnt_complete, "Kernel message didn't complete\n");
 MESSAGE(msg_unknown, "Unknown message\n");
 MESSAGE(msg_wrong_msg_len, "Wrong message length\n");
+MESSAGE(msg_dot, ".");
+MESSAGE(msg_no_proc, "Failed to create second process\n");
+MESSAGE(msg_thread_no_stop, "Failed to stop thread\n");
+MESSAGE(msg_thread_no_destroy, "Couldn't destroy thread\n");
+MESSAGE(msg_no_alloc, "Didn't allocate more vm space\n");
+MESSAGE(msg_no_map, "Couldn't do memory mapping\n");
 
 void file_read_test();
 GEN_HANDLE simple_term_write();
@@ -37,6 +45,9 @@ void keyboard_msgs(GEN_HANDLE term_handle);
 int main()
 {
   GEN_HANDLE term_handle;
+  GEN_HANDLE proc_handle;
+  ERR_CODE ret;
+  void *copy_space = reinterpret_cast<void *>(0x800000);
 
   SC_DEBUG_MSG(msg_hello);
 
@@ -46,6 +57,41 @@ int main()
   // Continue by displaying text on the screen! When trying to get a hold of the screen pipe it may not yet exist, so
   // spin until it does. Returns a handle to the terminal.
   term_handle = simple_term_write();
+
+  // Attempt to create another process that is basically a copy of this one, but starting from second_thread().
+  ret = syscall_create_process((void *)second_thread, &proc_handle);
+  if (ret != ERR_CODE::NO_ERROR)
+  {
+    SC_DEBUG_MSG(msg_no_proc);
+  }
+  else
+  {
+    // Create some space for us to do a bit of copying
+    ret = syscall_allocate_backing_memory(1, copy_space);
+    if (ret != ERR_CODE::NO_ERROR)
+    {
+      SC_DEBUG_MSG(msg_no_alloc);
+    }
+    else
+    {
+      ret = syscall_map_memory(proc_handle, (void *)0x400000, MEM_PAGE_SIZE, 0, copy_space);
+      if (ret != ERR_CODE::NO_ERROR)
+      {
+        SC_DEBUG_MSG(msg_no_map);
+      }
+      else
+      {
+        unsigned char *this_proc = (unsigned char *)0x400000;
+        unsigned char *copy_window = (unsigned char *)copy_space;
+        for(int i = 0; i < MEM_PAGE_SIZE; i++, this_proc++, copy_window++)
+        {
+          *copy_window = *this_proc;
+        }
+
+        syscall_start_process(proc_handle);
+      }
+    }
+  }
 
   // Deal with keyboard messages. This function won't actually return.
   keyboard_msgs(term_handle);
@@ -190,5 +236,22 @@ void keyboard_msgs(GEN_HANDLE term_handle)
         SC_DEBUG_MSG(msg_didnt_complete);
       }
     }
+  }
+}
+
+void second_thread()
+{
+  SC_DEBUG_MSG(msg_hello);
+  while(1)
+  {
+    for(int j = 0; j < 10; j++)
+    {
+      SC_DEBUG_MSG(msg_dot);
+      for(int i = 0; i < 10000000; i++)
+      {
+        __asm("nop");
+      }
+    }
+    syscall_exit_thread();
   }
 }

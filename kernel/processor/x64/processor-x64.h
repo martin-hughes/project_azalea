@@ -42,4 +42,9 @@ enum class PROC_X64_MSRS : unsigned long
 unsigned long proc_read_msr(PROC_X64_MSRS msr);
 void proc_write_msr(PROC_X64_MSRS msr, unsigned long value);
 
+extern "C" void asm_proc_read_cpuid(unsigned long eax_value,
+                                    unsigned long ecx_value,
+                                    unsigned long *ebx_eax,
+                                    unsigned long *edx_ecx);
+
 #endif

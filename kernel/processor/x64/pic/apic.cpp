@@ -134,7 +134,8 @@ unsigned char proc_x64_apic_get_local_id()
 ///
 /// @param interrupt The desired type of IPI to send
 ///
-/// @param vector The vector number for this IPI. Depending on the type of IPI being sent, this may be ignored.
+/// @param vector The vector number for this IPI. Depending on the type of IPI being sent, this may be ignored. For
+///               INIT IPIs, 0 indicates ASSERT, 1 indicates deassert.
 ///
 /// @param wait_for_delivery True if this processor should wait for the interrupt to have been delivered to the target.
 void proc_apic_send_ipi(const unsigned int apic_dest,
@@ -150,14 +151,29 @@ void proc_apic_send_ipi(const unsigned int apic_dest,
   unsigned int this_proc_id = proc_mp_this_proc_id();
   unsigned int reg_high_part;
   unsigned int reg_low_part;
+  unsigned int longer_vector = vector;
 
   KL_TRC_DATA("IPI destination", apic_dest);
   KL_TRC_DATA("Shorthand dest", short_code);
   KL_TRC_DATA("Interrupt to signal", int_code);
   KL_TRC_DATA("Interrupt vector", vector);
 
+  if (interrupt == PROC_IPI_INTERRUPT::INIT)
+  {
+    if (vector == 0)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "INIT level assert\n");
+      longer_vector = 1 << 14;
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "INIT level deassert\n");
+      longer_vector = 1 << 15;
+    }
+  }
+
   reg_high_part = apic_dest << 24;
-  reg_low_part = ((unsigned int)short_code << 18) | ((unsigned int)int_code << 8) | vector;
+  reg_low_part = ((unsigned int)short_code << 18) | ((unsigned int)int_code << 8) | longer_vector;
 
   KL_TRC_DATA("Register being written", ((unsigned long)reg_high_part << 32) | reg_low_part);
 

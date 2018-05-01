@@ -13,7 +13,6 @@ extern end_of_irq_ack_fn
 ; the process will crash as soon as it is started!
 asm_task_switch_interrupt:
     cli
-    pushf
     push rax
     push rbx
     push rcx
@@ -33,57 +32,40 @@ asm_task_switch_interrupt:
     mov rdi, task_switch_lock
     call asm_klib_synch_spinlock_lock
 
-    ; Save the stack pointer and prepare the execution pointer and CR3 as parameters for task_int_swap_task.
-    mov rdi, rsp
-    mov rsi, [rsp + 128]
-    mov rdx, cr3
+    ; Save the execution pointer as a parameter for task_int_swap_task.
+    mov rsi, cr3
 
-    ; Move the stack pointer down a bunch
+    ; Move the stack pointer down a bunch. The processor aligns the stack to 16-bytes before beginning the interrupt
+    ; instruction, then adds five pushes. We've added a further 15, so the stack is still 16-byte aligned.
     sub rsp, 512
-
-    ; Align it to a 16-byte boundary
-    and rsp, qword 0xFFFFFFFFFFFFFFF0
     fxsave64 [rsp]
-    sub rsp, 8
 
-    ; Save the original stack pointer, and update the one being passed as a parameter.
-    push rdi
+    ; Save the stack pointer as a parameter for task_int_swap_task.
     mov rdi, rsp
 
     ; Execute the task swap.
     call task_int_swap_task
 
-    ; Need to do an indirect call, which works from RAX, so store it, call and restore.
-    push rax
-    mov rax, end_of_irq_ack_fn
-    call [rax]
-    pop rax
-
-    ; From the returned execution context structure, compute the correct value of CR3 and restore it. CR3 is the third
-    ; entry.
-    mov rdx, rax
-    add rdx, 16
-    mov rax, [rdx]
+    ; From the returned execution context structure, compute the correct value of CR3 and restore it. CR3 is the first
+    ; element of the structure.
+    mov rax, [rax]
     mov cr3, rax
 
-    ; From the same structure, restore the stack to its post-fxsave state (RSP is the first entry).
-    sub rdx, 16
-    mov rsp, [rdx]
-
-    ; What was our original stack pointer?
-    pop rdi
-
-    ; Restore the FX state.
-    add rsp, 8
-    fxrstor [rsp]
-
-    ; Restore the original stack.
-    mov rsp, rdi
+    ; Restore the FX state and put the stack back to the correct place.
+    fxrstor64 [rsp]
+    add rsp, 512
 
     ; Task switching complete, release the lock.
     mov rax, task_switch_lock
     mov rbx, 0
     mov [rax], rbx
+
+    ; Need to do an indirect call, which works from RAX, so store it, call and restore.
+    push rax
+    mov rax, end_of_irq_ack_fn
+    mov rax, [rax]
+    call rax
+    pop rax
 
     pop r15
     pop r14
@@ -100,6 +82,4 @@ asm_task_switch_interrupt:
     pop rcx
     pop rbx
     pop rax
-    popf
-    sti
     iretq

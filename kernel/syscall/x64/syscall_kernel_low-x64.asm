@@ -50,12 +50,17 @@ asm_syscall_x64_prepare:
 ; System call number comes by RAX.
 GLOBAL asm_syscall_x64_syscall
 EXTERN syscall_x64_kernel_syscall
-EXTERN kernel_syscall_stack_ptrs
 EXTERN syscall_pointers
 EXTERN syscall_max_idx
 asm_syscall_x64_syscall:
   ; Stop interrupts while we're fiddling with the stack, to avoid bad corruptions.
   cli
+
+  ; Swap to this thread's kernel stack.
+  swapgs
+  mov [gs:16], rsp
+  mov rsp, [gs:8]
+  swapgs
 
   ; Save the registers that the calling convention says must be preserved
   push rbx
@@ -65,35 +70,14 @@ asm_syscall_x64_syscall:
   push r14
   push r15
 
-  ; Figure out which processor we're dealing with
-  mov rbx, 0
-  str bx
-  sub bx, 48
-
-  ; BX now contains the processor ID number, multiplied by 16. 8 bytes is the length of a pointer type on x64, so now
-  ; we can figure out the kernel stack pointer as being located at BX + [kernel_syscall_stack_ptrs]
-  shr bx, 1
-
-  ; Switch to kernel stack, saving the user mode one.
-  mov r12, kernel_syscall_stack_ptrs
-  mov r12, [r12]
-  add r12, rbx
-  mov r12, [r12]
-  mov rbx, rsp
-  mov rsp, r12
-
-  sti
-
   sub rsp, 512
-  and rsp, qword 0xFFFFFFFFFFFFFFF0
   fxsave64 [rsp]
-  sub rsp, 8
 
-  ; Save RCX (which is the stored RIP) and R11 (which is the stored RFLAGS), as well as RBX which is the address of the
-  ; user-mode stack. Three pushes, in combination with the 8 bytes above, ensure the stack is still 16-byte aligned.
-  push rbx
+  ; Save RCX (which is the stored RIP) and R11 (which is the stored RFLAGS).
   push rcx
   push r11
+
+  sti
 
   ; Confirm that the requested system call is within the boundaries of the index table:
   mov r12, syscall_max_idx
@@ -122,16 +106,12 @@ asm_syscall_x64_syscall:
   ; Put the RIP and R11 back again. Restore the FPU state.
   pop r11
   pop rcx
-  pop rbx
 
-  add rsp, 8
-  fxrstor [rsp]
+  fxrstor64 [rsp]
+  add rsp, 512
 
   ; Stop interrupts, because otherwise they might get called with the user stack (which is bad)
   cli
-
-  ; Restore the stack.
-  mov rsp, rbx
 
   ; Restore the registers that must be preserved by the calling convention.
   pop r15
@@ -140,6 +120,10 @@ asm_syscall_x64_syscall:
   pop r12
   pop rbp
   pop rbx
+
+  swapgs
+  mov rsp, [gs:16]
+  swapgs
 
   ; Carry on! Manually encode a "64-bit operands" (REX.W) prefix because:
   ; 1 - otherwise sysret thinks it's jumping back to 32-bit code, and hilarity ensues

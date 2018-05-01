@@ -565,6 +565,8 @@ klib_list_item<vmm_range_data *> *mem_vmm_allocate_list_item()
     initial_list_items_used++;
   }
 
+  klib_list_item_initialize(ret_item);
+
   KL_TRC_EXIT;
 
   return ret_item;

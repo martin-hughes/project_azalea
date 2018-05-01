@@ -3,7 +3,10 @@
 Import('env')
 files = ["syscall_kernel.cpp",
          "syscall_mpi.cpp",
+         "syscall_proc.cpp",
+         "syscall_mem.cpp",
+         "syscall_synch.cpp",
          "x64/syscall_kernel-x64.cpp",
          "x64/syscall_kernel_low-x64.asm"]
 obj = env.Library("syscall", files)
-Return ("obj") 
+Return ("obj")

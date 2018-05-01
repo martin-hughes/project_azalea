@@ -29,6 +29,28 @@ const void *syscall_pointers[] =
       (void *)syscall_receive_message_details,
       (void *)syscall_receive_message_body,
       (void *)syscall_message_complete,
+
+      // Process & thread control
+      (void *)syscall_create_process,
+      (void *)syscall_start_process,
+      (void *)syscall_stop_process,
+      (void *)syscall_destroy_process,
+      (void *)syscall_exit_process,
+
+      (void *)syscall_create_thread,
+      (void *)syscall_start_thread,
+      (void *)syscall_stop_thread,
+      (void *)syscall_destroy_thread,
+      (void *)syscall_exit_thread,
+
+      // Memory control,
+      (void *)syscall_allocate_backing_memory,
+      (void *)syscall_release_backing_memory,
+      (void *)syscall_map_memory,
+      (void *)syscall_unmap_memory,
+
+      // Thread synchronization
+      (void *)syscall_wait_for_object,
     };
 
 const unsigned long syscall_max_idx = (sizeof(syscall_pointers) / sizeof(void *)) - 1;
@@ -162,7 +184,7 @@ ERR_CODE syscall_close_handle(GEN_HANDLE handle)
 
   ERR_CODE result = ERR_CODE::UNKNOWN;
 
-  ISystemTreeLeaf *obj = dynamic_cast<ISystemTreeLeaf *>(om_retrieve_object(handle));
+  IRefCounted *obj = dynamic_cast<IRefCounted *>(om_retrieve_object(handle));
   if (obj == nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Object not found!\n");

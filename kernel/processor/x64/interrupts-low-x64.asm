@@ -58,7 +58,7 @@ asm_proc_install_idt:
 ; Restore the stack to it's pre-alignment state, since it can be arbitrarily aligned when an interrupt is called.
 %macro RESTORE_ORIG_STACK 0
   add rsp, 16
-  fxrstor [rsp]
+  fxrstor64 [rsp]
   mov rsp, r12
 %endmacro
 

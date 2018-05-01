@@ -54,17 +54,14 @@ struct proc_mp_ipi_msg_state
 };
 
 const unsigned char SUBTABLE_LAPIC_TYPE = 0;
-const unsigned short *pure_64_nmi_idt_entry = reinterpret_cast<const unsigned short *>(0xFFFFFFFF00000020);
 
 static proc_mp_ipi_msg_state *inter_proc_signals = nullptr;
 
 extern "C" unsigned long asm_ap_trampoline_start;
 extern "C" unsigned long asm_ap_trampoline_end;
+extern "C" unsigned long asm_ap_trampoline_addr;
 
 static_assert(sizeof(unsigned short) == 2, "Sizeof short must be two");
-
-// Pointers to kernel stacks, one per processor. This allows each processor to enter syscall with its own stack.
-void **kernel_syscall_stack_ptrs;
 
 /// @brief Prepare the system to start multi-processing
 ///
@@ -111,7 +108,6 @@ void proc_mp_init()
 
   proc_info_block = new processor_info[processor_count];
   inter_proc_signals = new proc_mp_ipi_msg_state[processor_count];
-  kernel_syscall_stack_ptrs = new void *[processor_count];
 
   // The second time around, save their details.
   subtable = acpi_init_subtable_ptr((void *)madt_table, sizeof(acpi_table_madt));
@@ -157,25 +153,24 @@ void proc_mp_init()
     inter_proc_signals[i].msg_being_sent = PROC_IPI_MSGS::SUSPEND;
     inter_proc_signals[i].msg_control_state = PROC_MP_X64_MSG_STATE::NO_MSG;
     klib_synch_spinlock_init(inter_proc_signals[i].signal_lock);
-
-    // Generate a stack for syscall to use. Remember that the stack grows downwards from the end of the allocation.
-    kernel_syscall_stack_ptrs[i] = proc_x64_allocate_stack();
   }
 
   // Recreate the GDT so that it is long enough to contain TSS descriptors for all processors
   proc_recreate_gdt(processor_count);
 
   // Copy the real mode startup point to a suitable location = 0x1000 should be good (SIPI vector number 1).
+  // Before doing this, remember that there are a couple of absolute JMP instructions that need fixing up. The first
+  // is at
   trampoline_length = reinterpret_cast<unsigned long>(&asm_ap_trampoline_end) -
                       reinterpret_cast<unsigned long>(&asm_ap_trampoline_start);
-  KL_TRC_DATA("Trampoline start", reinterpret_cast<unsigned long>(&asm_ap_trampoline_start));
+  KL_TRC_DATA("Trampoline start", reinterpret_cast<unsigned long>(&asm_ap_trampoline_addr));
   KL_TRC_DATA("Trampoline length", trampoline_length);
-  kl_memcpy(reinterpret_cast<void *>(&asm_ap_trampoline_start),
+  kl_memcpy(reinterpret_cast<void *>(&asm_ap_trampoline_addr),
             reinterpret_cast<void *>(0x1000),
             trampoline_length);
 
   // Signal all of the processors to wake up. They will then suspend themselves, awaiting a RESUME IPI message.
-  wait_offset = time_get_system_timer_offset(1000000000); // How many HPET units is a 1-second wait?
+  wait_offset = time_get_system_timer_offset(10000000000); // How many HPET units is a 1-second wait?
   for (int i = 0; i < processor_count; i++)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Looking at processor ", i, "\n");
@@ -211,7 +206,7 @@ void proc_mp_init()
       start_time = time_get_system_timer_count();
       end_time = start_time + wait_offset;
 
-      while ((time_get_system_timer_count() < end_time) || (proc_info_block[i].processor_running == false))
+      while ((time_get_system_timer_count() < end_time) && (proc_info_block[i].processor_running == false))
       {
         // Keep waiting.
       }

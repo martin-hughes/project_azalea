@@ -12,6 +12,7 @@
 
 #include "klib/klib.h"
 #include "processor/processor.h"
+#include "processor/x64/processor-x64.h"
 #include "mem/mem.h"
 #include "mem/mem-int.h"
 #include "mem/x64/mem-x64.h"
@@ -19,9 +20,6 @@
 
 mem_process_info task0_entry;
 process_x64_data task0_x64_entry;
-
-const unsigned long working_table_virtual_addr_base = 0xFFFFFFFFFFE00000;
-unsigned long working_table_virtual_addr;
 
 // This pointer points to the location in virtual address space corresponding to
 // the physical page being used as the PTE for working_table_virtual_addr. This
@@ -35,12 +33,23 @@ unsigned long *working_table_va_entry_addr;
 // but its virtual address will always be the same (so it can be filled in to the x64 TSS).
 void *mem_x64_kernel_stack_ptr;
 
-unsigned char *next_4kb_page;
-bool working_table_va_mapped;
+namespace
+{
+  // This mask represents the bits that are valid in a physical address - i.e., limited by MAXPHYADDR. See the Intel
+  // System Programming Guide chapter 4.1.4 for details.
+  unsigned long valid_phys_bit_mask = 0;
 
-static kernel_spinlock pml4_edit_lock;
+  const unsigned long working_table_virtual_addr_base = 0xFFFFFFFFFFE00000;
+  unsigned long working_table_virtual_addr;
 
-void *mem_get_next_4kb_page();
+  unsigned char *next_4kb_page;
+  bool working_table_va_mapped;
+
+  static kernel_spinlock pml4_edit_lock;
+
+  void *mem_get_next_4kb_page();
+  unsigned char mem_x64_get_max_phys_addr();
+}
 
 /// @brief Initialise the entire memory management subsystem.
 ///
@@ -51,12 +60,21 @@ void mem_gen_init(e820_pointer *e820_ptr)
 
   unsigned long temp_phys_addr;
   unsigned long temp_offset;
+  unsigned char phys_addr_width;
 
   // Initialise the physical memory subsystem. This will call back to x64- specific code later.
   mem_init_gen_phys_sys(e820_ptr);
 
   // Configure the x64 PAT system, so that caching works as expected.
   mem_x64_pat_init();
+
+  // Determine the maximum physical address length, and as a result a bit mask that can be used to mask out invalid
+  // bits.
+  phys_addr_width = mem_x64_get_max_phys_addr();
+  valid_phys_bit_mask = 1;
+  valid_phys_bit_mask = valid_phys_bit_mask << phys_addr_width;
+  valid_phys_bit_mask -= 1;
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Physical address bit mask: ", valid_phys_bit_mask, "\n");
 
   klib_synch_spinlock_init(pml4_edit_lock);
 
@@ -196,6 +214,10 @@ void mem_map_virtual_page(unsigned long virt_addr,
   void *table_phys_addr;
   page_table_entry new_entry;
   bool is_kernel_allocation;
+
+  // Truncate the physical address to be limited by MAXPHYADDR
+  ASSERT(valid_phys_bit_mask != 0);
+  phys_addr = phys_addr & valid_phys_bit_mask;
 
   is_kernel_allocation = ((virt_addr & 0x8000000000000000) != 0);
 
@@ -365,34 +387,38 @@ void mem_unmap_virtual_page(unsigned long virt_addr)
   KL_TRC_EXIT;
 }
 
-/// @brief Return the physical address of a 4kB "page" usable by the page table system by neatly carving up a 2MB page.
-///
-/// This is useful for certain callers instead of calling mem_allocate_phys_page because that returns 2MB pages which
-/// results in huge wasteage.
-///
-/// @return The physical address of the beginning of a 4kB "page".
-void *mem_get_next_4kb_page()
+namespace
 {
-  KL_TRC_ENTRY;
-
-  void *ret_val;
-  if (next_4kb_page == nullptr)
+  /// @brief Return the physical address of a 4kB "page" usable by the page table system by neatly carving up a 2MB
+  /// page.
+  ///
+  /// This is useful for certain callers instead of calling mem_allocate_phys_page because that returns 2MB pages which
+  /// results in huge wasteage.
+  ///
+  /// @return The physical address of the beginning of a 4kB "page".
+  void *mem_get_next_4kb_page()
   {
-    next_4kb_page = (unsigned char *)mem_allocate_physical_pages(1);
+    KL_TRC_ENTRY;
+
+    void *ret_val;
+    if (next_4kb_page == nullptr)
+    {
+      next_4kb_page = (unsigned char *)mem_allocate_physical_pages(1);
+    }
+
+    ret_val = next_4kb_page;
+
+    next_4kb_page = next_4kb_page + 4096;
+
+    if (((unsigned long)next_4kb_page) % MEM_PAGE_SIZE == 0)
+    {
+      next_4kb_page = nullptr;
+    }
+
+    KL_TRC_EXIT;
+
+    return ret_val;
   }
-
-  ret_val = next_4kb_page;
-
-  next_4kb_page = next_4kb_page + 4096;
-
-  if (((unsigned long)next_4kb_page) % MEM_PAGE_SIZE == 0)
-  {
-    next_4kb_page = nullptr;
-  }
-
-  KL_TRC_EXIT;
-
-  return ret_val;
 }
 
 /// @brief Set up a well-known virtual address to the given physical address.
@@ -703,4 +729,33 @@ unsigned long mem_x64_phys_addr_from_pte(unsigned long encoded)
   KL_TRC_EXIT;
 
   return decoded.target_addr;
+}
+
+namespace
+{
+  /// @brief Determine the value of MAXPHYADDR
+  ///
+  /// Determine the width of physical addresses the processor uses. For a better description see, in particular, the
+  /// Intel System Programming Guide chapter 4.1.4.
+  ///
+  /// @return A value corresponding to MAXPHYADDR - the number of bits the processor uses in physical addresses.
+  unsigned char mem_x64_get_max_phys_addr()
+  {
+    unsigned char result;
+    unsigned long ebx_eax;
+    unsigned long edx_ecx;
+
+    KL_TRC_ENTRY;
+
+    // Request the memory information leaf.
+    asm_proc_read_cpuid(0x80000008, 0, &ebx_eax, &edx_ecx);
+    result = static_cast<unsigned char>(ebx_eax & 0xFF);
+
+    ASSERT((result > 35) && (result <= 52)); // Per the current Intel documentation.
+
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "MAXPHYADDR: ", result, "\n");
+    KL_TRC_EXIT;
+
+    return result;
+  }
 }

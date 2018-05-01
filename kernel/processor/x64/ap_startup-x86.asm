@@ -13,6 +13,14 @@ asm_ap_x86_entry:
   and eax, 0x7FFFFFFF
   mov cr0, eax
 
+  ; Reset segment selectors
+  mov ax, 0x10
+  mov ss, ax
+  mov ds, ax
+  mov es, ax
+  mov fs, ax
+  mov gs, ax
+
   ; Enable PAE:
   mov eax, cr4
   or eax, 0x00000020

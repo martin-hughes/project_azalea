@@ -35,4 +35,32 @@ extern "C" ERR_CODE syscall_receive_message_details(unsigned long &sending_proc_
 extern "C" ERR_CODE syscall_receive_message_body(char *message_buffer, unsigned long buffer_size);
 extern "C" ERR_CODE syscall_message_complete();
 
+// Process & thread control
+extern "C" ERR_CODE syscall_create_process(void *entry_point_addr, GEN_HANDLE *proc_handle);
+extern "C" ERR_CODE syscall_start_process(GEN_HANDLE proc_handle);
+extern "C" ERR_CODE syscall_stop_process(GEN_HANDLE proc_handle);
+extern "C" ERR_CODE syscall_destroy_process(GEN_HANDLE proc_handle);
+extern "C" void syscall_exit_process();
+
+extern "C" ERR_CODE syscall_create_thread(void (*entry_point)(), GEN_HANDLE *thread_handle);
+extern "C" ERR_CODE syscall_start_thread(GEN_HANDLE thread_handle);
+extern "C" ERR_CODE syscall_stop_thread(GEN_HANDLE thread_handle);
+extern "C" ERR_CODE syscall_destroy_thread(GEN_HANDLE thread_handle);
+extern "C" void syscall_exit_thread();
+
+// Memory allocation / deallocation
+extern "C" ERR_CODE syscall_allocate_backing_memory(unsigned long pages, void *map_addr);
+extern "C" ERR_CODE syscall_release_backing_memory(void *dealloc_ptr);
+
+// Memory mapping
+extern "C" ERR_CODE syscall_map_memory(GEN_HANDLE proc_mapping_in,
+                                       void *map_addr,
+                                       unsigned long length,
+                                       GEN_HANDLE proc_already_in,
+                                       void *extant_addr);
+extern "C" ERR_CODE syscall_unmap_memory();
+
+// Thread synchronization
+extern "C" ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle);
+
 #endif

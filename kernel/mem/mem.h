@@ -6,6 +6,9 @@
 // memory functions should be used to allocate or deallocate specific amounts of
 // memory.
 
+// To include the constant MEM_PAGE_SIZE
+#include "user_interfaces/system_properties.h"
+
 // A structure to contain information specific to a single process.
 // In future, this will be able to track things like allocation counts and so
 // on, but for now it just contains the x64 specific data.
@@ -74,7 +77,5 @@ mem_process_info *mem_task_get_task0_entry();
 mem_process_info *mem_task_create_task_entry();
 void mem_task_destroy_task_entry();
 
-// Useful definitions.
-const unsigned long MEM_PAGE_SIZE = 2097152;
 
 #endif /* MEM_H_ */

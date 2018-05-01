@@ -4,10 +4,6 @@ enum class PROC_IPI_MSGS;
 
 // CPU Control
 extern "C" void asm_proc_stop_this_proc();
-extern "C" void asm_proc_read_cpuid(unsigned long eax_value,
-                                    unsigned long ecx_value,
-                                    unsigned long *ebx_eax,
-                                    unsigned long *edx_ecx);
 extern "C" unsigned long asm_proc_read_msr(unsigned long msr);
 extern "C" void asm_proc_write_msr(unsigned long msr, unsigned long value);
 extern "C" unsigned long asm_proc_read_port(const unsigned long port_id, const unsigned char width);

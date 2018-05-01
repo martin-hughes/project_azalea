@@ -156,7 +156,8 @@ void proc_write_msr(PROC_X64_MSRS msr, unsigned long value)
 
 /// @brief Allocate a single-page stack to the kernel.
 ///
-/// @return An address that can be used as a stack pointer, growing downwards as far as the next page boundary.
+/// @return An address that can be used as a stack pointer, growing downwards as far as the next page boundary. Values
+///         are 16-byte aligned.
 void *proc_x64_allocate_stack()
 {
   KL_TRC_ENTRY;

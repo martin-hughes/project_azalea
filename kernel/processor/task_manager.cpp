@@ -10,6 +10,15 @@
 /// The threads (as a task_thread object) point at each other via task_thread::next_thread, in a cycle. The processors
 /// move around the cycle until they find a thread that is permitted to run (i.e. not suspended) and not locked (by
 /// task_thread::cycle_lock). Being locked means that another processor is about to execute it.
+///
+/// Notice that much of the code in this file is contained within functions, rather than being delegated to the classes
+/// of the relevant objects. This is simply because of how this code comes from very early on in the project - it may
+/// well change one day.
+
+// Known defects:
+// - There's a possible race condition where waiting for a thread just as it is about to be destroyed may cause the
+//   waiting thread to have to wait until the object is destroyed until it gets signalled, rather than being
+//   signalled at the initial destruction.
 
 //#define ENABLE_TRACING
 
@@ -19,34 +28,37 @@
 #include "mem/mem.h"
 #include "object_mgr/object_mgr.h"
 
-// This is a list of all processes known to the system.
-klib_list<task_process *> process_list;
+namespace
+{
+  // A list of all processes known to the system.
+  klib_list<task_process *> process_list;
 
-// The threads each processor is currently running. After initialisation, this points to an array of size equal to the
-// number of processors.
-task_thread **current_threads = nullptr;
+  // The threads each processor is currently running. After initialisation, this points to an array of size equal to
+  // the number of processors.
+  task_thread **current_threads = nullptr;
 
-// Should the processor continue running this thread without considering other threads? After initialisation, this
-// points to an array of bools equal in size to the number of processors.
-static bool *continue_this_thread = nullptr;
+  // Should the processor continue running this thread without considering other threads? After initialisation, this
+  // points to an array of bools equal in size to the number of processors.
+  static bool *continue_this_thread = nullptr;
 
-// Idle threads for each processor. These are created during initialisation, and after initialisation this is an array
-// of pointers equal in size to the number of processors.
-task_thread **idle_threads = nullptr;
+  // Idle threads for each processor. These are created during initialisation, and after initialisation this is an
+  // array of pointers equal in size to the number of processors.
+  task_thread **idle_threads = nullptr;
 
-// A pointer to an arbitrary thread within the cycle of threads. It doesn't really matter which thread this points to,
-// the CPUs can just cycle through the cycle to find the one they want.
-task_thread *start_of_thread_cycle = nullptr;
+  // A pointer to an arbitrary thread within the cycle of threads. It doesn't really matter which thread this points
+  // to, the CPUs can just cycle through the cycle to find the one they want.
+  task_thread *start_of_thread_cycle = nullptr;
 
-// Protects the thread cycle from two threads making simultaneous changes.
-kernel_spinlock thread_cycle_lock;
+  // Protects the thread cycle from two threads making simultaneous changes.
+  kernel_spinlock thread_cycle_lock;
 
-// Some helper functions
-void task_thread_cycle_add(task_thread *new_thread);
-void task_thread_cycle_remove(task_thread *thread);
-void task_thread_cycle_lock();
-void task_thread_cycle_unlock();
-void task_idle_thread_cycle();
+  // Some helper functions
+  void task_thread_cycle_add(task_thread *new_thread);
+  void task_thread_cycle_remove(task_thread *thread);
+  void task_thread_cycle_lock();
+  void task_thread_cycle_unlock();
+  void task_idle_thread_cycle();
+}
 
 /// @brief Initialise and start the task management subsystem
 ///
@@ -185,15 +197,24 @@ task_thread *task_create_new_thread(ENTRY_PROC entry_point, task_process *parent
 
   klib_list_item_initialize(&new_thread->process_list_item);
   klib_list_item_initialize(&new_thread->synch_list_item);
+  new_thread->execution_context = task_int_create_exec_context(entry_point, new_thread);
   new_thread->synch_list_item.item = new_thread;
   new_thread->process_list_item.item = new_thread;
-  klib_list_add_tail(&parent_process->child_threads, &new_thread->process_list_item);
-  new_thread->execution_context = task_int_create_exec_context(entry_point, new_thread);
   new_thread->permit_running = false;
+  new_thread->release_thread = false;
+  new_thread->thread_destroyed = false;
+  klib_list_add_tail(&parent_process->child_threads, &new_thread->process_list_item);
 
   klib_synch_spinlock_init(new_thread->cycle_lock);
 
   task_thread_cycle_add(new_thread);
+
+  // Acquire a reference to this thread object on behalf of the task manager. It will only be released when the thread
+  // is "destroyed" in the eyes of the task manager.
+  new_thread->ref_acquire();
+
+  // Grab a reference to the parent process, to stop it being destroyed while it still has child threads running.
+  parent_process->ref_acquire();
 
   KL_TRC_EXIT;
   return new_thread;
@@ -201,13 +222,66 @@ task_thread *task_create_new_thread(ENTRY_PROC entry_point, task_process *parent
 
 /// @brief Destroy a thread
 ///
-/// Stop the thread from executing and destroy it.
+/// Stop the thread from executing and destroy it. It is permissible to destroy *any* thread, but this should be done
+/// with extreme caution - if you destroy a thread while it is holding a lock, then that lock will be locked forever.
 ///
 /// @param unlucky_thread The unlucky thread that is about to be destroyed.
 void task_destroy_thread(task_thread *unlucky_thread)
 {
   KL_TRC_ENTRY;
-  INCOMPLETE_CODE("Can't destroy threads.");
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Destroying thread ", unlucky_thread, "\n");
+  ASSERT(unlucky_thread != nullptr);
+
+  if (!unlucky_thread->thread_destroyed)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Destroying thread\n");
+
+    unlucky_thread->destroy_thread();
+
+    if (task_get_cur_thread() == unlucky_thread)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Abandoning this thread.");
+
+      // Continue this thread until completing this exercise, otherwise it might become unscheduled and never be
+      // rescheduled to finish its own destruction. As soon as the scheduler sees that release_thread is set, it will
+      // finish the destruction itself.
+      task_continue_this_thread();
+      task_thread_cycle_remove(unlucky_thread);
+      unlucky_thread->release_thread = true;
+      task_yield();
+
+      panic("Came back from abandoning a thread!");
+    }
+    else
+    {
+      // Stop the thread from running, then wait for it to be unscheduled.
+      task_stop_thread(unlucky_thread);
+      klib_synch_spinlock_lock(unlucky_thread->cycle_lock);
+
+      // Now it can be released.
+      task_thread_cycle_remove(unlucky_thread);
+      unlucky_thread->ref_release();
+    }
+  }
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Parts of the thread destruction handled by the thread class.
+///
+/// This code currently only triggers any threads that were waiting for the termination of this one.
+void task_thread::destroy_thread()
+{
+  KL_TRC_ENTRY;
+
+  if (!this->thread_destroyed)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Destroying this thread\n");
+    this->thread_destroyed = true;
+    this->trigger_all_threads();
+  }
+
   KL_TRC_EXIT;
 }
 
@@ -251,6 +325,17 @@ task_thread *task_get_next_thread()
 
   ASSERT(continue_this_thread != nullptr);
   ASSERT(current_threads != nullptr);
+
+  if (continue_this_thread[proc_id] &&
+      (current_threads[proc_id] != nullptr) &&
+      (current_threads[proc_id]->release_thread == true))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Thread has requested its own destruction\n");
+
+    current_threads[proc_id]->ref_release();
+    current_threads[proc_id] = nullptr;
+    continue_this_thread[proc_id] = false;
+  }
 
   if (continue_this_thread[proc_id])
   {
@@ -417,7 +502,7 @@ void task_start_thread(task_thread *thread)
   KL_TRC_DATA("Thread address", (unsigned long)thread);
 
   ASSERT(thread != nullptr);
-  if(!thread->permit_running)
+  if((!thread->permit_running) && (!thread->thread_destroyed))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Thread not running, start it\n");
     thread->permit_running = true;
@@ -471,108 +556,155 @@ void task_resume_scheduling()
   KL_TRC_EXIT;
 }
 
-/// @brief Add a new thread to the cycle of all threads
-///
-/// All threads are joined in a cycle by task_thread::next_thread. Add new_thread to this cycle.
-///
-/// @param new_thread The new thread to add.
-void task_thread_cycle_add(task_thread *new_thread)
+/// @brief Handle destruction of thread data.
+void task_thread::ref_counter_zero()
 {
   KL_TRC_ENTRY;
-  // We don't need to lock for the scheduler - the cycle is always in a consistent state as far as it's concerned, but
-  // we do need to prevent two threads being added at once, since that might cause one or the other to be lost.
-  task_thread_cycle_lock();
 
-  if (start_of_thread_cycle == nullptr)
-  {
-    start_of_thread_cycle = new_thread;
-    start_of_thread_cycle->next_thread = new_thread;
-  }
-  else
-  {
-    new_thread->next_thread = start_of_thread_cycle->next_thread;
-    start_of_thread_cycle->next_thread = new_thread;
-  }
+  task_x64_exec_context *context;
+  context = reinterpret_cast<task_x64_exec_context *>(this->execution_context);
+  this->execution_context = nullptr;
+  delete context;
+  klib_list_remove(&this->process_list_item);
 
-  task_thread_cycle_unlock();
+  ASSERT(this->parent_process != nullptr);
+  this->parent_process->ref_release();
+
   KL_TRC_EXIT;
+
+  delete this;
 }
 
-/// @brief Remove a thread from the thread cycle
-///
-/// This will cause it to not be considered for execution any more.
-///
-/// @param thread The thread to remove.
-void task_thread_cycle_remove(task_thread *thread)
+void task_process::ref_counter_zero()
 {
   KL_TRC_ENTRY;
 
-  task_thread *search_thread;
+  //We should not be destroying the process with any child threads still alive.
+  ASSERT(klib_list_get_length(&this->child_threads) == 0);
 
-  task_thread_cycle_lock();
+  KL_TRC_EXIT;
 
-  // Special case here - we're deleting the last thread.
-  if (thread->next_thread == thread)
+  delete this;
+}
+
+#ifdef AZALEA_TEST_CODE
+void test_only_reset_task_mgr()
+{
+  delete[] current_threads;
+  delete[] continue_this_thread;
+  delete[] idle_threads;
+
+  current_threads = nullptr;
+  continue_this_thread = nullptr;
+  idle_threads = nullptr;
+}
+#endif
+
+namespace
+{
+  /// @brief Add a new thread to the cycle of all threads
+  ///
+  /// All threads are joined in a cycle by task_thread::next_thread. Add new_thread to this cycle.
+  ///
+  /// @param new_thread The new thread to add.
+  void task_thread_cycle_add(task_thread *new_thread)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Deleting the last thread\n");
-    start_of_thread_cycle = nullptr;
-  }
-  else
-  {
-    if (start_of_thread_cycle == thread)
+    KL_TRC_ENTRY;
+    // We don't need to lock for the scheduler - the cycle is always in a consistent state as far as it's concerned,
+    // but we do need to prevent two threads being added at once, since that might cause one or the other to be lost.
+    task_thread_cycle_lock();
+
+    if (start_of_thread_cycle == nullptr)
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Moving start of thread cycle out of the way of the dead thread\n");
-      start_of_thread_cycle = thread->next_thread;
+      start_of_thread_cycle = new_thread;
+      start_of_thread_cycle->next_thread = new_thread;
+    }
+    else
+    {
+      new_thread->next_thread = start_of_thread_cycle->next_thread;
+      start_of_thread_cycle->next_thread = new_thread;
     }
 
-    search_thread = start_of_thread_cycle;
-    while (search_thread->next_thread != thread)
-    {
-      search_thread = search_thread->next_thread;
+    task_thread_cycle_unlock();
+    KL_TRC_EXIT;
+  }
 
-      if (search_thread == start_of_thread_cycle)
+  /// @brief Remove a thread from the thread cycle
+  ///
+  /// This will cause it to not be considered for execution any more.
+  ///
+  /// @param thread The thread to remove.
+  void task_thread_cycle_remove(task_thread *thread)
+  {
+    KL_TRC_ENTRY;
+
+    task_thread *search_thread;
+
+    task_thread_cycle_lock();
+
+    // Special case here - we're deleting the last thread.
+    if (thread->next_thread == thread)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Deleting the last thread\n");
+      start_of_thread_cycle = nullptr;
+    }
+    else
+    {
+      if (start_of_thread_cycle == thread)
       {
-        // If this isn't true then the thread officially didn't exist to start with.
-        ASSERT(search_thread->next_thread == thread);
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Moving start of thread cycle out of the way of the dead thread\n");
+        start_of_thread_cycle = thread->next_thread;
       }
+
+      search_thread = start_of_thread_cycle;
+      while (search_thread->next_thread != thread)
+      {
+        search_thread = search_thread->next_thread;
+
+        if (search_thread == start_of_thread_cycle)
+        {
+          // If this isn't true then the thread officially didn't exist to start with.
+          ASSERT(search_thread->next_thread == thread);
+        }
+      }
+
+      search_thread->next_thread = search_thread->next_thread->next_thread;
     }
 
-    search_thread->next_thread = search_thread->next_thread->next_thread;
+    task_thread_cycle_unlock();
+    KL_TRC_EXIT;
   }
 
-  task_thread_cycle_unlock();
-  KL_TRC_EXIT;
-}
-
-/// @brief Lock the thread cycle
-///
-/// This is used when editing the thread cycle, to ensure constant consistency.
-void task_thread_cycle_lock()
-{
-  KL_TRC_ENTRY;
-
-  klib_synch_spinlock_lock(thread_cycle_lock);
-
-  KL_TRC_EXIT;
-}
-
-/// @brief Unlock the thread cycle
-void task_thread_cycle_unlock()
-{
-  KL_TRC_ENTRY;
-
-  klib_synch_spinlock_unlock(thread_cycle_lock);
-
-  KL_TRC_EXIT;
-}
-
-/// @brief The idle thread's code
-///
-/// This function is executed by every one of the idle threads belonging to each processor.
-void task_idle_thread_cycle()
-{
-  while(1)
+  /// @brief Lock the thread cycle
+  ///
+  /// This is used when editing the thread cycle, to ensure constant consistency.
+  void task_thread_cycle_lock()
   {
-    asm("hlt");
+    KL_TRC_ENTRY;
+
+    klib_synch_spinlock_lock(thread_cycle_lock);
+
+    KL_TRC_EXIT;
   }
-}
+
+  /// @brief Unlock the thread cycle
+  void task_thread_cycle_unlock()
+  {
+    KL_TRC_ENTRY;
+
+    klib_synch_spinlock_unlock(thread_cycle_lock);
+
+    KL_TRC_EXIT;
+  }
+
+  /// @brief The idle thread's code
+  ///
+  /// This function is executed by every one of the idle threads belonging to each processor.
+  void task_idle_thread_cycle()
+  {
+    while(1)
+    {
+      asm("hlt");
+    }
+  }
+};

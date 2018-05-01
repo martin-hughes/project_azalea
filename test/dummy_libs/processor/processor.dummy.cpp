@@ -50,3 +50,8 @@ void test_only_set_cur_thread(task_thread *thread)
 {
   fake_cur_thread = thread;
 }
+
+void task_yield()
+{
+  // Not much that can be done here.
+}
