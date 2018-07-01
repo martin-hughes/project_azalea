@@ -40,6 +40,8 @@ task_process *proc_load_binary_file(kl_string binary_name)
   // Copy it into that mapping.
   // Release the kernel side of that mapping.
 
+  INCOMPLETE_CODE("Doesn't deal with allocating virtual address within the process");
+
   ISystemTreeLeaf *disk_prog;
   IBasicFile *new_prog_file;
   unsigned long prog_size;

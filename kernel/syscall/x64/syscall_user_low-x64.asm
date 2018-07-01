@@ -40,11 +40,15 @@ GENERIC_SYSCALL 18, syscall_stop_thread
 GENERIC_SYSCALL 19, syscall_destroy_thread
 GENERIC_SYSCALL 20, syscall_exit_thread
 
+GENERIC_SYSCALL 21, syscall_thread_set_tls_base
+
 ; Memory control
-GENERIC_SYSCALL 21, syscall_allocate_backing_memory
-GENERIC_SYSCALL 22, syscall_release_backing_memory
-GENERIC_SYSCALL 23, syscall_map_memory
-GENERIC_SYSCALL 24, syscall_unmap_memory
+GENERIC_SYSCALL 22, syscall_allocate_backing_memory
+GENERIC_SYSCALL 23, syscall_release_backing_memory
+GENERIC_SYSCALL 24, syscall_map_memory
+GENERIC_SYSCALL 25, syscall_unmap_memory
 
 ; Thread synchronization
-GENERIC_SYSCALL 25, syscall_wait_for_object
+GENERIC_SYSCALL 26, syscall_wait_for_object
+GENERIC_SYSCALL 27, syscall_futex_wait
+GENERIC_SYSCALL 28, syscall_futex_wake

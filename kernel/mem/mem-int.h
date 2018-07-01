@@ -1,6 +1,8 @@
 #ifndef _MEM_INTERNAL_H
 #define _MEM_INTERNAL_H
 
+struct vmm_process_data;
+
 void mem_init_gen_phys_sys(e820_pointer *e820_ptr);
 void mem_gen_phys_pages_bitmap(e820_pointer *e820_ptr,
                                unsigned long *bitmap_loc,
@@ -16,6 +18,8 @@ void mem_map_virtual_page(unsigned long virt_addr,
                           task_process *context = nullptr,
                           MEM_CACHE_MODES cache_mode = MEM_WRITE_BACK);
 void mem_unmap_virtual_page(unsigned long virt_addr);
+
+void mem_vmm_init_proc_data(vmm_process_data &proc_data_ref);
 
 // Allow the whole memory manager to access the data about task 0 (the kernel),
 // to make it easier to feed it into other parts of the system later.

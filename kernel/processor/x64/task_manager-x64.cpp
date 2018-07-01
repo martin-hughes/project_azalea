@@ -88,6 +88,9 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
   new_context->saved_stack.rax = 0;
   new_context->saved_stack.proc_rip = reinterpret_cast<unsigned long>(entry_point);
 
+  new_context->fs_base = 0;
+  new_context->gs_base = 0;
+
   new_context->owner_thread = new_thread;
   new_context->syscall_stack = proc_x64_allocate_stack();
 
@@ -144,6 +147,51 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
   return (void *)new_context;
 }
 
+/// @brief Set the command line and environment for a newly created process.
+///
+/// Azalea puts argc, and the argv and environ pointers into the registers for the first three parameters of a normal C
+/// function, using the Linux style parameter passing scheme used throughout.
+///
+/// This can only be carried out on a process that hasn't started yet. This function simply assumes that the first
+/// thread it finds for a process is the one that will execute the startup code, and sets up the registers
+/// appropriately in that thread, so care should be taken if setting up multiple threads in a process before starting
+/// it.
+///
+/// @param process The process to set the parameters for
+///
+/// @param argc Has the same meaning as argc in a normal C program.
+///
+/// @param argv Has the same meaning as argv in a normal C program. Must be a user mode pointer in the process's
+///             address space, although the kernel doesn't enforce this - the program will simply crash if this is
+///             wrong. This function does not copy the arguments into that space, it is assumed the program loader does
+///             this.
+///
+/// @param env Has the same meaning as argv in a normal C program. Must be a user mode pointer in the process's address
+///            space, although the kernel doesn't enforce this - the program will simply crash if this is wrong. This
+///            function does not copy the arguments into that space, it is assumed the program loader does this.
+void task_set_start_params(task_process *process, unsigned long argc, char **argv, char **env)
+{
+  KL_TRC_ENTRY;
+
+  task_thread *first_thread;
+  task_x64_exec_context *context;
+
+  ASSERT(process != nullptr);
+  ASSERT(process->child_threads.head != nullptr);
+  first_thread = process->child_threads.head->item;
+  ASSERT(first_thread != nullptr);
+  ASSERT(first_thread->permit_running == false);
+
+  context = reinterpret_cast <task_x64_exec_context *>(first_thread->execution_context);
+  ASSERT(context != nullptr);
+
+  context->saved_stack.rdi = argc;
+  context->saved_stack.rsi = reinterpret_cast<unsigned long>(argv);
+  context->saved_stack.rdx = reinterpret_cast<unsigned long>(env);
+
+  KL_TRC_EXIT;
+}
+
 /// @brief Main task switcher
 ///
 /// task_int_swap_task() is called by the timer interrupt. It saves the execution context of the thread currently
@@ -175,6 +223,9 @@ task_x64_exec_context *task_int_swap_task(unsigned long stack_addr, unsigned lon
     current_context->cr3_value = (void *)cr3_value;
 
     kl_memcpy(stack_ptr, &(current_context->saved_stack), sizeof(task_x64_saved_stack));
+
+    current_context->fs_base = proc_read_msr(PROC_X64_MSRS::IA32_FS_BASE);
+    current_context->gs_base = proc_read_msr(PROC_X64_MSRS::IA32_GS_BASE);
   }
   else
   {
@@ -198,6 +249,10 @@ task_x64_exec_context *task_int_swap_task(unsigned long stack_addr, unsigned lon
   // thread without having to look in a list (which is subject to threads moving between processors whilst looking in
   // the list.
   proc_write_msr(PROC_X64_MSRS::IA32_KERNEL_GS_BASE, reinterpret_cast<unsigned long>(next_thread->execution_context));
+
+  // We also need to make sure the base values of FS and GS are set as needed.
+  proc_write_msr(PROC_X64_MSRS::IA32_FS_BASE, next_context->fs_base);
+  proc_write_msr(PROC_X64_MSRS::IA32_GS_BASE, next_context->gs_base);
 
   // Only processor 0 directly receives timer interrupts. In order to trigger scheduling on all other processors, send
   // them an IPI for the correct vector.
@@ -302,6 +357,7 @@ namespace
     {
       stack_addr -= double_page;
     }
+    mem_vmm_allocate_specific_range(stack_addr, 1, proc);
 
     KL_TRC_TRACE(TRC_LVL::EXTRA, "Stack address: ", stack_addr, "\n");
     KL_TRC_EXIT;

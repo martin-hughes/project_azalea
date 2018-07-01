@@ -1,6 +1,0 @@
-# Simple demo program.
-
-Import('env')
-files = ["demo_intro.asm", "demo_program.cpp"]
-obj = env.Library("demo_program", files)
-Return ("obj") 

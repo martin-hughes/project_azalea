@@ -157,6 +157,7 @@ task_process *task_create_new_process(ENTRY_PROC entry_point,
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "No mem_info, create it\n");
     new_process->mem_info = mem_task_create_task_entry();
+    mem_vmm_allocate_specific_range(0, 1, new_process);
   }
 
   // New processes don't accept messages by default, since not all processes need the ability to receive and handle

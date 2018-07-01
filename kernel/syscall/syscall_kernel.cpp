@@ -9,6 +9,7 @@
 #include "system_tree/system_tree.h"
 #include "system_tree/fs/fs_file_interface.h"
 #include "object_mgr/object_mgr.h"
+#include "processor/x64/processor-x64.h"
 
 #include <memory>
 
@@ -43,6 +44,8 @@ const void *syscall_pointers[] =
       (void *)syscall_destroy_thread,
       (void *)syscall_exit_thread,
 
+      (void *)syscall_thread_set_tls_base,
+
       // Memory control,
       (void *)syscall_allocate_backing_memory,
       (void *)syscall_release_backing_memory,
@@ -51,6 +54,8 @@ const void *syscall_pointers[] =
 
       // Thread synchronization
       (void *)syscall_wait_for_object,
+      (void *)syscall_futex_wait,
+      (void *)syscall_futex_wake,
     };
 
 const unsigned long syscall_max_idx = (sizeof(syscall_pointers) / sizeof(void *)) - 1;
@@ -282,7 +287,7 @@ ERR_CODE syscall_read_handle(GEN_HANDLE handle,
           bytes_to_read = buffer_size;
         }
         KL_TRC_TRACE(TRC_LVL::FLOW, "Going to attempt a read on file: ", file, "\n");
-        result = file->read_bytes(0, bytes_to_read, buffer, buffer_size, *bytes_read);
+        result = file->read_bytes(start_offset, bytes_to_read, buffer, buffer_size, *bytes_read);
 
         KL_TRC_TRACE(TRC_LVL::FLOW, "bytes read: ", *bytes_read, "\n");
       }
@@ -423,11 +428,66 @@ ERR_CODE syscall_write_handle(GEN_HANDLE handle,
           KL_TRC_TRACE(TRC_LVL::FLOW, "Trimming bytes_to_write to max buffer length\n");
           bytes_to_write = buffer_size;
         }
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Going to attempt a read on file: ", file, "\n");
-        result = file->write_bytes(0, bytes_to_write, buffer, buffer_size, *bytes_written);
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Going to attempt a write on file: ", file, "\n");
+        result = file->write_bytes(start_offset, bytes_to_write, buffer, buffer_size, *bytes_written);
 
         KL_TRC_TRACE(TRC_LVL::FLOW, "bytes written: ", *bytes_written, "\n");
       }
+    }
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+/// @brief Configure the base address of TLS for this thread.
+///
+/// Threads generally define their thread-local storage relative to either FS or GS. It is difficult for them to set
+/// the base address of those registers in user-mode, so this system call allows the kernel to do it on their behalf.
+///
+/// It should be noted that modern x64 processors allow user mode threads to do this via WRGSBASE (etc.) but QEMU
+/// doesn't support these instructions, so we can't enable it in Azalea yet.
+///
+/// @param reg Which register to set.
+///
+/// @param value The value to load into the base of the required register.
+///
+/// @return ERR_CODE::INVALID_PARAM if either reg isn't valid, or value either isn't canonical or in user-space.
+ERR_CODE syscall_thread_set_tls_base(TLS_REGISTERS reg, unsigned long value)
+{
+  KL_TRC_ENTRY;
+
+  ERR_CODE result = ERR_CODE::NO_ERROR;
+
+  if (!SYSCALL_IS_UM_ADDRESS(value) || !mem_is_valid_virt_addr(value))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid base address\n");
+    result = ERR_CODE::INVALID_PARAM;
+  }
+  else
+  {
+    switch(reg)
+    {
+    case TLS_REGISTERS::FS:
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Setting FS base to ", value, "\n");
+      proc_write_msr (PROC_X64_MSRS::IA32_FS_BASE, value);
+
+      //unsigned long fs_reg;
+      //__asm__ __volatile__ ("mov %%fs:0, %0" : "=r" (fs_reg) );
+      //KL_TRC_TRACE(TRC_LVL::FLOW, "Actual value of FS: ", fs_reg, "\n");
+
+      break;
+
+    case TLS_REGISTERS::GS:
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Writing GS base to ", value, "\n");
+      proc_write_msr (PROC_X64_MSRS::IA32_GS_BASE, value);
+      break;
+
+    default:
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Unknown register\n");
+      result = ERR_CODE::INVALID_PARAM;
     }
   }
 

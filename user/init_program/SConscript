@@ -1,0 +1,6 @@
+# Beginnings of a startup program.
+
+Import('env')
+files = [ "init_program.cpp"]
+obj = env.Object("init_program", files)
+Return ("obj")

@@ -66,3 +66,8 @@ void mem_deallocate_pages(void *virtual_start, unsigned int num_pages)
 {
   free(virtual_start);
 }
+
+void mem_vmm_allocate_specific_range(unsigned long start_addr, unsigned int num_pages, task_process *process_to_use)
+{
+  // Do nothing.
+}

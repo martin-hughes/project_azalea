@@ -111,9 +111,9 @@ ERR_CODE syscall_send_message(unsigned long target_proc_id,
 /// @param[out] message_len The length of the message buffer required.
 ///
 /// @return A suitable error code.
-ERR_CODE syscall_receive_message_details(unsigned long &sending_proc_id,
-                                         unsigned long &message_id,
-                                         unsigned long &message_len)
+ERR_CODE syscall_receive_message_details(unsigned long *sending_proc_id,
+                                         unsigned long *message_id,
+                                         unsigned long *message_len)
 {
   KL_TRC_ENTRY;
 
@@ -121,6 +121,16 @@ ERR_CODE syscall_receive_message_details(unsigned long &sending_proc_id,
   klib_message_hdr msg;
   task_thread *this_thread = task_get_cur_thread();
 
+  if ((sending_proc_id == nullptr) ||
+      (message_id == nullptr) ||
+      (message_len == nullptr) ||
+      !SYSCALL_IS_UM_ADDRESS(sending_proc_id) ||
+      !SYSCALL_IS_UM_ADDRESS(message_id) ||
+      !SYSCALL_IS_UM_ADDRESS(message_len))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid parameter addresses\n")
+    res = ERR_CODE::INVALID_PARAM;
+  }
   if (this_thread == nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Unknown originating thread\n");
@@ -137,9 +147,9 @@ ERR_CODE syscall_receive_message_details(unsigned long &sending_proc_id,
     if (res == ERR_CODE::NO_ERROR)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved message\n");
-      sending_proc_id = reinterpret_cast<unsigned long>(msg.originating_process);
-      message_id = msg.msg_id;
-      message_len = msg.msg_length;
+      *sending_proc_id = reinterpret_cast<unsigned long>(msg.originating_process);
+      *message_id = msg.msg_id;
+      *message_len = msg.msg_length;
     }
   }
 

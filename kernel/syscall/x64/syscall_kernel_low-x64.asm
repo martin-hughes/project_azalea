@@ -27,7 +27,7 @@ asm_syscall_x64_prepare:
   rdmsr
 
   ; Now load in the two CSs - just use a magic number for the time being.
-  mov edx, 0x00180008
+  mov edx, 0x001B0008
 
   ; Put all those segments back.
   wrmsr

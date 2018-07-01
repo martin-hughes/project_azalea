@@ -29,9 +29,10 @@ _lgdt_jump:
   mov ax, 0x10      ; 0x10 is the offset in the GDT to our data segment
   mov ds, ax
   mov es, ax
+  mov ss, ax
+  mov ax, 0
   mov fs, ax
   mov gs, ax
-  mov ss, ax
 
   ; Because we pushed RSP after adding RAX to the stack, the stack that IRET
   ; has restored still has RAX on it. Pop it out.

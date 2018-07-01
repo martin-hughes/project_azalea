@@ -80,6 +80,7 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(unsigned long start,
 
     next_cluster = (_file_record.first_cluster_high << 16) + _file_record.first_cluster_low;
 
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Skipping ", clusters_to_skip, " clusters\n");
     for (int i = 0; i < clusters_to_skip; i++)
     {
       next_cluster = _parent->get_next_cluster_num(next_cluster);
@@ -108,7 +109,7 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(unsigned long start,
         read_offset = read_offset % bytes_per_sector;
       }
 
-      ASSERT(_parent->is_normal_cluster_number(next_cluster))
+      ASSERT(_parent->is_normal_cluster_number(next_cluster));
 
       for (int i = sector_offset; i < sectors_per_cluster; i++)
       {
@@ -131,9 +132,14 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(unsigned long start,
         bytes_from_this_sector = length - bytes_read_so_far;
         if (bytes_from_this_sector > bytes_per_sector)
         {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Truncating read to whole sector\n");
           bytes_from_this_sector = bytes_per_sector;
         }
-        bytes_from_this_sector -= read_offset;
+        if (bytes_from_this_sector + read_offset > bytes_per_sector)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Truncating read to partial sector\n");
+          bytes_from_this_sector = bytes_per_sector - read_offset;
+        }
         ASSERT(bytes_from_this_sector <= bytes_per_sector);
 
         KL_TRC_DATA("Offset", read_offset);

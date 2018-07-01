@@ -641,6 +641,7 @@ mem_process_info *mem_task_create_task_entry()
   KL_TRC_DATA("Created new x64 information at", (unsigned long)new_x64_proc_info);
 
   mem_x64_pml4_allocate(*new_x64_proc_info);
+  mem_vmm_init_proc_data(new_proc_info->process_vmm_data);
 
   new_proc_info->arch_specific_data = (void *)new_x64_proc_info;
 
@@ -729,6 +730,29 @@ unsigned long mem_x64_phys_addr_from_pte(unsigned long encoded)
   KL_TRC_EXIT;
 
   return decoded.target_addr;
+}
+
+/// @brief Determine whether a provided virtual address is valid.
+///
+/// On the x64 architecture this basically means "is it canonical". For a definition of canonical, see the Intel
+/// Software Developer's Manual Volume 1, Chapter 3.3.7.1. We assume a 48-bit implementation of the architecture.
+///
+/// @param virtual_addr The address to test for validity.
+///
+/// @return true if the address is canonical, false otherwise.
+bool mem_is_valid_virt_addr(unsigned long virtual_addr)
+{
+  KL_TRC_ENTRY;
+
+  bool result;
+  const unsigned long mask = 0xFFFF000000000000;
+
+  result = ((virtual_addr & mask) == 0) || ((virtual_addr & mask) == mask);
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
 }
 
 namespace

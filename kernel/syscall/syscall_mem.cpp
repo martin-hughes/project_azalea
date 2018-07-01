@@ -15,6 +15,7 @@
 //   yet.
 // - Having run out of RAM in syscall_allocate_backing_memory, we should deallocate some rather than just sitting tight.
 // - Attempting to double-map a virtual range causes a kernel panic.
+// - The way that VMM requires power-of-two sizes might cause trouble one day.
 
 /// @brief Back a virtual address range in the calling process with physical RAM.
 ///
@@ -26,22 +27,25 @@
 /// @param map_addr Pointer to the beginning of the range to be backed with RAM.
 ///
 /// @return ERR_CODE::NO_ERROR if the allocated succeeded. ERR_CODE::INVALID_PARAM if the length is zero, or
-///         `map_addr` does not point to a valid memory range.
-ERR_CODE syscall_allocate_backing_memory(unsigned long pages, void *map_addr)
+///         `map_addr` does not point to a valid memory range. ERR_CODE::INVALID_OP if this virtual address range is
+///         already mapped. ERR_CODE::OUT_OF_RESOURCE if the system has run out of physical memory.
+ERR_CODE syscall_allocate_backing_memory(unsigned long pages, void **map_addr)
 {
   ERR_CODE result = ERR_CODE::UNKNOWN;
-  unsigned long map_addr_start = reinterpret_cast<unsigned long>(map_addr);
+  unsigned long map_addr_start = reinterpret_cast<unsigned long>(*map_addr);
   unsigned long map_addr_end = map_addr_start + (pages * MEM_PAGE_SIZE);
-  unsigned long cur_map_addr = map_addr_start;
+  unsigned long cur_map_addr;
   void *phys_page;
+  task_thread *cur_thread;
 
   KL_TRC_ENTRY;
 
   if ((pages == 0) ||
       (pages > 0x8000000000000000) ||
-      (map_addr == nullptr) ||
+      map_addr == nullptr ||
       !SYSCALL_IS_UM_ADDRESS(map_addr) ||
-      !SYSCALL_IS_UM_ADDRESS(map_addr_end))
+      !SYSCALL_IS_UM_ADDRESS(map_addr_end) ||
+      !SYSCALL_IS_UM_ADDRESS(*map_addr))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid params\n");
     result = ERR_CODE::INVALID_PARAM;
@@ -49,17 +53,48 @@ ERR_CODE syscall_allocate_backing_memory(unsigned long pages, void *map_addr)
   else
   {
     result = ERR_CODE::NO_ERROR;
+
+    if (*map_addr == nullptr)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "App requests random assignment of ", pages, " pages\n");
+      cur_thread = task_get_cur_thread();
+      ASSERT(cur_thread != nullptr);
+      ASSERT(cur_thread->parent_process != nullptr);
+      *map_addr = mem_allocate_virtual_range(pages, cur_thread->parent_process);
+
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Proposed space: ", *map_addr, "\n");
+    }
+
+    map_addr_start = reinterpret_cast<unsigned long>(*map_addr);
+    map_addr_end = map_addr_start + (pages * MEM_PAGE_SIZE);
+    cur_map_addr = map_addr_start;
+
     for (int i = 0; i < pages; i++, cur_map_addr += MEM_PAGE_SIZE)
     {
-      phys_page = mem_allocate_physical_pages(1);
-      if (phys_page == nullptr)
+      if (mem_get_phys_addr(reinterpret_cast<void *>(cur_map_addr)) != nullptr)
       {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Ran out of pages\n");
-        result = ERR_CODE::OUT_OF_RESOURCE;
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Attempted duplicate mapping @ ", cur_map_addr, "\n");
+        result = ERR_CODE::INVALID_OP;
+        break;
       }
-      else
+    }
+
+    cur_map_addr = map_addr_start;
+
+    if (result == ERR_CODE::NO_ERROR)
+    {
+      for (int i = 0; i < pages; i++, cur_map_addr += MEM_PAGE_SIZE)
       {
-        mem_map_range(phys_page, reinterpret_cast<void *>(cur_map_addr), 1);
+        phys_page = mem_allocate_physical_pages(1);
+        if (phys_page == nullptr)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Ran out of pages\n");
+          result = ERR_CODE::OUT_OF_RESOURCE;
+        }
+        else
+        {
+          mem_map_range(phys_page, reinterpret_cast<void *>(cur_map_addr), 1);
+        }
       }
     }
   }

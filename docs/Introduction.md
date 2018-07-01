@@ -56,6 +56,7 @@ Being a hobby project, there are some fairly specific requirements for this proj
 - **Maximum** 1GB of RAM. This is a limitation of the memory manager.
 
 To compile the system, you will need the following tools and libraries installed:
+- Azalea-libc - this can be built as part of compiling the kernel, as described below.
 - Python 2.6 or later
 - GCC 5.4 or later
 - Clang 3.8.0 or later
@@ -63,7 +64,7 @@ To compile the system, you will need the following tools and libraries installed
 - NASM
 - Boost iostreams - only used in the test scripts.
 - Qemu - the default test script runs on qemu, and qemu-nbd is required to create disk images from scratch (which is
-  optional)
+  optional). Depending on how you choose to mount this disk images you might need qemu-nbd.
 - Virtualbox - Required to generate disk images from scratch (optional) and can be used as a test system.
 - GRUB2 2.02 beta 2 or later - Required to generate disk images from scratch. (optional)
 - Doxygen - Only needed to generate documentation. (optional)
@@ -75,13 +76,20 @@ bugs would be interesting to hear about!
 
 ## Getting Started
 
-To get the system running from its current state, do the following:
+To get the system running from scratch, do the following:
 
-- Get a copy of the code on your system, using your favourite method
-- Follow the instructions in `extras/configure_disk_images.txt`. Remember to mount the disk image whenever necessary
+1. Get a copy of the code on your system, using your favourite method.
+2. Also, get a copy of the Azalea-libc code.
+3. Follow the instructions in `extras/configure_disk_images.txt`. Remember to mount the disk image whenever necessary
 (e.g. after a reboot)
-- From the root directory, execute `python build_support/build_script.py`
-- Execute `build_support/start_test_machine.sh`
+4. Configure the values in build_support/config.py and the Azalea-libc SConstruct file as appropriate.
+5. From the root directory of the kernel, execute `scons install-headers` and check there are no errors.
+6. In the Azalea-libc root directory, execute `scons` followed by `scons install` - again, check for errors.
+7. Back in the kernel code tree, execute `scons` and check there are no errors.
+8. Finally, execute `build_support/start_test_machine.sh`.
+
+If you have already executed these steps, you will probably only need to execute steps 6-8 again if you make changes.
+Execute step 5 again if you make changes to the user interface headers.
 
 The system should now start! Assuming that everything went well, you will see two things:
 
@@ -91,8 +99,8 @@ The system should now start! Assuming that everything went well, you will see tw
 
 If something goes wrong, you will get a blue screen of death - which is a bug so please let me know!
 
-The system will start a program called 'testprog' from the root of its disk image and run it in user mode. At the
-moment, 'testprog' is compiled from the source in `extras/demo_program` as part of the main build script.
+The system will start a program called 'initprog' from the root of its disk image and run it in user mode. At the
+moment, 'initprog' is compiled from the source in `extras/demo_program` as part of the main build script.
 
 ## Contributing
 

@@ -1,0 +1,65 @@
+kernel = [
+    # Core components
+    '#kernel/entry/SConscript',
+    '#kernel/processor/SConscript-generic',
+    '#kernel/processor/SConscript-x64',
+    '#kernel/klib/memory/SConscript',
+    '#kernel/klib/panic/SConscript',
+    '#kernel/mem/SConscript',
+    '#kernel/klib/c_helpers/SConscript',
+    '#kernel/klib/misc/SConscript',
+    '#kernel/klib/data_structures/SConscript',
+    '#kernel/klib/tracing/SConscript',
+    '#kernel/klib/synch/SConscript',
+    '#kernel/klib/synch/SConscript-messages',
+    '#kernel/klib/synch/SConscript-spinlocks',
+    '#kernel/syscall/SConscript-kernel',
+    '#kernel/acpi/SConscript',
+    '#external/SConscript-ACPICA',
+    '#external/vsnprintf/Sconscript',
+    '#external/SConscript-libcxxrt',
+    '#kernel/object_mgr/SConscript',
+    '#kernel/system_tree/SConscript',
+    '#kernel/system_tree/process/SConscript',
+
+    # Devices
+    '#kernel/devices/block/ramdisk/SConscript',
+    '#kernel/devices/block/ata/SConscript',
+    '#kernel/devices/block/proxy/SConscript',
+    '#kernel/devices/legacy/ps2/SConscript',
+    '#kernel/devices/generic/SConscript',
+
+    # Filesystems
+    '#kernel/system_tree/fs/fat/SConscript',
+    '#kernel/system_tree/fs/pipe/SConscript',
+  ]
+
+init_program = [
+    '#user/init_program/SConscript',
+    '#kernel/syscall/SConscript-user',
+  ]
+
+main_tests = [
+    '#kernel/klib/c_helpers/SConscript',
+    '#kernel/klib/data_structures/SConscript',
+    '#kernel/klib/memory/SConscript',
+    '#kernel/klib/misc/SConscript',
+    '#kernel/klib/synch/SConscript-messages',
+    '#kernel/klib/synch/SConscript-spinlocks',
+    '#kernel/klib/tracing/SConscript',
+    '#kernel/processor/Sconscript-generic',
+    '#kernel/object_mgr/SConscript',
+    '#kernel/system_tree/SConscript',
+    '#test/SConscript-main',
+    '#test/dummy_libs/core_mem/SConscript',
+    '#test/dummy_libs/panic/SConscript',
+    '#test/dummy_libs/synch/Sconscript',
+    '#test/test_core/SConscript',
+    '#external/SConscript-GoogleTest',
+
+    # Devices for testing
+    '#kernel/devices/block/ramdisk/SConscript',
+    '#kernel/devices/block/proxy/SConscript',
+    '#kernel/system_tree/fs/pipe/SConscript',
+    '#kernel/system_tree/fs/fat/SConscript',
+  ]

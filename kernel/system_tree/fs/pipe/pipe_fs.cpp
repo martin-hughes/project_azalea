@@ -156,11 +156,6 @@ ERR_CODE pipe_branch::pipe_read_leaf::read_bytes(unsigned long start,
     KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid buffer ptr\n");
     ret = ERR_CODE::INVALID_PARAM;
   }
-  else if (start != 0)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Pipes always read from the beginning\n");
-    ret = ERR_CODE::INVALID_OP;
-  }
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Try to read from the pipe\n");
@@ -249,11 +244,6 @@ ERR_CODE pipe_branch::pipe_write_leaf::write_bytes(unsigned long start,
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid buffer ptr\n");
     ret = ERR_CODE::INVALID_PARAM;
-  }
-  else if (start != 0)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Pipes always write from the beginning\n");
-    ret = ERR_CODE::INVALID_OP;
   }
   else
   {

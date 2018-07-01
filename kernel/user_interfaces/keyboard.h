@@ -1,9 +1,11 @@
 #ifndef __USER_INTFACE_KEYBOARD_H
 #define __USER_INTFACE_KEYBOARD_H
 
-enum class KEYS : unsigned char
+#include "./macros.h"
+
+enum AZALEA_ENUM_CLASS KEYS_T : unsigned char
 {
-  UNK = 0,  // Unknown key.
+  UNK = 0,  /* Unknown key. */
 
   BACKSPACE = 8,
   TAB = 9,
@@ -14,10 +16,10 @@ enum class KEYS : unsigned char
   S_QUOTE = 39,
   COMMA = 44,
   DASH = 45,
-  PERIOD = 46,   // Main keyboard period
+  PERIOD = 46,   /* Main keyboard period */
   SLASH = 47,
 
-  // Mx = Main keyboard numbers, Kx = keypad numbers
+  /* Mx = Main keyboard numbers, Kx = keypad numbers */
   M0 = 48,
   M1 = 49,
   M2 = 50,
@@ -63,9 +65,9 @@ enum class KEYS : unsigned char
   BACKSLASH = 92,
   S_BRACK_R = 93,
 
-  BT = 96, // Backtick
+  BT = 96, /* Backtick */
 
-  // Keypad presses
+  /* Keypad presses */
   K0 = 100,
   K1 = 101,
   K2 = 102,
@@ -155,6 +157,8 @@ enum class KEYS : unsigned char
   ACPI_SLEEP = 201,
   ACPI_WAKE = 202,
 };
+
+AZALEA_RENAME_ENUM(KEYS);
 
 struct special_keys
 {

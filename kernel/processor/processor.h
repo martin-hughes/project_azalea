@@ -173,6 +173,8 @@ task_process *task_create_new_process(ENTRY_PROC entry_point,
     bool kernel_mode = false,
     mem_process_info *mem_info = nullptr);
 
+void task_set_start_params(task_process * process, unsigned long argc, char **argv, char **env);
+
 // Create a new thread starting at entry_point, with parent parent_process.
 task_thread *task_create_new_thread(ENTRY_PROC entry_point, task_process *parent_process);
 

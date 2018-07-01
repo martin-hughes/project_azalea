@@ -18,6 +18,7 @@ asm_ap_x86_entry:
   mov ss, ax
   mov ds, ax
   mov es, ax
+  mov ax, 0x0
   mov fs, ax
   mov gs, ax
 

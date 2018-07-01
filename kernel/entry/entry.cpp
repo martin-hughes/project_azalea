@@ -42,6 +42,7 @@
 extern "C" int main(unsigned int magic_number, multiboot_hdr *mb_header);
 void kernel_start();
 void simple_terminal();
+void setup_task_parameters(task_process *startup_proc);
 
 // Temporary procedures and storage while the kernel is being developed. Eventually, the full kernel start procedure
 // will cause these to become unused.
@@ -50,6 +51,8 @@ void setup_initial_fs();
 generic_ata_device *first_hdd;
 fat_filesystem *first_fs;
 gen_ps2_controller_device *ps2_controller;
+
+volatile bool wait_for_term;
 
 // Main kernel entry point. This is called by an assembly-language loader that should do as little as possible. On x64,
 // this involves setting up a simple page mapping, since the kernel is linked higher-half but loaded at 1MB, then
@@ -130,7 +133,10 @@ void kernel_start()
   ASSERT(first_fs != nullptr);
   ASSERT(system_tree()->add_branch("root", first_fs) == ERR_CODE::NO_ERROR);
 
-  initial_proc = proc_load_elf_file("root\\testprog");
+  wait_for_term = true;
+
+  initial_proc = proc_load_elf_file("root\\initprog");
+  setup_task_parameters(initial_proc);
   ASSERT(initial_proc != nullptr);
 
   // Start a simple terminal process.
@@ -140,6 +146,11 @@ void kernel_start()
 
   ps2_keyboard_device *keyboard = dynamic_cast<ps2_keyboard_device *>(ps2_controller->chan_1_dev);
   ASSERT(keyboard != nullptr);
+
+  while (wait_for_term)
+  {
+
+  }
 
   // Process should be good to go!
   task_start_process(initial_proc);
@@ -231,6 +242,8 @@ void simple_terminal()
     display_ptr[i + 1] = 0x0f;
   }
 
+  wait_for_term = false;
+
   KL_TRC_TRACE(TRC_LVL::FLOW, "Beginning terminal\n");
   while(1)
   {
@@ -253,6 +266,73 @@ void simple_terminal()
       KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to read\n");
     }
   }
+
+  KL_TRC_EXIT;
+}
+
+// Setup a plausible argc, argv and environ in startup_proc.
+// Let's go for:
+// argc = 2
+// argv = "initprog", "testparam"
+// environ = "OSTYPE=azalea"
+void setup_task_parameters(task_process *startup_proc)
+{
+  // The default user mode stack starts from this position - 16 and grows downwards, we put the task parameters above
+  // this position.
+  const unsigned long default_posn = 0x000000000F200000;
+
+  KL_TRC_ENTRY;
+
+  void *physical_backing;
+  void *kernel_map;
+  char **argv_ptr_k;
+  char **environ_ptr_k;
+  char *string_ptr_k;
+
+  char **argv_ptr_u;
+  char **environ_ptr_u;
+  char *string_ptr_u;
+
+  ASSERT(startup_proc != nullptr);
+  ASSERT(mem_get_phys_addr(reinterpret_cast<void *>(default_posn)) == nullptr);
+
+  physical_backing = mem_allocate_physical_pages(1);
+  kernel_map = mem_allocate_virtual_range(1);
+
+  mem_map_range(physical_backing, kernel_map, 1);
+  mem_vmm_allocate_specific_range(default_posn, 1, startup_proc);
+  mem_map_range(physical_backing, reinterpret_cast<void *>(default_posn), 1, startup_proc);
+
+  argv_ptr_k = reinterpret_cast<char **>(kernel_map);
+  argv_ptr_u = reinterpret_cast<char **>(default_posn);
+  // The end of argv is nullptr.
+  argv_ptr_k[2] = nullptr;
+
+  string_ptr_k = reinterpret_cast<char *>(argv_ptr_k + 3);
+  string_ptr_u = reinterpret_cast<char *>(argv_ptr_u + 3);
+
+  argv_ptr_k[0] = string_ptr_u;
+  kl_memcpy("initprog", string_ptr_k, 9);
+  string_ptr_k += 9;
+  string_ptr_u += 9;
+
+  argv_ptr_k[1] = string_ptr_u;
+  kl_memcpy("testparam", string_ptr_k, 10);
+  string_ptr_k += 10;
+  string_ptr_u += 10;
+
+  environ_ptr_k = reinterpret_cast<char **>(reinterpret_cast<unsigned long>(kernel_map) + 64);
+  environ_ptr_u = reinterpret_cast<char **>(default_posn + 64);
+  environ_ptr_k[1] = nullptr;
+  string_ptr_k = reinterpret_cast<char *>(environ_ptr_k + 2);
+  string_ptr_u = reinterpret_cast<char *>(environ_ptr_u + 2);
+  environ_ptr_k[0] = string_ptr_u;
+
+  kl_memcpy("OSTYPE=azalea", string_ptr_k, 14);
+
+  task_set_start_params(startup_proc, 2, argv_ptr_u, environ_ptr_u);
+
+  mem_unmap_range(kernel_map, 1);
 
   KL_TRC_EXIT;
 }

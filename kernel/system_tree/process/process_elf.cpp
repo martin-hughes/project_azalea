@@ -146,6 +146,9 @@ task_process *proc_load_elf_file(kl_string binary_name)
           KL_TRC_TRACE(TRC_LVL::FLOW, "No space for that allocated in the child process, grabbing a new page...\n");
           backing_addr = mem_allocate_physical_pages(1);
 
+          KL_TRC_TRACE(TRC_LVL::EXTRA, "Allocating this page in the process's tables\n");
+          mem_vmm_allocate_specific_range(this_page, 1, new_proc);
+
           KL_TRC_TRACE(TRC_LVL::EXTRA, "Mapping new page ", backing_addr, " to ", this_page, "\n");
           mem_map_range(backing_addr, reinterpret_cast<void *>(this_page), 1, new_proc);
         }
