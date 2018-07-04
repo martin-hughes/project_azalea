@@ -79,20 +79,18 @@ int main(unsigned int magic_number, multiboot_hdr *mb_header)
   hm_gen_init();
   om_gen_init();
   system_tree_init();
+  acpi_init_table_system();
+  time_gen_init();
+  proc_mp_init();
+  syscall_gen_init();
+  task_init();
 
   KL_TRC_TRACE(TRC_LVL::IMPORTANT, "Welcome to the OS!\n");
 
-  acpi_init_table_system();
+  task_process *kernel_process = task_create_new_process(kernel_start, true, mem_task_get_task0_entry());
+  task_start_process(kernel_process);
 
-  time_gen_init();
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Time started\n");
-  proc_mp_init();
-  KL_TRC_TRACE(TRC_LVL::FLOW, "MP started\n");
-  syscall_gen_init();
-
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Starting tasking\n");
-
-  task_gen_init(kernel_start);
+  task_start_tasking();
 
   // If the kernel gets back to here, just run in a loop. The task manager will soon kick in.
   // It takes too long, then assume something has gone wrong and abort.
@@ -161,10 +159,11 @@ void kernel_start()
     keyboard->recipient = initial_proc;
   }
 
-  while (1)
-  {
-    //Spin forever.
-  }
+  // If (when!) the initial process exits, we want the system to shut down. But since we don't really do shutting down
+  // at the moment, just crash instead.
+  initial_proc->wait_for_signal();
+
+  panic("System has 'shut down'");
 }
 
 // Configure the filesystem of the (presumed) boot device as part of System Tree.

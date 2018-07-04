@@ -147,6 +147,22 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
   return (void *)new_context;
 }
 
+/// @brief Destroy an x64 execution context for a thread that is terminating.
+///
+/// @param old_thread The thread being destroyed.
+void task_int_delete_exec_context(task_thread *old_thread)
+{
+  KL_TRC_ENTRY;
+
+  ASSERT(old_thread->permit_running == false);
+
+  task_x64_exec_context *old_context = reinterpret_cast<task_x64_exec_context *>(old_thread->execution_context);
+  delete old_context;
+  old_thread->execution_context = nullptr;
+
+  KL_TRC_EXIT;
+}
+
 /// @brief Set the command line and environment for a newly created process.
 ///
 /// Azalea puts argc, and the argv and environ pointers into the registers for the first three parameters of a normal C

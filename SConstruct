@@ -41,9 +41,14 @@ def main_build_script():
 
   # Unit test program
   test_script_env = build_default_env()
-  test_script_env['CXXFLAGS'] = '-g -O0 -std=gnu++14 -fsanitize=address -fsanitize=leak -Wunknown-pragmas -D AZALEA_TEST_CODE -D KL_TRACE_BY_STDOUT'
   test_script_env['LINKFLAGS'] = '-L/usr/lib/llvm-3.8/lib/clang/3.8.0/lib/linux -Wl,--start-group'
-  test_script_env['LIBS'] = [ 'clang_rt.asan-x86_64', 'pthread', 'boost_iostreams' ]
+  test_script_env['LIBS'] = [ 'pthread', 'boost_iostreams' ]
+  cxx_flags = '-g -O0 -std=gnu++14 -Wunknown-pragmas'
+  if config.test_use_asan:
+    test_script_env['LIBS'].append ('clang_rt.asan-x86_64')
+    cxx_flags = cxx_flags + ' -fsanitize=address'
+  cxx_flags = cxx_flags + ' -D AZALEA_TEST_CODE -D KL_TRACE_BY_STDOUT'
+  test_script_env['CXXFLAGS'] = cxx_flags
   test_script_env.AppendENVPath('CPATH', '#/external/googletest/googletest/include')
   test_script_env.AppendENVPath('CPATH', '#/kernel')
   tests_obj = default_build_script(dependencies.main_tests, "main-tests", test_script_env, "main_tests")
@@ -54,7 +59,7 @@ def build_default_env():
   env['CC'] = 'clang'
   env['CXX'] = 'clang++'
   env['CPPPATH'] = '#'
-  env['LINK'] = 'g++'
+  env['LINK'] = 'clang++'
   env['AS'] = 'nasm'
   env['ASFLAGS'] = '-f elf64'
   env['RANLIBCOM'] = ''

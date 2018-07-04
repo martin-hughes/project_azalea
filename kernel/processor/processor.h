@@ -26,7 +26,7 @@ class task_thread;
 
 /// Structure to hold information about a process. All information is stored here, to be accessed by the various
 /// components as needed. This removes the need for per-component lookup tables for each process.
-class task_process : public IRefCounted
+class task_process : public IRefCounted, public WaitObject
 {
 public:
   /// Refer ourself back to the process list.
@@ -59,6 +59,12 @@ public:
 
   /// The number of messages currently waiting for this process.
   unsigned long msg_queue_len;
+
+  /// Is this process currently being destroyed?
+  bool being_destroyed;
+
+  /// Called externally when all child threads are destroyed.
+  void destroy_process();
 
 protected:
   void ref_counter_zero();
@@ -165,8 +171,12 @@ void proc_stop_all_procs();
 void proc_stop_interrupts();
 void proc_start_interrupts();
 
-// Initialise the task management system and start it.
-void task_gen_init(ENTRY_PROC kern_start_proc);
+// Initialise the task management system.
+task_process *task_init();
+void task_gen_init();
+
+// Begin multi-tasking
+void task_start_tasking();
 
 // Create a new process, with a thread starting at entry_point.
 task_process *task_create_new_process(ENTRY_PROC entry_point,

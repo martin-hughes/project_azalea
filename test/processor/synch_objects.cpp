@@ -19,6 +19,8 @@ void test_fake_task();
 
 TEST(ProcessorTests, WaitObjects)
 {
+  task_process *sys_proc;
+  task_process *proc_a;
   task_thread *thread_a;
   task_thread *idle_thread_a;
   task_thread *ret_thread;
@@ -27,12 +29,13 @@ TEST(ProcessorTests, WaitObjects)
 
   hm_gen_init();
   om_gen_init();
-  task_gen_init(test_fake_task);
+  sys_proc = task_init();
 
-  // task_gen_init adds a thread for the IRQ slowpath to the first process. Disable the first thread arbitrarily, since
-  // the process starts with two.
-  thread_a = task_get_next_thread();
-  thread_a->permit_running = false;
+  // Don't run any threads from the system process, it just confuses the rest of the test.
+  task_stop_process(sys_proc);
+
+  proc_a = task_create_new_process(test_fake_task);
+  task_start_process(proc_a);
 
   // At the moment, there is only one thread, so it should be returned to us repeatedly.
   thread_a = task_get_next_thread();
@@ -81,6 +84,13 @@ TEST(ProcessorTests, WaitObjects)
   {
     ASSERT_EQ(thread_a, task_get_next_thread());
   }
+
+  // Switch to having the idle thread be current. It is necessary to unschedule all tasks as otherwise
+  // test_only_reset_task_mgr() gets stuck waiting for the thread to be unscheduled.
+  task_stop_process(proc_a);
+  task_get_next_thread();
+  test_only_set_cur_thread(nullptr);
+  task_destroy_process(proc_a);
 
   test_only_reset_om();
   test_only_reset_task_mgr();

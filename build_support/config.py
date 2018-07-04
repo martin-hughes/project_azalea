@@ -17,3 +17,8 @@ libc_include = '/home/martin/libc_build/include'
 # The location to install developer libraries and headers to. This is then used by the Azalea libc build script, where
 # it is referenced in the similarly named variable azalea_header_folder
 azalea_dev_folder = '/home/martin/azalea_dev'
+
+# Should the test code be built using the Clang version of Address Sanitizer? This helps detect leaks, but doesn't
+# detect all of them. For example, items still referenced via global variables don't show up. Valgrind can be used to
+# find this kind of leak, but can't be run on code with the Address Sanitizer built in to it.
+test_use_asan = False

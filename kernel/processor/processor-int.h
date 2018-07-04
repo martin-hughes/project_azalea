@@ -77,6 +77,7 @@ struct task_x64_exec_context
 #pragma pack ( pop )
 
 void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thread);
+void task_int_delete_exec_context(task_thread *old_thread);
 
 task_thread *task_get_next_thread();
 extern "C" task_x64_exec_context *task_int_swap_task(unsigned long stack_addr, unsigned long cr3_value);
@@ -86,5 +87,7 @@ void task_platform_init();
 
 extern "C" void proc_handle_irq(unsigned char irq_number);
 void proc_irq_slowpath_thread();
+
+task_process *task_create_system_process();
 
 #endif

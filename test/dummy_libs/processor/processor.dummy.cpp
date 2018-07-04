@@ -26,6 +26,11 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
   return (void *)&fake_ptr_target;
 }
 
+void task_int_delete_exec_context(task_thread *t)
+{
+  // Still nothing to do.
+}
+
 mem_process_info *mem_task_create_task_entry()
 {
   return (mem_process_info *)&fake_ptr_target;

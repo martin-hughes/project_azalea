@@ -33,6 +33,7 @@ files = [ "dummy_libs/processor/processor.dummy.cpp",
           "object_mgr/object_mgr_2.cpp",
 
           "processor/scheduler/scheduler_1.cpp",
+          "processor/scheduler/scheduler_proc_start_exit.cpp",
           "processor/irq_handler.cpp",
           "processor/synch_objects.cpp",
 

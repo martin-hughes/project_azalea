@@ -14,6 +14,8 @@ void test_1_fake_task();
 // Create a new list, add and delete items, check the list is still valid.
 TEST(SchedulerTest, SimpleTests)
 {
+  task_process *sys_proc;
+  task_process *proc_a;
   task_thread *thread_a;
   task_thread *idle_thread_a;
   task_process *proc_b;
@@ -26,12 +28,13 @@ TEST(SchedulerTest, SimpleTests)
 
   hm_gen_init();
   om_gen_init();
-  task_gen_init(test_1_fake_task);
+  sys_proc = task_init();
 
-  // task_gen_init adds a thread for the IRQ slowpath to the first process. Disable the first thread arbitrarily, since
-  // the process starts with two.
-  thread_a = task_get_next_thread();
-  thread_a->permit_running = false;
+  // Don't run any threads from the system process, it just confuses the rest of the test.
+  task_stop_process(sys_proc);
+
+  proc_a = task_create_new_process(test_1_fake_task);
+  task_start_process(proc_a);
 
   // At the moment, there is only one thread, so it should be returned to us repeatedly.
   thread_a = task_get_next_thread();
@@ -101,6 +104,9 @@ TEST(SchedulerTest, SimpleTests)
   {
     ASSERT_EQ(idle_thread_a, task_get_next_thread());
   }
+
+  task_destroy_process(proc_a);
+  task_destroy_process(proc_b);
 
   test_only_reset_om();
   test_only_reset_task_mgr();

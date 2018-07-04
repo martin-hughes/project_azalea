@@ -19,6 +19,7 @@
 // - There's a possible race condition where waiting for a thread just as it is about to be destroyed may cause the
 //   waiting thread to have to wait until the object is destroyed until it gets signalled, rather than being
 //   signalled at the initial destruction.
+// - It is possible to create a thread just as the process is being destroyed.
 
 //#define ENABLE_TRACING
 
@@ -62,60 +63,103 @@ namespace
 
 /// @brief Initialise and start the task management subsystem
 ///
-/// Performs setup tasks, and then attaches the task switcher to the periodic timer interrupt, which causes the kernel
-/// to start switching processes with no further input.
+/// This function initialises the task manager and creates a system process consisting of idle threads and the IRQ
+/// slowpath thread. It does not start the tasking system.
 ///
-/// The function can return, but task switching should start within a few microseconds. It is the caller's
-/// responsibility to monitor this.
-///
-/// @param kern_start_proc A pointer to a simple function that will be the first process started by the scheduler.
-void task_gen_init(ENTRY_PROC kern_start_proc)
+/// @return The system process created by this procedure.
+task_process *task_init()
 {
   KL_TRC_ENTRY;
 
-  mem_process_info *task0_mem_info;
-  task_process *first_process;
+  task_process *system_process;
+
+  task_gen_init();
+  system_process = task_create_system_process();
+
+  ASSERT(system_process != nullptr);
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "System process: ", system_process, "\n");
+  KL_TRC_EXIT;
+
+  return system_process;
+}
+
+/// @brief General initialisation of the task manager system.
+///
+/// The task manager will not function correctly until the idle threads have been created (using
+/// task_create_system_process() ) and another process has been started.
+void task_gen_init()
+{
+  KL_TRC_ENTRY;
+
   unsigned int number_of_procs = proc_mp_proc_count();
-  task_thread *new_idle_thread;
-  task_thread *irq_slowpath_thread;
 
   klib_synch_spinlock_init(thread_cycle_lock);
-
   klib_list_initialize(&process_list);
-
-  task0_mem_info = mem_task_get_task0_entry();
-  ASSERT(task0_mem_info != nullptr);
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Preparing the processor\n");
   task_platform_init();
 
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Creating first process\n");
-  first_process = task_create_new_process(kern_start_proc, true, task0_mem_info);
-  KL_TRC_DATA("First process at", (unsigned long)first_process);
-  ASSERT(first_process != nullptr);
-  task_start_process(first_process);
-
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Creating the IRQ handling thread\n");
-  irq_slowpath_thread = task_create_new_thread(proc_irq_slowpath_thread, first_process);
-  ASSERT(irq_slowpath_thread != nullptr);
-  task_start_thread(irq_slowpath_thread);
-
   KL_TRC_TRACE(TRC_LVL::FLOW, "Creating per-process info\n");
-  KL_TRC_DATA("Number of processors", number_of_procs);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Number of processors", number_of_procs);
   current_threads = new task_thread *[number_of_procs];
   continue_this_thread = new bool[number_of_procs];
   idle_threads = new task_thread *[number_of_procs];
+
   for (int i = 0; i < number_of_procs; i++)
   {
-    KL_TRC_DATA("Working on processor", i);
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Initialising processor ", i, "\n");
     current_threads[i] = nullptr;
     continue_this_thread[i] = false;
+    idle_threads[i] = nullptr;
+  }
 
-    new_idle_thread = task_create_new_thread(task_idle_thread_cycle, first_process);
+  KL_TRC_EXIT;
+}
+
+/// @brief Create a process to contain system-critical threads
+///
+/// This process contains idle threads for each processor, and a thread to handle the IRQ slowpath procedure.
+///
+/// @return The system process created here.
+task_process *task_create_system_process()
+{
+  KL_TRC_ENTRY;
+
+  unsigned int number_of_procs = proc_mp_proc_count();
+  task_thread *new_idle_thread;
+  task_thread *irq_slowpath_thread;
+  task_process *system_process;
+  mem_process_info *task0_mem_info;
+
+  task0_mem_info = mem_task_get_task0_entry();
+  ASSERT(task0_mem_info != nullptr);
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Creating system process\n");
+  system_process = task_create_new_process(proc_irq_slowpath_thread, true, task0_mem_info);
+  ASSERT(system_process != nullptr);
+  task_start_process(system_process);
+
+  for (int i = 0; i < number_of_procs; i++)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Creating idle thread for processor", i, "\n");
+
+    new_idle_thread = task_create_new_thread(task_idle_thread_cycle, system_process);
+    ASSERT(new_idle_thread != nullptr);
     idle_threads[i] = new_idle_thread;
     task_thread_cycle_remove(idle_threads[i]);
     idle_threads[i]->permit_running = false;
   }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "System process: ", system_process, "\n");
+  KL_TRC_EXIT;
+
+  return system_process;
+}
+
+void task_start_tasking()
+{
+  KL_TRC_ENTRY;
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Beginning task switching\n");
   task_install_task_switcher();
@@ -139,6 +183,7 @@ task_process *task_create_new_process(ENTRY_PROC entry_point,
                                       mem_process_info *mem_info)
 {
   task_process *new_process;
+  task_thread *first_thread;
 
   KL_TRC_ENTRY;
 
@@ -148,6 +193,8 @@ task_process *task_create_new_process(ENTRY_PROC entry_point,
   klib_list_initialize(&new_process->child_threads);
   new_process->process_list_item.item = new_process;
   new_process->kernel_mode = kernel_mode;
+  new_process->being_destroyed = false;
+
   if (mem_info != nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "mem_info provided\n");
@@ -167,7 +214,12 @@ task_process *task_create_new_process(ENTRY_PROC entry_point,
   KL_TRC_TRACE(TRC_LVL::FLOW, "Checks complete, adding process to list\n");
   klib_list_add_head(&process_list, &new_process->process_list_item);
 
-  task_create_new_thread(entry_point, new_process);
+  first_thread = task_create_new_thread(entry_point, new_process);
+  ASSERT(first_thread != nullptr);
+
+  // Processes only live as long as the threads within them, so don't bother hanging on to a reference - the first
+  // thread to be created grabbed one itself.
+  new_process->ref_release();
 
   KL_TRC_EXIT;
   return new_process;
@@ -187,36 +239,42 @@ task_thread *task_create_new_thread(ENTRY_PROC entry_point, task_process *parent
 {
   KL_TRC_ENTRY;
 
-  task_thread *new_thread = new task_thread;
+  task_thread *new_thread = nullptr;
 
   ASSERT(parent_process != nullptr);
 
-  KL_TRC_DATA("Entry point", reinterpret_cast<unsigned long>(entry_point));
-  KL_TRC_DATA("Parent Process", reinterpret_cast<unsigned long>(parent_process));
+  if (!parent_process->being_destroyed)
+  {
+    KL_TRC_DATA("Entry point", reinterpret_cast<unsigned long>(entry_point));
+    KL_TRC_DATA("Parent Process", reinterpret_cast<unsigned long>(parent_process));
 
-  new_thread->parent_process = parent_process;
+    new_thread = new task_thread;
 
-  klib_list_item_initialize(&new_thread->process_list_item);
-  klib_list_item_initialize(&new_thread->synch_list_item);
-  new_thread->execution_context = task_int_create_exec_context(entry_point, new_thread);
-  new_thread->synch_list_item.item = new_thread;
-  new_thread->process_list_item.item = new_thread;
-  new_thread->permit_running = false;
-  new_thread->release_thread = false;
-  new_thread->thread_destroyed = false;
-  klib_list_add_tail(&parent_process->child_threads, &new_thread->process_list_item);
+    new_thread->parent_process = parent_process;
 
-  klib_synch_spinlock_init(new_thread->cycle_lock);
+    klib_list_item_initialize(&new_thread->process_list_item);
+    klib_list_item_initialize(&new_thread->synch_list_item);
+    new_thread->execution_context = task_int_create_exec_context(entry_point, new_thread);
+    new_thread->synch_list_item.item = new_thread;
+    new_thread->process_list_item.item = new_thread;
+    new_thread->permit_running = false;
+    new_thread->release_thread = false;
+    new_thread->thread_destroyed = false;
+    klib_list_add_tail(&parent_process->child_threads, &new_thread->process_list_item);
 
-  task_thread_cycle_add(new_thread);
+    klib_synch_spinlock_init(new_thread->cycle_lock);
 
-  // Acquire a reference to this thread object on behalf of the task manager. It will only be released when the thread
-  // is "destroyed" in the eyes of the task manager.
-  new_thread->ref_acquire();
+    task_thread_cycle_add(new_thread);
 
-  // Grab a reference to the parent process, to stop it being destroyed while it still has child threads running.
-  parent_process->ref_acquire();
+    // Grab a reference to the parent process, to stop it being destroyed while it still has child threads running.
+    parent_process->ref_acquire();
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Don't bother creating thread - process being destroyed\n");
+  }
 
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "New thread object: ", new_thread, "\n");
   KL_TRC_EXIT;
   return new_thread;
 }
@@ -294,7 +352,59 @@ void task_thread::destroy_thread()
 void task_destroy_process(task_process *unlucky_process)
 {
   KL_TRC_ENTRY;
-  INCOMPLETE_CODE("Can't destroy processes.");
+
+  klib_list_item <task_thread *> *list_item;
+  klib_list_item <task_thread *> *next_item;
+  bool skipped_this_thread = false;
+
+  ASSERT(unlucky_process != nullptr);
+
+  if (!unlucky_process->being_destroyed)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Destroying process\n");
+    unlucky_process->being_destroyed = true;
+
+    // Destroy all threads except for this one.
+    // this needs more locking! But that can wait for the re-write.
+    list_item = unlucky_process->child_threads.head;
+    ASSERT(list_item != nullptr);
+    do
+    {
+      ASSERT(list_item->list_obj != nullptr);
+      next_item = list_item->next;
+      if (list_item->item != task_get_cur_thread())
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Destroying thread: ", list_item->list_obj, "\n");
+        task_destroy_thread(list_item->item);
+      }
+      else
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Destroy this thread later\n");
+        skipped_this_thread = true;
+      }
+
+      list_item = next_item;
+    } while (list_item != nullptr);
+  }
+
+  if (skipped_this_thread)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Destroying this thread now\n");
+    task_destroy_thread(task_get_cur_thread());
+  }
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Final destruction of a process.
+///
+/// This code simply triggers any threads waiting for the end of this process.
+void task_process::destroy_process()
+{
+  KL_TRC_ENTRY;
+
+  this->trigger_all_threads();
+
   KL_TRC_EXIT;
 }
 
@@ -333,6 +443,7 @@ task_thread *task_get_next_thread()
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Thread has requested its own destruction\n");
 
+    current_threads[proc_id]->permit_running = false;
     current_threads[proc_id]->ref_release();
     current_threads[proc_id] = nullptr;
     continue_this_thread[proc_id] = false;
@@ -562,10 +673,7 @@ void task_thread::ref_counter_zero()
 {
   KL_TRC_ENTRY;
 
-  task_x64_exec_context *context;
-  context = reinterpret_cast<task_x64_exec_context *>(this->execution_context);
-  this->execution_context = nullptr;
-  delete context;
+  task_int_delete_exec_context(this);
   klib_list_remove(&this->process_list_item);
 
   ASSERT(this->parent_process != nullptr);
@@ -591,6 +699,36 @@ void task_process::ref_counter_zero()
 #ifdef AZALEA_TEST_CODE
 void test_only_reset_task_mgr()
 {
+  KL_TRC_ENTRY;
+
+  task_process *system_proc = nullptr;
+  task_thread *idle_thread_to_del;
+
+  if (idle_threads[0] != nullptr)
+  {
+    system_proc = idle_threads[0]->parent_process;
+  }
+
+  for (int i = 0; i < proc_mp_proc_count(); i++)
+  {
+    if (idle_threads[i] != nullptr)
+    {
+      idle_thread_to_del = idle_threads[i];
+      klib_list_remove(&idle_thread_to_del->process_list_item);
+      delete idle_thread_to_del;
+      idle_threads[i] = nullptr;
+      system_proc->ref_release();
+    }
+  }
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "All idle threads destroyed\n");
+
+  if (system_proc != nullptr)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Destroying system proc\n");
+    task_destroy_process(system_proc);
+  }
+
   delete[] current_threads;
   delete[] continue_this_thread;
   delete[] idle_threads;
@@ -598,6 +736,13 @@ void test_only_reset_task_mgr()
   current_threads = nullptr;
   continue_this_thread = nullptr;
   idle_threads = nullptr;
+  start_of_thread_cycle = nullptr;
+  process_list.head = nullptr;
+  process_list.tail = nullptr;
+
+  thread_cycle_lock = 0;
+
+  KL_TRC_EXIT;
 }
 #endif
 
