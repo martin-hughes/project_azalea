@@ -11,7 +11,7 @@
 
 using namespace std;
 
-virtual_disk_dummy_device::virtual_disk_dummy_device(const char *filename, unsigned long block_size) :
+virtual_disk_dummy_device::virtual_disk_dummy_device(const char *filename, uint64_t block_size) :
   _name("Virtual disk"), _status(DEV_STATUS::FAILED), _block_size(block_size), _num_blocks(0)
 {
   this->_backing_file.open(filename);
@@ -29,7 +29,7 @@ virtual_disk_dummy_device::virtual_disk_dummy_device(const char *filename, unsig
           (this->_file_header->file_type == virtual_disk_dummy_device::VDI_TYPE_FIXED_SIZE)))
     {
       this->_data_ptr = this->_backing_file_data_ptr + this->_file_header->image_data_offset;
-      this->_block_data_ptr = reinterpret_cast<unsigned int *>
+      this->_block_data_ptr = reinterpret_cast<uint32_t *>
                                 (this->_backing_file_data_ptr + this->_file_header->block_data_offset);
 
       this->_block_size = this->_file_header->sector_size;
@@ -60,22 +60,22 @@ DEV_STATUS virtual_disk_dummy_device::get_device_status()
   return this->_status;
 }
 
-unsigned long virtual_disk_dummy_device::num_blocks()
+uint64_t virtual_disk_dummy_device::num_blocks()
 {
   return this->_num_blocks;
 }
 
-unsigned long virtual_disk_dummy_device::block_size()
+uint64_t virtual_disk_dummy_device::block_size()
 {
   return this->_block_size;
 }
 
 // This function is a bit confusing because the parameters "start_block" and "num_blocks" refer to sectors on the
 // virtual disk, rather than the blocks used within the VDI.
-ERR_CODE virtual_disk_dummy_device::read_blocks(unsigned long start_block,
-                                                unsigned long num_blocks,
+ERR_CODE virtual_disk_dummy_device::read_blocks(uint64_t start_block,
+                                                uint64_t num_blocks,
                                                 void *buffer,
-                                                unsigned long buffer_length)
+                                                uint64_t buffer_length)
 {
   ERR_CODE return_val = ERR_CODE::UNKNOWN;
 
@@ -109,10 +109,10 @@ ERR_CODE virtual_disk_dummy_device::read_blocks(unsigned long start_block,
 
 // This function is a bit confusing because the parameters "start_block" and "num_blocks" refer to sectors on the
 // virtual disk, rather than the blocks used within the VDI.
-ERR_CODE virtual_disk_dummy_device::write_blocks(unsigned long start_block,
-                                                 unsigned long num_blocks,
+ERR_CODE virtual_disk_dummy_device::write_blocks(uint64_t start_block,
+                                                 uint64_t num_blocks,
                                                  void *buffer,
-                                                 unsigned long buffer_length)
+                                                 uint64_t buffer_length)
 {
   ERR_CODE return_val = ERR_CODE::UNKNOWN;
 
@@ -144,16 +144,16 @@ ERR_CODE virtual_disk_dummy_device::write_blocks(unsigned long start_block,
   return return_val;
 }
 
-ERR_CODE virtual_disk_dummy_device::read_one_block(unsigned long start_sector, void *buffer)
+ERR_CODE virtual_disk_dummy_device::read_one_block(uint64_t start_sector, void *buffer)
 {
   ERR_CODE result = ERR_CODE::UNKNOWN;
-  unsigned int block = start_sector / this->_sectors_per_block;
+  uint32_t block = start_sector / this->_sectors_per_block;
 
   // How many bytes into the image block is this sector?
-  unsigned int sector_offset = (start_sector % this->_sectors_per_block) * this->_block_size;
+  uint32_t sector_offset = (start_sector % this->_sectors_per_block) * this->_block_size;
 
   // Which block within the file represents this block on disk?
-  unsigned int block_offset = this->_block_data_ptr[block];
+  uint32_t block_offset = this->_block_data_ptr[block];
 
   // For now, only support already extant blocks
   if ((block_offset == ~0) || (block_offset == ((~0) - 1)))
@@ -174,7 +174,7 @@ ERR_CODE virtual_disk_dummy_device::read_one_block(unsigned long start_sector, v
   return result;
 }
 
-ERR_CODE virtual_disk_dummy_device::write_one_block(unsigned long start_sector, void *buffer)
+ERR_CODE virtual_disk_dummy_device::write_one_block(uint64_t start_sector, void *buffer)
 {
   return ERR_CODE::UNKNOWN;
 }

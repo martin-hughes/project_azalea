@@ -9,8 +9,8 @@ using namespace std;
 
 struct pow2_test
 {
-  unsigned long input;
-  unsigned long expected_output;
+  uint64_t input;
+  uint64_t expected_output;
 };
 
 pow2_test rounding_tests[] = {
@@ -25,7 +25,7 @@ pow2_test rounding_tests[] = {
     { 0x1000000000000001, 0 },
 };
 
-const unsigned long num_rounding_tests = sizeof (rounding_tests) / sizeof (pow2_test);
+const uint64_t num_rounding_tests = sizeof (rounding_tests) / sizeof (pow2_test);
 
 class MathsTest : public ::testing::Test
 {
@@ -42,7 +42,7 @@ protected:
 // Create a new list, add and delete items, check the list is still valid.
 TEST(MathsTest, maths_test_1)
 {
-  unsigned long actual_output;
+  uint64_t actual_output;
 
   cout << "Math: round_to_power_two() tests" << endl;
 

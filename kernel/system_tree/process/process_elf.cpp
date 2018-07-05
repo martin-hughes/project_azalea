@@ -36,14 +36,14 @@ task_process *proc_load_elf_file(kl_string binary_name)
 
   ISystemTreeLeaf *disk_prog;
   IBasicFile *new_prog_file;
-  unsigned long prog_size;
-  unsigned long bytes_read;
+  uint64_t prog_size;
+  uint64_t bytes_read;
   task_process *new_proc;
-  unsigned char* load_buffer;
+  uint8_t* load_buffer;
   elf64_file_header *file_header;
   elf64_program_header *prog_header;
-  unsigned long end_addr;
-  unsigned long page_start_addr;
+  uint64_t end_addr;
+  uint64_t page_start_addr;
   void *backing_addr;
   void *kernel_write_window;
 
@@ -60,7 +60,7 @@ task_process *proc_load_elf_file(kl_string binary_name)
   ASSERT(prog_size < MEM_PAGE_SIZE);
 
   // Load the entire file into a buffer - it'll make it easier to process, but slower.
-  load_buffer = new unsigned char[prog_size];
+  load_buffer = new uint8_t[prog_size];
   ASSERT(new_prog_file->read_bytes(0, prog_size, load_buffer, prog_size, bytes_read) == ERR_CODE::NO_ERROR);
   ASSERT(bytes_read == prog_size);
 
@@ -92,12 +92,12 @@ task_process *proc_load_elf_file(kl_string binary_name)
   kernel_write_window = mem_allocate_virtual_range(1);
 
   // Cycle through the program headers, looking for segments to load.
-  for (unsigned int i = 0; i < file_header->num_prog_hdrs; i++)
+  for (uint32_t i = 0; i < file_header->num_prog_hdrs; i++)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Looking at header idx ", i, "\n");
     prog_header = reinterpret_cast<elf64_program_header *>(file_header->prog_hdrs_off
                                                            + i * (file_header->prog_hdr_entry_size)
-                                                           + reinterpret_cast<unsigned long>(load_buffer));
+                                                           + reinterpret_cast<uint64_t>(load_buffer));
     KL_TRC_TRACE(TRC_LVL::EXTRA, "Address in mem: ", prog_header, "\n");
 
     // At the moment, this is the only type that we'll load.
@@ -107,11 +107,11 @@ task_process *proc_load_elf_file(kl_string binary_name)
       KL_TRC_TRACE(TRC_LVL::FLOW, "Loading section\n");
       ASSERT(prog_header->req_phys_addr < 0x8000000000000000L);
 
-      unsigned long copy_end_addr;
-      unsigned long copy_length;
-      unsigned long offset;
-      unsigned long bytes_to_zero = 0;
-      unsigned long bytes_written = 0;
+      uint64_t copy_end_addr;
+      uint64_t copy_length;
+      uint64_t offset;
+      uint64_t bytes_to_zero = 0;
+      uint64_t bytes_written = 0;
       void *write_ptr;
       void *read_ptr;
 
@@ -134,7 +134,7 @@ task_process *proc_load_elf_file(kl_string binary_name)
 
       offset = prog_header->req_virt_addr % MEM_PAGE_SIZE;
 
-      for (unsigned long this_page = page_start_addr; this_page < end_addr; this_page += MEM_PAGE_SIZE)
+      for (uint64_t this_page = page_start_addr; this_page < end_addr; this_page += MEM_PAGE_SIZE)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Writing on another page: ", this_page, "\n");
 
@@ -172,8 +172,8 @@ task_process *proc_load_elf_file(kl_string binary_name)
             copy_length = copy_end_addr - this_page - offset;
           }
 
-          write_ptr = reinterpret_cast<void *>(reinterpret_cast<unsigned long>(kernel_write_window) + offset);
-          read_ptr = reinterpret_cast<void *>(reinterpret_cast<unsigned long>(load_buffer)
+          write_ptr = reinterpret_cast<void *>(reinterpret_cast<uint64_t>(kernel_write_window) + offset);
+          read_ptr = reinterpret_cast<void *>(reinterpret_cast<uint64_t>(load_buffer)
                                               + prog_header->file_offset
                                               + bytes_written);
           KL_TRC_TRACE(TRC_LVL::EXTRA, "Copy data:\n----------\n");
@@ -191,13 +191,13 @@ task_process *proc_load_elf_file(kl_string binary_name)
         if ((bytes_written >= prog_header->size_in_file) && bytes_to_zero && (offset < MEM_PAGE_SIZE))
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "Writing zeroes\n");
-          unsigned long bytes_now = MEM_PAGE_SIZE - offset;
+          uint64_t bytes_now = MEM_PAGE_SIZE - offset;
           if (bytes_now > bytes_to_zero)
           {
             bytes_now = bytes_to_zero;
           }
 
-          write_ptr = reinterpret_cast<void *>(reinterpret_cast<unsigned long>(kernel_write_window) + offset);
+          write_ptr = reinterpret_cast<void *>(reinterpret_cast<uint64_t>(kernel_write_window) + offset);
           kl_memset(write_ptr, 0, bytes_now);
           bytes_to_zero -= bytes_now;
         }

@@ -1,6 +1,8 @@
 #include "gtest/gtest.h"
 #include "devices/block/ramdisk/ramdisk.h"
 
+#include <memory>
+
 class RamdiskTest : public ::testing::Test
 {
 protected:

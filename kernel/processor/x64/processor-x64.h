@@ -8,15 +8,15 @@ struct processor_info_x64
 {
   /// The ID of the local APIC for this processor. This allows the system to determine which processor it is running
   /// on, and is also used as the address when signalling other processors.
-  unsigned int lapic_id;
+  uint32_t lapic_id;
 };
 
 typedef processor_info_generic<processor_info_x64> processor_info;
 
 extern processor_info *proc_info_block;
-extern unsigned int processor_count;
+extern uint32_t processor_count;
 
-enum class PROC_X64_MSRS : unsigned long
+enum class PROC_X64_MSRS : uint64_t
 {
   IA32_APIC_BASE = 0x1b,
   IA32_MTRRCAP = 0xfe,
@@ -41,12 +41,12 @@ enum class PROC_X64_MSRS : unsigned long
   IA32_KERNEL_GS_BASE = 0xC0000102,
 };
 
-unsigned long proc_read_msr(PROC_X64_MSRS msr);
-void proc_write_msr(PROC_X64_MSRS msr, unsigned long value);
+uint64_t proc_read_msr(PROC_X64_MSRS msr);
+void proc_write_msr(PROC_X64_MSRS msr, uint64_t value);
 
-extern "C" void asm_proc_read_cpuid(unsigned long eax_value,
-                                    unsigned long ecx_value,
-                                    unsigned long *ebx_eax,
-                                    unsigned long *edx_ecx);
+extern "C" void asm_proc_read_cpuid(uint64_t eax_value,
+                                    uint64_t ecx_value,
+                                    uint64_t *ebx_eax,
+                                    uint64_t *edx_ecx);
 
 #endif

@@ -1,7 +1,6 @@
 #include "gtest/gtest.h"
 #include <string.h>
 
-#include "synch_tests.h"
 #include "klib/data_structures/string.h"
 #include "processor/processor.h"
 
@@ -12,11 +11,6 @@ class KlibSynchTest : public ::testing::Test
 {
 protected:
 };
-
-TEST(KlibSynchTest, Lists1)
-{
-  synch_test_1();
-}
 
 // Basic test of message passing between processes proc_a and proc_b.
 TEST(KlibSynchTest, MessagePassing1)
@@ -34,7 +28,7 @@ TEST(KlibSynchTest, MessagePassing1)
 
   ERR_CODE res;
 
-  const unsigned int msg_len = 30;
+  const uint32_t msg_len = 30;
 
   char *buffer = new char[msg_len];
   memset(buffer, 0, msg_len);

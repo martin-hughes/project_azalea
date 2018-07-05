@@ -9,11 +9,12 @@
 #include <stdlib.h>
 #include <time.h>
 #include <set>
+#include "gtest/gtest.h"
 
 using namespace std;
 
 // Tests of kl_string
-void data_structures_test_4()
+TEST(DataStructuresTest, Strings1)
 {
 	kl_string string_a("Hello!");
 

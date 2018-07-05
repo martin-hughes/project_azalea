@@ -12,7 +12,7 @@
 #include <iostream>
 using namespace std;
 
-const unsigned long page_size = 2 * 1024 * 1024;
+const uint64_t page_size = 2 * 1024 * 1024;
 
 // In the dummy library, this doesn't need to do anything. All set up is done
 // automatically when this test code gets this far, which means the tests don't
@@ -22,52 +22,52 @@ void mem_gen_init()
   panic("mem_gen_init not written");
 }
 
-void *mem_allocate_physical_pages(unsigned int num_pages)
+void *mem_allocate_physical_pages(int32_t num_pages)
 {
   panic("mem_allocate_physical_pages not implemented");
   return nullptr;
 }
 
-void *mem_allocate_virtual_range(unsigned int num_pages)
+void *mem_allocate_virtual_range(uint32_t num_pages)
 {
   panic("mem_allocate_virtual_range Not implemented");
   return nullptr;
 }
 
-void mem_map_range(void *physical_start, void* virtual_start, unsigned int len)
+void mem_map_range(void *physical_start, void* virtual_start, uint32_t len)
 {
   panic("mem_map_range Not implemented");
 }
 
 // Allocate pages of RAM. Some of the kernel code relies on the assumption that
 // the returned address is aligned on page boundaries so use memalign for that.
-void *mem_allocate_pages(unsigned int num_pages)
+void *mem_allocate_pages(uint32_t num_pages)
 {
-  unsigned long requested_ram = num_pages * page_size;
+  uint64_t requested_ram = num_pages * page_size;
   return memalign(page_size, requested_ram);
 }
 
-void mem_deallocate_physical_pages(void *start, unsigned int num_pages)
+void mem_deallocate_physical_pages(void *start, uint32_t num_pages)
 {
   panic("mem_deallocate_physical_pages Not implemented");
 }
 
-void mem_deallocate_virtual_range(void *start, unsigned int num_pages)
+void mem_deallocate_virtual_range(void *start, uint32_t num_pages)
 {
   panic("mem_deallocate_virtual_range Not implemented");
 }
 
-void mem_unmap_range(void *virtual_start, unsigned int num_pages)
+void mem_unmap_range(void *virtual_start, uint32_t num_pages)
 {
   panic("mem_unmap_range Not implemented");
 }
 
-void mem_deallocate_pages(void *virtual_start, unsigned int num_pages)
+void mem_deallocate_pages(void *virtual_start, uint32_t num_pages)
 {
   free(virtual_start);
 }
 
-void mem_vmm_allocate_specific_range(unsigned long start_addr, unsigned int num_pages, task_process *process_to_use)
+void mem_vmm_allocate_specific_range(uint64_t start_addr, uint32_t num_pages, task_process *process_to_use)
 {
   // Do nothing.
 }

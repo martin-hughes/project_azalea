@@ -23,8 +23,8 @@ public:
   virtual DEV_STATUS get_device_status();
 
   // IIrqReceiver interface
-  virtual bool handle_irq_fast(unsigned char irq_number);
-  virtual void handle_irq_slow(unsigned char irq_number);
+  virtual bool handle_irq_fast(uint8_t irq_number);
+  virtual void handle_irq_slow(uint8_t irq_number);
 
 protected:
   void enable_irq();
@@ -49,8 +49,8 @@ public:
   ps2_keyboard_device(gen_ps2_controller_device *parent, bool second_channel);
 
   // IIrqReceiver interface.
-  virtual bool handle_irq_fast(unsigned char irq_number);
-  virtual void handle_irq_slow(unsigned char irq_number);
+  virtual bool handle_irq_fast(uint8_t irq_number);
+  virtual void handle_irq_slow(uint8_t irq_number);
 
   // Process that should receive key press messages. This is only intended to be temporary, until the driver structure
   // gets a bit more flesh in it.

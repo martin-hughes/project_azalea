@@ -20,7 +20,7 @@ public:
   virtual void wait_for_signal();
   virtual void cancel_waiting_thread(task_thread *thread);
 
-  virtual unsigned long threads_waiting();
+  virtual uint64_t threads_waiting();
 
 protected:
   void trigger_next_thread();

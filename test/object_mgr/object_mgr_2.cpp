@@ -1,5 +1,4 @@
 #include "test/test_core/test.h"
-#include "test/object_mgr/object_mgr_tests.h"
 #include "system_tree/system_tree_leaf.h"
 #include "object_mgr/handles.h"
 #include "object_mgr/object_mgr.h"
@@ -7,7 +6,7 @@
 
 #include "gtest/gtest.h"
 
-const unsigned int NUM_OBJECTS = 5;
+const uint32_t NUM_OBJECTS = 5;
 
 class simple_object : public ISystemTreeLeaf
 {

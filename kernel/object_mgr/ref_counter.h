@@ -1,6 +1,7 @@
 #ifndef __REF_COUNT_INTFACE_HDR
 #define __REF_COUNT_INTFACE_HDR
 
+#include <stdint.h>
 #include "klib/synch/kernel_locks.h"
 
 /// @brief Provides reference counting capabilities to a class
@@ -22,7 +23,7 @@ public:
 protected:
   virtual void ref_counter_zero();
 
-  volatile unsigned long _ref_counter;
+  volatile uint64_t _ref_counter;
   kernel_spinlock _ref_counter_lock;
 };
 

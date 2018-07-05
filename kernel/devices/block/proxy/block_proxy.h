@@ -8,23 +8,23 @@
 class block_proxy_device: public IBlockDevice
 {
 public:
-  block_proxy_device(IBlockDevice *parent, unsigned long start_block, unsigned long num_blocks);
+  block_proxy_device(IBlockDevice *parent, uint64_t start_block, uint64_t num_blocks);
   virtual ~block_proxy_device();
 
   virtual const kl_string device_name();
   virtual DEV_STATUS get_device_status();
 
-  virtual unsigned long num_blocks();
-  virtual unsigned long block_size();
+  virtual uint64_t num_blocks();
+  virtual uint64_t block_size();
 
-  virtual ERR_CODE read_blocks(unsigned long start_block,
-                               unsigned long num_blocks,
+  virtual ERR_CODE read_blocks(uint64_t start_block,
+                               uint64_t num_blocks,
                                void *buffer,
-                               unsigned long buffer_length);
-  virtual ERR_CODE write_blocks(unsigned long start_block,
-                                unsigned long num_blocks,
+                               uint64_t buffer_length);
+  virtual ERR_CODE write_blocks(uint64_t start_block,
+                                uint64_t num_blocks,
                                 void *buffer,
-                                unsigned long buffer_length);
+                                uint64_t buffer_length);
 
 protected:
   const kl_string _name;
@@ -32,8 +32,8 @@ protected:
   IBlockDevice * const _parent;
   DEV_STATUS status;
 
-  const unsigned long _start_block;
-  const unsigned long _num_blocks;
+  const uint64_t _start_block;
+  const uint64_t _num_blocks;
 };
 
 #endif

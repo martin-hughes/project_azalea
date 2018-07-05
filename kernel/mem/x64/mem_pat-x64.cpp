@@ -10,7 +10,7 @@
 #include "processor/x64/processor-x64.h"
 #include "processor/x64/processor-x64-int.h"
 
-const unsigned long PAT_REGISTER_VAL = 0x0005040600010406;
+const uint64_t PAT_REGISTER_VAL = 0x0005040600010406;
 
 /// @brief Initialise the PAT
 ///
@@ -42,14 +42,14 @@ void mem_x64_pat_init()
 ///                   support small values.
 ///
 /// @return The index into the PAT that represents the requested caching mode.
-unsigned char mem_x64_pat_get_val(const unsigned char cache_type, bool first_half)
+uint8_t mem_x64_pat_get_val(const uint8_t cache_type, bool first_half)
 {
   KL_TRC_ENTRY;
 
-  unsigned char result;
+  uint8_t result;
 
-  KL_TRC_DATA("Requested cache type", cache_type);
-  KL_TRC_DATA("Must be first half?", first_half);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Requested cache type", cache_type, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Must be first half?", first_half, "\n");
 
   switch(cache_type)
   {
@@ -78,7 +78,7 @@ unsigned char mem_x64_pat_get_val(const unsigned char cache_type, bool first_hal
       panic("Invalid cache request");
   }
 
-  KL_TRC_DATA("Result", result);
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Result", result, "\n");
   return result;
 }
 
@@ -87,11 +87,11 @@ unsigned char mem_x64_pat_get_val(const unsigned char cache_type, bool first_hal
 /// @param pat_idx The index in the PAT to decode. Must be in the range 0-7, inclusive, or the system will panic.
 ///
 /// @return The caching mode that PAT entry represents.
-unsigned char mem_x64_pat_decode(const unsigned char pat_idx)
+uint8_t mem_x64_pat_decode(const uint8_t pat_idx)
 {
   KL_TRC_ENTRY;
 
-  unsigned char result;
+  uint8_t result;
 
   ASSERT(pat_idx < 7);
 

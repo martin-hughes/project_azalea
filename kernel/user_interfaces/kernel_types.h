@@ -1,9 +1,10 @@
 #ifndef _KLIB_KERNEL_TYPES
 #define _KLIB_KERNEL_TYPES
 
+#include <stdint.h>
 #include "./macros.h"
 
-typedef unsigned long GEN_HANDLE;
+typedef uint64_t GEN_HANDLE;
 
 /**
  *  @brief Identify which register to set when setting up thread-local storage.

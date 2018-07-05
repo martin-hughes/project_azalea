@@ -2,6 +2,8 @@
 #include "devices/block/proxy/block_proxy.h"
 #include "devices/block/ramdisk/ramdisk.h"
 
+#include <memory>
+
 class BlockProxyTest: public ::testing::Test
 {
 protected:

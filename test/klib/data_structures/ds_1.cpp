@@ -1,16 +1,17 @@
 #include "klib/data_structures/lists.h"
 #include <iostream>
+#include "gtest/gtest.h"
 
 #include "test/test_core/test.h"
 
 using namespace std;
 
 // Use these in the tests, it's simpler than allocating and destroying them.
-const unsigned int num_demo_items = 5;
-klib_list_item<unsigned int *> demo_items[num_demo_items];
+const uint32_t num_demo_items = 5;
+klib_list_item<uint32_t *> demo_items[num_demo_items];
 
 // Create a new list, add and delete items, check the list is still valid.
-void data_structures_test_1()
+TEST(DataStructuresTest, Lists1)
 {
   cout << "Lists test 1" << endl;
 
@@ -18,11 +19,11 @@ void data_structures_test_1()
   for (int i = 0; i < num_demo_items; i++)
   {
     klib_list_item_initialize(&demo_items[i]);
-    demo_items[i].item = const_cast<unsigned int *>(&num_demo_items);
+    demo_items[i].item = const_cast<uint32_t *>(&num_demo_items);
   }
 
   // Test the empty list.
-  klib_list<unsigned int *> list_root;
+  klib_list<uint32_t *> list_root;
   klib_list_initialize(&list_root);
   ASSERT(klib_list_is_valid(&list_root));
   ASSERT(klib_list_is_empty(&list_root));

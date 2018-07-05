@@ -54,14 +54,14 @@ extern "C" ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle)
   return result;
 }
 
-ERR_CODE syscall_futex_wait(volatile int *futex, int req_value)
+ERR_CODE syscall_futex_wait(volatile int32_t *futex, int32_t req_value)
 {
   INCOMPLETE_CODE("futext_wait");
 
   return ERR_CODE::UNKNOWN;
 }
 
-ERR_CODE syscall_futex_wake(volatile int *futex)
+ERR_CODE syscall_futex_wake(volatile int32_t *futex)
 {
   INCOMPLETE_CODE("futext_wake");
 

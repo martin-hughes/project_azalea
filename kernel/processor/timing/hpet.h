@@ -1,12 +1,14 @@
 #ifndef __HPET_H
 #define __HPET_H
 
+#include <stdint.h>
+
 bool time_hpet_exists();
 void time_hpet_init();
 
-void time_hpet_stall(unsigned long wait_in_ns);
-unsigned long time_hpet_cur_value();
-unsigned long time_hpet_compute_wait(unsigned long wait_in_ns);
+void time_hpet_stall(uint64_t wait_in_ns);
+uint64_t time_hpet_cur_value();
+uint64_t time_hpet_compute_wait(uint64_t wait_in_ns);
 
 /*
 000-007h General Capabilities and ID Register Read Only
@@ -34,22 +36,22 @@ unsigned long time_hpet_compute_wait(unsigned long wait_in_ns);
 #pragma pack(push, 1)
 struct hpet_timer_cfg
 {
-  unsigned long cfg_and_caps;
-  unsigned long comparator_val;
-  unsigned long interrupt_route;
-  unsigned long reserved;
+  uint64_t cfg_and_caps;
+  uint64_t comparator_val;
+  uint64_t interrupt_route;
+  uint64_t reserved;
 };
 
 struct hpet_hardware_cfg_block
 {
-  unsigned long gen_cap_and_id;
-  unsigned long reserved_1;
-  unsigned long gen_config;
-  unsigned long reserved_2;
-  unsigned long gen_int_status;
-  unsigned long reserved_3[25];
-  unsigned long main_counter_val;
-  unsigned long reserved_4;
+  uint64_t gen_cap_and_id;
+  uint64_t reserved_1;
+  uint64_t gen_config;
+  uint64_t reserved_2;
+  uint64_t gen_int_status;
+  uint64_t reserved_3[25];
+  uint64_t main_counter_val;
+  uint64_t reserved_4;
   hpet_timer_cfg timer_cfg[32];
 };
 #pragma pack(pop)
@@ -60,35 +62,35 @@ struct hpet_hardware_cfg_block
 #define HPET_REVISION(x) ((x) & 0xFF)
 
 // Flags within hpet_hardware_cfg_block.gen_cap_and_id
-const unsigned long hpet_hw_leg_rte_cap = (1 << 15);
+const uint64_t hpet_hw_leg_rte_cap = (1 << 15);
 
 // Flags within hpet_hardware_cfg_block.gen_config
-const unsigned long hpet_cfg_leg_rte_map = 2;
-const unsigned long hpet_cfg_glbl_enable = 1;
+const uint64_t hpet_cfg_leg_rte_map = 2;
+const uint64_t hpet_cfg_glbl_enable = 1;
 
 // Flags within hpet_timer_cfg.cfg_and_caps
-const unsigned long hpet_tmr_level_trig_int = 2;
-const unsigned long hpet_tmr_enable = 4;
-const unsigned long hpet_tmr_periodic = 8;
-const unsigned long hpet_tmr_periodic_capable = 16;
-const unsigned long hpet_tmr_64_bit_cap = 32;
-const unsigned long hpet_tmr_write_val = 64;
-const unsigned long hpet_tmr_force_32_bit = 256;
-const unsigned long hpet_tmr_fsb_int_enable = (1 << 14);
-const unsigned long hpet_tmr_fsb_int_cap = (1 << 15);
+const uint64_t hpet_tmr_level_trig_int = 2;
+const uint64_t hpet_tmr_enable = 4;
+const uint64_t hpet_tmr_periodic = 8;
+const uint64_t hpet_tmr_periodic_capable = 16;
+const uint64_t hpet_tmr_64_bit_cap = 32;
+const uint64_t hpet_tmr_write_val = 64;
+const uint64_t hpet_tmr_force_32_bit = 256;
+const uint64_t hpet_tmr_fsb_int_enable = (1 << 14);
+const uint64_t hpet_tmr_fsb_int_cap = (1 << 15);
 
 // Fields within hpet_timer_cfg.cfg_and_caps
 #define HPET_TMR_INT_RTE_CAP(x) ((x) >> 32)
 #define HPET_TMR_GET_INT_RTE(x) (((x) >> 9) & 0x0F)
 #define HPET_TMR_SET_INT_RTE(x, rte) \
       { \
-        unsigned long DEF_scratch = (x); \
+        uint64_t DEF_scratch = (x); \
         DEF_scratch = DEF_scratch & ~((0x0F) << 9); \
         DEF_scratch = DEF_scratch | ((rte) << 9); \
         x = DEF_scratch; \
       }
 
-const unsigned long max_period_fs = 0x05F5E100;
+const uint64_t max_period_fs = 0x05F5E100;
 
 
 

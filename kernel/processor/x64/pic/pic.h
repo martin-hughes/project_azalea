@@ -1,8 +1,10 @@
 #ifndef __PROC_X64_PIC_AND_APIC
 #define __PROC_X64_PIC_AND_APIC
 
+#include <stdint.h>
+
 // Interface for controlling the system's various PICs or APIC/xAPIC/x2APICs
-void proc_conf_interrupt_control_sys(unsigned int num_procs);
+void proc_conf_interrupt_control_sys(uint32_t num_procs);
 void proc_conf_local_int_controller();
 void proc_configure_global_int_ctrlrs();
 
@@ -28,10 +30,10 @@ enum class PROC_IPI_INTERRUPT
   STARTUP = 6,
 };
 
-void proc_send_ipi(unsigned int apic_dest,
+void proc_send_ipi(uint32_t apic_dest,
                    PROC_IPI_SHORT_TARGET shorthand,
                    PROC_IPI_INTERRUPT interrupt,
-                   unsigned char vector,
+                   uint8_t vector,
                    const bool wait_for_delivery);
 
 #endif

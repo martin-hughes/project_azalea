@@ -1,6 +1,8 @@
 #ifndef MEM_H_
 #define MEM_H_
 
+#include <stdint.h>
+
 // Main kernel interface to memory management functions.  The mem module
 // provides basic memory management at the level of pages, generally the klib
 // memory functions should be used to allocate or deallocate specific amounts of
@@ -21,8 +23,8 @@ struct task_thread;
 /// @brief Stores information about whether a specific address range is allocated or not.
 struct vmm_range_data
 {
-  unsigned long start; ///< The start address of the range being considered.
-  unsigned long number_of_pages; ///< The number of pages in the range (must be a power of two).
+  uint64_t start; ///< The start address of the range being considered.
+  uint64_t number_of_pages; ///< The number of pages in the range (must be a power of two).
   bool allocated; ///< Whether or not this address range is allocated (true) or not (false).
 };
 
@@ -72,10 +74,10 @@ enum MEM_CACHE_MODES
 #pragma pack(push,1)
 struct e820_record
 {
-  unsigned int size;
-  unsigned long start_addr;
-  unsigned long length;
-  unsigned int memory_type;
+  uint32_t size;
+  uint64_t start_addr;
+  uint64_t length;
+  uint32_t memory_type;
 };
 #pragma pack(pop)
 
@@ -89,23 +91,23 @@ struct e820_pointer
 
 void mem_gen_init(e820_pointer *e820_ptr);
 
-void *mem_allocate_physical_pages(unsigned int num_pages);
-void *mem_allocate_virtual_range(unsigned int num_pages, task_process *process_to_use = nullptr);
-void mem_vmm_allocate_specific_range(unsigned long start_addr, unsigned int num_pages, task_process *process_to_use);
+void *mem_allocate_physical_pages(uint32_t num_pages);
+void *mem_allocate_virtual_range(uint32_t num_pages, task_process *process_to_use = nullptr);
+void mem_vmm_allocate_specific_range(uint64_t start_addr, uint32_t num_pages, task_process *process_to_use);
 void mem_map_range(void *physical_start,
                    void* virtual_start,
-                   unsigned int len,
+                   uint32_t len,
                    task_process *context = nullptr,
                    MEM_CACHE_MODES cache_mode = MEM_WRITE_BACK);
-void *mem_allocate_pages(unsigned int num_pages);
+void *mem_allocate_pages(uint32_t num_pages);
 
-void mem_deallocate_physical_pages(void *start, unsigned int num_pages);
-void mem_deallocate_virtual_range(void *start, unsigned int num_pages, task_process *process_to_use = nullptr);
-void mem_unmap_range(void *virtual_start, unsigned int num_pages);
-void mem_deallocate_pages(void *virtual_start, unsigned int num_pages);
+void mem_deallocate_physical_pages(void *start, uint32_t num_pages);
+void mem_deallocate_virtual_range(void *start, uint32_t num_pages, task_process *process_to_use = nullptr);
+void mem_unmap_range(void *virtual_start, uint32_t num_pages);
+void mem_deallocate_pages(void *virtual_start, uint32_t num_pages);
 void *mem_get_phys_addr(void *virtual_addr, task_process *context = nullptr);
 
-bool mem_is_valid_virt_addr(unsigned long virtual_addr);
+bool mem_is_valid_virt_addr(uint64_t virtual_addr);
 
 // A helper function to allow the task manager to easily find the information
 // about task-0 memory.

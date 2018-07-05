@@ -8,6 +8,7 @@
 /// At the moment, this file doesn't even do a very good job of keeping track of handles. It simply allocates in an
 /// upwards direction until it runs out, then crashes.
 
+#include <stdint.h>
 #include "klib/klib.h"
 
 static GEN_HANDLE hm_next_handle = 1;
@@ -35,7 +36,7 @@ GEN_HANDLE hm_get_handle()
   klib_synch_spinlock_lock(hm_lock);
   return_handle = hm_next_handle++;
 
-  if (hm_next_handle == ~((unsigned long)0))
+  if (hm_next_handle == ~((uint64_t)0))
   {
     panic("Out of handles!");
   }

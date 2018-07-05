@@ -13,14 +13,14 @@
 extern processor_info *proc_info_block;
 processor_info *proc_info_block = nullptr;
 
-extern unsigned int processor_count;
-unsigned int processor_count = 0;
+extern uint32_t processor_count;
+uint32_t processor_count = 0;
 
 /// @brief Return the number of processors in the system.
 ///
 /// @return The number of processors in the system. Processors can then by identified by an integer in the range 0 ->
 ///         (return value - 1)
-unsigned int proc_mp_proc_count()
+uint32_t proc_mp_proc_count()
 {
   KL_TRC_ENTRY;
 
@@ -37,12 +37,12 @@ unsigned int proc_mp_proc_count()
 /// @param proc_id The processor ID (not APIC ID) to signal.
 ///
 /// @param msg The message to be sent.
-void proc_mp_signal_processor(unsigned int proc_id, PROC_IPI_MSGS msg)
+void proc_mp_signal_processor(uint32_t proc_id, PROC_IPI_MSGS msg)
 {
   KL_TRC_ENTRY;
 
-  KL_TRC_DATA("Message to send", static_cast<unsigned long>(msg));
-  KL_TRC_DATA("Processor to signal", proc_id);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Message to send", static_cast<uint64_t>(msg), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Processor to signal", proc_id, "\n");
 
   ASSERT(proc_id < processor_count);
 
@@ -58,7 +58,7 @@ void proc_mp_receive_signal(PROC_IPI_MSGS msg)
 {
   KL_TRC_ENTRY;
 
-  KL_TRC_DATA("Received message", static_cast<unsigned long>(msg));
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Received message", static_cast<uint64_t>(msg), "\n");
 
   switch (msg)
   {
@@ -91,14 +91,14 @@ void proc_stop_other_procs()
 {
   KL_TRC_ENTRY;
 
-  unsigned int this_proc_id = proc_mp_this_proc_id();
-  KL_TRC_DATA("This processor ID", this_proc_id);
+  uint32_t this_proc_id = proc_mp_this_proc_id();
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "This processor ID", this_proc_id, "\n");
 
-  for (unsigned int i = 0; i < processor_count; i++)
+  for (uint32_t i = 0; i < processor_count; i++)
   {
     if ((this_proc_id != i) && (proc_info_block[i].processor_running))
     {
-      KL_TRC_DATA("Signalling processor", i);
+      KL_TRC_TRACE(TRC_LVL::EXTRA, "Signalling processor", i, "\n");
       proc_mp_signal_processor(i, PROC_IPI_MSGS::SUSPEND);
     }
   }
@@ -133,7 +133,7 @@ void proc_mp_start_aps()
   if (processor_count > 1)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Starting other processors\n");
-    for (unsigned int i = 1; i < processor_count; i++)
+    for (uint32_t i = 1; i < processor_count; i++)
     {
       proc_mp_signal_processor(i, PROC_IPI_MSGS::RESUME);
     }
@@ -147,7 +147,7 @@ void proc_mp_start_aps()
 /// @param msg The message to send to all processors.
 void proc_mp_signal_all_processors(PROC_IPI_MSGS msg)
 {
-  for (unsigned int i = 0; i < processor_count; i++)
+  for (uint32_t i = 0; i < processor_count; i++)
   {
     proc_mp_signal_processor(i, msg);
   }

@@ -4,6 +4,8 @@
 
 //#define ENABLE_TRACING
 
+#include <stdint.h>
+
 #include "klib/klib.h"
 #include "devices/generic/gen_keyboard.h"
 
@@ -18,11 +20,11 @@
 ///
 /// @return A key_props struct containing details for the key that was pressed. If the key code is outside of the table
 ///         or the table is invalid then a default, blank, entry is returned.
-key_props keyb_get_key_props(KEYS key_pressed, key_props *key_props_table, unsigned int tab_len)
+key_props keyb_get_key_props(KEYS key_pressed, key_props *key_props_table, uint32_t tab_len)
 {
   KL_TRC_ENTRY;
 
-  unsigned int code = static_cast<unsigned int>(key_pressed);
+  uint16_t code = static_cast<uint16_t>(key_pressed);
   key_props res = { false, 0, 0 };
 
   if ((key_props_table != nullptr) && (code < tab_len))
@@ -48,7 +50,7 @@ key_props keyb_get_key_props(KEYS key_pressed, key_props *key_props_table, unsig
 /// @param tab_len The number of entries in key_props_table.
 ///
 /// @return If the key press translates into something printable, return that. Otherwise, return 0.
-char keyb_translate_key(KEYS key_pressed, special_keys modifiers, key_props *key_props_table, unsigned int tab_len)
+char keyb_translate_key(KEYS key_pressed, special_keys modifiers, key_props *key_props_table, uint32_t tab_len)
 {
   KL_TRC_ENTRY;
 

@@ -7,8 +7,8 @@
 #include <vector>
 #include <stdlib.h>
 #include <time.h>
+#include "gtest/gtest.h"
 
-#include "test/klib/memory/memory_tests.h"
 #include "klib/memory/memory.h"
 #include "test/test_core/test.h"
 
@@ -19,30 +19,30 @@ namespace
   struct allocation
   {
     void *ptr;
-    unsigned long size;
+    uint64_t size;
   };
 
   typedef std::vector<allocation> allocation_list;
 
-  const unsigned long MAX_ALLOCATIONS = 1000;
-  const unsigned long MAX_SINGLE_CHUNK = 262144;
-  const unsigned long ITERATIONS = 1000000;
+  const uint64_t MAX_ALLOCATIONS = 1000;
+  const uint64_t MAX_SINGLE_CHUNK = 262144;
+  const uint64_t ITERATIONS = 1000000;
 
-  const unsigned long NUM_THREADS = 2;
+  const uint64_t NUM_THREADS = 2;
 
   pthread_t test_threads[NUM_THREADS];
 }
 
 void *memory_test_fuzz_allocation_thread(void *);
 
-void memory_test_2()
+TEST(KlibMemoryTest, FuzzTests)
 {
   memory_test_fuzz_allocation_thread(nullptr);
 
   test_only_reset_allocator();
 }
 
-void memory_test_3_mt_fuzz()
+TEST(KlibMemoryTest, MultiThreadFuzzTest)
 {
   // Ensure that the allocator is initialized before starting the test. This prevents both threads attempting to
   // initialize it at the same time. The allocator doesn't protect against this because it is guaranteed to be
@@ -69,10 +69,10 @@ void *memory_test_fuzz_allocation_thread(void *)
 {
   bool allocate = false;
   float proportion;
-  unsigned long bytes_to_allocate;
-  unsigned long dealloc_idx;
+  uint64_t bytes_to_allocate;
+  uint64_t dealloc_idx;
   allocation this_allocation;
-  unsigned long allocation_count = 0;
+  uint64_t allocation_count = 0;
   allocation_list completed_allocations;
 
   for (int i = 0; i < ITERATIONS; i++)
@@ -94,7 +94,7 @@ void *memory_test_fuzz_allocation_thread(void *)
     {
       // Decide how much to allocate.
       proportion = (float)rand() / RAND_MAX;
-      bytes_to_allocate = (unsigned long)(proportion * MAX_SINGLE_CHUNK);
+      bytes_to_allocate = (uint64_t)(proportion * MAX_SINGLE_CHUNK);
       if (bytes_to_allocate > MAX_SINGLE_CHUNK)
       {
         bytes_to_allocate = MAX_SINGLE_CHUNK;

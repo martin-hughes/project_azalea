@@ -1,9 +1,10 @@
 #ifndef __USER_INTFACE_KEYBOARD_H
 #define __USER_INTFACE_KEYBOARD_H
 
+#include <stdint.h>
 #include "./macros.h"
 
-enum AZALEA_ENUM_CLASS KEYS_T : unsigned char
+enum AZALEA_ENUM_CLASS KEYS_T : uint8_t
 {
   UNK = 0,  /* Unknown key. */
 

@@ -4,9 +4,9 @@
 #include "./keyboard.h"
 
 /* System-defined message IDs: */
-const unsigned long SM_KEYDOWN = 1;
-const unsigned long SM_KEYUP = 2;
-const unsigned long SM_PCHAR = 3;
+const uint64_t SM_KEYDOWN = 1;
+const uint64_t SM_KEYUP = 2;
+const uint64_t SM_PCHAR = 3;
 
 /* System message structures */
 

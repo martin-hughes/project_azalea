@@ -73,20 +73,20 @@ void proc_start_interrupts()
 ///              width of the port being read, the processor may cause a GPF.
 ///
 /// @return The value read from the port, zero-expanded to 64 bits.
-unsigned long proc_read_port(const unsigned long port_id, const unsigned char width)
+uint64_t proc_read_port(const uint64_t port_id, const uint8_t width)
 {
   KL_TRC_ENTRY;
 
-  unsigned long retval;
+  uint64_t retval;
 
-  KL_TRC_DATA("Port", port_id);
-  KL_TRC_DATA("Width", width);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Port", port_id, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Width", width, "\n");
 
   ASSERT((width == 8) || (width == 16) || (width == 32));
 
   retval = asm_proc_read_port(port_id, width);
 
-  KL_TRC_DATA("Returned value", retval);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Returned value", retval, "\n");
   KL_TRC_EXIT;
 
   return retval;
@@ -100,12 +100,12 @@ unsigned long proc_read_port(const unsigned long port_id, const unsigned char wi
 ///
 /// @param width The width of the port, in bits. Must be one of 8, 16 or 32 and must correspond to the I/O port's
 ///              actual width.
-void proc_write_port(const unsigned long port_id, const unsigned long value, const unsigned char width)
+void proc_write_port(const uint64_t port_id, const uint64_t value, const uint8_t width)
 {
   KL_TRC_ENTRY;
-  KL_TRC_DATA("Port", port_id);
-  KL_TRC_DATA("Value", value);
-  KL_TRC_DATA("Width", width);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Port", port_id, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Value", value, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Width", width, "\n");
 
   ASSERT((width == 8) || (width == 16) || (width == 32));
 
@@ -119,16 +119,16 @@ void proc_write_port(const unsigned long port_id, const unsigned long value, con
 /// @param msr The MSR to read from.
 ///
 /// @return The value of the MSR, combined in to a single 64 bit form.
-unsigned long proc_read_msr(PROC_X64_MSRS msr)
+uint64_t proc_read_msr(PROC_X64_MSRS msr)
 {
   KL_TRC_ENTRY;
 
-  unsigned long retval;
-  unsigned long msr_l = static_cast<unsigned long>(msr);
+  uint64_t retval;
+  uint64_t msr_l = static_cast<uint64_t>(msr);
 
-  KL_TRC_DATA("Reading MSR", msr_l);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Reading MSR", msr_l, "\n");
   retval = asm_proc_read_msr(msr_l);
-  KL_TRC_DATA("Returned value", retval);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Returned value", retval, "\n");
 
   KL_TRC_EXIT;
 
@@ -140,14 +140,14 @@ unsigned long proc_read_msr(PROC_X64_MSRS msr)
 /// @param msr The MSR to write to
 ///
 /// @param value The 64-bit value to write out.
-void proc_write_msr(PROC_X64_MSRS msr, unsigned long value)
+void proc_write_msr(PROC_X64_MSRS msr, uint64_t value)
 {
   KL_TRC_ENTRY;
 
-  unsigned long msr_l = static_cast<unsigned long>(msr);
+  uint64_t msr_l = static_cast<uint64_t>(msr);
 
-  KL_TRC_DATA("Writing MSR", msr_l);
-  KL_TRC_DATA("Value", value);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Writing MSR", msr_l, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Value", value, "\n");
 
   asm_proc_write_msr(msr_l, value);
 
@@ -163,10 +163,10 @@ void *proc_x64_allocate_stack()
   KL_TRC_ENTRY;
 
   void *new_stack = kmalloc(MEM_PAGE_SIZE);
-  new_stack = reinterpret_cast<void *>(reinterpret_cast<unsigned long>(new_stack) + MEM_PAGE_SIZE - 16);
-  ASSERT((reinterpret_cast<unsigned long>(new_stack) & 0x0F) == 0);
+  new_stack = reinterpret_cast<void *>(reinterpret_cast<uint64_t>(new_stack) + MEM_PAGE_SIZE - 16);
+  ASSERT((reinterpret_cast<uint64_t>(new_stack) & 0x0F) == 0);
 
-  KL_TRC_DATA("Issuing new stack", reinterpret_cast<unsigned long>(new_stack));
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Issuing new stack", reinterpret_cast<uint64_t>(new_stack), "\n");
 
   KL_TRC_EXIT;
 

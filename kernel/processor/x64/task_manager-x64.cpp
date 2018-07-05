@@ -17,17 +17,17 @@
 
 namespace
 {
-  const unsigned long DEF_RFLAGS_KERNEL = (unsigned long)0x200202;
-  const unsigned long DEF_CS_KERNEL = 0x08;
-  const unsigned long DEF_SS_KERNEL = 0x10;
+  const uint64_t DEF_RFLAGS_KERNEL = (uint64_t)0x200202;
+  const uint64_t DEF_CS_KERNEL = 0x08;
+  const uint64_t DEF_SS_KERNEL = 0x10;
 
-  const unsigned long DEF_RFLAGS_USER = (unsigned long)0x203202;
-  const unsigned long DEF_CS_USER = 0x18;
-  const unsigned long DEF_SS_USER = 0x20;
+  const uint64_t DEF_RFLAGS_USER = (uint64_t)0x203202;
+  const uint64_t DEF_CS_USER = 0x18;
+  const uint64_t DEF_SS_USER = 0x20;
 
-  const unsigned int TM_INTERRUPT_NUM = IRQ_BASE;
+  const uint32_t TM_INTERRUPT_NUM = IRQ_BASE;
 
-  const unsigned long DEF_USER_MODE_STACK_PAGE = 0x000000000F000000;
+  const uint64_t DEF_USER_MODE_STACK_PAGE = 0x000000000F000000;
 
   void *task_int_allocate_user_mode_stack(task_process *proc);
 }
@@ -49,7 +49,7 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
   mem_process_info *memmgr_data;
   process_x64_data *memmgr_x64_data;
   void *physical_backing = nullptr;
-  unsigned long stack_long;
+  uint64_t stack_long;
 
   KL_TRC_ENTRY;
 
@@ -86,7 +86,7 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
   new_context->saved_stack.rcx = 0;
   new_context->saved_stack.rbx = 0;
   new_context->saved_stack.rax = 0;
-  new_context->saved_stack.proc_rip = reinterpret_cast<unsigned long>(entry_point);
+  new_context->saved_stack.proc_rip = reinterpret_cast<uint64_t>(entry_point);
 
   new_context->fs_base = 0;
   new_context->gs_base = 0;
@@ -104,7 +104,7 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
 
     // The stack is allocated and made ready to use by proc_x64_allocate_stack(). The allocated stacks are 16-byte
     /// aligned. We deliberately offset a further 8 bytes. This is to simulate a `call` instruction to `entry_point`.
-    stack_long = reinterpret_cast<unsigned long>(proc_x64_allocate_stack());
+    stack_long = reinterpret_cast<uint64_t>(proc_x64_allocate_stack());
     new_context->saved_stack.proc_rsp = stack_long - 8;
 
     KL_TRC_TRACE(TRC_LVL::EXTRA, "Stack pointer:", new_context->saved_stack.proc_rsp, "\n");
@@ -120,7 +120,7 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
     // the former provides a valid stack pointer near the end of the page, the latter simply a pointer to the beginning
     // of a page where the stack can be put.
     new_context->saved_stack.proc_rsp =
-      reinterpret_cast<unsigned long>(task_int_allocate_user_mode_stack(parent_process));
+      reinterpret_cast<uint64_t>(task_int_allocate_user_mode_stack(parent_process));
 
     if (new_context->saved_stack.proc_rsp == 0)
     {
@@ -185,7 +185,7 @@ void task_int_delete_exec_context(task_thread *old_thread)
 /// @param env Has the same meaning as argv in a normal C program. Must be a user mode pointer in the process's address
 ///            space, although the kernel doesn't enforce this - the program will simply crash if this is wrong. This
 ///            function does not copy the arguments into that space, it is assumed the program loader does this.
-void task_set_start_params(task_process *process, unsigned long argc, char **argv, char **env)
+void task_set_start_params(task_process *process, uint64_t argc, char **argv, char **env)
 {
   KL_TRC_ENTRY;
 
@@ -202,8 +202,8 @@ void task_set_start_params(task_process *process, unsigned long argc, char **arg
   ASSERT(context != nullptr);
 
   context->saved_stack.rdi = argc;
-  context->saved_stack.rsi = reinterpret_cast<unsigned long>(argv);
-  context->saved_stack.rdx = reinterpret_cast<unsigned long>(env);
+  context->saved_stack.rsi = reinterpret_cast<uint64_t>(argv);
+  context->saved_stack.rdx = reinterpret_cast<uint64_t>(env);
 
   KL_TRC_EXIT;
 }
@@ -221,7 +221,7 @@ void task_set_start_params(task_process *process, unsigned long argc, char **arg
 /// @param cr3_value The value of CR3 used by the suspended thread
 ///
 /// @return The execution context for the caller to begin executing.
-task_x64_exec_context *task_int_swap_task(unsigned long stack_addr, unsigned long cr3_value)
+task_x64_exec_context *task_int_swap_task(uint64_t stack_addr, uint64_t cr3_value)
 {
   task_thread *current_thread;
   task_x64_exec_context *current_context;
@@ -264,7 +264,7 @@ task_x64_exec_context *task_int_swap_task(unsigned long stack_addr, unsigned lon
   // Save the thread context's address in IA32_KERNEL_GS_BASE in order that the processor can uniquely identify the
   // thread without having to look in a list (which is subject to threads moving between processors whilst looking in
   // the list.
-  proc_write_msr(PROC_X64_MSRS::IA32_KERNEL_GS_BASE, reinterpret_cast<unsigned long>(next_thread->execution_context));
+  proc_write_msr(PROC_X64_MSRS::IA32_KERNEL_GS_BASE, reinterpret_cast<uint64_t>(next_thread->execution_context));
 
   // We also need to make sure the base values of FS and GS are set as needed.
   proc_write_msr(PROC_X64_MSRS::IA32_FS_BASE, next_context->fs_base);
@@ -331,7 +331,7 @@ task_thread *task_get_cur_thread()
 {
   KL_TRC_ENTRY;
 
-  unsigned int proc_id;
+  uint32_t proc_id;
 
   task_thread *ret_thread;
   task_x64_exec_context *context;
@@ -367,8 +367,8 @@ namespace
   {
     KL_TRC_ENTRY;
 
-    unsigned long stack_addr = DEF_USER_MODE_STACK_PAGE;
-    const unsigned long double_page = MEM_PAGE_SIZE * 2;
+    uint64_t stack_addr = DEF_USER_MODE_STACK_PAGE;
+    const uint64_t double_page = MEM_PAGE_SIZE * 2;
     while (mem_get_phys_addr(reinterpret_cast<void *>(stack_addr), proc) != nullptr)
     {
       stack_addr -= double_page;

@@ -4,7 +4,7 @@
 #include "klib/synch/kernel_locks.h"
 #include "processor/processor.h"
 
-const unsigned long MUTEX_MAX_WAIT = 0xFFFFFFFFFFFFFFFF;
+const uint64_t MUTEX_MAX_WAIT = 0xFFFFFFFFFFFFFFFF;
 
 // Defines a mutex structure. There's no inherent reason this couldn't be the basis of a mutex for user space too, but
 // it'd need wrapping in some kind of handle. Users of mutexes shouldn't modify this structure, or they could cause
@@ -25,7 +25,7 @@ struct klib_mutex
 };
 
 void klib_synch_mutex_init(klib_mutex &mutex);
-SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, unsigned long max_wait);
+SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, uint64_t max_wait);
 void klib_synch_mutex_release(klib_mutex &mutex, const bool disregard_owner);
 
 #endif

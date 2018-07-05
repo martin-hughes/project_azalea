@@ -3,7 +3,7 @@
 // The normal scan codes are those not prefixed by 0xE0. "Special" scan codes are those prefixed by 0xE0.
 extern const KEYS ps2_set_2_norm_scancode_map[256];
 extern const KEYS ps2_set_2_spec_scancode_map[256];
-extern const unsigned int ps2_set_2_props_tab_len;
+extern const uint32_t ps2_set_2_props_tab_len;
 extern key_props ps2_set_2_key_props[];
 
 const KEYS ps2_set_2_norm_scancode_map[256] = {
@@ -556,7 +556,7 @@ const KEYS ps2_set_2_spec_scancode_map[256] = {
 
 #define UNPRINTABLE { false, 0, 0 }
 
-const unsigned int ps2_set_2_props_tab_len = 115;
+const uint32_t ps2_set_2_props_tab_len = 115;
 key_props ps2_set_2_key_props[ps2_set_2_props_tab_len] =
 {
   UNPRINTABLE, // UNK = 0

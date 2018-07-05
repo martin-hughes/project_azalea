@@ -18,7 +18,7 @@ public:
 
 private:
   /// Used to ensure that only one instance of the root of the tree exists at once.
-  static unsigned int number_of_instances;
+  static uint32_t number_of_instances;
 };
 
 #endif

@@ -1,4 +1,3 @@
-#include "test/object_mgr/object_mgr_tests.h"
 #include "object_mgr/handles.h"
 
 #include "gtest/gtest.h"

@@ -9,12 +9,12 @@ using namespace std;
 
 namespace
 {
-  const unsigned long NORMAL_BUFFER_SIZE = 1 << 10;
+  const uint64_t NORMAL_BUFFER_SIZE = 1 << 10;
   const char read_leaf_name[] = "read";
   const char write_leaf_name[] = "write";
 }
 
-pipe_branch::pipe_branch() : _buffer(new unsigned char[NORMAL_BUFFER_SIZE])
+pipe_branch::pipe_branch() : _buffer(new uint8_t[NORMAL_BUFFER_SIZE])
 {
   KL_TRC_ENTRY;
 
@@ -136,18 +136,18 @@ pipe_branch::pipe_read_leaf::~pipe_read_leaf()
 
 }
 
-ERR_CODE pipe_branch::pipe_read_leaf::read_bytes(unsigned long start,
-                                                 unsigned long length,
-                                                 unsigned char *buffer,
-                                                 unsigned long buffer_length,
-                                                 unsigned long &bytes_read)
+ERR_CODE pipe_branch::pipe_read_leaf::read_bytes(uint64_t start,
+                                                 uint64_t length,
+                                                 uint8_t *buffer,
+                                                 uint64_t buffer_length,
+                                                 uint64_t &bytes_read)
 {
   ERR_CODE ret = ERR_CODE::UNKNOWN;
-  unsigned long read_length;
-  unsigned long avail_length;
-  unsigned long rp;
-  unsigned long wp;
-  unsigned long buf_start;
+  uint64_t read_length;
+  uint64_t avail_length;
+  uint64_t rp;
+  uint64_t wp;
+  uint64_t buf_start;
 
   KL_TRC_ENTRY;
 
@@ -161,9 +161,9 @@ ERR_CODE pipe_branch::pipe_read_leaf::read_bytes(unsigned long start,
     KL_TRC_TRACE(TRC_LVL::FLOW, "Try to read from the pipe\n");
     klib_synch_spinlock_lock(this->_parent->_pipe_lock);
 
-    rp = reinterpret_cast<unsigned long>(this->_parent->_read_ptr);
-    wp = reinterpret_cast<unsigned long>(this->_parent->_write_ptr);
-    buf_start = reinterpret_cast<unsigned long>(this->_parent->_buffer.get());
+    rp = reinterpret_cast<uint64_t>(this->_parent->_read_ptr);
+    wp = reinterpret_cast<uint64_t>(this->_parent->_write_ptr);
+    buf_start = reinterpret_cast<uint64_t>(this->_parent->_buffer.get());
 
     if (wp >= rp)
     {
@@ -195,7 +195,7 @@ ERR_CODE pipe_branch::pipe_read_leaf::read_bytes(unsigned long start,
       *buffer = *this->_parent->_read_ptr;
       buffer++;
       this->_parent->_read_ptr++;
-      rp = reinterpret_cast<unsigned long>(this->_parent->_read_ptr);
+      rp = reinterpret_cast<uint64_t>(this->_parent->_read_ptr);
       if (rp > buf_start + NORMAL_BUFFER_SIZE)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Read pointer wrapped\n");
@@ -225,18 +225,18 @@ pipe_branch::pipe_write_leaf::~pipe_write_leaf()
 
 }
 
-ERR_CODE pipe_branch::pipe_write_leaf::write_bytes(unsigned long start,
-                                                   unsigned long length,
-                                                   const unsigned char *buffer,
-                                                   unsigned long buffer_length,
-                                                   unsigned long &bytes_written)
+ERR_CODE pipe_branch::pipe_write_leaf::write_bytes(uint64_t start,
+                                                   uint64_t length,
+                                                   const uint8_t *buffer,
+                                                   uint64_t buffer_length,
+                                                   uint64_t &bytes_written)
 {
   ERR_CODE ret = ERR_CODE::UNKNOWN;
-  unsigned long write_length;
-  unsigned long avail_length;
-  unsigned long rp;
-  unsigned long wp;
-  unsigned long buf_start;
+  uint64_t write_length;
+  uint64_t avail_length;
+  uint64_t rp;
+  uint64_t wp;
+  uint64_t buf_start;
 
   KL_TRC_ENTRY;
 
@@ -250,9 +250,9 @@ ERR_CODE pipe_branch::pipe_write_leaf::write_bytes(unsigned long start,
     KL_TRC_TRACE(TRC_LVL::FLOW, "Try to write from the pipe\n");
     klib_synch_spinlock_lock(this->_parent->_pipe_lock);
 
-    rp = reinterpret_cast<unsigned long>(this->_parent->_read_ptr);
-    wp = reinterpret_cast<unsigned long>(this->_parent->_write_ptr);
-    buf_start = reinterpret_cast<unsigned long>(this->_parent->_buffer.get());
+    rp = reinterpret_cast<uint64_t>(this->_parent->_read_ptr);
+    wp = reinterpret_cast<uint64_t>(this->_parent->_write_ptr);
+    buf_start = reinterpret_cast<uint64_t>(this->_parent->_buffer.get());
 
     if (rp > wp)
     {
@@ -284,7 +284,7 @@ ERR_CODE pipe_branch::pipe_write_leaf::write_bytes(unsigned long start,
       *this->_parent->_write_ptr = *buffer;
       buffer++;
       this->_parent->_write_ptr++;
-      wp = reinterpret_cast<unsigned long>(this->_parent->_write_ptr);
+      wp = reinterpret_cast<uint64_t>(this->_parent->_write_ptr);
       if (wp > buf_start + NORMAL_BUFFER_SIZE)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Write pointer wrapped\n");

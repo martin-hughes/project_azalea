@@ -2,6 +2,8 @@
 
 //#define ENABLE_TRACING
 
+#include <stdint.h>
+
 #include "klib/klib.h"
 #include "ata.h"
 #include "processor/processor.h"
@@ -11,25 +13,25 @@
 
 namespace
 {
-const unsigned long SECTOR_LENGTH = 512;
+const uint16_t SECTOR_LENGTH = 512;
 
 kernel_spinlock ata_spinlock = 0;
 }
 
 struct status_byte
 {
-  unsigned char error_flag :1;
-  unsigned char reserved :2;
-  unsigned char data_ready_flag :1;
-  unsigned char overlapped_service_flag :1;
-  unsigned char drive_fault_flag :1;
-  unsigned char drive_ready_flag :1;
-  unsigned char busy_flag :1;
+  uint8_t error_flag :1;
+  uint8_t reserved :2;
+  uint8_t data_ready_flag :1;
+  uint8_t overlapped_service_flag :1;
+  uint8_t drive_fault_flag :1;
+  uint8_t drive_ready_flag :1;
+  uint8_t busy_flag :1;
 };
 
 static_assert(sizeof(status_byte) == 1, "Incorrect packing of status_byte");
 
-generic_ata_device::generic_ata_device(unsigned short base_port, bool master) :
+generic_ata_device::generic_ata_device(uint16_t base_port, bool master) :
     _name("Generic ATA device"),
     _base_port(base_port),
     _master(master),
@@ -41,7 +43,7 @@ generic_ata_device::generic_ata_device(unsigned short base_port, bool master) :
 
   unsigned char result;
 
-  std::unique_ptr<unsigned short[]> identify_buffer(new unsigned short[SECTOR_LENGTH / sizeof(unsigned short)]);
+  std::unique_ptr<uint16_t[]> identify_buffer(new uint16_t[SECTOR_LENGTH / sizeof(uint16_t)]);
 
   // Send an IDENTIFY command and read the results
   klib_synch_spinlock_lock(ata_spinlock);
@@ -111,28 +113,28 @@ DEV_STATUS generic_ata_device::get_device_status()
   return this->_status;
 }
 
-unsigned long generic_ata_device::num_blocks()
+uint64_t generic_ata_device::num_blocks()
 {
   KL_TRC_ENTRY;KL_TRC_EXIT;
   return this->number_of_sectors;
 }
 
-unsigned long generic_ata_device::block_size()
+uint64_t generic_ata_device::block_size()
 {
   return SECTOR_LENGTH;
 }
 
-ERR_CODE generic_ata_device::read_blocks(unsigned long start_block,
-                                         unsigned long num_blocks,
+ERR_CODE generic_ata_device::read_blocks(uint64_t start_block,
+                                         uint64_t num_blocks,
                                          void *buffer,
-                                         unsigned long buffer_length)
+                                         uint64_t buffer_length)
 {
   KL_TRC_ENTRY;
 
   ERR_CODE result = ERR_CODE::UNKNOWN;
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Start block: ", start_block, "\nNum blocks: ", num_blocks, "\nBuffer: ",
-      (unsigned long)buffer, "\nBuffer length: ", buffer_length, "\n");
+      buffer, "\nBuffer length: ", buffer_length, "\n");
 
   if (buffer == nullptr)
   {
@@ -247,15 +249,15 @@ ERR_CODE generic_ata_device::read_blocks(unsigned long start_block,
   return result;
 }
 
-ERR_CODE generic_ata_device::write_blocks(unsigned long start_block,
-                                          unsigned long num_blocks,
+ERR_CODE generic_ata_device::write_blocks(uint64_t start_block,
+                                          uint64_t num_blocks,
                                           void *buffer,
-                                          unsigned long buffer_length)
+                                          uint64_t buffer_length)
 {
   return ERR_CODE::INVALID_OP;
 }
 
-void generic_ata_device::write_ata_cmd_port(ATA_PORTS port, unsigned char value)
+void generic_ata_device::write_ata_cmd_port(ATA_PORTS port, uint8_t value)
 {
   KL_TRC_ENTRY;
 
@@ -265,13 +267,13 @@ void generic_ata_device::write_ata_cmd_port(ATA_PORTS port, unsigned char value)
   KL_TRC_EXIT;
 }
 
-unsigned char generic_ata_device::read_ata_cmd_port(ATA_PORTS port)
+uint8_t generic_ata_device::read_ata_cmd_port(ATA_PORTS port)
 {
-  unsigned char res;
+  uint8_t res;
 
   KL_TRC_ENTRY;
   ASSERT(port != ATA_PORTS::DATA_PORT);
-  res = static_cast<unsigned char>(proc_read_port(this->_base_port + port, 8));
+  res = static_cast<uint8_t>(proc_read_port(this->_base_port + port, 8));
 
   KL_TRC_EXIT;
   return res;
@@ -282,7 +284,7 @@ bool generic_ata_device::wait_and_poll()
   KL_TRC_ENTRY;
 
   status_byte result;
-  unsigned char result_c;
+  uint8_t result_c;
   bool ret;
 
   // Do 4 dummy reads to flush the status
@@ -315,14 +317,14 @@ bool generic_ata_device::wait_and_poll()
   KL_TRC_EXIT;
 }
 
-void generic_ata_device::read_sector_to_buffer(unsigned char *buffer, unsigned long buffer_length)
+void generic_ata_device::read_sector_to_buffer(unsigned char *buffer, uint64_t buffer_length)
 {
   KL_TRC_ENTRY;
 
-  unsigned short *int_buffer = reinterpret_cast<unsigned short *>(buffer);
+  uint16_t *int_buffer = reinterpret_cast<uint16_t *>(buffer);
 
   ASSERT(buffer_length >= SECTOR_LENGTH);
-  for (unsigned int i = 0; i < SECTOR_LENGTH; i += 2)
+  for (uint16_t i = 0; i < SECTOR_LENGTH; i += 2)
   {
     int_buffer[i / 2] = proc_read_port(this->_base_port + DATA_PORT, 16);
   }

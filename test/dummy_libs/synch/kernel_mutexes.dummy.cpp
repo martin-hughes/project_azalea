@@ -35,7 +35,7 @@ void klib_synch_mutex_init(klib_mutex &mutex)
 // MUTEX_MAX_WAIT then the caller waits indefinitely. Threads acquire the mutex in order that they call this function.
 //
 // The return values should be self-explanatory.
-SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, unsigned long max_wait)
+SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, uint64_t max_wait)
 {
   KL_TRC_ENTRY;
 

@@ -2,6 +2,8 @@
 
 //#define ENABLE_TRACING
 
+#include <stdint.h>
+
 #include "klib/klib.h"
 extern "C"
 {
@@ -23,8 +25,8 @@ public:
   AcpiIrqHandler(ACPI_OSD_HANDLER irq_handler, void *irq_context);
   virtual ~AcpiIrqHandler() { };
 
-  virtual bool handle_irq_fast(unsigned char irq_number);
-  virtual void handle_irq_slow(unsigned char irq_number) { };
+  virtual bool handle_irq_fast(uint8_t irq_number);
+  virtual void handle_irq_slow(uint8_t irq_number) { };
 
 private:
   ACPI_OSD_HANDLER _irq_handler;
@@ -34,7 +36,7 @@ private:
 namespace
 {
   char *exception_message_buf;
-  const unsigned int em_buf_len = 1000;
+  const uint16_t em_buf_len = 1000;
 
   // At present, only support a single IRQ handler for ACPI.
   AcpiIrqHandler *acpi_int_handler = nullptr;
@@ -174,7 +176,7 @@ ACPI_STATUS AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle)
 ACPI_STATUS AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Timeout)
 {
   KL_TRC_ENTRY;
-  unsigned long wait = Timeout;
+  uint64_t wait = Timeout;
   SYNC_ACQ_RESULT res;
   ACPI_STATUS retval;
   klib_semaphore *sp = (klib_semaphore *)Handle;
@@ -250,7 +252,7 @@ ACPI_STATUS AcpiOsAcquireMutex(ACPI_MUTEX Handle, UINT16 Timeout)
 {
   KL_TRC_ENTRY;
   klib_mutex *mutex = (klib_mutex *)Handle;
-  unsigned long wait = Timeout;
+  uint64_t wait = Timeout;
   ACPI_STATUS retval;
   SYNC_ACQ_RESULT res;
   ASSERT(mutex != nullptr);
@@ -312,18 +314,18 @@ void AcpiOsFree(void * Memory)
 void *AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS Where, ACPI_SIZE Length)
 {
   KL_TRC_ENTRY;
-  unsigned long start_of_page;
-  unsigned long offset;
-  unsigned long total_length;
-  unsigned int num_pages;
-  unsigned long start_of_range;
+  uint64_t start_of_page;
+  uint64_t offset;
+  uint64_t total_length;
+  uint32_t num_pages;
+  uint64_t start_of_range;
 
-  offset = (unsigned long)Where % MEM_PAGE_SIZE;
-  start_of_page = (unsigned long)Where - offset;
-  total_length = (unsigned long)Length + offset;
+  offset = (uint64_t)Where % MEM_PAGE_SIZE;
+  start_of_page = (uint64_t)Where - offset;
+  total_length = (uint64_t)Length + offset;
   num_pages = (total_length / MEM_PAGE_SIZE) + 1;
 
-  start_of_range = (unsigned long)mem_allocate_virtual_range(num_pages);
+  start_of_range = (uint64_t)mem_allocate_virtual_range(num_pages);
   mem_map_range((void *)start_of_page, (void *)start_of_range, num_pages);
   start_of_range += offset;
   KL_TRC_EXIT;
@@ -334,13 +336,13 @@ void *AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS Where, ACPI_SIZE Length)
 void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Size)
 {
   KL_TRC_ENTRY;
-  unsigned long addr;
-  unsigned long start_of_page;
-  unsigned long offset;
-  unsigned long total_length;
-  unsigned long num_pages;
+  uint64_t addr;
+  uint64_t start_of_page;
+  uint64_t offset;
+  uint64_t total_length;
+  uint64_t num_pages;
 
-  addr = (unsigned long)LogicalAddress;
+  addr = (uint64_t)LogicalAddress;
   offset = addr % MEM_PAGE_SIZE;
   start_of_page = addr - offset;
   total_length = Size + offset;
@@ -435,9 +437,9 @@ ACPI_STATUS AcpiOsRemoveInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLE
  */
 ACPI_THREAD_ID AcpiOsGetThreadId(void)
 {
-  unsigned long thread_id;
+  uint64_t thread_id;
   KL_TRC_ENTRY;
-  thread_id = (unsigned long)task_get_cur_thread();
+  thread_id = (uint64_t)task_get_cur_thread();
 
   // If task_get_cur_thread returns 0 then we're still single threaded, in which case it's acceptable to send any
   // positive integer back to ACPICA.
@@ -469,9 +471,9 @@ void AcpiOsSleep(UINT64 Milliseconds)
 {
   KL_TRC_ENTRY;
 
-  unsigned long wait_in_ns = Milliseconds * 1000000;
+  uint64_t wait_in_ns = Milliseconds * 1000000;
 
-  KL_TRC_DATA("ACPI requests sleep (ns)", wait_in_ns);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "ACPI requests sleep (ns)", wait_in_ns, "\n");
   time_sleep_process(wait_in_ns);
   KL_TRC_EXIT;
 }
@@ -479,9 +481,9 @@ void AcpiOsSleep(UINT64 Milliseconds)
 void AcpiOsStall(UINT32 Microseconds)
 {
   KL_TRC_ENTRY;
-  unsigned long wait_in_ns = Microseconds * 1000;
+  uint64_t wait_in_ns = Microseconds * 1000;
 
-  KL_TRC_DATA("ACPI requests stall (ns)", wait_in_ns);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "ACPI requests stall (ns)", wait_in_ns, "\n");
   time_stall_process(wait_in_ns);
 
   KL_TRC_EXIT;
@@ -494,16 +496,16 @@ ACPI_STATUS AcpiOsReadPort(ACPI_IO_ADDRESS Address, UINT32 *Value, UINT32 Width)
 {
   KL_TRC_ENTRY;
 
-  KL_TRC_DATA("Address", Address);
-  KL_TRC_DATA("Output address", (unsigned long)Value);
-  KL_TRC_DATA("Width", Width);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Address", Address, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Output address", Value, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Width", Width, "\n");
 
   ASSERT(Value != (UINT32 *)nullptr);
   ASSERT((Width == 8) || (Width == 16) || (Width == 32));
 
   *Value = proc_read_port(Address, Width);
 
-  KL_TRC_DATA("Value returned", *Value);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Value returned", *Value, "\n");
 
   KL_TRC_EXIT;
   return AE_OK;
@@ -513,9 +515,9 @@ ACPI_STATUS AcpiOsWritePort(ACPI_IO_ADDRESS Address, UINT32 Value, UINT32 Width)
 {
   KL_TRC_ENTRY;
 
-  KL_TRC_DATA("Address", Address);
-  KL_TRC_DATA("Value", Value);
-  KL_TRC_DATA("Width", Width);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Address", Address, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Value", Value, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Width", Width, "\n");
 
   ASSERT((Width == 8) || (Width == 16) || (Width == 32));
 
@@ -531,7 +533,7 @@ ACPI_STATUS AcpiOsWritePort(ACPI_IO_ADDRESS Address, UINT32 Value, UINT32 Width)
 ACPI_STATUS AcpiOsReadMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 *Value, UINT32 Width)
 {
   KL_TRC_ENTRY;
-  unsigned long *mem = (unsigned long *)AcpiOsMapMemory(Address, Width / 8);
+  uint64_t *mem = (uint64_t *)AcpiOsMapMemory(Address, Width / 8);
   *Value = *mem;
   AcpiOsUnmapMemory((void *)mem, Width / 8);
   KL_TRC_EXIT;
@@ -542,7 +544,7 @@ ACPI_STATUS AcpiOsReadMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 *Value, UINT3
 ACPI_STATUS AcpiOsWriteMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 Value, UINT32 Width)
 {
   KL_TRC_ENTRY;
-  unsigned long *mem = (unsigned long *)AcpiOsMapMemory(Address, Width / 8);
+  uint64_t *mem = (uint64_t *)AcpiOsMapMemory(Address, Width / 8);
 
   kl_memcpy(&Value, (void *)mem, Width / 8);
 
@@ -580,7 +582,7 @@ BOOLEAN AcpiOsReadable(void *Pointer, ACPI_SIZE Length)
 {
   KL_TRC_ENTRY;
 
-  unsigned long vp = reinterpret_cast<unsigned long>(Pointer);
+  uint64_t vp = reinterpret_cast<uint64_t>(Pointer);
 
   bool res = (mem_get_phys_addr(reinterpret_cast<void *>(vp)) != nullptr) &&
              (mem_get_phys_addr(reinterpret_cast<void *>(vp + Length)) != nullptr);
@@ -770,7 +772,7 @@ AcpiIrqHandler::AcpiIrqHandler(ACPI_OSD_HANDLER irq_handler, void *irq_context) 
 {
 }
 
-bool AcpiIrqHandler::handle_irq_fast(unsigned char irq_number)
+bool AcpiIrqHandler::handle_irq_fast(uint8_t irq_number)
 {
   // If ACPI IRQs start to give grief then note that this function returns a UINT and maybe it had some purpose after
   // all...

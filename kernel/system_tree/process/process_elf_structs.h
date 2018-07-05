@@ -5,39 +5,39 @@
 
 #pragma pack(push, 1)
 
-const unsigned long ELF64_FILE_HDR_SIZE = 64;
-const unsigned long ELF64_PROG_HDR_SIZE = 56;
+const uint64_t ELF64_FILE_HDR_SIZE = 64;
+const uint64_t ELF64_PROG_HDR_SIZE = 56;
 
 typedef struct
 {
-  unsigned char ident[16];
-  unsigned short type;
-  unsigned short machine_type;
-  unsigned int version;
-  unsigned long entry_addr;
-  unsigned long prog_hdrs_off;
-  unsigned long sect_hdrs_off;
-  unsigned int flags;
-  unsigned short file_header_size;
-  unsigned short prog_hdr_entry_size;
-  unsigned short num_prog_hdrs;
-  unsigned short sect_hdr_entry_size;
-  unsigned short num_sect_hdrs;
-  unsigned short sect_name_str_table_idx;
+  uint8_t ident[16];
+  uint16_t type;
+  uint16_t machine_type;
+  uint32_t version;
+  uint64_t entry_addr;
+  uint64_t prog_hdrs_off;
+  uint64_t sect_hdrs_off;
+  uint32_t flags;
+  uint16_t file_header_size;
+  uint16_t prog_hdr_entry_size;
+  uint16_t num_prog_hdrs;
+  uint16_t sect_hdr_entry_size;
+  uint16_t num_sect_hdrs;
+  uint16_t sect_name_str_table_idx;
 } elf64_file_header;
 
 static_assert(sizeof(elf64_file_header) == ELF64_FILE_HDR_SIZE, "elf64_file_header size does not match");
 
 typedef struct
 {
-  unsigned int type;
-  unsigned int flags;
-  unsigned long file_offset;
-  unsigned long req_virt_addr;
-  unsigned long req_phys_addr;
-  unsigned long size_in_file;
-  unsigned long size_in_mem;
-  unsigned long req_alignment;
+  uint32_t type;
+  uint32_t flags;
+  uint64_t file_offset;
+  uint64_t req_virt_addr;
+  uint64_t req_phys_addr;
+  uint64_t size_in_file;
+  uint64_t size_in_mem;
+  uint64_t req_alignment;
 } elf64_program_header;
 
 static_assert(sizeof(elf64_program_header) == ELF64_PROG_HDR_SIZE, "elf64_program_header size does not match");

@@ -5,8 +5,8 @@
 
 using namespace std;
 
-const unsigned long pipe_size = 1 << 10;
-const unsigned long buffer_size = 50;
+const uint64_t pipe_size = 1 << 10;
+const uint64_t buffer_size = 50;
 
 // A simple test of the pipes objects within ST.
 TEST(SystemTreeTest, GeneralPipes)
@@ -15,11 +15,11 @@ TEST(SystemTreeTest, GeneralPipes)
   pipe_branch::pipe_read_leaf *reader;
   pipe_branch::pipe_write_leaf *writer;
   ISystemTreeLeaf *leaf;
-  std::unique_ptr<unsigned char[]> buf(new unsigned char [buffer_size]);
-  unsigned long total_written = 0;
-  unsigned long written_this_time = 0;
-  unsigned long total_read = 0;
-  unsigned long read_this_time = 0;
+  std::unique_ptr<uint8_t[]> buf(new uint8_t [buffer_size]);
+  uint64_t total_written = 0;
+  uint64_t written_this_time = 0;
+  uint64_t total_read = 0;
+  uint64_t read_this_time = 0;
   ERR_CODE r;
 
   for (int i = 0; i < buffer_size; i++)

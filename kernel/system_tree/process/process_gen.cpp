@@ -44,10 +44,10 @@ task_process *proc_load_binary_file(kl_string binary_name)
 
   ISystemTreeLeaf *disk_prog;
   IBasicFile *new_prog_file;
-  unsigned long prog_size;
-  unsigned long bytes_read;
+  uint64_t prog_size;
+  uint64_t bytes_read;
   task_process *new_proc;
-  const unsigned long start_addr = 0x200000;
+  const uint64_t start_addr = 0x200000;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Attempting to load binary ", binary_name, "\n");
 
@@ -69,15 +69,15 @@ task_process *proc_load_binary_file(kl_string binary_name)
   // Allocate it some memory for the code to go in, and allow the kernel to access it.
   void *physical_page = mem_allocate_physical_pages(1);
   void *kernel_virtual_page = mem_allocate_virtual_range(1);
-  KL_TRC_DATA("Physical page to use", (unsigned long)physical_page);
-  KL_TRC_DATA("Kernel virtual page", (unsigned long)kernel_virtual_page);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Physical page to use", (uint64_t)physical_page, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Kernel virtual page", (uint64_t)kernel_virtual_page, "\n");
   mem_map_range(physical_page, kernel_virtual_page, 1);
   KL_TRC_TRACE(TRC_LVL::FLOW, "First map complete\n");
 
   // Copy the program from disk into that space
   ASSERT(new_prog_file->read_bytes(0,
                                    prog_size,
-                                   static_cast<unsigned char *>(kernel_virtual_page),
+                                   static_cast<uint8_t *>(kernel_virtual_page),
                                    prog_size,
                                    bytes_read)
          == ERR_CODE::NO_ERROR);

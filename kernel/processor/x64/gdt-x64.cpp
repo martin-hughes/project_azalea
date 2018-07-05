@@ -11,21 +11,21 @@
 #include "processor/x64/pic/pic.h"
 #include "mem/x64/mem-x64-int.h"
 
-unsigned char *system_gdt = nullptr;
-extern "C" unsigned char main_gdt_pointer[10];
-extern "C" unsigned char initial_gdt_table;
-extern "C" unsigned char initial_end_of_gdt_table;
+uint8_t *system_gdt = nullptr;
+extern "C" uint8_t main_gdt_pointer[10];
+extern "C" uint8_t initial_gdt_table;
+extern "C" uint8_t initial_end_of_gdt_table;
 
-const unsigned short gdt_entry_len = 16;
-const unsigned char TSS_SEG_LENGTH = 104;
+const uint16_t gdt_entry_len = 16;
+const uint8_t TSS_SEG_LENGTH = 104;
 
-unsigned short proc_gdt_calc_req_len(unsigned int num_procs);
-void proc_gdt_populate_pointer(unsigned char *ptr, unsigned long loc, unsigned short len);
-void proc_generate_tss(unsigned char *tss_descriptor,
+uint16_t proc_gdt_calc_req_len(uint32_t num_procs);
+void proc_gdt_populate_pointer(uint8_t *ptr, uint64_t loc, uint16_t len);
+void proc_generate_tss(uint8_t *tss_descriptor,
                        void *kernel_stack_loc,
                        void *ist1_stack_loc,
                        void *ist2_stack_loc);
-unsigned short proc_calc_tss_desc_offset(unsigned int proc_num);
+uint16_t proc_calc_tss_desc_offset(uint32_t proc_num);
 
 /// @brief Recreate the GDT
 ///
@@ -34,29 +34,29 @@ unsigned short proc_calc_tss_desc_offset(unsigned int proc_num);
 /// it, allocate enough space for all those TSS descriptors.
 ///
 /// @param num_procs The number of processors in the system.
-void proc_recreate_gdt(unsigned int num_procs)
+void proc_recreate_gdt(uint32_t num_procs)
 {
   KL_TRC_ENTRY;
 
-  unsigned short length_of_gdt;
-  unsigned short initial_gdt_len;
-  unsigned long gdt_loc;
-  unsigned short offset;
+  uint16_t length_of_gdt;
+  uint16_t initial_gdt_len;
+  uint64_t gdt_loc;
+  uint16_t offset;
 
-  KL_TRC_DATA("Number of processors to create for", num_procs);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Number of processors to create for", num_procs, "\n");
 
   ASSERT(num_procs > 0);
 
   // Assume this code is only called on the BSP.
   ASSERT(proc_mp_this_proc_id() == 0);
 
-  initial_gdt_len = (unsigned short)(reinterpret_cast<unsigned long>(&initial_end_of_gdt_table) -
-                                     reinterpret_cast<unsigned long>(&initial_gdt_table));
+  initial_gdt_len = (uint16_t)(reinterpret_cast<uint64_t>(&initial_end_of_gdt_table) -
+                                     reinterpret_cast<uint64_t>(&initial_gdt_table));
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "More processors\n");
   length_of_gdt = proc_gdt_calc_req_len(num_procs);
 
-  system_gdt = new unsigned char[length_of_gdt];
+  system_gdt = new uint8_t[length_of_gdt];
 
   ASSERT(length_of_gdt >= initial_gdt_len);
 
@@ -72,7 +72,7 @@ void proc_recreate_gdt(unsigned int num_procs)
                       proc_x64_allocate_stack());
   }
 
-  proc_gdt_populate_pointer(main_gdt_pointer, reinterpret_cast<unsigned long>(system_gdt), length_of_gdt);
+  proc_gdt_populate_pointer(main_gdt_pointer, reinterpret_cast<uint64_t>(system_gdt), length_of_gdt);
   asm_proc_load_gdt();
 
   KL_TRC_EXIT;
@@ -85,17 +85,17 @@ void proc_recreate_gdt(unsigned int num_procs)
 /// @param loc The location of the GDT in virtual memory
 ///
 /// @param len The length of the GDT.
-void proc_gdt_populate_pointer(unsigned char *ptr, unsigned long loc, unsigned short len)
+void proc_gdt_populate_pointer(uint8_t *ptr, uint64_t loc, uint16_t len)
 {
   KL_TRC_ENTRY;
 
-  unsigned short *len_ptr = reinterpret_cast<unsigned short *>(ptr);
-  unsigned long *loc_ptr = reinterpret_cast<unsigned long *>(ptr + 2);
+  uint16_t *len_ptr = reinterpret_cast<uint16_t *>(ptr);
+  uint64_t *loc_ptr = reinterpret_cast<uint64_t *>(ptr + 2);
 
-  KL_TRC_DATA("Output pointer", reinterpret_cast<unsigned long>(ptr));
-  KL_TRC_DATA("Location pointer", reinterpret_cast<unsigned long>(loc_ptr));
-  KL_TRC_DATA("Location", loc);
-  KL_TRC_DATA("Length", len);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Output pointer", ptr, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Location pointer", loc_ptr, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Location", loc, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Length", len, "\n");
 
   *len_ptr = len - 1;
   *loc_ptr = loc;
@@ -108,16 +108,16 @@ void proc_gdt_populate_pointer(unsigned char *ptr, unsigned long loc, unsigned s
 /// @param num_procs The number of processors in the system.
 ///
 /// @return The required length of the GDT, in bytes.
-unsigned short proc_gdt_calc_req_len(unsigned int num_procs)
+uint16_t proc_gdt_calc_req_len(uint32_t num_procs)
 {
   KL_TRC_ENTRY;
 
   // The length of the GDT is comprised of two parts:
   // 48 bytes of code and data segment descriptors (6 lots, see gdt-low-x64.asm for the details)
   // 16 bytes per processor of TSS descriptors.
-  unsigned short result = 48 + (num_procs * 16);
+  uint16_t result = 48 + (num_procs * 16);
 
-  KL_TRC_DATA("Result", result);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result", result, "\n");
   KL_TRC_EXIT;
 
   return result;
@@ -153,41 +153,41 @@ void proc_init_tss()
 ///
 /// @param ist2_stack_loc A pointer to a stack to use for interrupts using entry 2 of the IST. Currently, this is only
 ///                       the task switching interrupt.
-void proc_generate_tss(unsigned char *tss_descriptor,
+void proc_generate_tss(uint8_t *tss_descriptor,
                        void *kernel_stack_loc,
                        void *ist1_stack_loc,
                        void *ist2_stack_loc)
 {
   KL_TRC_ENTRY;
 
-  unsigned long tss_seg_ulong;
-  unsigned char *tss_segment;
-  unsigned long *ist_entry;
+  uint64_t tss_seg_ulong;
+  uint8_t *tss_segment;
+  uint64_t *ist_entry;
 
   // We make the assumption below that the length fits into one byte of the limit field.
   static_assert(TSS_SEG_LENGTH < 255, "The TSS segment size can't be described to the CPU");
 
   // Allocate a new TSS segment.
-  tss_segment = new unsigned char[TSS_SEG_LENGTH];
-  unsigned long *segment_rsp0;
-  tss_seg_ulong = (unsigned long)tss_segment;
+  tss_segment = new uint8_t[TSS_SEG_LENGTH];
+  uint64_t *segment_rsp0;
+  tss_seg_ulong = (uint64_t)tss_segment;
   kl_memset(tss_segment, 0, TSS_SEG_LENGTH);
 
   ////////////////////////////////////
   // Fill in TSS segment descriptor //
   ////////////////////////////////////
 
-  KL_TRC_DATA("Filling in TSS GDT entry at", (unsigned long)tss_gdt_entry);
-  KL_TRC_DATA("To point at TSS at", (unsigned long)tss_segment);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Filling in TSS GDT entry at", tss_gdt_entry, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "To point at TSS at", tss_segment, "\n");
 
   // These two bytes define the length of the segment.
-  tss_descriptor[0] = (unsigned char)(TSS_SEG_LENGTH - 1);
+  tss_descriptor[0] = (uint8_t)(TSS_SEG_LENGTH - 1);
   tss_descriptor[1] = 0;
 
   // The next three bytes define the lowest three bytes of the base of the segment.
-  tss_descriptor[2] = (unsigned char)(tss_seg_ulong  & 0x00000000000000FF);
-  tss_descriptor[3] = (unsigned char)((tss_seg_ulong & 0x000000000000FF00) >> 8);
-  tss_descriptor[4] = (unsigned char)((tss_seg_ulong & 0x0000000000FF0000) >> 16);
+  tss_descriptor[2] = (uint8_t)(tss_seg_ulong  & 0x00000000000000FF);
+  tss_descriptor[3] = (uint8_t)((tss_seg_ulong & 0x000000000000FF00) >> 8);
+  tss_descriptor[4] = (uint8_t)((tss_seg_ulong & 0x0000000000FF0000) >> 16);
 
   // The next byte is formed of these bits (MSb first)
   // 1 - Present
@@ -204,11 +204,11 @@ void proc_generate_tss(unsigned char *tss_descriptor,
   tss_descriptor[6] = 0x10;
 
   // The remaining 5 bytes of base
-  tss_descriptor[7] =  (unsigned char)((tss_seg_ulong & 0x00000000FF000000) >> 24);
-  tss_descriptor[8] =  (unsigned char)((tss_seg_ulong & 0x000000FF00000000) >> 32);
-  tss_descriptor[9] =  (unsigned char)((tss_seg_ulong & 0x0000FF0000000000) >> 40);
-  tss_descriptor[10] = (unsigned char)((tss_seg_ulong & 0x00FF000000000000) >> 48);
-  tss_descriptor[11] = (unsigned char)((tss_seg_ulong & 0xFF00000000000000) >> 56);
+  tss_descriptor[7] =  (uint8_t)((tss_seg_ulong & 0x00000000FF000000) >> 24);
+  tss_descriptor[8] =  (uint8_t)((tss_seg_ulong & 0x000000FF00000000) >> 32);
+  tss_descriptor[9] =  (uint8_t)((tss_seg_ulong & 0x0000FF0000000000) >> 40);
+  tss_descriptor[10] = (uint8_t)((tss_seg_ulong & 0x00FF000000000000) >> 48);
+  tss_descriptor[11] = (uint8_t)((tss_seg_ulong & 0xFF00000000000000) >> 56);
 
   // Remaining 4 bytes are 0 or unused.
   tss_descriptor[12] = 0;
@@ -221,30 +221,30 @@ void proc_generate_tss(unsigned char *tss_descriptor,
   /////////////////////////
 
   // There are two important fields. The first is RSP0 - the stack pointer to use when jumping to ring 0.
-  segment_rsp0 = reinterpret_cast<unsigned long *>(tss_segment + 4);
-  *segment_rsp0 = reinterpret_cast<unsigned long>(kernel_stack_loc);
-  KL_TRC_DATA("Set Kernel RSP to", (unsigned long)kernel_stack_loc);
-  KL_TRC_DATA("At position", (unsigned long)segment_rsp0);
+  segment_rsp0 = reinterpret_cast<uint64_t *>(tss_segment + 4);
+  *segment_rsp0 = reinterpret_cast<uint64_t>(kernel_stack_loc);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Set Kernel RSP to", kernel_stack_loc, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "At position", segment_rsp0, "\n");
 
   // Next, fill in IST1
-  ist_entry = reinterpret_cast<unsigned long *>(tss_segment + 36);
-  *ist_entry = reinterpret_cast<unsigned long>(ist1_stack_loc);
+  ist_entry = reinterpret_cast<uint64_t *>(tss_segment + 36);
+  *ist_entry = reinterpret_cast<uint64_t>(ist1_stack_loc);
 
   // Finally IST2.
-  ist_entry = reinterpret_cast<unsigned long *>(tss_segment + 44);
-  *ist_entry = reinterpret_cast<unsigned long>(ist2_stack_loc);
+  ist_entry = reinterpret_cast<uint64_t *>(tss_segment + 44);
+  *ist_entry = reinterpret_cast<uint64_t>(ist2_stack_loc);
 
   KL_TRC_EXIT;
 }
 
-void proc_load_tss(unsigned int proc_num)
+void proc_load_tss(uint32_t proc_num)
 {
   KL_TRC_ENTRY;
 
-  unsigned long offset = proc_calc_tss_desc_offset(proc_num);
+  uint64_t offset = proc_calc_tss_desc_offset(proc_num);
 
-  KL_TRC_DATA("Processor number", proc_num);
-  KL_TRC_DATA("Offset", offset);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Processor number", proc_num, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Offset", offset, "\n");
 
   asm_proc_load_tss(offset);
 
@@ -254,16 +254,16 @@ void proc_load_tss(unsigned int proc_num)
 /// @brief Given a processor, calculate the offset within the GDT of its TSS descriptor
 ///
 /// @param proc_num The ID number of the desired processor
-unsigned short proc_calc_tss_desc_offset(unsigned int proc_num)
+uint16_t proc_calc_tss_desc_offset(uint32_t proc_num)
 {
   KL_TRC_ENTRY;
 
-  unsigned short result;
+  uint16_t result;
 
   // Reasoning is as per proc_gdt_calc_req_len
   result = 48 + (16 * proc_num);
 
-  KL_TRC_DATA("Result", result);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result", result, "\n");
   KL_TRC_EXIT;
 
   return result;

@@ -92,7 +92,7 @@ void task_gen_init()
 {
   KL_TRC_ENTRY;
 
-  unsigned int number_of_procs = proc_mp_proc_count();
+  uint32_t number_of_procs = proc_mp_proc_count();
 
   klib_synch_spinlock_init(thread_cycle_lock);
   klib_list_initialize(&process_list);
@@ -106,7 +106,7 @@ void task_gen_init()
   continue_this_thread = new bool[number_of_procs];
   idle_threads = new task_thread *[number_of_procs];
 
-  for (int i = 0; i < number_of_procs; i++)
+  for (uint32_t i = 0; i < number_of_procs; i++)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Initialising processor ", i, "\n");
     current_threads[i] = nullptr;
@@ -126,7 +126,7 @@ task_process *task_create_system_process()
 {
   KL_TRC_ENTRY;
 
-  unsigned int number_of_procs = proc_mp_proc_count();
+  uint32_t number_of_procs = proc_mp_proc_count();
   task_thread *new_idle_thread;
   task_thread *irq_slowpath_thread;
   task_process *system_process;
@@ -140,7 +140,7 @@ task_process *task_create_system_process()
   ASSERT(system_process != nullptr);
   task_start_process(system_process);
 
-  for (int i = 0; i < number_of_procs; i++)
+  for (uint32_t i = 0; i < number_of_procs; i++)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Creating idle thread for processor", i, "\n");
 
@@ -188,7 +188,7 @@ task_process *task_create_new_process(ENTRY_PROC entry_point,
   KL_TRC_ENTRY;
 
   new_process = new task_process;
-  KL_TRC_DATA("New process CB at", (unsigned long)new_process);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "New process CB at", new_process, "\n");
   klib_list_item_initialize(&new_process->process_list_item);
   klib_list_initialize(&new_process->child_threads);
   new_process->process_list_item.item = new_process;
@@ -245,8 +245,8 @@ task_thread *task_create_new_thread(ENTRY_PROC entry_point, task_process *parent
 
   if (!parent_process->being_destroyed)
   {
-    KL_TRC_DATA("Entry point", reinterpret_cast<unsigned long>(entry_point));
-    KL_TRC_DATA("Parent Process", reinterpret_cast<unsigned long>(parent_process));
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Entry point", reinterpret_cast<uint64_t>(entry_point), "\n");
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Parent Process", reinterpret_cast<uint64_t>(parent_process), "\n");
 
     new_thread = new task_thread;
 
@@ -428,7 +428,7 @@ task_thread *task_get_next_thread()
 {
   task_thread *next_thread = nullptr;
   task_thread *start_thread = nullptr;
-  unsigned int proc_id;
+  uint32_t proc_id;
   bool found_thread;
   KL_TRC_ENTRY;
 
@@ -481,7 +481,7 @@ task_thread *task_get_next_thread()
     found_thread = false;
     do
     {
-      KL_TRC_DATA("Considering thread", (unsigned long)next_thread);
+      KL_TRC_TRACE(TRC_LVL::EXTRA, "Considering thread", (uint64_t)next_thread, "\n");
       if ((next_thread->permit_running) && (next_thread->cycle_lock != 1))
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Trying to lock for ourselves... ");
@@ -512,7 +512,7 @@ task_thread *task_get_next_thread()
 
     if (found_thread)
     {
-      KL_TRC_DATA("The next thread to execute is live thread", (unsigned long)next_thread);
+      KL_TRC_TRACE(TRC_LVL::EXTRA, "The next thread to execute is live thread", (uint64_t)next_thread, "\n");
       if ((next_thread != current_threads[proc_id]) && (current_threads[proc_id] != nullptr))
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Unlocking old thread\n");
@@ -540,7 +540,7 @@ task_thread *task_get_next_thread()
 
   current_threads[proc_id] = next_thread;
 
-  KL_TRC_DATA("Next thread (addr)", (unsigned long)next_thread);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Next thread (addr)", (uint64_t)next_thread, "\n");
   KL_TRC_EXIT;
 
   return next_thread;
@@ -556,7 +556,7 @@ void task_start_process(task_process *process)
   task_thread *next_thread = nullptr;
   klib_list_item<task_thread *> *next_item = nullptr;
 
-  KL_TRC_DATA("Process address", (unsigned long)process);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Process address", process, "\n");
 
   ASSERT(process != nullptr);
   next_item = process->child_threads.head;
@@ -565,7 +565,7 @@ void task_start_process(task_process *process)
   {
     next_thread = (task_thread *)next_item->item;
     ASSERT(next_thread != nullptr);
-    KL_TRC_DATA("Next thread", (unsigned long)next_thread);
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Next thread", next_thread, "\n");
     task_start_thread(next_thread);
 
     next_item = next_item->next;
@@ -584,7 +584,7 @@ void task_stop_process(task_process *process)
   task_thread *next_thread = nullptr;
   klib_list_item<task_thread *> *next_item = nullptr;
 
-  KL_TRC_DATA("Process address", (unsigned long)process);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Process address", (uint64_t)process, "\n");
 
   ASSERT(process != nullptr);
   next_item = process->child_threads.head;
@@ -593,7 +593,7 @@ void task_stop_process(task_process *process)
   {
     next_thread = (task_thread *)next_item->item;
     ASSERT(next_thread != nullptr);
-    KL_TRC_DATA("Next thread", (unsigned long)next_thread);
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Next thread", (uint64_t)next_thread, "\n");
     task_stop_thread(next_thread);
 
     next_item = next_item->next;
@@ -611,7 +611,7 @@ void task_stop_process(task_process *process)
 void task_start_thread(task_thread *thread)
 {
   KL_TRC_ENTRY;
-  KL_TRC_DATA("Thread address", (unsigned long)thread);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Thread address", (uint64_t)thread, "\n");
 
   ASSERT(thread != nullptr);
   if((!thread->permit_running) && (!thread->thread_destroyed))
@@ -632,7 +632,7 @@ void task_start_thread(task_thread *thread)
 void task_stop_thread(task_thread *thread)
 {
   KL_TRC_ENTRY;
-  KL_TRC_DATA("Thread address", (unsigned long)thread);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Thread address", (uint64_t)thread, "\n");
 
   ASSERT(thread != nullptr);
   if(thread->permit_running)
@@ -709,7 +709,7 @@ void test_only_reset_task_mgr()
     system_proc = idle_threads[0]->parent_process;
   }
 
-  for (int i = 0; i < proc_mp_proc_count(); i++)
+  for (uint32_t i = 0; i < proc_mp_proc_count(); i++)
   {
     if (idle_threads[i] != nullptr)
     {

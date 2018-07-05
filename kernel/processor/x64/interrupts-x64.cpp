@@ -8,7 +8,7 @@
 #include "processor/x64/processor-x64-int.h"
 #include "processor/x64/pic/pic.h"
 
-unsigned char interrupt_descriptor_table[NUM_INTERRUPTS * IDT_ENTRY_LEN];
+uint8_t interrupt_descriptor_table[NUM_INTERRUPTS * IDT_ENTRY_LEN];
 void *end_of_irq_ack_fn = (void *)asm_proc_legacy_pic_irq_ack;
 
 //------------------------------------------------------------------------------
@@ -31,10 +31,6 @@ void proc_def_interrupt_handler()
 /// Configure the IDT on the BSP. This function is only meant to be called once, the APs simply copy the IDT.
 void proc_configure_idt()
 {
-  static_assert(sizeof(long) == 8, "Type length check failed");
-  static_assert(sizeof(int) == 4, "Type length check failed");
-  static_assert(sizeof(short) == 2, "Type length check failed");
-
   // Start by zero-ing out everything.
   kl_memset(interrupt_descriptor_table, 0, sizeof(interrupt_descriptor_table));
 
@@ -108,14 +104,14 @@ void proc_configure_idt()
 ///                entries 0 and 1, although 1 is not available until after the TSS is installed just prior to
 ///                beginning scheduling. If entries greater than 1 are used, the user is responsible for configuring
 ///                the TSS as appropriate.
-void proc_configure_idt_entry(unsigned int interrupt_num, int req_priv_lvl, void *fn_pointer, unsigned char ist_num)
+void proc_configure_idt_entry(uint32_t interrupt_num, int req_priv_lvl, void *fn_pointer, uint8_t ist_num)
 {
   KL_TRC_ENTRY;
-  unsigned short low_bytes;
-  unsigned short mid_bytes;
-  unsigned int high_bytes;
-  unsigned short segment_selector = 0x0008;
-  unsigned short type_field = 0x8F00;
+  uint16_t low_bytes;
+  uint16_t mid_bytes;
+  uint32_t high_bytes;
+  uint16_t segment_selector = 0x0008;
+  uint16_t type_field = 0x8F00;
 
   ASSERT((req_priv_lvl == 0) || (req_priv_lvl == 3))
   if (req_priv_lvl)
@@ -127,14 +123,14 @@ void proc_configure_idt_entry(unsigned int interrupt_num, int req_priv_lvl, void
   ASSERT(ist_num < 8);
   type_field = type_field | ist_num;
 
-  unsigned long vector = (unsigned long)fn_pointer;
-  low_bytes = (unsigned short)(vector & 0xFFFF);
-  mid_bytes = (unsigned short)((vector & 0xFFFF0000) >> 16);
-  high_bytes = (unsigned int)((vector & 0xFFFFFFFF00000000) >> 32);
+  uint64_t vector = (uint64_t)fn_pointer;
+  low_bytes = (uint16_t)(vector & 0xFFFF);
+  mid_bytes = (uint16_t)((vector & 0xFFFF0000) >> 16);
+  high_bytes = (uint32_t)((vector & 0xFFFFFFFF00000000) >> 32);
 
-  unsigned char *field_base = interrupt_descriptor_table + (interrupt_num *
+  uint8_t *field_base = interrupt_descriptor_table + (interrupt_num *
       IDT_ENTRY_LEN);
-  unsigned short *work_ptr_a = (unsigned short*)field_base;
+  uint16_t *work_ptr_a = (uint16_t*)field_base;
   *work_ptr_a = low_bytes;
   work_ptr_a++;
   *work_ptr_a = segment_selector;
@@ -144,9 +140,9 @@ void proc_configure_idt_entry(unsigned int interrupt_num, int req_priv_lvl, void
   *work_ptr_a = mid_bytes;
   work_ptr_a++;
 
-  ASSERT((unsigned char*)work_ptr_a == field_base + 8);
+  ASSERT((uint8_t*)work_ptr_a == field_base + 8);
 
-  unsigned int *work_ptr_b = (unsigned int *)work_ptr_a;
+  uint32_t *work_ptr_b = (uint32_t *)work_ptr_a;
   *work_ptr_b = high_bytes;
 
   KL_TRC_EXIT;

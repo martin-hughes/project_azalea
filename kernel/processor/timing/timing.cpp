@@ -30,7 +30,7 @@ void time_gen_init()
 /// Allows other processes to take over on this processor.
 ///
 /// @param wait_in_ns The number of nanoseconds to sleep the current process for.
-void time_sleep_process(unsigned long wait_in_ns)
+void time_sleep_process(uint64_t wait_in_ns)
 {
   INCOMPLETE_CODE(time_sleep_process);
 }
@@ -41,11 +41,11 @@ void time_sleep_process(unsigned long wait_in_ns)
 /// scheduler!
 ///
 /// @param wait_in_ns The number of nanoseconds to stall for.
-void time_stall_process(unsigned long wait_in_ns)
+void time_stall_process(uint64_t wait_in_ns)
 {
   KL_TRC_ENTRY;
 
-  KL_TRC_DATA("Stall for ns", wait_in_ns);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Stall for ns", wait_in_ns, "\n");
   time_hpet_stall(wait_in_ns);
 
   KL_TRC_EXIT;
@@ -57,7 +57,7 @@ void time_stall_process(unsigned long wait_in_ns)
 /// period whilst polling, or for performance measurements
 ///
 /// @return The value of the system timer - the HPET in Azalea. May not be directly meaningful!
-unsigned long time_get_system_timer_count()
+uint64_t time_get_system_timer_count()
 {
   KL_TRC_ENTRY;
   KL_TRC_EXIT;
@@ -73,7 +73,7 @@ unsigned long time_get_system_timer_count()
 /// @param wait_in_ns The number of nanoseconds to translate into a system-dependent value.
 ///
 /// @return A value to be added to time_get_system_timer_count() to check for the passing of time.
-unsigned long time_get_system_timer_offset(unsigned long wait_in_ns)
+uint64_t time_get_system_timer_offset(uint64_t wait_in_ns)
 {
   KL_TRC_ENTRY;
   KL_TRC_EXIT;

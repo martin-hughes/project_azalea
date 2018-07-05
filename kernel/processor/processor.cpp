@@ -29,7 +29,7 @@ namespace
     bool slow_path_reqd;
   };
 
-  const unsigned char MAX_IRQ = 16;
+  const uint8_t MAX_IRQ = 16;
   klib_list<proc_irq_handler *> irq_handlers[MAX_IRQ] = { { nullptr, nullptr },
                                                           { nullptr, nullptr },
                                                           { nullptr, nullptr },
@@ -58,7 +58,7 @@ namespace
 ///
 /// @param receiver Pointer to an IRQ receiver that will be executed in response to the IRQ with the number given by
 ///                 `irq_number`
-void proc_register_irq_handler(unsigned char irq_number, IIrqReceiver *receiver)
+void proc_register_irq_handler(uint8_t irq_number, IIrqReceiver *receiver)
 {
   KL_TRC_ENTRY;
 
@@ -86,7 +86,7 @@ void proc_register_irq_handler(unsigned char irq_number, IIrqReceiver *receiver)
 /// @param irq_number The IRQ that the receiver should no longer be called for.
 ///
 /// @param receiver The receiver to unregister.
-void proc_unregister_irq_handler(unsigned char irq_number, IIrqReceiver *receiver)
+void proc_unregister_irq_handler(uint8_t irq_number, IIrqReceiver *receiver)
 {
   KL_TRC_ENTRY;
 
@@ -130,7 +130,7 @@ void proc_unregister_irq_handler(unsigned char irq_number, IIrqReceiver *receive
 /// Called by the processor-specific code.
 ///
 /// @param irq_number The number of the IRQ that fired.
-void proc_handle_irq(unsigned char irq_number)
+void proc_handle_irq(uint8_t irq_number)
 {
   KL_TRC_ENTRY;
 
@@ -168,7 +168,7 @@ void proc_irq_slowpath_thread()
 
   while(1)
   {
-    for (unsigned int i = 0; i < MAX_IRQ; i++)
+    for (uint32_t i = 0; i < MAX_IRQ; i++)
     {
       cur_item = irq_handlers[i].head;
 

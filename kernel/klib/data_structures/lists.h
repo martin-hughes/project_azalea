@@ -162,9 +162,9 @@ template <typename T> void klib_list_remove(klib_list_item<T> *entry_to_remove)
   entry_to_remove->prev = nullptr;
 }
 
-template <typename T> unsigned long klib_list_get_length(klib_list<T> *list_obj)
+template <typename T> uint64_t klib_list_get_length(klib_list<T> *list_obj)
 {
-  unsigned long count = 0;
+  uint64_t count = 0;
   klib_list_item<T> *list_item;
 
   ASSERT(list_obj != nullptr);

@@ -9,6 +9,8 @@
 #define KLIB_DEBUG
 #endif
 
+#include <stdint.h>
+
 #include "user_interfaces/kernel_types.h"
 #include "user_interfaces/error_codes.h"
 #include "klib/data_structures/lists.h"

@@ -1,13 +1,15 @@
 #ifndef KL_STRING_H
 #define KL_STRING_H
 
+#include <stdint.h>
+
 /// @brief A simplified version of the standard C++ string class
 class kl_string
 {
 public:
   /// A value to indicate that a given character was not found, or that a range should extend the maximum possible
   /// length. No string could fill all of memory (otherwise there'd be no room for code!) so ~0 is acceptable.
-  const static unsigned long npos = ~((unsigned long)0);
+  const static uint64_t npos = ~((uint64_t)0);
 
   /// @brief Default constructor. Creates an empty string.
   kl_string();
@@ -63,7 +65,7 @@ public:
   /////////////////////
   kl_string operator +(const kl_string &) const;
   kl_string operator +(const char *&) const;
-  char &operator [](const unsigned long pos);
+  char &operator [](const uint64_t pos);
   const bool operator <(const kl_string &) const;
   const bool operator >(const kl_string &) const;
 
@@ -77,12 +79,12 @@ public:
   ///
   /// @return The position of substr within this one, starting from 0. If substr is not in this one, kl_string::npos is
   ///         returned.
-  const unsigned long find(const kl_string &substr) const;
+  const uint64_t find(const kl_string &substr) const;
 
   /// @brief Return the character length of this string
   ///
   /// @return The number of characters in this string, not including the trailing 0.
-  const unsigned long length() const;
+  const uint64_t length() const;
 
   /// @brief Returns a section of this string
   ///
@@ -91,7 +93,7 @@ public:
   /// @param len The length of the substring. Use kl_string::npos to return the remainder of the string.
   ///
   /// @return A string containing the requested substring.
-  kl_string substr(unsigned long start, unsigned long len) const;
+  kl_string substr(uint64_t start, uint64_t len) const;
 
 protected:
   /// A buffer containing the string stored here. May be larger than is required.
@@ -104,7 +106,7 @@ protected:
   void reset_string();
 
   /// Resize the buffer in string_contents to a new size.
-  void resize_buffer(unsigned long new_size);
+  void resize_buffer(uint64_t new_size);
 
   /// Move the string provided in to this one, and destroy it.
   ///

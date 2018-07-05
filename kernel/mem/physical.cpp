@@ -18,18 +18,18 @@
 namespace
 {
   // In the page allocation bitmap, a 1 indicates that the page is FREE.
-  const unsigned long MAX_SUPPORTED_PAGES = 2048;
-  const unsigned long SIZE_OF_PAGE = 2097152;
-  const unsigned long BITMAP_SIZE = MAX_SUPPORTED_PAGES / 64;
+  const uint64_t MAX_SUPPORTED_PAGES = 2048;
+  const uint64_t SIZE_OF_PAGE = 2097152;
+  const uint64_t BITMAP_SIZE = MAX_SUPPORTED_PAGES / 64;
 
   // Determines whether or not a page has been allocated. A 1 indicates free, 0 indicates allocated.
-  unsigned long phys_pages_alloc_bitmap[BITMAP_SIZE];
+  uint64_t phys_pages_alloc_bitmap[BITMAP_SIZE];
 
   // Determines whether or not a page actually exists to be used. A 1 indicates exists, 0 indicates invalid.
-  unsigned long phys_pages_exist_bitmap[BITMAP_SIZE];
+  uint64_t phys_pages_exist_bitmap[BITMAP_SIZE];
 
   // A simple count of the number of free pages.
-  unsigned long free_pages;
+  uint64_t free_pages;
 
   // Protects the bitmap from multi-threaded accesses.
   kernel_spinlock bitmap_lock;
@@ -42,7 +42,7 @@ void mem_init_gen_phys_sys(e820_pointer *e820_ptr)
 {
   KL_TRC_ENTRY;
 
-  unsigned long mask;
+  uint64_t mask;
 
   ASSERT((e820_ptr != nullptr) && (e820_ptr->table_ptr != nullptr));
 
@@ -80,12 +80,12 @@ void mem_init_gen_phys_sys(e820_pointer *e820_ptr)
 /// @param num_pages Must be equal to 1.
 ///
 /// @return The address of a newly allocated physical page.
-void *mem_allocate_physical_pages(unsigned int num_pages)
+void *mem_allocate_physical_pages(uint32_t num_pages)
 {
   KL_TRC_ENTRY;
 
-  unsigned long mask;
-  unsigned long addr;
+  uint64_t mask;
+  uint64_t addr;
 
   // For the time being, only allow the allocation of single pages.
   ASSERT(num_pages == 1);
@@ -94,11 +94,11 @@ void *mem_allocate_physical_pages(unsigned int num_pages)
   // Spin through the list, looking for a free page. Upon finding one, mark it
   // as in use and return the relevant address.
   klib_synch_spinlock_lock(bitmap_lock);
-  for (int i = 0; i < MAX_SUPPORTED_PAGES / 64; i++)
+  for (uint64_t i = 0; i < MAX_SUPPORTED_PAGES / 64; i++)
   {
     mask = 0x8000000000000000;
     ASSERT(mask == 0x8000000000000000);
-    for (int j = 0; j < 64; j++)
+    for (uint64_t j = 0; j < 64; j++)
     {
       ASSERT(mask != 0);
       if ((phys_pages_alloc_bitmap[i] & mask) != 0)
@@ -131,11 +131,11 @@ void *mem_allocate_physical_pages(unsigned int num_pages)
 /// @param start The address of the start of the physical page to deallocate.
 ///
 /// @param num_pages Must be equal to 1.
-void mem_deallocate_physical_pages(void *start, unsigned int num_pages)
+void mem_deallocate_physical_pages(void *start, uint32_t num_pages)
 {
   KL_TRC_ENTRY;
 
-  unsigned long start_num = (unsigned long)start;
+  uint64_t start_num = (uint64_t)start;
 
   ASSERT(num_pages == 1);
   ASSERT(start_num % SIZE_OF_PAGE == 0);
@@ -155,13 +155,13 @@ void mem_deallocate_physical_pages(void *start, unsigned int num_pages)
 /// @param ignore_checks If set to false, the system will check that this page is known to exist before changing the
 ///                      state of the allocation bitmap. However, this interferes with generating the map to start with
 ///                      so ignore_checks can be set to true to bypass this.
-void mem_set_bitmap_page_bit(unsigned long page_addr, const bool ignore_checks)
+void mem_set_bitmap_page_bit(uint64_t page_addr, const bool ignore_checks)
 {
   KL_TRC_ENTRY;
 
-  unsigned long bitmap_qword;
-  unsigned long bitmap_idx;
-  unsigned long mask;
+  uint64_t bitmap_qword;
+  uint64_t bitmap_idx;
+  uint64_t mask;
 
   ASSERT((page_addr / SIZE_OF_PAGE) < MAX_SUPPORTED_PAGES);
 
@@ -187,13 +187,13 @@ void mem_set_bitmap_page_bit(unsigned long page_addr, const bool ignore_checks)
 /// Note that no checking is done to ensure the page is within the physical pages available to the system.
 ///
 /// @param page_addr The address of the physical page to mark as in use.
-void mem_clear_bitmap_page_bit(unsigned long page_addr)
+void mem_clear_bitmap_page_bit(uint64_t page_addr)
 {
   KL_TRC_ENTRY;
 
-  unsigned long bitmap_qword;
-  unsigned long bitmap_idx;
-  unsigned long mask;
+  uint64_t bitmap_qword;
+  uint64_t bitmap_idx;
+  uint64_t mask;
 
   ASSERT((page_addr / SIZE_OF_PAGE) < MAX_SUPPORTED_PAGES);
 
@@ -219,13 +219,13 @@ void mem_clear_bitmap_page_bit(unsigned long page_addr)
 /// @param page_addr The page address to check
 ///
 /// @return TRUE implies the page is free (the bit is set), FALSE implies in use.
-bool mem_is_bitmap_page_bit_set(unsigned long page_addr)
+bool mem_is_bitmap_page_bit_set(uint64_t page_addr)
 {
   KL_TRC_ENTRY;
 
-  unsigned long bitmap_qword;
-  unsigned long bitmap_idx;
-  unsigned long mask;
+  uint64_t bitmap_qword;
+  uint64_t bitmap_idx;
+  uint64_t mask;
 
   ASSERT((page_addr / SIZE_OF_PAGE) < MAX_SUPPORTED_PAGES);
 

@@ -8,32 +8,32 @@
 class ramdisk_device: public IBlockDevice
 {
 public:
-  ramdisk_device(unsigned long num_blocks, unsigned long block_size);
+  ramdisk_device(uint64_t num_blocks, uint64_t block_size);
   virtual ~ramdisk_device();
 
   virtual const kl_string device_name();
   virtual DEV_STATUS get_device_status();
 
-  virtual unsigned long num_blocks();
-  virtual unsigned long block_size();
+  virtual uint64_t num_blocks();
+  virtual uint64_t block_size();
 
-  virtual ERR_CODE read_blocks(unsigned long start_block,
-                               unsigned long num_blocks,
+  virtual ERR_CODE read_blocks(uint64_t start_block,
+                               uint64_t num_blocks,
                                void *buffer,
-                               unsigned long buffer_length);
-  virtual ERR_CODE write_blocks(unsigned long start_block,
-                                unsigned long num_blocks,
+                               uint64_t buffer_length);
+  virtual ERR_CODE write_blocks(uint64_t start_block,
+                                uint64_t num_blocks,
                                 void *buffer,
-                                unsigned long buffer_length);
+                                uint64_t buffer_length);
 
 protected:
   char *_ramdisk_storage;
   const kl_string _name;
 
-  const unsigned long _num_blocks;
-  const unsigned long _block_size;
+  const uint64_t _num_blocks;
+  const uint64_t _block_size;
 
-  const unsigned long _storage_size;
+  const uint64_t _storage_size;
 };
 
 #endif

@@ -5,8 +5,7 @@
 #include <iostream>
 #include <pthread.h>
 #include <unistd.h>
-
-#include "synch_tests.h"
+#include "gtest/gtest.h"
 
 #include "klib/synch/kernel_locks.h"
 #include "test/test_core/test.h"
@@ -18,7 +17,7 @@ volatile bool lock_locked = false;
 
 void* second_part(void *);
 
-void synch_test_1()
+TEST(KlibSynchTest, Lists1)
 {
   pthread_t other_thread;
 

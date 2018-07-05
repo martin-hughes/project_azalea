@@ -6,27 +6,27 @@
 #include "ioapic-x64.h"
 #include "acpi/acpi_if.h"
 
-static unsigned long ioapic_count = 0;
+static uint64_t ioapic_count = 0;
 
-const unsigned char SUBTABLE_IOAPIC_TYPE = 1;
+const uint8_t SUBTABLE_IOAPIC_TYPE = 1;
 
 struct ioapic_data
 {
   // Translated values
-  unsigned int *reg_select;
-  unsigned int *data_window;
+  uint32_t *reg_select;
+  uint32_t *data_window;
 
   // Raw values
-  unsigned char apic_id;
-  unsigned int apic_addr;
-  unsigned int gs_interrupt_base;
+  uint8_t apic_id;
+  uint32_t apic_addr;
+  uint32_t gs_interrupt_base;
 };
 
 static klib_list<ioapic_data *> ioapic_list;
 
 void proc_x64_ioapic_add_ioapic(acpi_madt_io_apic *table);
 
-void proc_x64_ioapic_set_redir_tab(ioapic_data *ioapic, unsigned char num_in, unsigned char vector_out, unsigned char apic_id);
+void proc_x64_ioapic_set_redir_tab(ioapic_data *ioapic, uint8_t num_in, uint8_t vector_out, uint8_t apic_id);
 
 void proc_x64_ioapic_load_data()
 {
@@ -44,9 +44,9 @@ void proc_x64_ioapic_load_data()
   ASSERT(madt_table->Header.Length > sizeof(acpi_table_madt));
 
   subtable = acpi_init_subtable_ptr((void *)madt_table, sizeof(acpi_table_madt));
-  while(((unsigned long)subtable - (unsigned long)madt_table) < madt_table->Header.Length)
+  while(((uint64_t)subtable - (uint64_t)madt_table) < madt_table->Header.Length)
   {
-    KL_TRC_DATA("Found a new table of type", (unsigned long)subtable->Type);
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Found a new table of type", subtable->Type, "\n");
 
     if (subtable->Type == SUBTABLE_IOAPIC_TYPE)
     {
@@ -59,10 +59,10 @@ void proc_x64_ioapic_load_data()
   KL_TRC_EXIT;
 }
 
-unsigned long proc_x64_ioapic_get_count()
+uint64_t proc_x64_ioapic_get_count()
 {
   KL_TRC_ENTRY;
-  KL_TRC_DATA("Number of I/O APICs known", ioapic_count);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Number of I/O APICs known", ioapic_count, "\n");
   KL_TRC_EXIT;
 
   return ioapic_count;
@@ -72,9 +72,9 @@ void proc_x64_ioapic_add_ioapic(acpi_madt_io_apic *table)
 {
   KL_TRC_ENTRY;
 
-  unsigned long ioapic_phys_base;
-  unsigned long ioapic_offset;
-  unsigned long virtual_addr;
+  uint64_t ioapic_phys_base;
+  uint64_t ioapic_offset;
+  uint64_t virtual_addr;
 
   klib_list_item<ioapic_data *> *new_item = new klib_list_item<ioapic_data *>;
   ioapic_data *data = new ioapic_data;
@@ -86,20 +86,20 @@ void proc_x64_ioapic_add_ioapic(acpi_madt_io_apic *table)
   data->apic_addr = table->Address;
   data->gs_interrupt_base = table->GlobalIrqBase;
 
-  KL_TRC_DATA("APIC ID", (unsigned long)table->Id);
-  KL_TRC_DATA("APIC address", table->Address);
-  KL_TRC_DATA("GSI Base", table->GlobalIrqBase);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "APIC ID", table->Id, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "APIC address", table->Address, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "GSI Base", table->GlobalIrqBase, "\n");
 
   klib_list_add_tail(&ioapic_list, new_item);
 
   // Map this IOAPICs registers.
   ioapic_offset = table->Address % MEM_PAGE_SIZE;
   ioapic_phys_base = table->Address - ioapic_offset;
-  virtual_addr = (unsigned long)mem_allocate_virtual_range(1);
+  virtual_addr = (uint64_t)mem_allocate_virtual_range(1);
   mem_map_range((void *)ioapic_phys_base, (void *)virtual_addr, 1, nullptr, MEM_UNCACHEABLE);
 
-  data->reg_select = (unsigned int *)(virtual_addr + ioapic_offset);
-  data->data_window = (unsigned int *)(virtual_addr + ioapic_offset + 16);
+  data->reg_select = (uint32_t *)(virtual_addr + ioapic_offset);
+  data->data_window = (uint32_t *)(virtual_addr + ioapic_offset + 16);
 
   ioapic_count++;
 
@@ -107,15 +107,15 @@ void proc_x64_ioapic_add_ioapic(acpi_madt_io_apic *table)
 }
 
 // Remap an IO APICs inputs to interrupts starting from the vector number at base_int.
-void proc_x64_ioapic_remap_interrupts(unsigned int ioapic_num, unsigned char base_int, unsigned char apic_id)
+void proc_x64_ioapic_remap_interrupts(uint32_t ioapic_num, uint8_t base_int, uint8_t apic_id)
 {
   KL_TRC_ENTRY;
 
   int temp_vect;
 
-  KL_TRC_DATA("IO APIC number", ioapic_num);
-  KL_TRC_DATA("Base interrupt", base_int);
-  KL_TRC_DATA("APIC ID to route to", apic_id);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "IO APIC number", ioapic_num, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Base interrupt", base_int, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "APIC ID to route to", apic_id, "\n");
 
   ASSERT(ioapic_num == 0);
 
@@ -141,14 +141,14 @@ void proc_x64_ioapic_remap_interrupts(unsigned int ioapic_num, unsigned char bas
 }
 
 // Remap an IO APIC's single input to a specified vector at the CPU
-void proc_x64_ioapic_set_redir_tab(ioapic_data *ioapic, unsigned char num_in, unsigned char vector_out, unsigned char apic_id)
+void proc_x64_ioapic_set_redir_tab(ioapic_data *ioapic, uint8_t num_in, uint8_t vector_out, uint8_t apic_id)
 {
   KL_TRC_ENTRY;
 
-  const unsigned int INP_ZERO_REG = 0x10;
+  const uint32_t INP_ZERO_REG = 0x10;
 
-  unsigned int vector_data_low;
-  unsigned int vector_data_high;
+  uint32_t vector_data_low;
+  uint32_t vector_data_high;
 
   *ioapic->reg_select = INP_ZERO_REG + 2 * num_in;
   vector_data_low = *ioapic->data_window;
@@ -157,7 +157,7 @@ void proc_x64_ioapic_set_redir_tab(ioapic_data *ioapic, unsigned char num_in, un
   vector_data_high = *ioapic->data_window;
 
   vector_data_high = vector_data_high & 0x00FFFFFF;
-  vector_data_high = vector_data_high | (((unsigned int)apic_id) << 24);
+  vector_data_high = vector_data_high | (((uint32_t)apic_id) << 24);
 
   // This rather odd mask preserves all known RO fields.
   vector_data_low = vector_data_low & 0xFFFE5000;

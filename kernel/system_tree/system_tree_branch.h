@@ -1,6 +1,7 @@
 #ifndef __SYSTEM_TREE_BRANCH_INTERFACE_H
 #define __SYSTEM_TREE_BRANCH_INTERFACE_H
 
+#include <stdint.h>
 #include "user_interfaces/error_codes.h"
 #include "klib/data_structures/string.h"
 #include "system_tree/system_tree_leaf.h"
@@ -116,7 +117,7 @@ public:
   /// @param[out] second_part The remainder of the path, as described above.
   void split_name(const kl_string name_to_split, kl_string &first_part, kl_string &second_part) const
   {
-    unsigned long split_pos = name_to_split.find("\\");
+    uint64_t split_pos = name_to_split.find("\\");
 
     if (split_pos == kl_string::npos)
     {

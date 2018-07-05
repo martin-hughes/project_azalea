@@ -6,8 +6,8 @@
 #include "klib/data_structures/string.h"
 #include "devices/legacy/ps2/ps2_device.h"
 
-const unsigned long PS2_DATA_PORT = 0x60;
-const unsigned long PS2_COMMAND_PORT = 0x64;
+const uint16_t PS2_DATA_PORT = 0x60;
+const uint16_t PS2_COMMAND_PORT = 0x64;
 
 enum class PS2_DEV_TYPE
 {
@@ -25,33 +25,33 @@ enum class PS2_DEV_TYPE
 namespace PS2_CONST
 {
   // Controller command and response constants.
-  const unsigned char READ_CONFIG = 0x20;
-  const unsigned char WRITE_CONFIG = 0x60;
-  const unsigned char SELF_TEST = 0xAA;
-  const unsigned char SELF_TEST_SUCCESS = 0x55;
-  const unsigned char DEV_1_PORT_TEST = 0xAB;
-  const unsigned char DEV_2_PORT_TEST = 0xA9;
+  const uint8_t READ_CONFIG = 0x20;
+  const uint8_t WRITE_CONFIG = 0x60;
+  const uint8_t SELF_TEST = 0xAA;
+  const uint8_t SELF_TEST_SUCCESS = 0x55;
+  const uint8_t DEV_1_PORT_TEST = 0xAB;
+  const uint8_t DEV_2_PORT_TEST = 0xA9;
 
-  const unsigned char PORT_TEST_SUCCESS = 0x00;
+  const uint8_t PORT_TEST_SUCCESS = 0x00;
 
-  const unsigned char DISABLE_DEV_1 = 0xAD;
-  const unsigned char ENABLE_DEV_1 = 0xAE;
+  const uint8_t DISABLE_DEV_1 = 0xAD;
+  const uint8_t ENABLE_DEV_1 = 0xAE;
 
-  const unsigned char DISABLE_DEV_2 = 0xA7;
-  const unsigned char ENABLE_DEV_2 = 0xA8;
+  const uint8_t DISABLE_DEV_2 = 0xA7;
+  const uint8_t ENABLE_DEV_2 = 0xA8;
 
-  const unsigned char DEV_2_NEXT = 0xD4;
+  const uint8_t DEV_2_NEXT = 0xD4;
 
   // General device command and response constants.
-  const unsigned char DEV_RESET = 0xFF;
-  const unsigned char DEV_IDENTIFY = 0xF2;
-  const unsigned char DEV_ENABLE_SCANNING = 0xF4;
-  const unsigned char DEV_DISABLE_SCANNING = 0xF5;
-  const unsigned char DEV_CMD_ACK = 0xFA;
-  const unsigned char DEV_CMD_RESEND = 0xFE;
-  const unsigned char DEV_CMD_FAILED = 0xFC;
+  const uint8_t DEV_RESET = 0xFF;
+  const uint8_t DEV_IDENTIFY = 0xF2;
+  const uint8_t DEV_ENABLE_SCANNING = 0xF4;
+  const uint8_t DEV_DISABLE_SCANNING = 0xF5;
+  const uint8_t DEV_CMD_ACK = 0xFA;
+  const uint8_t DEV_CMD_RESEND = 0xFE;
+  const uint8_t DEV_CMD_FAILED = 0xFC;
 
-  const unsigned char DEV_SELF_TEST_OK = 0xAA;
+  const uint8_t DEV_SELF_TEST_OK = 0xAA;
 }
 
 class gen_ps2_controller_device: public IDevice
@@ -69,48 +69,48 @@ public:
   {
     struct
     {
-      unsigned char output_buffer_status :1; // 0 = no data waiting, 1 = data waiting.
-      unsigned char input_buffer_status :1; // 1 = data waiting to transmit, 0 = no data waiting.
-      unsigned char system_flag :1;
-      unsigned char command_data_flag :1;
-      unsigned char keyboard_lock :1;           // This field is system specific, but is apparently most commonly this.
-      unsigned char device_two_out_buf_full :1; // This field is system specific, but is apparently most commonly this.
-      unsigned char timeout_error :1;
-      unsigned char parity_error :1;
+      uint8_t output_buffer_status :1; // 0 = no data waiting, 1 = data waiting.
+      uint8_t input_buffer_status :1; // 1 = data waiting to transmit, 0 = no data waiting.
+      uint8_t system_flag :1;
+      uint8_t command_data_flag :1;
+      uint8_t keyboard_lock :1;           // This field is system specific, but is apparently most commonly this.
+      uint8_t device_two_out_buf_full :1; // This field is system specific, but is apparently most commonly this.
+      uint8_t timeout_error :1;
+      uint8_t parity_error :1;
     } flags;
-    unsigned char raw;
+    uint8_t raw;
   };
 
   union ps2_config_register
   {
     struct
     {
-      unsigned char first_port_interrupt_enabled :1; // 1 = enabled, 0 = disabled.
-      unsigned char second_port_interrupt_enabled :1; // As above.
-      unsigned char system_flag :1; // Should always be set to 1.
-      unsigned char zero_flag :1; // Should always be set to zero.
-      unsigned char first_port_clock_disable :1; // 1 = clock disabled, 0 = enabled.
-      unsigned char second_port_clock_disable :1; // As above.
-      unsigned char first_port_translation :1; // 1 = translation enabled.
-      unsigned char second_zero_flag :1; // Must be zero.
+      uint8_t first_port_interrupt_enabled :1; // 1 = enabled, 0 = disabled.
+      uint8_t second_port_interrupt_enabled :1; // As above.
+      uint8_t system_flag :1; // Should always be set to 1.
+      uint8_t zero_flag :1; // Should always be set to zero.
+      uint8_t first_port_clock_disable :1; // 1 = clock disabled, 0 = enabled.
+      uint8_t second_port_clock_disable :1; // As above.
+      uint8_t first_port_translation :1; // 1 = translation enabled.
+      uint8_t second_zero_flag :1; // Must be zero.
     } flags;
-    unsigned char raw;
+    uint8_t raw;
   };
 
   // PS/2 device interactions.
-  ERR_CODE send_ps2_command(unsigned char command,
+  ERR_CODE send_ps2_command(uint8_t command,
                             bool needs_second_byte,
-                            unsigned char second_byte,
+                            uint8_t second_byte,
                             bool expect_response,
-                            unsigned char &response);
+                            uint8_t &response);
 
   ps2_status_register read_status();
 
   ps2_config_register read_config();
   void write_config(ps2_config_register reg);
 
-  ERR_CODE send_byte(unsigned char data, bool second_channel = false);
-  ERR_CODE read_byte(unsigned char &data);
+  ERR_CODE send_byte(uint8_t data, bool second_channel = false);
+  ERR_CODE read_byte(uint8_t &data);
 
   gen_ps2_device *chan_1_dev;
   gen_ps2_device *chan_2_dev;

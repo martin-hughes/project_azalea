@@ -53,15 +53,13 @@ struct proc_mp_ipi_msg_state
   kernel_spinlock signal_lock;
 };
 
-const unsigned char SUBTABLE_LAPIC_TYPE = 0;
+const uint8_t SUBTABLE_LAPIC_TYPE = 0;
 
 static proc_mp_ipi_msg_state *inter_proc_signals = nullptr;
 
-extern "C" unsigned long asm_ap_trampoline_start;
-extern "C" unsigned long asm_ap_trampoline_end;
-extern "C" unsigned long asm_ap_trampoline_addr;
-
-static_assert(sizeof(unsigned short) == 2, "Sizeof short must be two");
+extern "C" uint64_t asm_ap_trampoline_start;
+extern "C" uint64_t asm_ap_trampoline_end;
+extern "C" uint64_t asm_ap_trampoline_addr;
 
 /// @brief Prepare the system to start multi-processing
 ///
@@ -75,12 +73,12 @@ void proc_mp_init()
   acpi_table_madt *madt_table;
   acpi_subtable_header *subtable;
   acpi_madt_local_apic *lapic_table;
-  unsigned int procs_saved = 0;
-  unsigned long pure64_nmi_handler_loc;
-  unsigned int trampoline_length;
-  unsigned long start_time;
-  unsigned long wait_offset;
-  unsigned long end_time;
+  uint32_t procs_saved = 0;
+  uint64_t pure64_nmi_handler_loc;
+  uint32_t trampoline_length;
+  uint64_t start_time;
+  uint64_t wait_offset;
+  uint64_t end_time;
 
   retval = AcpiGetTable((ACPI_STRING)table_name, 0, (ACPI_TABLE_HEADER **)&madt_table);
   ASSERT(retval == AE_OK);
@@ -92,9 +90,9 @@ void proc_mp_init()
   // The first time through this loop, simply count the number of LAPICs, in order that we can allocate the correct
   // storage space.
   subtable = acpi_init_subtable_ptr((void *)madt_table, sizeof(acpi_table_madt));
-  while(((unsigned long)subtable - (unsigned long)madt_table) < madt_table->Header.Length)
+  while(((uint64_t)subtable - (uint64_t)madt_table) < madt_table->Header.Length)
   {
-    KL_TRC_DATA("Found a new table of type", (unsigned long)subtable->Type);
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Found a new table of type", (uint64_t)subtable->Type, "\n");
 
     if (subtable->Type == SUBTABLE_LAPIC_TYPE)
     {
@@ -104,16 +102,16 @@ void proc_mp_init()
     subtable = acpi_advance_subtable_ptr(subtable);
   }
 
-  KL_TRC_DATA("Number of processors", processor_count);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Number of processors", processor_count, "\n");
 
   proc_info_block = new processor_info[processor_count];
   inter_proc_signals = new proc_mp_ipi_msg_state[processor_count];
 
   // The second time around, save their details.
   subtable = acpi_init_subtable_ptr((void *)madt_table, sizeof(acpi_table_madt));
-  while(((unsigned long)subtable - (unsigned long)madt_table) < madt_table->Header.Length)
+  while(((uint64_t)subtable - (uint64_t)madt_table) < madt_table->Header.Length)
   {
-    KL_TRC_DATA("Found a new table of type", (unsigned long)subtable->Type);
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Found a new table of type", (uint64_t)subtable->Type, "\n");
 
     if (subtable->Type == SUBTABLE_LAPIC_TYPE)
     {
@@ -126,9 +124,9 @@ void proc_mp_init()
       proc_info_block[procs_saved].processor_running = false;
       proc_info_block[procs_saved].platform_data.lapic_id = lapic_table->Id;
 
-      KL_TRC_DATA("Our processor ID", procs_saved);
-      KL_TRC_DATA("ACPI proc ID", (unsigned long)lapic_table->ProcessorId);
-      KL_TRC_DATA("LAPIC ID", (unsigned long)lapic_table->Id);
+      KL_TRC_TRACE(TRC_LVL::EXTRA, "Our processor ID", procs_saved, "\n");
+      KL_TRC_TRACE(TRC_LVL::EXTRA, "ACPI proc ID", (uint64_t)lapic_table->ProcessorId, "\n");
+      KL_TRC_TRACE(TRC_LVL::EXTRA, "LAPIC ID", (uint64_t)lapic_table->Id, "\n");
 
       procs_saved++;
     }
@@ -147,9 +145,9 @@ void proc_mp_init()
   // Fill in the inter-processor signal control codes. We have to fill in a valid signal, even though it isn't actually
   // being sent, so pick an arbitrary one. Processors should be protected from acting on it through the value of
   // msg_control_state.
-  for (unsigned int i = 0; i < processor_count; i++)
+  for (uint32_t i = 0; i < processor_count; i++)
   {
-    KL_TRC_DATA("Filling in signals for proc", i);
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Filling in signals for proc", i, "\n");
     inter_proc_signals[i].msg_being_sent = PROC_IPI_MSGS::SUSPEND;
     inter_proc_signals[i].msg_control_state = PROC_MP_X64_MSG_STATE::NO_MSG;
     klib_synch_spinlock_init(inter_proc_signals[i].signal_lock);
@@ -161,10 +159,10 @@ void proc_mp_init()
   // Copy the real mode startup point to a suitable location = 0x1000 should be good (SIPI vector number 1).
   // Before doing this, remember that there are a couple of absolute JMP instructions that need fixing up. The first
   // is at
-  trampoline_length = reinterpret_cast<unsigned long>(&asm_ap_trampoline_end) -
-                      reinterpret_cast<unsigned long>(&asm_ap_trampoline_start);
-  KL_TRC_DATA("Trampoline start", reinterpret_cast<unsigned long>(&asm_ap_trampoline_addr));
-  KL_TRC_DATA("Trampoline length", trampoline_length);
+  trampoline_length = reinterpret_cast<uint64_t>(&asm_ap_trampoline_end) -
+                      reinterpret_cast<uint64_t>(&asm_ap_trampoline_start);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Trampoline start", reinterpret_cast<uint64_t>(&asm_ap_trampoline_addr), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Trampoline length", trampoline_length, "\n");
   kl_memcpy(reinterpret_cast<void *>(&asm_ap_trampoline_addr),
             reinterpret_cast<void *>(0x1000),
             trampoline_length);
@@ -232,7 +230,7 @@ void proc_mp_ap_startup()
 
   KL_TRC_ENTRY;
 
-  unsigned int proc_num = proc_mp_this_proc_id();
+  uint32_t proc_num = proc_mp_this_proc_id();
 
   ASSERT(proc_num != 0);
 
@@ -265,17 +263,17 @@ void proc_mp_ap_startup()
 /// Until multi-processing is supported, this will always return 0.
 ///
 /// @return The integer ID number of the processor this function executes on.
-unsigned int proc_mp_this_proc_id()
+uint32_t proc_mp_this_proc_id()
 {
   bool apic_id_found = false;
-  unsigned int lapic_id;
-  unsigned int proc_id;
+  uint32_t lapic_id;
+  uint32_t proc_id;
 
   KL_TRC_ENTRY;
 
   lapic_id = proc_x64_apic_get_local_id();
 
-  KL_TRC_DATA("Looking for LAPIC ID", lapic_id);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Looking for LAPIC ID", lapic_id, "\n");
 
   if (processor_count > 0)
   {
@@ -298,7 +296,7 @@ unsigned int proc_mp_this_proc_id()
   }
 
   ASSERT(apic_id_found);
-  KL_TRC_DATA("Processor ID", proc_id);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Processor ID", proc_id, "\n");
 
   KL_TRC_EXIT;
 
@@ -316,12 +314,12 @@ unsigned int proc_mp_this_proc_id()
 /// @param proc_id The processor ID (not APIC ID) to signal.
 ///
 /// @param msg The message to be sent.
-void proc_mp_x64_signal_proc(unsigned int proc_id, PROC_IPI_MSGS msg)
+void proc_mp_x64_signal_proc(uint32_t proc_id, PROC_IPI_MSGS msg)
 {
   KL_TRC_ENTRY;
 
-  KL_TRC_DATA("Sending signal to processor", proc_id);
-  KL_TRC_DATA("Message", static_cast<unsigned long>(msg));
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Sending signal to processor", proc_id, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Message", static_cast<uint64_t>(msg), "\n");
 
   ASSERT(proc_id < processor_count);
 
@@ -356,7 +354,7 @@ void proc_mp_x64_receive_signal_int()
 {
   KL_TRC_ENTRY;
 
-  unsigned int this_proc_id = proc_mp_this_proc_id();
+  uint32_t this_proc_id = proc_mp_this_proc_id();
 
   ASSERT(inter_proc_signals[this_proc_id].msg_control_state == PROC_MP_X64_MSG_STATE::MSG_WAITING);
 

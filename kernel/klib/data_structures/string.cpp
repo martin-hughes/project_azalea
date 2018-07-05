@@ -18,7 +18,7 @@ kl_string::kl_string()
 
 kl_string::kl_string(const char *s)
 {
-  unsigned long sl = kl_strlen(s, 0) + 1;
+  uint64_t sl = kl_strlen(s, 0) + 1;
   this->string_contents = new char [sl];
   this->buffer_length = sl;
 
@@ -126,9 +126,9 @@ kl_string &kl_string::operator =(kl_string &&s)
 // Other operators
 kl_string kl_string::operator +(const kl_string &s) const
 {
-  unsigned long other_length = kl_strlen(s.string_contents, s.buffer_length);
-  unsigned long our_length = kl_strlen(this->string_contents, this->buffer_length);
-  unsigned long required_size = our_length + other_length + 1;
+  uint64_t other_length = kl_strlen(s.string_contents, s.buffer_length);
+  uint64_t our_length = kl_strlen(this->string_contents, this->buffer_length);
+  uint64_t required_size = our_length + other_length + 1;
   kl_string new_string;
 
   new_string.buffer_length = required_size;
@@ -142,9 +142,9 @@ kl_string kl_string::operator +(const kl_string &s) const
 
 kl_string kl_string::operator +(const char *&s) const
 {
-  unsigned long other_length = kl_strlen(s, 0);
-  unsigned long our_length = kl_strlen(this->string_contents, this->buffer_length);
-  unsigned long required_size = our_length + other_length + 1;
+  uint64_t other_length = kl_strlen(s, 0);
+  uint64_t our_length = kl_strlen(this->string_contents, this->buffer_length);
+  uint64_t required_size = our_length + other_length + 1;
   kl_string new_string;
 
   new_string.buffer_length = required_size;
@@ -156,7 +156,7 @@ kl_string kl_string::operator +(const char *&s) const
   return new_string;
 }
 
-char &kl_string::operator [](const unsigned long pos)
+char &kl_string::operator [](const uint64_t pos)
 {
   // It is totally acceptable to return a position that may well be beyond the limits of the string - the C++ spec says
   // that the standard library string has "undefined behaviour", so we can too.
@@ -178,15 +178,15 @@ const bool kl_string::operator >(const kl_string &s) const
   return (kl_strcmp(this->string_contents, this->buffer_length, s.string_contents, s.buffer_length) == 1);
 }
 
-const unsigned long kl_string::find(const kl_string &substr) const
+const uint64_t kl_string::find(const kl_string &substr) const
 {
-  unsigned long substr_len = substr.length();
+  uint64_t substr_len = substr.length();
   if (substr_len > this->length())
   {
     return kl_string::npos;
   }
 
-  for (unsigned long p = 0; p < (this->length() - substr.length()); p++)
+  for (uint64_t p = 0; p < (this->length() - substr.length()); p++)
   {
     if (kl_strcmp(&this->string_contents[p], substr_len, substr.string_contents, substr_len) == 0)
     {
@@ -197,16 +197,16 @@ const unsigned long kl_string::find(const kl_string &substr) const
   return kl_string::npos;
 }
 
-const unsigned long kl_string::length() const
+const uint64_t kl_string::length() const
 {
   return kl_strlen(this->string_contents, this->buffer_length);
 }
 
-kl_string kl_string::substr(unsigned long start, unsigned long len) const
+kl_string kl_string::substr(uint64_t start, uint64_t len) const
 {
   kl_string ret_string;
-  unsigned long true_end;
-  unsigned long our_len = this->length();
+  uint64_t true_end;
+  uint64_t our_len = this->length();
 
   if ((start > our_len) || (len == 0))
   {
@@ -239,7 +239,7 @@ void kl_string::reset_string()
   }
 }
 
-void kl_string::resize_buffer(unsigned long new_size)
+void kl_string::resize_buffer(uint64_t new_size)
 {
   char *new_buf = new char[new_size];
 

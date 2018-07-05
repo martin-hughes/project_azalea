@@ -9,11 +9,11 @@ class IBlockDevice : public IDevice
 public:
   virtual ~IBlockDevice() = default;
 
-  virtual unsigned long num_blocks() = 0;
-  virtual unsigned long block_size() = 0;
+  virtual uint64_t num_blocks() = 0;
+  virtual uint64_t block_size() = 0;
 
-  virtual ERR_CODE read_blocks(unsigned long start_block, unsigned long num_blocks, void *buffer, unsigned long buffer_length) = 0;
-  virtual ERR_CODE write_blocks(unsigned long start_block, unsigned long num_blocks, void *buffer, unsigned long buffer_length) = 0;
+  virtual ERR_CODE read_blocks(uint64_t start_block, uint64_t num_blocks, void *buffer, uint64_t buffer_length) = 0;
+  virtual ERR_CODE write_blocks(uint64_t start_block, uint64_t num_blocks, void *buffer, uint64_t buffer_length) = 0;
 };
 
 #endif

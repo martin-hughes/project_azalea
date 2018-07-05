@@ -28,11 +28,11 @@ public:
     pipe_read_leaf(pipe_branch *parent);
     virtual ~pipe_read_leaf();
 
-    virtual ERR_CODE read_bytes(unsigned long start,
-                                unsigned long length,
-                                unsigned char *buffer,
-                                unsigned long buffer_length,
-                                unsigned long &bytes_read);
+    virtual ERR_CODE read_bytes(uint64_t start,
+                                uint64_t length,
+                                uint8_t *buffer,
+                                uint64_t buffer_length,
+                                uint64_t &bytes_read);
 
   protected:
     pipe_branch *_parent;
@@ -44,20 +44,20 @@ public:
     pipe_write_leaf(pipe_branch *parent);
     virtual ~pipe_write_leaf();
 
-    virtual ERR_CODE write_bytes(unsigned long start,
-                                 unsigned long length,
-                                 const unsigned char *buffer,
-                                 unsigned long buffer_length,
-                                 unsigned long &bytes_written);
+    virtual ERR_CODE write_bytes(uint64_t start,
+                                 uint64_t length,
+                                 const uint8_t *buffer,
+                                 uint64_t buffer_length,
+                                 uint64_t &bytes_written);
 
   protected:
     pipe_branch *_parent;
   };
 
 protected:
-  std::unique_ptr<unsigned char[]> _buffer;
-  unsigned char *_read_ptr;
-  unsigned char *_write_ptr;
+  std::unique_ptr<uint8_t[]> _buffer;
+  uint8_t *_read_ptr;
+  uint8_t *_write_ptr;
 
   kernel_spinlock _pipe_lock;
 };

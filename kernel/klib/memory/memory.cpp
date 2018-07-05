@@ -41,14 +41,12 @@
 #include "klib/synch/kernel_locks.h"
 #include "klib/synch/kernel_mutexes.h"
 
-static_assert(sizeof(unsigned long) == 8, "Unsigned long must be 8 bytes");
-
 typedef klib_list<void *> PTR_LIST;
 typedef klib_list_item<void *> PTR_LIST_ITEM;
 struct slab_header
 {
   PTR_LIST_ITEM list_entry;
-  unsigned long allocation_count;
+  uint64_t allocation_count;
 };
 
 // The assertion below ensures that the size of slab_header hasn't changed. If it does, the number of available chunks
@@ -66,14 +64,13 @@ static_assert(sizeof(slab_header) == 40,
 //------------------------------------------------------------------------------
 namespace
 {
-  const unsigned int CHUNK_SIZES[] = {8, 64, 256, 1024, 262144};
-  const unsigned int NUM_CHUNKS_PER_SLAB[] = {258041, 32703, 8187, 2047, 7};
-  const unsigned int FIRST_OFFSET_IN_SLAB[] = {32824, 4160, 1280, 1024, 262144};
-  const unsigned int NUM_SLAB_LISTS =
-      (sizeof(CHUNK_SIZES) / sizeof(CHUNK_SIZES[0]));
-  const unsigned int MAX_CHUNK_SIZE = CHUNK_SIZES[NUM_SLAB_LISTS - 1];
-  const unsigned int FIRST_BITMAP_ENTRY_OFFSET = 40;
-  const unsigned int MAX_FREE_SLABS = 5;
+  const uint32_t CHUNK_SIZES[] = {8, 64, 256, 1024, 262144};
+  const uint32_t NUM_CHUNKS_PER_SLAB[] = {258041, 32703, 8187, 2047, 7};
+  const uint32_t FIRST_OFFSET_IN_SLAB[] = {32824, 4160, 1280, 1024, 262144};
+  const uint32_t NUM_SLAB_LISTS = (sizeof(CHUNK_SIZES) / sizeof(CHUNK_SIZES[0]));
+  const uint32_t MAX_CHUNK_SIZE = CHUNK_SIZES[NUM_SLAB_LISTS - 1];
+  const uint32_t FIRST_BITMAP_ENTRY_OFFSET = 40;
+  const uint32_t MAX_FREE_SLABS = 5;
 
   // This is currently redundant since the addition of the mutex system, below. It remains in place to (hopefully!)
   // simplify a removal of the mutex in a later update of the allocator.
@@ -98,10 +95,10 @@ static_assert(FIRST_BITMAP_ENTRY_OFFSET == sizeof(slab_header),
 // Helper function declarations.
 //------------------------------------------------------------------------------
 void init_allocator_system();
-void *allocate_new_slab(unsigned int chunk_size_idx);
-void *allocate_chunk_from_slab(void *slab, unsigned int chunk_size_idx);
-bool slab_is_full(void* slab, unsigned int chunk_size_idx);
-bool slab_is_empty(void* slab, unsigned int chunk_size_idx);
+void *allocate_new_slab(uint32_t chunk_size_idx);
+void *allocate_chunk_from_slab(void *slab, uint32_t chunk_size_idx);
+bool slab_is_full(void* slab, uint32_t chunk_size_idx);
+bool slab_is_empty(void* slab, uint32_t chunk_size_idx);
 
 //------------------------------------------------------------------------------
 // Main malloc & free functions.
@@ -117,15 +114,15 @@ bool slab_is_empty(void* slab, unsigned int chunk_size_idx);
 /// @param mem_size The number of bytes required.
 ///
 /// @return A pointer to the newly allocated memory.
-void *kmalloc(unsigned int mem_size)
+void *kmalloc(uint64_t mem_size)
 {
   KL_TRC_ENTRY;
 
   void *return_addr;
   void *slab_ptr;
   slab_header *slab_header_ptr;
-  int required_pages;
-  unsigned long proportion_used;
+  uint32_t required_pages;
+  uint64_t proportion_used;
   SYNC_ACQ_RESULT res;
   bool release_mutex_at_end = true;
 
@@ -147,8 +144,8 @@ void *kmalloc(unsigned int mem_size)
   }
 
   // Figure out the index of all the chunk lists to use.
-  unsigned int slab_idx = NUM_SLAB_LISTS;
-  for(unsigned int i = 0; i < NUM_SLAB_LISTS; i++)
+  uint32_t slab_idx = NUM_SLAB_LISTS;
+  for(uint32_t i = 0; i < NUM_SLAB_LISTS; i++)
   {
     if (mem_size <= CHUNK_SIZES[i])
     {
@@ -166,7 +163,7 @@ void *kmalloc(unsigned int mem_size)
       KL_TRC_TRACE(TRC_LVL::FLOW, "Releasing mutex from kmalloc 1\n");
       klib_synch_mutex_release(allocator_gen_lock, false);
     }
-    KL_TRC_DATA("Big allocation. Pages needed", required_pages);
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Big allocation. Pages needed", required_pages, "\n");
     KL_TRC_EXIT;
     return mem_allocate_pages(required_pages);
   }
@@ -261,20 +258,20 @@ void kfree(void *mem_block)
 {
   KL_TRC_ENTRY;
 
-  unsigned long mem_ptr_num = reinterpret_cast<unsigned long>(mem_block);
+  uint64_t mem_ptr_num = reinterpret_cast<uint64_t>(mem_block);
   slab_header *slab_ptr;
   klib_list<void *> *list_ptr;
-  unsigned long list_ptr_base_num_a;
-  unsigned long list_ptr_base_num_b;
-  unsigned int chunk_size_idx;
-  const unsigned long list_array_size = sizeof(free_slabs_list);
+  uint64_t list_ptr_base_num_a;
+  uint64_t list_ptr_base_num_b;
+  uint32_t chunk_size_idx;
+  const uint64_t list_array_size = sizeof(free_slabs_list);
   bool slab_was_full = false;
-  unsigned int chunk_offset;
-  unsigned long *bitmap_ptr;
-  unsigned int bitmap_ulong;
-  unsigned int bitmap_bit;
-  unsigned long bitmap_mask;
-  unsigned long free_slabs;
+  uint32_t chunk_offset;
+  uint64_t *bitmap_ptr;
+  uint32_t bitmap_ulong;
+  uint32_t bitmap_bit;
+  uint64_t bitmap_mask;
+  uint64_t free_slabs;
   bool release_mutex_at_end = true;
   SYNC_ACQ_RESULT res;
 
@@ -304,9 +301,9 @@ void kfree(void *mem_block)
     list_ptr = slab_ptr->list_entry.list_obj;
 
     // Is this in one of the partially-full slab lists?
-    mem_ptr_num = (unsigned long)list_ptr;
-    list_ptr_base_num_a = (unsigned long)(&partial_slabs_list[0]);
-    list_ptr_base_num_b = (unsigned long)(&full_slabs_list[0]);
+    mem_ptr_num = (uint64_t)list_ptr;
+    list_ptr_base_num_a = (uint64_t)(&partial_slabs_list[0]);
+    list_ptr_base_num_b = (uint64_t)(&full_slabs_list[0]);
     if ((mem_ptr_num >= list_ptr_base_num_a) &&
         (mem_ptr_num < (list_ptr_base_num_a + list_array_size)))
     {
@@ -330,7 +327,7 @@ void kfree(void *mem_block)
 
     // Calculate how many chunks after the first chunk we are.
     ASSERT(chunk_size_idx < NUM_SLAB_LISTS);
-    chunk_offset = (unsigned long)mem_block - (unsigned long)slab_ptr;
+    chunk_offset = (uint64_t)mem_block - (uint64_t)slab_ptr;
     chunk_offset = chunk_offset - FIRST_OFFSET_IN_SLAB[chunk_size_idx];
     chunk_offset = chunk_offset / CHUNK_SIZES[chunk_size_idx];
     ASSERT(chunk_offset < NUM_CHUNKS_PER_SLAB[chunk_size_idx]);
@@ -340,9 +337,8 @@ void kfree(void *mem_block)
     bitmap_bit = 63 - (chunk_offset % 64);
 
     // Clear that bit from the allocation bit mask.
-    bitmap_mask = (unsigned long)1 << bitmap_bit;
-    bitmap_ptr = (unsigned long *)(((unsigned long)slab_ptr) +
-        FIRST_BITMAP_ENTRY_OFFSET);
+    bitmap_mask = (uint64_t)1 << bitmap_bit;
+    bitmap_ptr = (uint64_t *)(((uint64_t)slab_ptr) + FIRST_BITMAP_ENTRY_OFFSET);
     bitmap_ptr += bitmap_ulong;
     ASSERT((*bitmap_ptr & bitmap_mask) != 0);
     *bitmap_ptr = *bitmap_ptr ^ bitmap_mask;
@@ -417,7 +413,7 @@ void init_allocator_system()
   // kmalloc a new list item, which will lead to an infinite loop. Therefore, create one empty slab of each size and
   // add it to the empty lists now. This means that the first call of kmalloc is guaranteed to be able to find a slab
   // to create list entries in.
-  for(int i = 0; i < NUM_SLAB_LISTS; i++)
+  for(uint32_t i = 0; i < NUM_SLAB_LISTS; i++)
   {
     klib_list_initialize(&free_slabs_list[i]);
     klib_list_initialize(&partial_slabs_list[i]);
@@ -445,18 +441,18 @@ void init_allocator_system()
 /// @param chunk_size_idx The index into CHUNK_SIZES that specifies how big the chunks used in this slab are.
 ///
 /// @return The address of a new slab
-void *allocate_new_slab(unsigned int chunk_size_idx)
+void *allocate_new_slab(uint32_t chunk_size_idx)
 {
   KL_TRC_ENTRY;
 
-  unsigned int bitmap_bytes;
+  uint32_t bitmap_bytes;
   char *slab_buffer;
 
   // Allocate a new slab and fill in the header.
   void *new_slab = mem_allocate_pages(1);
   slab_header* new_slab_header = (slab_header *)new_slab;
-  KL_TRC_TRACE(TRC_LVL::IMPORTANT, "Got address: ", (unsigned long)new_slab_header, "\n");
-  KL_TRC_TRACE(TRC_LVL::IMPORTANT, "Got address 2: ", (unsigned long)(&new_slab_header->list_entry), "\n");
+  KL_TRC_TRACE(TRC_LVL::IMPORTANT, "Got address: ", new_slab_header, "\n");
+  KL_TRC_TRACE(TRC_LVL::IMPORTANT, "Got address 2: ", (&new_slab_header->list_entry), "\n");
   klib_list_item_initialize(&new_slab_header->list_entry);
   KL_TRC_TRACE(TRC_LVL::IMPORTANT, "List initialized.\n");
   new_slab_header->list_entry.item = new_slab;
@@ -489,18 +485,18 @@ void *allocate_new_slab(unsigned int chunk_size_idx)
 /// @param chunk_size_idx The index into CHUNK_SIZES that specifies how big the chunk to allocate is.
 ///
 /// @return The address of the newly allocated chunk.
-void *allocate_chunk_from_slab(void *slab, unsigned int chunk_size_idx)
+void *allocate_chunk_from_slab(void *slab, uint32_t chunk_size_idx)
 {
   KL_TRC_ENTRY;
 
-  unsigned long test_mask = 0xFFFFFFFFFFFFFFFF;
-  unsigned long moving_bit_mask;
-  unsigned long *test_location;
-  unsigned long test_result;
+  uint64_t test_mask = 0xFFFFFFFFFFFFFFFF;
+  uint64_t moving_bit_mask;
+  uint64_t *test_location;
+  uint64_t test_result;
   char *slab_as_bytes;
   slab_header *slab_ptr;
-  unsigned int first_free_idx = 0;
-  unsigned long chunk_offset;
+  uint32_t first_free_idx = 0;
+  uint64_t chunk_offset;
 
 
   ASSERT(slab != nullptr);
@@ -510,7 +506,7 @@ void *allocate_chunk_from_slab(void *slab, unsigned int chunk_size_idx)
   slab_ptr = (slab_header *)slab;
   slab_as_bytes = (char *)slab;
   slab_as_bytes += sizeof(slab_header);
-  test_location = (unsigned long *)slab_as_bytes;
+  test_location = (uint64_t *)slab_as_bytes;
 
   // Continue looping until a free spot is found in this slab. If we go past the
   // maximum possible number that means the caller has passed a full slab, which
@@ -585,12 +581,12 @@ void *allocate_chunk_from_slab(void *slab, unsigned int chunk_size_idx)
 /// @param chunk_size_idx The index into CHUNK_SIZES representing the size of chunks within this slab
 ///
 /// @return Whether the slab is full or not.
-bool slab_is_full(void* slab, unsigned int chunk_size_idx)
+bool slab_is_full(void* slab, uint32_t chunk_size_idx)
 {
   KL_TRC_ENTRY;
 
   slab_header *slab_header_ptr = (slab_header *)slab;
-  unsigned int max_chunks;
+  uint32_t max_chunks;
 
   ASSERT(slab != nullptr);
   ASSERT(chunk_size_idx < NUM_SLAB_LISTS);
@@ -611,7 +607,7 @@ bool slab_is_full(void* slab, unsigned int chunk_size_idx)
 /// @param chunk_size_idx The index into CHUNK_SIZES representing the size of chunks within this slab
 ///
 /// @return Whether the slab is empty or not.
-bool slab_is_empty(void* slab, unsigned int chunk_size_idx)
+bool slab_is_empty(void* slab, uint32_t chunk_size_idx)
 {
   KL_TRC_ENTRY;
 
@@ -641,7 +637,7 @@ void test_only_reset_allocator()
 
   // Spin through each possible list in turn, removing the slabs from the list
   // and freeing them.
-  for (unsigned int i = 0; i < NUM_SLAB_LISTS; i++)
+  for (uint32_t i = 0; i < NUM_SLAB_LISTS; i++)
   {
     while(!klib_list_is_empty(&free_slabs_list[i]))
     {

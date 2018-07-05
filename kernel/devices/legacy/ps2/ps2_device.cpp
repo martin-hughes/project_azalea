@@ -17,7 +17,7 @@
 
 extern const KEYS ps2_set_2_norm_scancode_map[256];
 extern const KEYS ps2_set_2_spec_scancode_map[256];
-extern const unsigned int ps2_set_2_props_tab_len;
+extern const uint32_t ps2_set_2_props_tab_len;
 extern key_props ps2_set_2_key_props[];
 
 gen_ps2_device::gen_ps2_device(gen_ps2_controller_device *parent, bool second_channel) :
@@ -47,12 +47,12 @@ DEV_STATUS gen_ps2_device::get_device_status()
   return _status;
 }
 
-bool gen_ps2_device::handle_irq_fast(unsigned char irq_number)
+bool gen_ps2_device::handle_irq_fast(uint8_t irq_number)
 {
   return false;
 }
 
-void gen_ps2_device::handle_irq_slow(unsigned char irq_number)
+void gen_ps2_device::handle_irq_slow(uint8_t irq_number)
 {
 
 }
@@ -65,7 +65,7 @@ void gen_ps2_device::enable_irq()
 {
   KL_TRC_ENTRY;
 
-  unsigned char irq_num;
+  uint8_t irq_num;
 
   ASSERT(!this->_irq_enabled);
 
@@ -100,7 +100,7 @@ void gen_ps2_device::disable_irq()
 {
   KL_TRC_ENTRY;
 
-  unsigned char irq_num;
+  uint8_t irq_num;
 
   ASSERT(this->_irq_enabled);
 
@@ -157,16 +157,16 @@ ps2_keyboard_device::ps2_keyboard_device(gen_ps2_controller_device *parent, bool
   KL_TRC_EXIT;
 }
 
-bool ps2_keyboard_device::handle_irq_fast(unsigned char irq_num)
+bool ps2_keyboard_device::handle_irq_fast(uint8_t irq_num)
 {
   // Simply do all of our handling in the slow path part of the handler.
   return true;
 }
 
-void ps2_keyboard_device::handle_irq_slow(unsigned char irq_num)
+void ps2_keyboard_device::handle_irq_slow(uint8_t irq_num)
 {
   KL_TRC_ENTRY;
-  unsigned char scancode;
+  uint8_t scancode;
   KEYS translated_code;
   task_process *proc = this->recipient;
   klib_message_hdr hdr;
@@ -180,7 +180,7 @@ void ps2_keyboard_device::handle_irq_slow(unsigned char irq_num)
 
   while ((proc_read_port(0x64, 8) & 0x1) == 1)
   {
-    scancode = static_cast<unsigned char>(proc_read_port(0x60, 8));
+    scancode = static_cast<uint8_t>(proc_read_port(0x60, 8));
     KL_TRC_TRACE(TRC_LVL::FLOW, "Keyboard data: ", scancode, "\n");
 
     if (this->_pause_seq_chars != 0)

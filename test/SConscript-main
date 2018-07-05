@@ -11,15 +11,13 @@ files = [ "dummy_libs/processor/processor.dummy.cpp",
           "devices/block/proxy/proxy_tests.cpp",
           "devices/block/ramdisk/ramdisk_tests.cpp",
 
-          "klib/data_structures/ds_tests.cpp",
           "klib/data_structures/ds_1.cpp",
           "klib/data_structures/ds_2.cpp",
           "klib/data_structures/ds_3.cpp",
           "klib/data_structures/ds_4.cpp",
 
-          "klib/math/maths_tests.cpp",
+          "klib/math/maths_1.cpp",
 
-          "klib/memory/memory_tests.cpp",
           "klib/memory/memory_1.cpp",
           "klib/memory/memory_2.cpp",
 
@@ -42,7 +40,6 @@ files = [ "dummy_libs/processor/processor.dummy.cpp",
           "system_tree/system_tree_3_pipes.cpp",
           "system_tree/system_tree_4_fat.cpp",
 
-          "tracing/tracing_tests.cpp",
           "tracing/tracing_1.cpp",
         ]
 

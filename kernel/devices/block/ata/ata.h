@@ -1,6 +1,8 @@
 #ifndef DEVICE_ATA_HEADER
 #define DEVICE_ATA_HEADER
 
+#include <stdint.h>
+
 #include "devices/block/block_interface.h"
 #include "user_interfaces/error_codes.h"
 #include "klib/data_structures/string.h"
@@ -14,17 +16,17 @@ public:
   virtual const kl_string device_name();
   virtual DEV_STATUS get_device_status();
 
-  virtual unsigned long num_blocks();
-  virtual unsigned long block_size();
+  virtual uint64_t num_blocks();
+  virtual uint64_t block_size();
 
-  virtual ERR_CODE read_blocks(unsigned long start_block,
-                               unsigned long num_blocks,
+  virtual ERR_CODE read_blocks(uint64_t start_block,
+                               uint64_t num_blocks,
                                void *buffer,
-                               unsigned long buffer_length);
-  virtual ERR_CODE write_blocks(unsigned long start_block,
-                                unsigned long num_blocks,
+                               uint64_t buffer_length);
+  virtual ERR_CODE write_blocks(uint64_t start_block,
+                                uint64_t num_blocks,
                                 void *buffer,
-                                unsigned long buffer_length);
+                                uint64_t buffer_length);
 
 protected:
   enum ATA_PORTS
@@ -47,20 +49,20 @@ protected:
   };
 
   const kl_string _name;
-  const unsigned short _base_port;
+  const uint16_t _base_port;
   const bool _master;
 
   DEV_STATUS _status;
 
   bool supports_lba48;
-  unsigned long number_of_sectors;
+  uint64_t number_of_sectors;
 
-  void write_ata_cmd_port(ATA_PORTS port, unsigned char value);
-  unsigned char read_ata_cmd_port(ATA_PORTS port);
+  void write_ata_cmd_port(ATA_PORTS port, uint8_t value);
+  uint8_t read_ata_cmd_port(ATA_PORTS port);
 
   bool wait_and_poll();
 
-  void read_sector_to_buffer(unsigned char *buffer, unsigned long buffer_length);
+  void read_sector_to_buffer(unsigned char *buffer, uint64_t buffer_length);
 };
 
 #endif

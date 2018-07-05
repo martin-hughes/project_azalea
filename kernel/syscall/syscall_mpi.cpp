@@ -51,9 +51,9 @@ ERR_CODE syscall_register_for_mp()
 /// @param[in] message_ptr A buffer containing the message to be sent. Must be at least as long as message_len.
 ///
 /// @return A suitable error code.
-ERR_CODE syscall_send_message(unsigned long target_proc_id,
-                              unsigned long message_id,
-                              unsigned long message_len,
+ERR_CODE syscall_send_message(uint64_t target_proc_id,
+                              uint64_t message_id,
+                              uint64_t message_len,
                               const char *message_ptr)
 {
   KL_TRC_ENTRY;
@@ -111,9 +111,9 @@ ERR_CODE syscall_send_message(unsigned long target_proc_id,
 /// @param[out] message_len The length of the message buffer required.
 ///
 /// @return A suitable error code.
-ERR_CODE syscall_receive_message_details(unsigned long *sending_proc_id,
-                                         unsigned long *message_id,
-                                         unsigned long *message_len)
+ERR_CODE syscall_receive_message_details(uint64_t *sending_proc_id,
+                                         uint64_t *message_id,
+                                         uint64_t *message_len)
 {
   KL_TRC_ENTRY;
 
@@ -147,7 +147,7 @@ ERR_CODE syscall_receive_message_details(unsigned long *sending_proc_id,
     if (res == ERR_CODE::NO_ERROR)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved message\n");
-      *sending_proc_id = reinterpret_cast<unsigned long>(msg.originating_process);
+      *sending_proc_id = reinterpret_cast<uint64_t>(msg.originating_process);
       *message_id = msg.msg_id;
       *message_len = msg.msg_length;
     }
@@ -168,14 +168,14 @@ ERR_CODE syscall_receive_message_details(unsigned long *sending_proc_id,
 ///                    silently truncated.
 ///
 /// @return A suitable error code.
-ERR_CODE syscall_receive_message_body(char *message_buffer, unsigned long buffer_size)
+ERR_CODE syscall_receive_message_body(char *message_buffer, uint64_t buffer_size)
 {
   KL_TRC_ENTRY;
 
   ERR_CODE res;
   klib_message_hdr msg;
   task_thread *this_thread = task_get_cur_thread();
-  unsigned long restricting_size;
+  uint64_t restricting_size;
 
   if (message_buffer == nullptr || !SYSCALL_IS_UM_ADDRESS(message_buffer))
   {

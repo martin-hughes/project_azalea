@@ -1,9 +1,11 @@
 #ifndef _KLIB_MEMORY_H
 #define _KLIB_MEMORY_H
 
+#include <stdint.h>
+
 #include "mem/mem.h"
 
-void *kmalloc(unsigned int mem_size);
+void *kmalloc(uint64_t mem_size);
 void kfree(void *mem_block);
 
 // Only for use by test code. See the associated comment in memory.cpp for

@@ -6,12 +6,12 @@
 // Ensure that these do not accidentally get included in the test scripts, as carnage occurs.
 #ifndef AZALEA_TEST_CODE
 
-void *operator new(unsigned long size)
+void *operator new(uint64_t size)
 {
   return kmalloc(size);
 }
 
-void *operator new[](unsigned long size)
+void *operator new[](uint64_t size)
 {
   return kmalloc(size);
 }
@@ -21,7 +21,7 @@ void operator delete(void *unlucky) noexcept
   kfree(unlucky);
 }
 
-void operator delete (void *unlucky, unsigned long)
+void operator delete (void *unlucky, uint64_t)
 {
   kfree(unlucky);
 }

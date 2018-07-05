@@ -1,12 +1,12 @@
 #include "panic.h"
 #include "processor/processor.h"
 
-void panic_print(const char *message, unsigned int line);
+void panic_print(const char *message, uint16_t line);
 void panic_clear_screen();
 
 char *vidmem = (char *)0xFFFFFFFF000b8000;
-const unsigned int screen_lines = 25;
-const unsigned int screen_cols = 80;
+const uint16_t screen_lines = 25;
+const uint16_t screen_cols = 80;
 
 // As expected, print a kernel panic message on to the screen, and stop running.
 void panic(const char *message)
@@ -33,8 +33,8 @@ void panic(const char *message)
 // Remove all other characters from the screen, for clarity.
 void panic_clear_screen()
 {
-	const unsigned int screen_chars = screen_cols * screen_lines;
-	for(unsigned int i = 0; i < screen_chars; i++)
+	const uint16_t screen_chars = screen_cols * screen_lines;
+	for(uint16_t i = 0; i < screen_chars; i++)
 	{
 		vidmem[i * 2] = ' ';
 		vidmem[(i * 2) + 1] = 0x10;
@@ -44,10 +44,10 @@ void panic_clear_screen()
 // Print a message, starting on a specific line. message must be less than 80
 // characters, and line must be less than or equal to 23. (The first line is
 // line 0)
-void panic_print(const char *message, unsigned int line)
+void panic_print(const char *message, uint16_t line)
 {
-	unsigned int i= 0;
-	unsigned int count = 0;
+	uint16_t i= 0;
+	uint16_t count = 0;
 
 	i = (line * screen_cols * 2);
 

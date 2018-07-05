@@ -3,6 +3,8 @@
 
 #define ENABLE_TRACING
 
+#include <stdint.h>
+
 #include "klib/klib.h"
 #include "processor/processor.h"
 #include "processor/timing/timing.h"
@@ -54,10 +56,15 @@ gen_ps2_controller_device *ps2_controller;
 
 volatile bool wait_for_term;
 
+// Assumptions used throughout the kernel
+static_assert(sizeof(unsigned int) == 4, "Unsigned long assumed to be length 4.");
+static_assert(sizeof(uint64_t) == sizeof(uintptr_t), "Code throughout assumes pointers are 64-bits long.");
+static_assert(sizeof(unsigned long) == 8, "Unsigned long must be 8 bytes");
+
 // Main kernel entry point. This is called by an assembly-language loader that should do as little as possible. On x64,
 // this involves setting up a simple page mapping, since the kernel is linked higher-half but loaded at 1MB, then
 // kicking the task manager in to life.
-int main(unsigned int magic_number, multiboot_hdr *mb_header)
+int main(uint32_t magic_number, multiboot_hdr *mb_header)
 {
   // The kernel needs the information table provided by the multiboot loader in order to function properly.
   if (magic_number != MULTIBOOT_CONSTANT)
@@ -69,7 +76,7 @@ int main(unsigned int magic_number, multiboot_hdr *mb_header)
   ASSERT((mb_header->flags && (1 << 6)) != 0);
 
   // Gather details about the memory map in advance of giving them to the memory manager.
-  unsigned long e820_map_addr = mb_header->mmap_addr;
+  uint64_t e820_map_addr = mb_header->mmap_addr;
   e820_pointer e820_ptr;
   e820_ptr.table_ptr = reinterpret_cast<e820_record *>(e820_map_addr);
   e820_ptr.table_length = mb_header->mmap_length;
@@ -108,7 +115,7 @@ void kernel_start()
 {
   KL_TRC_TRACE(TRC_LVL::FLOW,
                "Entered kernel start - thread: ",
-               reinterpret_cast<unsigned long>(task_get_cur_thread()),
+               reinterpret_cast<uint64_t>(task_get_cur_thread()),
                "\n");
 
   ACPI_STATUS status;
@@ -182,17 +189,17 @@ void setup_initial_fs()
   }
 
   // Confirm that we've loaded a valid MBR
-  KL_TRC_TRACE(TRC_LVL::EXTRA, (unsigned long)sector_buffer[510], " ", (unsigned long)sector_buffer[511], "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, (uint64_t)sector_buffer[510], " ", (uint64_t)sector_buffer[511], "\n");
   ASSERT((sector_buffer[510] == 0x55) && (sector_buffer[511] == 0xAA));
 
-  unsigned int start_sector;
-  unsigned int sector_count;
+  uint32_t start_sector;
+  uint32_t sector_count;
 
   // Parse the MBR to find the first partition.
   kl_memcpy(sector_buffer.get() + 454, &start_sector, 4);
   kl_memcpy(sector_buffer.get() + 458, &sector_count, 4);
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "First partition: ", (unsigned long)start_sector, " -> +", (unsigned long)sector_count, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "First partition: ", (uint64_t)start_sector, " -> +", (uint64_t)sector_count, "\n");
   block_proxy_device *pd = new block_proxy_device(first_hdd, start_sector, sector_count);
 
   // Initialise the filesystem based on that information
@@ -208,16 +215,16 @@ void simple_terminal()
 
   ISystemTreeLeaf *leaf;
   IReadable *reader;
-  const unsigned long buffer_size = 10;
+  const uint64_t buffer_size = 10;
   unsigned char buffer[buffer_size];
-  unsigned long bytes_read;
+  uint64_t bytes_read;
   unsigned char *display_ptr;
 
-  const unsigned int width = 80;
-  const unsigned int height = 25;
-  const unsigned int bytes_per_char = 2;
+  const uint16_t width = 80;
+  const uint16_t height = 25;
+  const uint16_t bytes_per_char = 2;
 
-  unsigned int cur_offset = 0;
+  uint16_t cur_offset = 0;
 
   // Set up the input pipe
   ISystemTreeBranch *pipes_br = new system_tree_simple_branch();

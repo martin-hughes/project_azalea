@@ -6,7 +6,7 @@
 #ifndef AZALEA_TEST_CODE
 #include "external/vsnprintf/vsnprintf.h"
 
-int klib_snprintf(char *out_str, int max_out_len, const char *fmt, ...)
+uint32_t klib_snprintf(char *out_str, uint64_t max_out_len, const char *fmt, ...)
 {
   KL_TRC_ENTRY;
   int retval;
@@ -23,7 +23,7 @@ int klib_snprintf(char *out_str, int max_out_len, const char *fmt, ...)
   return retval;
 }
 
-int klib_vsnprintf(char *out_str, int max_out_len, const char *fmt, va_list args)
+uint32_t klib_vsnprintf(char *out_str, uint64_t max_out_len, const char *fmt, va_list args)
 {
   int retval;
   KL_TRC_ENTRY;

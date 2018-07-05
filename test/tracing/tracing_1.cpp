@@ -1,8 +1,9 @@
 #define ENABLE_TRACING
 
-#include "test/tracing/tracing_tests.h"
 #include "test/test_core/test.h"
 #include <iostream>
+#include "gtest/gtest.h"
+
 
 #include "klib/tracing/tracing.h"
 #include "klib/data_structures/string.h"
@@ -10,7 +11,7 @@
 using namespace std;
 
 // Some simple tests to ensure that all types are traced in a reasonable way.
-void tracing_test_1()
+TEST(TracingTest, SimpleTracing)
 {
   char a = 1;
   short b = 2;

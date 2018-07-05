@@ -23,7 +23,7 @@ ERR_CODE system_tree_simple_branch::get_child_type(const kl_string &name, CHILD_
   KL_TRC_ENTRY;
 
   ERR_CODE ret_code = ERR_CODE::NO_ERROR;
-  unsigned long split_pos;
+  uint64_t split_pos;
   kl_string direct_child;
   kl_string lower_child;
   ISystemTreeBranch *child_branch;
@@ -71,8 +71,8 @@ ERR_CODE system_tree_simple_branch::get_child_type(const kl_string &name, CHILD_
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Name searched for: ", name, "\n");
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Type: ", static_cast<unsigned int>(type), "\n");
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Error code: ", static_cast<unsigned int>(ret_code), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Type: ", static_cast<uint32_t>(type), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Error code: ", static_cast<uint32_t>(ret_code), "\n");
   KL_TRC_EXIT;
 
   return ret_code;
@@ -175,7 +175,7 @@ ERR_CODE system_tree_simple_branch::add_branch(const kl_string &name, ISystemTre
 
   CHILD_TYPE ct;
   ERR_CODE rt = ERR_CODE::NO_ERROR;
-  unsigned long split_pos;
+  uint64_t split_pos;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Adding branch with name ", name, " and address ", branch, "\n");
 
@@ -206,7 +206,7 @@ ERR_CODE system_tree_simple_branch::add_branch(const kl_string &name, ISystemTre
     this->child_branches.insert(name, branch);
   }
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", static_cast<unsigned int>(rt), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", static_cast<uint32_t>(rt), "\n");
 
   KL_TRC_EXIT;
 
@@ -219,7 +219,7 @@ ERR_CODE system_tree_simple_branch::add_leaf (const kl_string &name, ISystemTree
 
   CHILD_TYPE ct;
   ERR_CODE rt = ERR_CODE::NO_ERROR;
-  unsigned long split_pos;
+  uint64_t split_pos;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Adding leaf with name ", name, " and address ", leaf, "\n");
 
@@ -250,7 +250,7 @@ ERR_CODE system_tree_simple_branch::add_leaf (const kl_string &name, ISystemTree
     this->child_leaves.insert(name, leaf);
   }
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", static_cast<unsigned int>(rt), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", static_cast<uint32_t>(rt), "\n");
 
   KL_TRC_EXIT;
 
@@ -266,8 +266,8 @@ ERR_CODE system_tree_simple_branch::rename_child(const kl_string &old_name, cons
   ERR_CODE intermediate;
   ISystemTreeBranch *b;
   ISystemTreeLeaf *l;
-  unsigned long old_dir_split;
-  unsigned long new_dir_split;
+  uint64_t old_dir_split;
+  uint64_t new_dir_split;
   kl_string child_branch;
   kl_string grandchild_old_name;
   kl_string grandchild_new_name;
@@ -322,7 +322,7 @@ ERR_CODE system_tree_simple_branch::rename_child(const kl_string &old_name, cons
     intermediate = this->get_child_type(old_name, ct);
     if (intermediate != ERR_CODE::NO_ERROR)
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Error ", static_cast<unsigned int>(intermediate),
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Error ", static_cast<uint32_t>(intermediate),
                    " occurred while looking for child\n");
       rt = intermediate;
     }
@@ -348,7 +348,7 @@ ERR_CODE system_tree_simple_branch::rename_child(const kl_string &old_name, cons
     }
   }
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", static_cast<unsigned int>(rt), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", static_cast<uint32_t>(rt), "\n");
   KL_TRC_EXIT;
 
   return rt;
@@ -360,7 +360,7 @@ ERR_CODE system_tree_simple_branch::delete_child(const kl_string &name)
 
   CHILD_TYPE ct;
   ERR_CODE rt = ERR_CODE::NO_ERROR;
-  unsigned long split_pos;
+  uint64_t split_pos;
   kl_string our_branch;
   kl_string grandchild;
   ISystemTreeBranch *branch;
@@ -404,7 +404,7 @@ ERR_CODE system_tree_simple_branch::delete_child(const kl_string &name)
     }
   }
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", static_cast<unsigned int>(rt), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", static_cast<uint32_t>(rt), "\n");
   KL_TRC_EXIT;
 
   return rt;

@@ -24,7 +24,7 @@ const char *sample_image = "/tmp/fat_disk_image.vdi";
 const char *sample_image = "test/assets/fat_disk_image.vdi";
 #endif
 
-const unsigned int block_size = 512;
+const uint32_t block_size = 512;
 
 class FatFsTest : public ::testing::Test
 {
@@ -41,10 +41,10 @@ protected:
 
     this->backing_storage = unique_ptr<virtual_disk_dummy_device>
                               (new virtual_disk_dummy_device(sample_image, block_size));
-    std::unique_ptr<unsigned char[]> sector_buffer(new unsigned char[512]);
-    unsigned int start_sector;
-    unsigned int sector_count;
-    unsigned int write_blocks;
+    std::unique_ptr<uint8_t[]> sector_buffer(new uint8_t[512]);
+    uint32_t start_sector;
+    uint32_t sector_count;
+    uint32_t write_blocks;
 
     memset(sector_buffer.get(), 0, 512);
     EXPECT_EQ(ERR_CODE::NO_ERROR, backing_storage->read_blocks(0, 1, sector_buffer.get(), 512)) << "Virt. disk failed";
@@ -78,11 +78,11 @@ TEST_F(FatFsTest, FatReading)
   IBasicFile *input_file;
   const kl_string filename = "TESTREAD.TXT";
   const char *expected_text = "This is a test.";
-  const unsigned int expected_file_size = strlen(expected_text);
-  unique_ptr<unsigned char[]> buffer = unique_ptr<unsigned char[]>(new unsigned char[expected_file_size + 1]);
+  const uint32_t expected_file_size = strlen(expected_text);
+  unique_ptr<uint8_t[]> buffer = unique_ptr<uint8_t[]>(new uint8_t[expected_file_size + 1]);
   buffer[expected_file_size] = 0;
-  unsigned long bytes_read;
-  unsigned long actual_size;
+  uint64_t bytes_read;
+  uint64_t actual_size;
 
   ASSERT_EQ(ERR_CODE::NO_ERROR, filesystem->get_leaf(filename, &basic_leaf)) << "Failed to open file on disk";
   input_file = dynamic_cast<IBasicFile *>(basic_leaf);

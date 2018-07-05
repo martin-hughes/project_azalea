@@ -1,11 +1,11 @@
 #include "math_hacks.h"
 
 // Round a number to the next-highest power of two.
-unsigned long round_to_power_two(unsigned long input)
+uint64_t round_to_power_two(uint64_t input)
 {
-  unsigned long pos;
-  unsigned long output;
-  unsigned long first_in = input;
+  uint64_t pos;
+  uint64_t output;
+  uint64_t first_in = input;
 
   if (input == 0)
   {
@@ -18,7 +18,7 @@ unsigned long round_to_power_two(unsigned long input)
   }
 
   pos = __builtin_clzl(input);
-  output = (unsigned long)1 << (63 - pos);
+  output = (uint64_t)1 << (63 - pos);
 
   if (first_in != output)
   {

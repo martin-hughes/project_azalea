@@ -10,8 +10,8 @@
 //   be fairly easy to understand that this only works in the test code!
 
 #include "processor/x64/processor-x64-int.h"
-const unsigned short TRC_COM1_BASE_PORT = 0x3F8;
-const unsigned short TRC_MAGIC_PORT = 0xE9;
+const uint16_t TRC_COM1_BASE_PORT = 0x3F8;
+const uint16_t TRC_MAGIC_PORT = 0xE9;
 
 #ifdef KL_TRACE_BY_STDOUT
 #include <iostream>
@@ -34,10 +34,10 @@ void kl_trc_char(unsigned char c)
   {
     //spin!
   }
-  asm_proc_write_port(TRC_COM1_BASE_PORT, (unsigned long)c, 8);
+  asm_proc_write_port(TRC_COM1_BASE_PORT, (uint64_t)c, 8);
 #endif
 #ifdef KL_TRACE_BY_MAGIC_PORT
-  asm_proc_write_port(TRC_MAGIC_PORT, (unsigned long)c, 8);
+  asm_proc_write_port(TRC_MAGIC_PORT, (uint64_t)c, 8);
 #endif
 #ifdef KL_TRACE_BY_STDOUT
   cout << c;
@@ -61,7 +61,7 @@ void kl_trc_init_tracing()
 #endif
 }
 
-void kl_trc_output_int_argument(unsigned long value)
+void kl_trc_output_int_argument(uint64_t value)
 {
   char buf[19] = "0x0000000000000000";
   char temp = 0;
@@ -95,7 +95,7 @@ void kl_trc_output_str_argument(char const *str)
 
 void kl_trc_output_kl_string_argument(kl_string &str)
 {
-  for (unsigned long x = 0; x < str.length(); x++)
+  for (uint64_t x = 0; x < str.length(); x++)
   {
     kl_trc_char(str[x]);
   }
@@ -181,6 +181,6 @@ void kl_trc_output_err_code_argument(ERR_CODE ec)
   else
   {
     kl_trc_output_str_argument("Unknown code: ");
-    kl_trc_output_int_argument((unsigned long)(ec));
+    kl_trc_output_int_argument((uint64_t)(ec));
   }
 }

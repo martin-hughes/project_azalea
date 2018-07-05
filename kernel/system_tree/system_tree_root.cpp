@@ -4,7 +4,7 @@
 #include "klib/klib.h"
 #include "system_tree/system_tree_root.h"
 
-unsigned int system_tree_root::number_of_instances = 0;
+uint32_t system_tree_root::number_of_instances = 0;
 
 system_tree_root::system_tree_root()
 {

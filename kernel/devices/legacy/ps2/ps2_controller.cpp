@@ -38,7 +38,7 @@ gen_ps2_controller_device::gen_ps2_controller_device() :
   // 9 - And finally, identify the devices.
   // Both devices are enabled, but with scanning and IRQs turned off.
 
-  unsigned char response;
+  uint8_t response;
 
   // 1 - Disable both connected devices.
   send_ps2_command(PS2_CONST::DISABLE_DEV_1, false, 0, false, response);
@@ -200,15 +200,15 @@ DEV_STATUS gen_ps2_controller_device::get_device_status()
 ///
 /// @return ERR_CODE::NO_ERROR in all cases. In the future, when deadlock detection is implemented, other codes will be
 ///         returned.
-ERR_CODE gen_ps2_controller_device::send_ps2_command(unsigned char command,
+ERR_CODE gen_ps2_controller_device::send_ps2_command(uint8_t command,
                                                      bool needs_second_byte,
-                                                     unsigned char second_byte,
+                                                     uint8_t second_byte,
                                                      bool expect_response,
-                                                     unsigned char &response)
+                                                     uint8_t &response)
 {
   KL_TRC_ENTRY;
 
-  unsigned char status;
+  uint8_t status;
 
   proc_write_port(PS2_COMMAND_PORT, command, 8);
 
@@ -232,7 +232,7 @@ ERR_CODE gen_ps2_controller_device::send_ps2_command(unsigned char command,
     }
 
     KL_TRC_TRACE(TRC_LVL::FLOW, "Reading\n");
-    response = static_cast<unsigned char>(proc_read_port(PS2_DATA_PORT, 8));
+    response = static_cast<uint8_t>(proc_read_port(PS2_DATA_PORT, 8));
     KL_TRC_TRACE(TRC_LVL::EXTRA, "Response: ", response, "\n");
   }
 
@@ -265,7 +265,7 @@ gen_ps2_controller_device::ps2_status_register gen_ps2_controller_device::read_s
 ///
 /// @return ERR_CODE::NO_ERROR if the byte is sent successfully, ERR_CODE::INVALID_OP if the byte was meant for the
 ///         second device but this is a single channel controller.
-ERR_CODE gen_ps2_controller_device::send_byte(unsigned char data, bool second_channel)
+ERR_CODE gen_ps2_controller_device::send_byte(uint8_t data, bool second_channel)
 {
   KL_TRC_ENTRY;
 
@@ -304,7 +304,7 @@ ERR_CODE gen_ps2_controller_device::send_byte(unsigned char data, bool second_ch
 /// @param[out] data The next byte of retrieved data.
 ///
 /// @return ERR_CODE::NO_ERROR. Other codes are possible in future.
-ERR_CODE gen_ps2_controller_device::read_byte(unsigned char &data)
+ERR_CODE gen_ps2_controller_device::read_byte(uint8_t &data)
 {
   KL_TRC_ENTRY;
 
@@ -328,7 +328,7 @@ PS2_DEV_TYPE gen_ps2_controller_device::identify_device(bool second_channel)
   KL_TRC_ENTRY;
 
   PS2_DEV_TYPE dev_type = PS2_DEV_TYPE::NONE_CONNECTED;
-  unsigned char response;
+  uint8_t response;
 
   send_byte(PS2_CONST::DEV_IDENTIFY, second_channel);
   read_byte(response);
@@ -435,7 +435,7 @@ gen_ps2_controller_device::ps2_config_register gen_ps2_controller_device::read_c
 void gen_ps2_controller_device::write_config(gen_ps2_controller_device::ps2_config_register reg)
 {
   KL_TRC_ENTRY;
-  unsigned char response;
+  uint8_t response;
 
   send_ps2_command(PS2_CONST::WRITE_CONFIG, true, reg.raw, false, response);
   KL_TRC_EXIT;

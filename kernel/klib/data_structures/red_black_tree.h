@@ -17,6 +17,8 @@
 #ifndef __RED_BLACK_TREE_H
 #define __RED_BLACK_TREE_H
 
+#include <stdint.h>
+
 #include "klib/tracing/tracing.h"
 #include "klib/panic/panic.h"
 #include "klib/misc/assert.h"
@@ -868,7 +870,7 @@ protected:
   /// @param start_node The node to start checking from
   ///
   /// @return The number of black children in any one branch, including start_node.
-  unsigned long debug_verify_black_length(tree_node *start_node)
+  uint64_t debug_verify_black_length(tree_node *start_node)
   {
     if (start_node == nullptr)
     {
@@ -876,7 +878,7 @@ protected:
     }
     else
     {
-      unsigned long res;
+      uint64_t res;
       res = debug_verify_black_length(start_node->left);
       ASSERT(debug_verify_black_length(start_node->right) == res);
 
@@ -895,9 +897,9 @@ protected:
   /// @param start_node The node to dump from
   ///
   /// @param indent The indentation to use. Callers are suggested to use zero.
-  void debug_print_tree(tree_node *start_node, unsigned int indent)
+  void debug_print_tree(tree_node *start_node, uint8_t indent)
   {
-    for (unsigned int i = 0; i < indent; i++)
+    for (uint8_t i = 0; i < indent; i++)
     {
       KL_TRC_TRACE(TRC_LVL::EXTRA, "| ");
     }

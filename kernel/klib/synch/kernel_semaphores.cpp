@@ -4,7 +4,7 @@
 
 // Initialize a semaphore object. The owner of the semaphore object is responsible for managing the memory associated
 // with it.
-void klib_synch_semaphore_init(klib_semaphore &semaphore, unsigned long max_users, unsigned long start_users)
+void klib_synch_semaphore_init(klib_semaphore &semaphore, uint64_t max_users, uint64_t start_users)
 {
   KL_TRC_ENTRY;
   ASSERT (max_users != 0);
@@ -28,7 +28,7 @@ void klib_synch_semaphore_init(klib_semaphore &semaphore, unsigned long max_user
 // Threads acquire the semaphore in order that they call this function.
 //
 // The return values should be self-explanatory.
-SYNC_ACQ_RESULT klib_synch_semaphore_wait(klib_semaphore &semaphore, unsigned long max_wait)
+SYNC_ACQ_RESULT klib_synch_semaphore_wait(klib_semaphore &semaphore, uint64_t max_wait)
 {
   KL_TRC_ENTRY;
 
@@ -113,7 +113,7 @@ void klib_synch_semaphore_clear(klib_semaphore &semaphore)
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Getting next user from the head of list\n");
-    KL_TRC_DATA("Next user is", (unsigned long)next_owner->item);
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Next user is", next_owner->item, "\n");
     ASSERT(semaphore.cur_user_count == semaphore.max_users);
     klib_list_remove(next_owner);
     task_start_thread((task_thread *)next_owner->item);

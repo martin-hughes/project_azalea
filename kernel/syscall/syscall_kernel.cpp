@@ -58,11 +58,11 @@ const void *syscall_pointers[] =
       (void *)syscall_futex_wake,
     };
 
-const unsigned long syscall_max_idx = (sizeof(syscall_pointers) / sizeof(void *)) - 1;
+const uint64_t syscall_max_idx = (sizeof(syscall_pointers) / sizeof(void *)) - 1;
 
 bool syscall_is_um_address(const void *addr)
 {
-  unsigned long addr_l = reinterpret_cast<unsigned long>(addr);
+  uint64_t addr_l = reinterpret_cast<uint64_t>(addr);
   return !(addr_l & 0x8000000000000000ULL);
 }
 
@@ -78,7 +78,7 @@ bool syscall_is_um_address(const void *addr)
 ///
 /// @return ERR_CODE::INVALID_PARAM if either of the parameters isn't valid.
 ///         ERR_CODE::NO_ERROR otherwise (even if no output was actually made).
-ERR_CODE syscall_debug_output(const char *msg, unsigned long length)
+ERR_CODE syscall_debug_output(const char *msg, uint64_t length)
 {
   KL_TRC_ENTRY;
 
@@ -96,7 +96,7 @@ ERR_CODE syscall_debug_output(const char *msg, unsigned long length)
     return ERR_CODE::INVALID_PARAM;
   }
 
-  for (int i = 0; i < length; i++)
+  for (uint32_t i = 0; i < length; i++)
   {
     kl_trc_char(msg[i]);
   }
@@ -119,7 +119,7 @@ ERR_CODE syscall_debug_output(const char *msg, unsigned long length)
 /// @param[out] handle The handle for the calling process to use.
 ///
 /// @return A suitable ERR_CODE value.
-ERR_CODE syscall_open_handle(const char *path, unsigned long path_len, GEN_HANDLE *handle)
+ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *handle)
 {
   ERR_CODE result;
   KL_TRC_ENTRY;
@@ -236,11 +236,11 @@ ERR_CODE syscall_close_handle(GEN_HANDLE handle)
 ///
 /// @return A suitable ERR_CODE value.
 ERR_CODE syscall_read_handle(GEN_HANDLE handle,
-                             unsigned long start_offset,
-                             unsigned long bytes_to_read,
+                             uint64_t start_offset,
+                             uint64_t bytes_to_read,
                              unsigned char *buffer,
-                             unsigned long buffer_size,
-                             unsigned long *bytes_read)
+                             uint64_t buffer_size,
+                             uint64_t *bytes_read)
 {
   KL_TRC_ENTRY;
 
@@ -312,7 +312,7 @@ ERR_CODE syscall_read_handle(GEN_HANDLE handle,
 /// @param[out] data_length The number of available bytes as described above.
 ///
 /// @return A suitable ERR_CODE value.
-ERR_CODE syscall_get_handle_data_len(GEN_HANDLE handle, unsigned long *data_length)
+ERR_CODE syscall_get_handle_data_len(GEN_HANDLE handle, uint64_t *data_length)
 {
   KL_TRC_ENTRY;
 
@@ -378,11 +378,11 @@ ERR_CODE syscall_get_handle_data_len(GEN_HANDLE handle, unsigned long *data_leng
 ///
 /// @return A suitable ERR_CODE value.
 ERR_CODE syscall_write_handle(GEN_HANDLE handle,
-                              unsigned long start_offset,
-                              unsigned long bytes_to_write,
+                              uint64_t start_offset,
+                              uint64_t bytes_to_write,
                               unsigned char *buffer,
-                              unsigned long buffer_size,
-                              unsigned long *bytes_written)
+                              uint64_t buffer_size,
+                              uint64_t *bytes_written)
 {
   KL_TRC_ENTRY;
 
@@ -455,7 +455,7 @@ ERR_CODE syscall_write_handle(GEN_HANDLE handle,
 /// @param value The value to load into the base of the required register.
 ///
 /// @return ERR_CODE::INVALID_PARAM if either reg isn't valid, or value either isn't canonical or in user-space.
-ERR_CODE syscall_thread_set_tls_base(TLS_REGISTERS reg, unsigned long value)
+ERR_CODE syscall_thread_set_tls_base(TLS_REGISTERS reg, uint64_t value)
 {
   KL_TRC_ENTRY;
 
@@ -474,7 +474,7 @@ ERR_CODE syscall_thread_set_tls_base(TLS_REGISTERS reg, unsigned long value)
       KL_TRC_TRACE(TRC_LVL::FLOW, "Setting FS base to ", value, "\n");
       proc_write_msr (PROC_X64_MSRS::IA32_FS_BASE, value);
 
-      //unsigned long fs_reg;
+      //uint64_t fs_reg;
       //__asm__ __volatile__ ("mov %%fs:0, %0" : "=r" (fs_reg) );
       //KL_TRC_TRACE(TRC_LVL::FLOW, "Actual value of FS: ", fs_reg, "\n");
 

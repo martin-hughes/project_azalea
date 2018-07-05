@@ -16,30 +16,30 @@ fat_filesystem::fat_file::~fat_file()
 
 }
 
-ERR_CODE fat_filesystem::fat_file::read_bytes(unsigned long start,
-                                              unsigned long length,
-                                              unsigned char *buffer,
-                                              unsigned long buffer_length,
-                                              unsigned long &bytes_read)
+ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
+                                              uint64_t length,
+                                              uint8_t *buffer,
+                                              uint64_t buffer_length,
+                                              uint64_t &bytes_read)
 {
   KL_TRC_ENTRY;
 
-  unsigned long bytes_read_so_far = 0;
-  unsigned long clusters_to_skip;
-  unsigned long read_offset;
-  unsigned long bytes_per_cluster;
-  unsigned long bytes_per_sector;
-  unsigned long next_cluster;
-  unsigned long sector_offset = 0;
-  unsigned long sectors_per_cluster = 0;
-  unsigned long bytes_from_this_sector = 0;
+  uint64_t bytes_read_so_far = 0;
+  uint64_t clusters_to_skip;
+  uint64_t read_offset;
+  uint64_t bytes_per_cluster;
+  uint64_t bytes_per_sector;
+  uint64_t next_cluster;
+  uint64_t sector_offset = 0;
+  uint64_t sectors_per_cluster = 0;
+  uint64_t bytes_from_this_sector = 0;
 
   ERR_CODE ec = ERR_CODE::NO_ERROR;
   ERR_CODE sub_err_code;
 
-  KL_TRC_DATA("Start", start);
-  KL_TRC_DATA("Length", length);
-  KL_TRC_DATA("buffer_length", buffer_length);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Start", start, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Length", length, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "buffer_length", buffer_length, "\n");
 
   // Check parameters for correctness.
   if (buffer == nullptr)
@@ -76,7 +76,7 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(unsigned long start,
     bytes_per_cluster = sectors_per_cluster * bytes_per_sector;
     clusters_to_skip = start / bytes_per_cluster;
     read_offset = start % bytes_per_cluster;
-    std::unique_ptr<unsigned char[]> sector_buffer = std::make_unique<unsigned char[]>(bytes_per_sector);
+    std::unique_ptr<uint8_t[]> sector_buffer = std::make_unique<uint8_t[]>(bytes_per_sector);
 
     next_cluster = (_file_record.first_cluster_high << 16) + _file_record.first_cluster_low;
 
@@ -117,7 +117,7 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(unsigned long start,
         // The (next_cluster - 2) might seem a bit odd, but in FAT the clusters start being numbered from 2 - indicies
         // 0 and 1 have a special meaning. next_cluster is guaranteed to be 2 or greater by the call to
         // is_normal_cluster_number, above.
-        unsigned long start_sector = ((next_cluster - 2) * sectors_per_cluster) + i + _parent->first_data_sector;
+        uint64_t start_sector = ((next_cluster - 2) * sectors_per_cluster) + i + _parent->first_data_sector;
         KL_TRC_TRACE(TRC_LVL::FLOW, "Reading sector: ", start_sector, "\n");
         ec = _parent->_storage->read_blocks(start_sector,
                                             1,
@@ -142,10 +142,10 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(unsigned long start,
         }
         ASSERT(bytes_from_this_sector <= bytes_per_sector);
 
-        KL_TRC_DATA("Offset", read_offset);
-        KL_TRC_DATA("Bytes now", bytes_from_this_sector);
+        KL_TRC_TRACE(TRC_LVL::EXTRA, "Offset", read_offset, "\n");
+        KL_TRC_TRACE(TRC_LVL::EXTRA, "Bytes now", bytes_from_this_sector, "\n");
 
-        kl_memcpy((void *)(((unsigned char *)sector_buffer.get()) + read_offset),
+        kl_memcpy((void *)(((uint8_t *)sector_buffer.get()) + read_offset),
                   buffer + bytes_read_so_far,
                   bytes_from_this_sector);
 
@@ -179,16 +179,16 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(unsigned long start,
   return ec;
 }
 
-ERR_CODE fat_filesystem::fat_file::write_bytes(unsigned long start,
-                                               unsigned long length,
-                                               const unsigned char *buffer,
-                                               unsigned long buffer_length,
-                                               unsigned long &bytes_written)
+ERR_CODE fat_filesystem::fat_file::write_bytes(uint64_t start,
+                                               uint64_t length,
+                                               const uint8_t *buffer,
+                                               uint64_t buffer_length,
+                                               uint64_t &bytes_written)
 {
   return ERR_CODE::INVALID_OP;
 }
 
-ERR_CODE fat_filesystem::fat_file::get_file_size(unsigned long &file_size)
+ERR_CODE fat_filesystem::fat_file::get_file_size(uint64_t &file_size)
 {
   KL_TRC_ENTRY;
 

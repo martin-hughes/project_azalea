@@ -12,9 +12,9 @@ extern "C"
 
 hpet_hardware_cfg_block *hpet_config = nullptr;
 
-void time_hpet_set_flag(unsigned long &hpet_reg, const unsigned long flag);
-void time_hpet_clear_flag(unsigned long &hpet_reg, const unsigned long flag);
-bool time_hpet_get_flag(unsigned long &hpet_reg, const unsigned long flag);
+void time_hpet_set_flag(uint64_t &hpet_reg, const uint64_t flag);
+void time_hpet_clear_flag(uint64_t &hpet_reg, const uint64_t flag);
+bool time_hpet_get_flag(uint64_t &hpet_reg, const uint64_t flag);
 
 /// @brief Use ACPI to determine whether a HPET exists in this system.
 ///
@@ -47,14 +47,14 @@ void time_hpet_init()
   acpi_table_hpet *hpet_table;
   ACPI_STATUS retval;
   char table_name[] = "HPET";
-  unsigned long phys_addr;
-  unsigned long offset;
-  unsigned long virt_addr;
-  unsigned long cap_flags;
+  uint64_t phys_addr;
+  uint64_t offset;
+  uint64_t virt_addr;
+  uint64_t cap_flags;
 
   retval = AcpiGetTable(table_name, 0, (ACPI_TABLE_HEADER **)&hpet_table);
   ASSERT(retval == AE_OK);
-  ASSERT(hpet_table->Address.Address != (unsigned long)nullptr);
+  ASSERT(hpet_table->Address.Address != (uint64_t)nullptr);
 
   // Map the HPET configuration into the kernel's address space.
   phys_addr = hpet_table->Address.Address;
@@ -63,7 +63,7 @@ void time_hpet_init()
   ASSERT((offset + sizeof(hpet_hardware_cfg_block)) < MEM_PAGE_SIZE);
   phys_addr -= offset;
 
-  virt_addr = (unsigned long)mem_allocate_virtual_range(1);
+  virt_addr = (uint64_t)mem_allocate_virtual_range(1);
   mem_map_range((void *)phys_addr, (void *)virt_addr, 1);
   virt_addr += offset;
 
@@ -75,10 +75,10 @@ void time_hpet_init()
   ASSERT(HPET_PERIOD(cap_flags) <= max_period_fs);
   ASSERT(time_hpet_get_flag(cap_flags, hpet_hw_leg_rte_cap));
 
-  KL_TRC_TRACE(TRC_LVL::FLOW, "HPET general information:\n");
-  KL_TRC_DATA("Revision", HPET_REVISION(cap_flags));
-  KL_TRC_DATA("Number of timers", HPET_NUM_TIMERS(cap_flags));
-  KL_TRC_DATA("Period in fs", HPET_PERIOD(cap_flags));
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "HPET general information:\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Revision", HPET_REVISION(cap_flags), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Number of timers", HPET_NUM_TIMERS(cap_flags), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Period in fs", HPET_PERIOD(cap_flags), "\n");
 
   // Stop the HPET while we configure it.
   time_hpet_clear_flag(hpet_config->gen_config, hpet_cfg_glbl_enable);
@@ -89,8 +89,8 @@ void time_hpet_init()
   time_hpet_set_flag(hpet_config->gen_config, hpet_cfg_leg_rte_map);
 
   // Configure timer 0 as a 100us periodic timer that calls IRQ 0. IRQ 0 is configured by task_install_task_switcher()
-  KL_TRC_DATA("Timer 0 config field before", hpet_config->timer_cfg[0].cfg_and_caps);
-  KL_TRC_DATA("Timer 1 config field before", hpet_config->timer_cfg[1].cfg_and_caps);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Timer 0 config field before", hpet_config->timer_cfg[0].cfg_and_caps, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Timer 1 config field before", hpet_config->timer_cfg[1].cfg_and_caps, "\n");
   ASSERT(time_hpet_get_flag(hpet_config->timer_cfg[0].cfg_and_caps, hpet_tmr_periodic_capable));
   ASSERT(time_hpet_get_flag(hpet_config->timer_cfg[0].cfg_and_caps, hpet_tmr_64_bit_cap));
   //ASSERT((HPET_TMR_INT_RTE_CAP(hpet_config->timer_cfg[0].cfg_and_caps) & 1) != 0);
@@ -107,7 +107,7 @@ void time_hpet_init()
 
   time_hpet_set_flag(hpet_config->timer_cfg[0].cfg_and_caps, hpet_tmr_enable);
 
-  KL_TRC_DATA("Timer 0 config field after", hpet_config->timer_cfg[0].cfg_and_caps);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Timer 0 config field after", hpet_config->timer_cfg[0].cfg_and_caps, "\n");
 
   // Configure timer 1 as a stopped 1-shot timer that calls IRQ 8.
   //ASSERT((HPET_TMR_INT_RTE_CAP(hpet_config->timer_cfg[1].cfg_and_caps) & 0x100) != 0);
@@ -118,7 +118,7 @@ void time_hpet_init()
   time_hpet_clear_flag(hpet_config->timer_cfg[1].cfg_and_caps, hpet_tmr_level_trig_int);
   time_hpet_clear_flag(hpet_config->timer_cfg[1].cfg_and_caps, hpet_tmr_enable);
 
-  KL_TRC_DATA("Timer 1 config field after", hpet_config->timer_cfg[1].cfg_and_caps);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Timer 1 config field after", hpet_config->timer_cfg[1].cfg_and_caps, "\n");
 
   // Resume the HPET
   time_hpet_set_flag(hpet_config->gen_config, hpet_cfg_glbl_enable);
@@ -132,12 +132,12 @@ void time_hpet_init()
 ///
 /// @param flag The flag to set - ideally only one bit should be set, but the system will probably respond correctly if
 ///             multiple bits are set (no guarantees!)
-void time_hpet_set_flag(unsigned long &hpet_reg, const unsigned long flag)
+void time_hpet_set_flag(uint64_t &hpet_reg, const uint64_t flag)
 {
   KL_TRC_ENTRY;
-  KL_TRC_DATA("Flag being set", flag);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Flag being set", flag, "\n");
 
-  unsigned long scratch;
+  uint64_t scratch;
 
   scratch = hpet_reg;
   scratch = scratch | flag;
@@ -152,12 +152,12 @@ void time_hpet_set_flag(unsigned long &hpet_reg, const unsigned long flag)
 ///
 /// @param flag The flag to clear - ideally only one bit should be set, but the system will probably respond correctly
 ///             if multiple bits are set (no guarantees!)
-void time_hpet_clear_flag(unsigned long &hpet_reg, const unsigned long flag)
+void time_hpet_clear_flag(uint64_t &hpet_reg, const uint64_t flag)
 {
   KL_TRC_ENTRY;
-  KL_TRC_DATA("Flag being cleared", flag);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Flag being cleared", flag, "\n");
 
-  unsigned long scratch;
+  uint64_t scratch;
 
   scratch = hpet_reg;
   scratch = scratch & ~flag;
@@ -173,14 +173,14 @@ void time_hpet_clear_flag(unsigned long &hpet_reg, const unsigned long flag)
 /// @param flag The flag to consider. Undefined behaviour results if anything other than exactly one bit is set.
 ///
 /// @return True if the flag is set, false otherwise.
-bool time_hpet_get_flag(unsigned long &hpet_reg, const unsigned long flag)
+bool time_hpet_get_flag(uint64_t &hpet_reg, const uint64_t flag)
 {
   KL_TRC_ENTRY;
 
-  KL_TRC_DATA("Flag being checked", flag);
-  KL_TRC_DATA("Register value    ", hpet_reg);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Flag being checked", flag, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Register value    ", hpet_reg, "\n");
   bool result = ((hpet_reg & flag) != 0);
-  KL_TRC_DATA("Result", (unsigned long)result);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result", result, "\n");
 
   KL_TRC_EXIT;
 
@@ -198,19 +198,19 @@ bool time_hpet_get_flag(unsigned long &hpet_reg, const unsigned long flag)
 /// @param wait_in_ns How long is the desired wait, in nanoseconds
 ///
 /// @return The number of HPET timer units corresponding to the desired wait.
-unsigned long time_hpet_compute_wait(unsigned long wait_in_ns)
+uint64_t time_hpet_compute_wait(uint64_t wait_in_ns)
 {
   KL_TRC_ENTRY;
 
-  unsigned long wait_in_fs;
-  unsigned long result;
+  uint64_t wait_in_fs;
+  uint64_t result;
 
-  KL_TRC_DATA("Requested period (ns)", wait_in_ns);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Requested period (ns)", wait_in_ns, "\n");
 
   wait_in_fs = wait_in_ns * 1000000;
   result = wait_in_fs / HPET_PERIOD(hpet_config->gen_cap_and_id);
 
-  KL_TRC_DATA("Number of cycles required", result);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Number of cycles required", result, "\n");
 
   KL_TRC_EXIT;
 
@@ -223,28 +223,28 @@ unsigned long time_hpet_compute_wait(unsigned long wait_in_ns)
 /// scheduler!
 ///
 /// @param wait_in_ns The number of nanoseconds to stall for.
-void time_hpet_stall(unsigned long wait_in_ns)
+void time_hpet_stall(uint64_t wait_in_ns)
 {
   KL_TRC_ENTRY;
 
-  unsigned long wait_in_cycles = time_hpet_compute_wait(wait_in_ns);
-  unsigned long cur_count;
-  unsigned long end_count;
+  uint64_t wait_in_cycles = time_hpet_compute_wait(wait_in_ns);
+  uint64_t cur_count;
+  uint64_t end_count;
 
   cur_count = hpet_config->main_counter_val;
   end_count = cur_count + wait_in_cycles;
 
-  KL_TRC_DATA("Wait in ns", wait_in_ns);
-  KL_TRC_DATA("Wait in cycles", wait_in_cycles);
-  KL_TRC_DATA("Current cycle count", cur_count);
-  KL_TRC_DATA("End cycle count", end_count);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Wait in ns", wait_in_ns, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Wait in cycles", wait_in_cycles, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Current cycle count", cur_count, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "End cycle count", end_count, "\n");
 
   while(end_count > cur_count)
   {
     cur_count = hpet_config->main_counter_val;
   }
 
-  KL_TRC_DATA("Actual end count", cur_count);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Actual end count", cur_count, "\n");
 
   KL_TRC_EXIT;
 }
@@ -252,7 +252,7 @@ void time_hpet_stall(unsigned long wait_in_ns)
 /// @brief Return the current value of the HPET counter.
 ///
 /// @return The current value of the main HPET counter.
-unsigned long time_hpet_cur_value()
+uint64_t time_hpet_cur_value()
 {
   KL_TRC_ENTRY;
   KL_TRC_EXIT;

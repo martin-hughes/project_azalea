@@ -9,18 +9,19 @@
 #include <stdlib.h>
 #include <time.h>
 #include <set>
+#include "gtest/gtest.h"
 
 using namespace std;
 
-const unsigned long NUM_TESTS = 10000;
-static set<unsigned long> keys;
+const uint64_t NUM_TESTS = 10000;
+static set<uint64_t> keys;
 
-void data_structures_test_3()
+TEST(DataStructuresTest, RedBlackTrees1)
 {
   cout << "Red black trees test" << endl;
-  
-  kl_rb_tree<unsigned long, unsigned long> *tree = new kl_rb_tree<unsigned long, unsigned long>();
-  unsigned long cur_key;
+
+  kl_rb_tree<uint64_t, uint64_t> *tree = new kl_rb_tree<uint64_t, uint64_t>();
+  uint64_t cur_key;
 
   srand (time(nullptr));
 
@@ -39,8 +40,8 @@ void data_structures_test_3()
 
   while (keys.size() > 0)
   {
-    set<unsigned long>::iterator iter(keys.begin());
-    for (unsigned int i = 0; i < (rand() % keys.size()); i++)
+    set<uint64_t>::iterator iter(keys.begin());
+    for (uint32_t i = 0; i < (rand() % keys.size()); i++)
     {
       iter++;
     }

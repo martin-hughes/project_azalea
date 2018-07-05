@@ -1,6 +1,7 @@
 #ifndef __SYSTEM_TREE_LEAF_INTERFACE_H
 #define __SYSTEM_TREE_LEAF_INTERFACE_H
 
+#include <stdint.h>
 #include "object_mgr/ref_counter.h"
 
 /// @brief The interface for leaves in System Tree

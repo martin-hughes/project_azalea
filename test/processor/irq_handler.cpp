@@ -15,7 +15,7 @@ class TestIrqHandler : public IIrqReceiver
 {
 public:
   TestIrqHandler();
-  virtual bool handle_irq_fast(unsigned char irq_number);
+  virtual bool handle_irq_fast(uint8_t irq_number);
   virtual void handle_irq_slow();
 
   bool irq_fired;
@@ -62,7 +62,7 @@ TEST(ProcessorTests, IrqHandling)
 
 TestIrqHandler::TestIrqHandler() : irq_fired(false) {}
 
-bool TestIrqHandler::handle_irq_fast(unsigned char irq_number)
+bool TestIrqHandler::handle_irq_fast(uint8_t irq_number)
 {
   this->irq_fired = true;
   return false;

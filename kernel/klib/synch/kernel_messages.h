@@ -1,6 +1,8 @@
 #ifndef KLIB_MSG_PASSING
 #define KLIB_MSG_PASSING
 
+#include <stdint.h>
+
 #include "user_interfaces/error_codes.h"
 #include "user_interfaces/messages.h"
 #include <queue>
@@ -11,9 +13,9 @@ struct klib_message_hdr
 {
   task_process *originating_process;
 
-  unsigned long msg_id;
+  uint64_t msg_id;
 
-  unsigned long msg_length;
+  uint64_t msg_length;
 
   // The message doesn't have any defined type, but using a byte-array allows 'delete' to be called on this pointer.
   char *msg_contents;
@@ -27,7 +29,7 @@ struct klib_msg_broadcast_grp
 
 };
 
-typedef unsigned long message_id_number;
+typedef uint64_t message_id_number;
 typedef std::queue<klib_message_hdr> msg_msg_queue;
 
 ERR_CODE msg_register_msg_id(kl_string msg_name, message_id_number new_id_number);

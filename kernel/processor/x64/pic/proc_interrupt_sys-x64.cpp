@@ -17,8 +17,8 @@
 // The various PIC types supported by the Project Azalea kernel.
 enum class APIC_TYPES { LEGACY_PIC, APIC, X2APIC };
 
-const unsigned long APIC_PRESENT = 0x0000020000000000;
-const unsigned long X2_APIC_PRESENT = 0x0000000000200000;
+const uint64_t APIC_PRESENT = 0x0000020000000000;
+const uint64_t X2_APIC_PRESENT = 0x0000000000200000;
 
 APIC_TYPES selected_pic_mode = APIC_TYPES::LEGACY_PIC;
 
@@ -29,7 +29,7 @@ APIC_TYPES proc_x64_detect_pic_type();
 /// The choices currently are to use the Legacy PIC, or APIC. X2APIC systems use the normal APIC.
 ///
 /// @param num_procs The number of processors attached to the system.
-void proc_conf_interrupt_control_sys(unsigned int num_procs)
+void proc_conf_interrupt_control_sys(uint32_t num_procs)
 {
   KL_TRC_ENTRY;
 
@@ -94,7 +94,7 @@ void proc_configure_global_int_ctrlrs()
 {
   KL_TRC_ENTRY;
 
-  unsigned char bsp_apic_id = proc_x64_apic_get_local_id();
+  uint8_t bsp_apic_id = proc_x64_apic_get_local_id();
 
   proc_x64_ioapic_load_data();
 
@@ -122,13 +122,13 @@ APIC_TYPES proc_x64_detect_pic_type()
   KL_TRC_ENTRY;
 
   APIC_TYPES detected_pic = APIC_TYPES::LEGACY_PIC;
-  unsigned long apic_det_result;
-  unsigned long ebx_eax;
-  unsigned long edx_ecx;
+  uint64_t apic_det_result;
+  uint64_t ebx_eax;
+  uint64_t edx_ecx;
 
   asm_proc_read_cpuid(1, 0, &ebx_eax, &edx_ecx);
-  KL_TRC_DATA("CPUID EBX:EAX", ebx_eax);
-  KL_TRC_DATA("CPUID EDX:ECX", edx_ecx);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "CPUID EBX:EAX", ebx_eax, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "CPUID EDX:ECX", edx_ecx, "\n");
 
   if ((edx_ecx & APIC_PRESENT) != 0)
   {
@@ -168,10 +168,10 @@ APIC_TYPES proc_x64_detect_pic_type()
 /// @param vector The vector number for this IPI. Depending on the type of IPI being sent, this may be ignored.
 ///
 /// @param wait_for_delivery True if this processor should wait for the interrupt to have been delivered to the target.
-void proc_send_ipi(unsigned int apic_dest,
+void proc_send_ipi(uint32_t apic_dest,
                    PROC_IPI_SHORT_TARGET shorthand,
                    PROC_IPI_INTERRUPT interrupt,
-                   unsigned char vector,
+                   uint8_t vector,
                    const bool wait_for_delivery)
 {
   KL_TRC_ENTRY;

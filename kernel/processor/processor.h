@@ -4,6 +4,8 @@
 #ifndef PROCESSOR_H_
 #define PROCESSOR_H_
 
+#include <stdint.h>
+
 #include "klib/data_structures/lists.h"
 #include "klib/synch/kernel_locks.h"
 #include "mem/mem.h"
@@ -58,7 +60,7 @@ public:
   bool msg_outstanding;
 
   /// The number of messages currently waiting for this process.
-  unsigned long msg_queue_len;
+  uint64_t msg_queue_len;
 
   /// Is this process currently being destroyed?
   bool being_destroyed;
@@ -130,7 +132,7 @@ template <typename T> struct processor_info_generic
 {
   /// A zero-based ID for the processor to be identified by. In the range 0 -> n-1, where n is the number of processors
   /// in the system
-  unsigned int processor_id;
+  uint32_t processor_id;
 
   /// Has the processor been started or not? That is, (in x64 speak) has it finished responding to the STARTUP IPI?
   volatile bool processor_running;
@@ -183,7 +185,7 @@ task_process *task_create_new_process(ENTRY_PROC entry_point,
     bool kernel_mode = false,
     mem_process_info *mem_info = nullptr);
 
-void task_set_start_params(task_process * process, unsigned long argc, char **argv, char **env);
+void task_set_start_params(task_process * process, uint64_t argc, char **argv, char **env);
 
 // Create a new thread starting at entry_point, with parent parent_process.
 task_thread *task_create_new_thread(ENTRY_PROC entry_point, task_process *parent_process);
@@ -206,9 +208,9 @@ void task_stop_thread(task_thread *thread);
 void task_yield();
 
 // Multiple processor control functions
-unsigned int proc_mp_proc_count();
-unsigned int proc_mp_this_proc_id();
-void proc_mp_signal_processor(unsigned int proc_id, PROC_IPI_MSGS msg);
+uint32_t proc_mp_proc_count();
+uint32_t proc_mp_this_proc_id();
+void proc_mp_signal_processor(uint32_t proc_id, PROC_IPI_MSGS msg);
 void proc_mp_signal_all_processors(PROC_IPI_MSGS msg);
 void proc_mp_receive_signal(PROC_IPI_MSGS msg);
 
@@ -217,11 +219,11 @@ void proc_mp_receive_signal(PROC_IPI_MSGS msg);
 void task_continue_this_thread();
 void task_resume_scheduling();
 
-unsigned long proc_read_port(const unsigned long port_id, const unsigned char width);
-void proc_write_port(const unsigned long port_id, const unsigned long value, const unsigned char width);
+uint64_t proc_read_port(const uint64_t port_id, const uint8_t width);
+void proc_write_port(const uint64_t port_id, const uint64_t value, const uint8_t width);
 
-void proc_register_irq_handler(unsigned char irq_number, IIrqReceiver *receiver);
-void proc_unregister_irq_handler(unsigned char irq_number, IIrqReceiver *receiver);
+void proc_register_irq_handler(uint8_t irq_number, IIrqReceiver *receiver);
+void proc_unregister_irq_handler(uint8_t irq_number, IIrqReceiver *receiver);
 
 #ifdef AZALEA_TEST_CODE
 void test_only_reset_task_mgr();

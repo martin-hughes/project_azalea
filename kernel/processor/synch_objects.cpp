@@ -96,11 +96,11 @@ void WaitObject::cancel_waiting_thread(task_thread *thread)
 /// @brief Return a count of how many threads are waiting on this WaitObject.
 ///
 /// @return The number of waiting threads.
-unsigned long WaitObject::threads_waiting()
+uint64_t WaitObject::threads_waiting()
 {
   KL_TRC_ENTRY;
 
-  unsigned long result;
+  uint64_t result;
   result = klib_list_get_length(&this->_waiting_threads);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");

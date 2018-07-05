@@ -5,10 +5,12 @@
 
 //#define ENABLE_TRACING
 
+#include <stdint.h>
+
 #include "devices/block/proxy/block_proxy.h"
 #include "klib/klib.h"
 
-block_proxy_device::block_proxy_device(IBlockDevice *parent, unsigned long start_block, unsigned long num_blocks) :
+block_proxy_device::block_proxy_device(IBlockDevice *parent, uint64_t start_block, uint64_t num_blocks) :
     _name("Generic block device"), _start_block(start_block), _num_blocks(num_blocks), _parent(parent)
 {
   KL_TRC_ENTRY;
@@ -60,24 +62,25 @@ DEV_STATUS block_proxy_device::get_device_status()
     ret = this->_parent->get_device_status();
   }
 
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Status: ", (unsigned long)ret, "\n");
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Status: ", ret, "\n");
 
   KL_TRC_EXIT;
 
   return ret;
 }
 
-unsigned long block_proxy_device::num_blocks()
+uint64_t block_proxy_device::num_blocks()
 {
   KL_TRC_ENTRY; KL_TRC_EXIT;
 
   return this->_num_blocks;
 }
-unsigned long block_proxy_device::block_size()
+
+uint64_t block_proxy_device::block_size()
 {
   KL_TRC_ENTRY; KL_TRC_EXIT;
 
-  unsigned long block_size = 0;
+  uint64_t block_size = 0;
 
   if (this->_parent != nullptr)
   {
@@ -87,10 +90,10 @@ unsigned long block_proxy_device::block_size()
   return block_size;
 }
 
-ERR_CODE block_proxy_device::read_blocks(unsigned long start_block,
-                                         unsigned long num_blocks,
+ERR_CODE block_proxy_device::read_blocks(uint64_t start_block,
+                                         uint64_t num_blocks,
                                          void *buffer,
-                                         unsigned long buffer_length)
+                                         uint64_t buffer_length)
 {
   KL_TRC_ENTRY;
 
@@ -120,10 +123,10 @@ ERR_CODE block_proxy_device::read_blocks(unsigned long start_block,
   return ret;
 }
 
-ERR_CODE block_proxy_device::write_blocks(unsigned long start_block,
-                                          unsigned long num_blocks,
+ERR_CODE block_proxy_device::write_blocks(uint64_t start_block,
+                                          uint64_t num_blocks,
                                           void *buffer,
-                                          unsigned long buffer_length)
+                                          uint64_t buffer_length)
 {
   KL_TRC_ENTRY;
 

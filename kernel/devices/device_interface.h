@@ -5,6 +5,8 @@
 #ifndef CORE_DEVICE_INTFACE_HEADER
 #define CORE_DEVICE_INTFACE_HEADER
 
+#include <stdint.h>
+
 #include "klib/data_structures/string.h"
 
 enum class DEV_STATUS

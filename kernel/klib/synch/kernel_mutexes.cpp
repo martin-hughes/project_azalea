@@ -26,7 +26,7 @@ void klib_synch_mutex_init(klib_mutex &mutex)
 // MUTEX_MAX_WAIT then the caller waits indefinitely. Threads acquire the mutex in order that they call this function.
 //
 // The return values should be self-explanatory.
-SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, unsigned long max_wait)
+SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, uint64_t max_wait)
 {
   SYNC_ACQ_RESULT res = SYNC_ACQ_TIMEOUT;
   klib_synch_spinlock_lock(mutex.access_lock);
@@ -130,7 +130,7 @@ void klib_synch_mutex_release(klib_mutex &mutex, const bool disregard_owner)
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Getting next owner from the head of list\n");
-    KL_TRC_DATA("Next owner is", (unsigned long)next_owner->item);
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Next owner is", next_owner->item, "\n");
     mutex.owner_thread = next_owner->item;
     klib_list_remove(next_owner);
     task_start_thread(next_owner->item);

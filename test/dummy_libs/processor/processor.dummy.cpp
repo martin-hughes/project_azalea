@@ -2,16 +2,16 @@
 
 namespace
 {
-  unsigned long fake_ptr_target = 5;
+  uint64_t fake_ptr_target = 5;
   task_thread *fake_cur_thread = nullptr;
 }
 
-unsigned int proc_mp_proc_count()
+uint32_t proc_mp_proc_count()
 {
   return 1;
 }
 
-unsigned int proc_mp_this_proc_id()
+uint32_t proc_mp_this_proc_id()
 {
   return 0;
 }

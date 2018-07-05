@@ -9,10 +9,10 @@
 
 FAT_TYPE determine_fat_type(fat32_bpb &bpb);
 
-const unsigned long ASSUMED_SECTOR_SIZE = 512;
+const uint64_t ASSUMED_SECTOR_SIZE = 512;
 
 fat_filesystem::fat_filesystem(IBlockDevice *parent_device) :
-    _storage(parent_device), _status(DEV_STATUS::OK), _buffer(new unsigned char[ASSUMED_SECTOR_SIZE])
+    _storage(parent_device), _status(DEV_STATUS::OK), _buffer(new uint8_t[ASSUMED_SECTOR_SIZE])
 {
   fat32_bpb* temp_bpb;
   ERR_CODE r;
@@ -61,7 +61,7 @@ fat_filesystem::fat_filesystem(IBlockDevice *parent_device) :
 
     // Copy the entire FAT into RAM, for convenience later.
     this->fat_length_bytes = bpb_16.shared.bytes_per_sec * bpb_16.shared.fat_size_16;
-    _raw_fat = std::make_unique<unsigned char[]>(fat_length_bytes);
+    _raw_fat = std::make_unique<uint8_t[]>(fat_length_bytes);
     r = this->_storage->read_blocks(bpb_16.shared.rsvd_sec_cnt,
                                     bpb_16.shared.fat_size_16,
                                     _raw_fat.get(),
@@ -126,7 +126,7 @@ ERR_CODE fat_filesystem::get_leaf(const kl_string &name, ISystemTreeLeaf **leaf)
 
     if (ec == ERR_CODE::NO_ERROR)
     {
-      unsigned long cluster = (((unsigned long)fde.first_cluster_high) << 16) + fde.first_cluster_low;
+      uint64_t cluster = (((uint64_t)fde.first_cluster_high) << 16) + fde.first_cluster_low;
       KL_TRC_TRACE(TRC_LVL::FLOW, "First cluster: ", cluster, "\n");
 
       file_obj = new fat_file(fde, this);
@@ -174,21 +174,21 @@ FAT_TYPE determine_fat_type(fat32_bpb &bpb)
   FAT_TYPE ret;
 
   ASSERT(bpb.shared.bytes_per_sec != 0);
-  unsigned long root_dir_sectors = (((unsigned long)bpb.shared.root_entry_cnt * 32)
-                                    + ((unsigned long)bpb.shared.bytes_per_sec - 1))
+  uint64_t root_dir_sectors = (((uint64_t)bpb.shared.root_entry_cnt * 32)
+                                    + ((uint64_t)bpb.shared.bytes_per_sec - 1))
                                    / bpb.shared.bytes_per_sec;
 
-  unsigned long fat_size;
+  uint64_t fat_size;
   fat_size = (bpb.shared.fat_size_16 == 0) ? bpb.fat_size_32 : bpb.shared.fat_size_16;
 
-  unsigned long total_sectors;
+  uint64_t total_sectors;
   total_sectors = (bpb.shared.total_secs_16 == 0) ? bpb.shared.total_secs_32 : bpb.shared.total_secs_16;
 
-  unsigned long private_sectors = bpb.shared.rsvd_sec_cnt + (bpb.shared.num_fats * fat_size) + root_dir_sectors;
-  unsigned long data_sectors = total_sectors - private_sectors;
+  uint64_t private_sectors = bpb.shared.rsvd_sec_cnt + (bpb.shared.num_fats * fat_size) + root_dir_sectors;
+  uint64_t data_sectors = total_sectors - private_sectors;
 
   ASSERT(bpb.shared.secs_per_cluster != 0);
-  unsigned long cluster_count = data_sectors / bpb.shared.secs_per_cluster;
+  uint64_t cluster_count = data_sectors / bpb.shared.secs_per_cluster;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Final count of clusters: ", cluster_count, "\n");
 
@@ -215,18 +215,18 @@ FAT_TYPE determine_fat_type(fat32_bpb &bpb)
 
 ERR_CODE fat_filesystem::get_dir_entry(const kl_string &name,
                                        bool start_in_root,
-                                       unsigned long dir_first_cluster,
+                                       uint64_t dir_first_cluster,
                                        fat_dir_entry &storage)
 {
   KL_TRC_ENTRY;
 
   ERR_CODE ret_code = ERR_CODE::NO_ERROR;
   bool continue_looking = true;
-  unsigned long sector_to_look_at;
+  uint64_t sector_to_look_at;
   fat_dir_entry *cur_entry;
   kl_string first_part;
   kl_string ext_part;
-  unsigned long dot_pos;
+  uint64_t dot_pos;
   char short_name[12] =
   { 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00 };
 
@@ -370,14 +370,14 @@ ERR_CODE fat_filesystem::get_dir_entry(const kl_string &name,
 /// @return The next cluster in the chain. If the next cluster is one of the special values, the first bit of the
 ///         return value is set to 1 (which is OK, since the return type is 64-bits long, but FAT clusters have 32-bit
 ///         indicies.
-unsigned long fat_filesystem::get_next_cluster_num(unsigned long this_cluster_num)
+uint64_t fat_filesystem::get_next_cluster_num(uint64_t this_cluster_num)
 {
   KL_TRC_ENTRY;
 
-  unsigned long offset = 0;
-  unsigned long next_cluster = 0;
+  uint64_t offset = 0;
+  uint64_t next_cluster = 0;
 
-  KL_TRC_DATA("Start cluster number", this_cluster_num);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Start cluster number", this_cluster_num, "\n");
 
   switch (this->type)
   {
@@ -425,8 +425,8 @@ unsigned long fat_filesystem::get_next_cluster_num(unsigned long this_cluster_nu
       break;
   }
 
-  KL_TRC_DATA("Computed offset in FAT", offset);
-  KL_TRC_DATA("Next cluster as given by the FAT", next_cluster);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Computed offset in FAT", offset, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Next cluster as given by the FAT", next_cluster, "\n");
 
   KL_TRC_EXIT;
   return next_cluster;
@@ -440,7 +440,7 @@ unsigned long fat_filesystem::get_next_cluster_num(unsigned long this_cluster_nu
 ///
 /// @return true if the cluster is a non-reserved number, false otherwise. The range of reserved values depends on FAT
 ///         size.
-bool fat_filesystem::is_normal_cluster_number(unsigned long cluster_num)
+bool fat_filesystem::is_normal_cluster_number(uint64_t cluster_num)
 {
   bool is_normal = true;
   switch (this->type)

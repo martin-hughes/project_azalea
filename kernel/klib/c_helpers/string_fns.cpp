@@ -14,9 +14,9 @@
 ///                no checking is performed.
 ///
 /// @return The length of the string, or max_len if max_len is less than the length of the string and not zero.
-unsigned long kl_strlen(const char *str, unsigned long max_len)
+uint64_t kl_strlen(const char *str, uint64_t max_len)
 {
-  unsigned long len = 0;
+  uint64_t len = 0;
 
   while ((*str != 0) && ((max_len == 0) || (len < max_len)))
   {
@@ -42,10 +42,10 @@ unsigned long kl_strlen(const char *str, unsigned long max_len)
 /// @param max_len_b The maximum length of b to consider.
 ///
 /// @return If str_a < str_b, -1. If str_a == str_b, 0. Otherwise +1.
-int kl_strcmp(const char *str_a, const unsigned long max_len_a, const char *str_b, const unsigned long max_len_b)
+int32_t kl_strcmp(const char *str_a, const uint64_t max_len_a, const char *str_b, const uint64_t max_len_b)
 {
-  unsigned long ctr = 0;
-  
+  uint64_t ctr = 0;
+
   while (1)
   {
     if (*str_a < *str_b)

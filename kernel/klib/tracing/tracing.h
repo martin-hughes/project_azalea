@@ -1,6 +1,7 @@
 #ifndef _KLIB_TRACING_H
 #define _KLIB_TRACING_H
 
+#include <stdint.h>
 #include <type_traits>
 #include "klib/data_structures/string.h"
 #include "user_interfaces/error_codes.h"
@@ -27,12 +28,9 @@ enum class TRC_LVL
 #define KL_TRC_ENTRY kl_trc_trace(TRC_LVL::FLOW, "ENTRY ", __FUNCTION__, " { \n")
 #define KL_TRC_EXIT kl_trc_trace(TRC_LVL::FLOW, "EXIT ", __FUNCTION__, " } \n")
 
-#define KL_TRC_DATA(name, val) kl_trc_trace(TRC_LVL::FLOW, (name), ": ", (unsigned long)(val), "\n")
-
 #else
 #define KL_TRC_INIT_TRACING
 #define KL_TRC_TRACE(...)
-#define KL_TRC_DATA(name, val)
 
 #define KL_TRC_ENTRY
 #define KL_TRC_EXIT
@@ -51,15 +49,15 @@ void kl_trc_char(unsigned char c);
 
 //template <typename p> void kl_trc_output_argument(p param);
 void kl_trc_output_str_argument(char const *str);
-void kl_trc_output_int_argument(unsigned long value);
+void kl_trc_output_int_argument(uint64_t value);
 void kl_trc_output_kl_string_argument(kl_string &str);
 void kl_trc_output_err_code_argument(ERR_CODE ec);
 
 // Template to output integral types
-template<typename T = unsigned long, typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
+template<typename T = uint64_t, typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
 T kl_trc_output_single_arg(T param)
 {
-  kl_trc_output_int_argument((unsigned long)param);
+  kl_trc_output_int_argument((uint64_t)param);
   return param;
 }
 
@@ -86,7 +84,7 @@ template<typename T, typename = typename std::enable_if<std::is_pointer<T>::valu
     typename Y = void>
 T kl_trc_output_single_arg(T param)
 {
-  kl_trc_output_int_argument((unsigned long)param);
+  kl_trc_output_int_argument((uint64_t)param);
   return param;
 }
 

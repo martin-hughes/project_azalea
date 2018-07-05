@@ -10,23 +10,23 @@
 class virtual_disk_dummy_device: public IBlockDevice
 {
 public:
-  virtual_disk_dummy_device(const char *filename, unsigned long block_size);
+  virtual_disk_dummy_device(const char *filename, uint64_t block_size);
   virtual ~virtual_disk_dummy_device();
 
   virtual const kl_string device_name();
   virtual DEV_STATUS get_device_status();
 
-  virtual unsigned long num_blocks();
-  virtual unsigned long block_size();
+  virtual uint64_t num_blocks();
+  virtual uint64_t block_size();
 
-  virtual ERR_CODE read_blocks(unsigned long start_block,
-                               unsigned long num_blocks,
+  virtual ERR_CODE read_blocks(uint64_t start_block,
+                               uint64_t num_blocks,
                                void *buffer,
-                               unsigned long buffer_length);
-  virtual ERR_CODE write_blocks(unsigned long start_block,
-                                unsigned long num_blocks,
+                               uint64_t buffer_length);
+  virtual ERR_CODE write_blocks(uint64_t start_block,
+                                uint64_t num_blocks,
                                 void *buffer,
-                                unsigned long buffer_length);
+                                uint64_t buffer_length);
 
 protected:
 
@@ -41,7 +41,7 @@ protected:
     char info_test[64];
 
     // Confirms the file type - should be 0xbeda107f.
-    unsigned int magic_number;
+    uint32_t magic_number;
 
     // Should be 1.
     unsigned short version_minor;
@@ -50,69 +50,69 @@ protected:
     unsigned short version_major;
 
     // Size of the header - excluding the pre-header...
-    unsigned int header_len;
+    uint32_t header_len;
 
     // The type of the file - dynamic, static, etc. We support 1 (normal) and 2 (fixed). Others are not supported.
-    unsigned int file_type;
+    uint32_t file_type;
 
     // Image flags - No idea what flags are valid, always seems to be zero...
-    unsigned int image_flags;
+    uint32_t image_flags;
 
     // Image comment - optional.
     char comment[256];
 
     // Byte-offset of the blocks table from the beginning of the image file.
-    unsigned int block_data_offset;
+    uint32_t block_data_offset;
 
     // Byte-offset of the image data from the beginning of the image file.
-    unsigned int image_data_offset;
+    uint32_t image_data_offset;
 
     // Disk geometry data.
-    unsigned int geo_cylinders;
-    unsigned int geo_heads;
-    unsigned int geo_sectors;
+    uint32_t geo_cylinders;
+    uint32_t geo_heads;
+    uint32_t geo_sectors;
 
     // Sector size in bytes.
-    unsigned int sector_size;
+    uint32_t sector_size;
 
-    unsigned int unused_1;
+    uint32_t unused_1;
 
     // Total size of disk, in bytes.
-    unsigned long disk_size;
+    uint64_t disk_size;
 
     // Size of a block in this file, in bytes.
-    unsigned int image_block_size;
+    uint32_t image_block_size;
 
     // Additional data pre-pended to each block, in bytes (must be power of two). Only zero is supported at the moment.
-    unsigned int image_block_extra_size;
+    uint32_t image_block_extra_size;
 
     // Number of blocks in the simulated disk.
-    unsigned int number_blocks;
+    uint32_t number_blocks;
 
     // Number of blocks allocated in this image.
-    unsigned int number_blocks_allocated;
+    uint32_t number_blocks_allocated;
   };
 #pragma pack ( pop )
 
   const kl_string _name;
   DEV_STATUS _status;
-  unsigned long _block_size;
-  unsigned long _num_blocks;
+  uint64_t _block_size;
+  uint64_t _num_blocks;
 
   boost::iostreams::mapped_file _backing_file;
   char *_backing_file_data_ptr;
   vdi_header *_file_header;
-  unsigned int *_block_data_ptr;
+  uint32_t *_block_data_ptr;
   char *_data_ptr;
-  unsigned int _sectors_per_block;
+  uint32_t _sectors_per_block;
 
-  const unsigned int VDI_MAGIC_NUM = 0xbeda107f;
+  const uint32_t VDI_MAGIC_NUM = 0xbeda107f;
 
-  const unsigned int VDI_TYPE_NORMAL = 1;
-  const unsigned int VDI_TYPE_FIXED_SIZE = 2;
+  const uint32_t VDI_TYPE_NORMAL = 1;
+  const uint32_t VDI_TYPE_FIXED_SIZE = 2;
 
-  virtual ERR_CODE read_one_block(unsigned long start_sector, void *buffer);
-  virtual ERR_CODE write_one_block(unsigned long start_sector, void *buffer);
+  virtual ERR_CODE read_one_block(uint64_t start_sector, void *buffer);
+  virtual ERR_CODE write_one_block(uint64_t start_sector, void *buffer);
 };
 
 

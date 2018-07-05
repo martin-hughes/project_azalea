@@ -31,11 +31,11 @@ public:
   ///
   /// @return An appropriate choice from `ERR_CODE`. If the read succeeds, even if the number of bytes is not as
   ///         requested, then the result will be `NO_ERROR`.
-  virtual ERR_CODE read_bytes(unsigned long start,
-                              unsigned long length,
-                              unsigned char *buffer,
-                              unsigned long buffer_length,
-                              unsigned long &bytes_read) = 0;
+  virtual ERR_CODE read_bytes(uint64_t start,
+                              uint64_t length,
+                              uint8_t *buffer,
+                              uint64_t buffer_length,
+                              uint64_t &bytes_read) = 0;
 };
 
 /// @brief Interface for objects that support arbitrarily sized writes
@@ -65,11 +65,11 @@ public:
   ///
   /// @return An appropriate choice from `ERR_CODE`. If the write succeeds, even if the number of bytes is not as
   ///         requested, then the result will be `NO_ERROR`.
-  virtual ERR_CODE write_bytes(unsigned long start,
-                               unsigned long length,
-                               const unsigned char *buffer,
-                               unsigned long buffer_length,
-                               unsigned long &bytes_written) = 0;
+  virtual ERR_CODE write_bytes(uint64_t start,
+                               uint64_t length,
+                               const uint8_t *buffer,
+                               uint64_t buffer_length,
+                               uint64_t &bytes_written) = 0;
 };
 
 /// @brief Interface for objects that act like files on a traditional file system.
@@ -89,7 +89,7 @@ public:
   ///                       function was called.
   ///
   /// @return An appropriate choice from `ERR_CODE`
-  virtual ERR_CODE get_file_size(unsigned long &file_size) = 0;
+  virtual ERR_CODE get_file_size(uint64_t &file_size) = 0;
 };
 
 #endif

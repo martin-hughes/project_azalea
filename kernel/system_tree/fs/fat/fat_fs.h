@@ -14,28 +14,28 @@ struct fat_generic_bpb
 {
   char jmp_code[3];
   char oem_name[8];
-  unsigned short bytes_per_sec;
-  unsigned char secs_per_cluster;
-  unsigned short rsvd_sec_cnt;
-  unsigned char num_fats;
-  unsigned short root_entry_cnt;
-  unsigned short total_secs_16;
-  unsigned char media_type;
-  unsigned short fat_size_16;
-  unsigned short secs_per_track;
-  unsigned short num_heads;
-  unsigned int hidden_secs;
-  unsigned int total_secs_32;
+  uint16_t bytes_per_sec;
+  uint8_t secs_per_cluster;
+  uint16_t rsvd_sec_cnt;
+  uint8_t num_fats;
+  uint16_t root_entry_cnt;
+  uint16_t total_secs_16;
+  uint8_t media_type;
+  uint16_t fat_size_16;
+  uint16_t secs_per_track;
+  uint16_t num_heads;
+  uint32_t hidden_secs;
+  uint32_t total_secs_32;
 };
 
 struct fat16_bpb
 {
   fat_generic_bpb shared;
 
-  unsigned char drive_number;
-  unsigned char reserved;
-  unsigned char boot_signature;
-  unsigned int volume_id;
+  uint8_t drive_number;
+  uint8_t reserved;
+  uint8_t boot_signature;
+  uint32_t volume_id;
   char volume_label[11];
   char fs_type[8];
 };
@@ -44,58 +44,58 @@ struct fat32_bpb
 {
   fat_generic_bpb shared;
 
-  unsigned int fat_size_32;
-  unsigned short ext_flags;
-  unsigned short fs_version;
-  unsigned int root_cluster;
-  unsigned short fs_info_sector;
-  unsigned short boot_sector_cnt;
+  uint32_t fat_size_32;
+  uint16_t ext_flags;
+  uint16_t fs_version;
+  uint32_t root_cluster;
+  uint16_t fs_info_sector;
+  uint16_t boot_sector_cnt;
   char reserved[12];
-  unsigned char drive_number;
-  unsigned char reserved2;
-  unsigned char boot_signature;
-  unsigned int volume_id;
+  uint8_t drive_number;
+  uint8_t reserved2;
+  uint8_t boot_signature;
+  uint32_t volume_id;
   char volume_label[11];
   char fs_type[8];
 };
 
 struct fat_time
 {
-  unsigned short two_seconds :5;
-  unsigned short minutes :6;
-  unsigned short hours :5;
+  uint16_t two_seconds :5;
+  uint16_t minutes :6;
+  uint16_t hours :5;
 };
 
 struct fat_date
 {
-  unsigned short day :5;
-  unsigned short month :4;
-  unsigned short year :7;
+  uint16_t day :5;
+  uint16_t month :4;
+  uint16_t year :7;
 };
 
 struct fat_dir_entry
 {
-  unsigned char name[11];
+  uint8_t name[11];
   struct
   {
-    unsigned char read_only :1;
-    unsigned char hidden :1;
-    unsigned char system :1;
-    unsigned char volume_id :1;
-    unsigned char directory :1;
-    unsigned char archive :1;
-    unsigned char reserved :2;
+    uint8_t read_only :1;
+    uint8_t hidden :1;
+    uint8_t system :1;
+    uint8_t volume_id :1;
+    uint8_t directory :1;
+    uint8_t archive :1;
+    uint8_t reserved :2;
   } attributes;
-  unsigned char nt_use_only;
-  unsigned char create_time_tenths;
+  uint8_t nt_use_only;
+  uint8_t create_time_tenths;
   fat_time create_time;
   fat_date create_date;
   fat_date last_access_date;
-  unsigned short first_cluster_high;
+  uint16_t first_cluster_high;
   fat_time write_time;
   fat_date write_date;
-  unsigned short first_cluster_low;
-  unsigned int file_size;
+  uint16_t first_cluster_low;
+  uint32_t file_size;
 };
 
 #pragma pack ( pop )
@@ -148,19 +148,19 @@ public:
     fat_file(fat_dir_entry file_data_record, fat_filesystem *parent);
     virtual ~fat_file();
 
-    virtual ERR_CODE read_bytes(unsigned long start,
-                          unsigned long length,
-                          unsigned char *buffer,
-                          unsigned long buffer_length,
-                          unsigned long &bytes_read);
+    virtual ERR_CODE read_bytes(uint64_t start,
+                          uint64_t length,
+                          uint8_t *buffer,
+                          uint64_t buffer_length,
+                          uint64_t &bytes_read);
 
-    virtual ERR_CODE write_bytes(unsigned long start,
-                                 unsigned long length,
-                                 const unsigned char *buffer,
-                                 unsigned long buffer_length,
-                                 unsigned long &bytes_written);
+    virtual ERR_CODE write_bytes(uint64_t start,
+                                 uint64_t length,
+                                 const uint8_t *buffer,
+                                 uint64_t buffer_length,
+                                 uint64_t &bytes_written);
 
-    virtual ERR_CODE get_file_size(unsigned long &file_size);
+    virtual ERR_CODE get_file_size(uint64_t &file_size);
 
     protected:
     fat_dir_entry _file_record;
@@ -170,29 +170,29 @@ public:
 protected:
   IBlockDevice *_storage;
   DEV_STATUS _status;
-  std::unique_ptr<unsigned char[]> _buffer;
-  std::unique_ptr<unsigned char[]> _raw_fat;
+  std::unique_ptr<uint8_t[]> _buffer;
+  std::unique_ptr<uint8_t[]> _raw_fat;
 
   kernel_spinlock gen_lock;
-  unsigned long max_sectors;
+  uint64_t max_sectors;
   FAT_TYPE type;
 
   fat16_bpb bpb_16;
   fat32_bpb bpb_32;
   fat_generic_bpb *shared_bpb;
 
-  unsigned long root_dir_start_sector;
-  unsigned long root_dir_sector_count;
-  unsigned long first_data_sector;
-  unsigned long fat_length_bytes;
+  uint64_t root_dir_start_sector;
+  uint64_t root_dir_sector_count;
+  uint64_t first_data_sector;
+  uint64_t fat_length_bytes;
 
   ERR_CODE get_dir_entry(const kl_string &name,
                          bool start_in_root,
-                         unsigned long dir_first_cluster,
+                         uint64_t dir_first_cluster,
                          fat_dir_entry &storage);
-  unsigned long get_next_cluster_num(unsigned long this_cluster_num);
+  uint64_t get_next_cluster_num(uint64_t this_cluster_num);
 
-  bool is_normal_cluster_number(unsigned long cluster_num);
+  bool is_normal_cluster_number(uint64_t cluster_num);
 };
 
 #endif

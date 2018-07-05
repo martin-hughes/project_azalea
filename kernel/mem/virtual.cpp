@@ -41,15 +41,15 @@ namespace
   const unsigned int NUM_INITIAL_RANGES = 64;
   klib_list_item<vmm_range_data *> initial_range_list[NUM_INITIAL_RANGES];
   vmm_range_data initial_range_data[NUM_INITIAL_RANGES];
-  unsigned int initial_ranges_used;
-  unsigned int initial_list_items_used;
+  uint32_t initial_ranges_used;
+  uint32_t initial_list_items_used;
 
   // Support function declarations
   void mem_vmm_initialize();
   klib_list_item<vmm_range_data *> *mem_vmm_split_range(klib_list_item<vmm_range_data *> *item_to_split,
-                                                        unsigned int number_of_pages_reqd,
+                                                        uint32_t number_of_pages_reqd,
                                                         vmm_process_data *proc_data_ptr);
-  klib_list_item<vmm_range_data *> *mem_vmm_get_suitable_range(unsigned int num_pages,
+  klib_list_item<vmm_range_data *> *mem_vmm_get_suitable_range(uint32_t num_pages,
                                                                vmm_process_data *proc_data_ptr);
   void mem_vmm_resolve_merges(klib_list_item<vmm_range_data *> *start_point);
 
@@ -84,7 +84,7 @@ namespace
 /// @return The address of the virtual range allocated.
 ///
 /// @see mem_deallocate_virtual_range
-void *mem_allocate_virtual_range(unsigned int num_pages, task_process *process_to_use)
+void *mem_allocate_virtual_range(uint32_t num_pages, task_process *process_to_use)
 {
   vmm_process_data *proc_data_ptr;
   klib_list_item<vmm_range_data *> *selected_list_item;
@@ -112,12 +112,12 @@ void *mem_allocate_virtual_range(unsigned int num_pages, task_process *process_t
 
 
   acquired_lock = mem_vmm_lock(proc_data_ptr);
-  KL_TRC_DATA("Lock acquired?", acquired_lock);
+  KL_TRC_TRACE(TRC_LFL::FLOW, "Lock acquired?", acquired_lock, "\n");
 
   // How many pages are we actually going to allocate. If num_pages is exactly
   // a power of two, it will be used. Otherwise, it will be rounded up to the
   // next power of two.
-  unsigned int actual_num_pages;
+  uint32_t actual_num_pages;
   actual_num_pages = round_to_power_two(num_pages);
 
   // What range are we going to allocate from?
@@ -161,13 +161,13 @@ void *mem_allocate_virtual_range(unsigned int num_pages, task_process *process_t
 /// @param num_pages The number of pages covered by this allocation. Must be an integer (or zero) power of two.
 ///
 /// @param process_to_use The data for the process to perform the allocation in.
-void mem_vmm_allocate_specific_range(unsigned long start_addr, unsigned int num_pages, task_process *process_to_use)
+void mem_vmm_allocate_specific_range(uint64_t start_addr, uint32_t num_pages, task_process *process_to_use)
 {
   vmm_process_data *proc_data_ptr;
   klib_list_item<vmm_range_data *> *cur_item;
   vmm_range_data *cur_data;
-  unsigned long end_addr;
-  unsigned int rounded_num_pages = round_to_power_two(num_pages);
+  uint64_t end_addr;
+  uint32_t rounded_num_pages = round_to_power_two(num_pages);
 
   KL_TRC_ENTRY;
 
@@ -251,7 +251,7 @@ void mem_vmm_allocate_specific_range(unsigned long start_addr, unsigned int num_
 //                   passed to #mem_allocate_virtual_range, or an error will result.
 ///
 /// @param process_to_use The process to do the deallocation in. If nullptr, a kernel deallocation is made.
-void mem_deallocate_virtual_range(void *start, unsigned int num_pages, task_process *process_to_use)
+void mem_deallocate_virtual_range(void *start, uint32_t num_pages, task_process *process_to_use)
 {
   vmm_process_data *proc_data_ptr;
 
@@ -270,13 +270,13 @@ void mem_deallocate_virtual_range(void *start, unsigned int num_pages, task_proc
 
   klib_list_item<vmm_range_data *> *cur_list_item;
   vmm_range_data *cur_range_data;
-  unsigned int actual_num_pages;
+  uint32_t actual_num_pages;
   bool acquired_lock;
 
   ASSERT(vmm_initialized);
 
   acquired_lock = mem_vmm_lock(proc_data_ptr);
-  KL_TRC_DATA("Lock acquired?", acquired_lock);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Lock acquired?", acquired_lock, "\n");
 
   actual_num_pages = round_to_power_two(num_pages);
 
@@ -284,7 +284,7 @@ void mem_deallocate_virtual_range(void *start, unsigned int num_pages, task_proc
   while (cur_list_item != nullptr)
   {
     cur_range_data = (vmm_range_data *)cur_list_item->item;
-    if (cur_range_data->start == (unsigned long)start)
+    if (cur_range_data->start == (uint64_t)start)
     {
       ASSERT(cur_range_data->allocated == true);
       ASSERT(cur_range_data->number_of_pages == actual_num_pages);
@@ -361,8 +361,8 @@ namespace
 
     klib_list_item<vmm_range_data *> *root_item;
     vmm_range_data *root_data;
-    unsigned long free_pages;
-    unsigned long used_pages;
+    uint64_t free_pages;
+    uint64_t used_pages;
 
     ASSERT(!vmm_initialized);
 
@@ -427,7 +427,7 @@ namespace
   /// @param num_pages The minimum number of pages required in the range.
   ///
   /// @param proc_data_ptr The data for the process to perform the allocation in.
-  klib_list_item<vmm_range_data *> *mem_vmm_get_suitable_range(unsigned int num_pages, vmm_process_data *proc_data_ptr)
+  klib_list_item<vmm_range_data *> *mem_vmm_get_suitable_range(uint32_t num_pages, vmm_process_data *proc_data_ptr)
   {
     KL_TRC_ENTRY;
 
@@ -486,7 +486,7 @@ namespace
   /// @return A range item of the correct size (or larger) The caller need not clean this up, it lives in the list of
   ///         ranges.
   klib_list_item<vmm_range_data *> *mem_vmm_split_range(klib_list_item<vmm_range_data *> *item_to_split,
-                                                        unsigned int number_of_pages_reqd,
+                                                        uint32_t number_of_pages_reqd,
                                                         vmm_process_data *proc_data_ptr)
   {
     KL_TRC_ENTRY;
@@ -542,7 +542,7 @@ namespace
     klib_list_item<vmm_range_data *> *partner_item;
     vmm_range_data *partner_data;
     bool first_half_of_pair;
-    unsigned long next_block_size;
+    uint64_t next_block_size;
 
     klib_list_item<vmm_range_data *> *survivor_item;
     vmm_range_data *survivor_data;
@@ -696,9 +696,9 @@ namespace
 
     // If this item is one of the pre-allocated ones, there's nothing to do.
     // Otherwise, hand it over to kfree.
-    unsigned long this_item = (unsigned long)item;
-    unsigned long prealloc_start = (unsigned long)(&initial_range_list[0]);
-    unsigned long prealloc_end = prealloc_start + sizeof(initial_range_list);
+    uint64_t this_item = (uint64_t)item;
+    uint64_t prealloc_start = (uint64_t)(&initial_range_list[0]);
+    uint64_t prealloc_end = prealloc_start + sizeof(initial_range_list);
 
     if ((this_item < prealloc_start) || (this_item >= prealloc_end))
     {
@@ -722,9 +722,9 @@ namespace
 
     // If this item is one of the pre-allocated ones, there's nothing to do.
     // Otherwise, hand it over to kfree.
-    unsigned long this_item = (unsigned long)item;
-    unsigned long prealloc_start = (unsigned long)(&initial_range_data[0]);
-    unsigned long prealloc_end = prealloc_start + sizeof(initial_range_data);
+    uint64_t this_item = (uint64_t)item;
+    uint64_t prealloc_start = (uint64_t)(&initial_range_data[0]);
+    uint64_t prealloc_end = prealloc_start + sizeof(initial_range_data);
 
     if ((this_item < prealloc_start) || (this_item >= prealloc_end))
     {
