@@ -455,3 +455,14 @@ ERR_CODE msg_broadcast_msg()
   return ERR_CODE::UNKNOWN;
 }
 */
+
+#ifdef AZALEA_TEST_CODE
+void test_only_reset_message_system()
+{
+  delete msg_name_id_map;
+  delete msg_id_name_map;
+
+  msg_name_id_map = nullptr;
+  msg_id_name_map = nullptr;
+}
+#endif

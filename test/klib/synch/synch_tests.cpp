@@ -181,4 +181,6 @@ TEST(KlibSynchTest, MessagePassing2)
   res = msg_get_msg_name(id_a, name_out);
   ASSERT_EQ(res, ERR_CODE::NO_ERROR);
   ASSERT_EQ(name_a, name_out);
+
+  test_only_reset_message_system();
 }

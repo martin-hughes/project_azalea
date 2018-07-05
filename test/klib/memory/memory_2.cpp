@@ -37,15 +37,13 @@ void *memory_test_fuzz_allocation_thread(void *);
 
 void memory_test_2()
 {
-  test_only_reset_allocator();
-
   memory_test_fuzz_allocation_thread(nullptr);
+
+  test_only_reset_allocator();
 }
 
 void memory_test_3_mt_fuzz()
 {
-  test_only_reset_allocator();
-
   // Ensure that the allocator is initialized before starting the test. This prevents both threads attempting to
   // initialize it at the same time. The allocator doesn't protect against this because it is guaranteed to be
   // initialized before multi-tasking begins in the kernel.
@@ -63,6 +61,8 @@ void memory_test_3_mt_fuzz()
   {
     pthread_join(test_threads[i], nullptr);
   }
+
+  test_only_reset_allocator();
 }
 
 void *memory_test_fuzz_allocation_thread(void *)

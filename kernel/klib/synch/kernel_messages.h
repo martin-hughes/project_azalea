@@ -48,4 +48,8 @@ ERR_CODE msg_add_process_to_grp();
 ERR_CODE msg_remove_process_from_grp();
 ERR_CODE msg_broadcast_msg();*/
 
+#ifdef AZALEA_TEST_CODE
+void test_only_reset_message_system();
+#endif
+
 #endif

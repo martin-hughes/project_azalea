@@ -30,6 +30,8 @@ void memory_test_1()
   {
     memory_test_1_try_size(SIZES_TO_TRY[i]);
   }
+
+  test_only_reset_allocator();
 }
 
 void memory_test_1_try_size(unsigned int size)
