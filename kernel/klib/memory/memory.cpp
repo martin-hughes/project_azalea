@@ -633,34 +633,37 @@ void test_only_reset_allocator()
 {
   KL_TRC_ENTRY;
 
-  slab_header *slab_ptr;
-
-  // Spin through each possible list in turn, removing the slabs from the list
-  // and freeing them.
-  for (uint32_t i = 0; i < NUM_SLAB_LISTS; i++)
+  if (allocator_initialized)
   {
-    while(!klib_list_is_empty(&free_slabs_list[i]))
+    slab_header *slab_ptr;
+
+    // Spin through each possible list in turn, removing the slabs from the list
+    // and freeing them.
+    for (uint32_t i = 0; i < NUM_SLAB_LISTS; i++)
     {
-      slab_ptr = (slab_header *)free_slabs_list[i].head->item;
-      klib_list_remove(&slab_ptr->list_entry);
-      mem_deallocate_pages(slab_ptr, 1);
+      while(!klib_list_is_empty(&free_slabs_list[i]))
+      {
+        slab_ptr = (slab_header *)free_slabs_list[i].head->item;
+        klib_list_remove(&slab_ptr->list_entry);
+        mem_deallocate_pages(slab_ptr, 1);
+      }
+      while(!klib_list_is_empty(&partial_slabs_list[i]))
+      {
+        slab_ptr = (slab_header *)partial_slabs_list[i].head->item;
+        klib_list_remove(&slab_ptr->list_entry);
+        mem_deallocate_pages(slab_ptr, 1);
+      }
+      while(!klib_list_is_empty(&full_slabs_list[i]))
+      {
+        slab_ptr = (slab_header *)full_slabs_list[i].head->item;
+        klib_list_remove(&slab_ptr->list_entry);
+        mem_deallocate_pages(slab_ptr, 1);
+      }
     }
-    while(!klib_list_is_empty(&partial_slabs_list[i]))
-    {
-      slab_ptr = (slab_header *)partial_slabs_list[i].head->item;
-      klib_list_remove(&slab_ptr->list_entry);
-      mem_deallocate_pages(slab_ptr, 1);
-    }
-    while(!klib_list_is_empty(&full_slabs_list[i]))
-    {
-      slab_ptr = (slab_header *)full_slabs_list[i].head->item;
-      klib_list_remove(&slab_ptr->list_entry);
-      mem_deallocate_pages(slab_ptr, 1);
-    }
+
+    allocator_initialized = false;
   }
-
-  allocator_initialized = false;
-
+  
   KL_TRC_EXIT;
 }
 #endif

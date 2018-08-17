@@ -17,6 +17,8 @@ private:
   const char *_reason;
 };
 
+void test_spin_sleep(uint64_t sleep_time_ns);
+
 // defined in processor.dummy.cpp
 class task_thread;
 void test_only_set_cur_thread(task_thread *thread);

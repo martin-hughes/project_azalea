@@ -5,7 +5,8 @@ task_switch_lock:
     dq 0x00
 
 EXTERN task_int_swap_task
-EXTERN asm_klib_synch_spinlock_lock
+EXTERN klib_synch_spinlock_lock
+EXTERN klib_synch_spinlock_unlock
 GLOBAL asm_task_switch_interrupt
 extern end_of_irq_ack_fn
 
@@ -30,7 +31,7 @@ asm_task_switch_interrupt:
     push r15
 
     mov rdi, task_switch_lock
-    call asm_klib_synch_spinlock_lock
+    call klib_synch_spinlock_lock
 
     ; Save the execution pointer as a parameter for task_int_swap_task.
     mov rsi, cr3
@@ -56,9 +57,8 @@ asm_task_switch_interrupt:
     add rsp, 512
 
     ; Task switching complete, release the lock.
-    mov rax, task_switch_lock
-    mov rbx, 0
-    mov [rax], rbx
+    mov rdi, task_switch_lock
+    call klib_synch_spinlock_unlock
 
     ; Need to do an indirect call, which works from RAX, so store it, call and restore.
     push rax

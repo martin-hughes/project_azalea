@@ -15,7 +15,8 @@ namespace
 {
 const uint16_t SECTOR_LENGTH = 512;
 
-kernel_spinlock ata_spinlock = 0;
+kernel_spinlock ata_spinlock;
+bool spinlock_inited = false;
 }
 
 struct status_byte
@@ -44,6 +45,13 @@ generic_ata_device::generic_ata_device(uint16_t base_port, bool master) :
   unsigned char result;
 
   std::unique_ptr<uint16_t[]> identify_buffer(new uint16_t[SECTOR_LENGTH / sizeof(uint16_t)]);
+
+  if (!spinlock_inited)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Spinlock init\n");
+    spinlock_inited = true;
+    klib_synch_spinlock_init(ata_spinlock);
+  }
 
   // Send an IDENTIFY command and read the results
   klib_synch_spinlock_lock(ata_spinlock);

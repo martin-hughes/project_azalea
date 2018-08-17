@@ -6,7 +6,8 @@
 - [Background](#background)
 - [Choosing a Name](#choosing-a-name)
 - [Requirements](#requirements)
-- [Getting Started](#getting-started)
+- [Getting Started - Full build](#getting-started---full-build)
+- [Getting Started - Windows build](#getting-started---windows-builds)
 - [Contributing](#contributing)
 - [Find out more](#find-out-more)
 
@@ -55,28 +56,32 @@ Being a hobby project, there are some fairly specific requirements for this proj
 - An x64 compatible processor. A recent Intel one should work.
 - **Maximum** 1GB of RAM. This is a limitation of the memory manager.
 
-To compile the system, you will need the following tools and libraries installed:
+To compile the full system, you will need the following tools and libraries installed:
 - Azalea-libc - this can be built as part of compiling the kernel, as described below.
-- Python 2.6 or later
+- Python 2.6 or later (*)
 - GCC 5.4 or later
 - Clang 3.8.0 or later
-- SCons
-- NASM
-- Boost iostreams - only used in the test scripts.
+- SCons (*)
+- NASM (*)
+- Boost iostreams (*) - only used in the test scripts.
 - Qemu - the default test script runs on qemu, and qemu-nbd is required to create disk images from scratch (which is
   optional). Depending on how you choose to mount this disk images you might need qemu-nbd.
 - Virtualbox - Required to generate disk images from scratch (optional) and can be used as a test system.
 - GRUB2 2.02 beta 2 or later - Required to generate disk images from scratch. (optional)
 - Doxygen - Only needed to generate documentation. (optional)
+- Visual Studio - only needed if doing a Windows build (optional, see below)
 
-Compilation has been tested using Ubuntu 16.04. It may work on the Windows Subsystem for Linux, but is untested.
+Items marked with a (*) are the only ones required if doing a unit test program build on Windows. 
+
+Full compilation has been tested using Ubuntu 16.04. It may work on the Windows Subsystem for Linux, but is untested.
 
 The project is routinely tested in qemu-system-x86_64 and Virtual Box, and very rarely on real hardware. Real hardware
 bugs would be interesting to hear about!
 
-## Getting Started
+## Getting Started - Full build
 
-To get the system running from scratch, do the following:
+A full build requires a Linux toolchain, as described in [Requirements](#requirements) above. To get the system running
+from scratch, do the following:
 
 1. Get a copy of the code on your system, using your favourite method.
 2. Also, get a copy of the Azalea-libc code.
@@ -101,6 +106,34 @@ If something goes wrong, you will get a blue screen of death - which is a bug so
 
 The system will start a program called 'initprog' from the root of its disk image and run it in user mode. At the
 moment, 'initprog' is compiled from the source in `extras/demo_program` as part of the main build script.
+
+## Getting Started - Windows Builds
+
+At present, there is no support for building the live kernel, live test programs or C Library using Windows. It is
+possible to compile the unit test program to run on Windows. If possible, further Windows build support will be added
+in future, but there are a few obstacles to this, described below.
+
+In order to get the unit test program running on Windows:
+
+1. Get a copy of the code on your system, using your favourite method.
+2. Configure the values in build_support/config.py as appropriate.
+3. Ensure the INCLUDE and LIB environment variables are configured to include location of the Boost iostreams library.
+4. Ensure the other environment variables are correctly configured - the easiest way is to start a Developer Command
+   Prompt - this is one of the links in the Visual Studio start menu folder.
+5. In the Azalea-libc root directory, execute `scons` and check there are no errors.
+6. Execute output\main-tests.
+
+This allows at least some development work to be done using a Windows machine. As mentioned, there are some obstacles
+to a full Windows build - for example:
+
+- The native Visual Studio tools don't seem to be able to produce ELF outputs (an issue for initprog)
+- I'm not sure if there is a way to use custom linker scripts or not (to produce the kernel binary), but it'll
+  definitely be a different format to the LD version.
+- The compiler intrinsics are differently named.
+- Windows uses a different calling convention, which breaks a lot of the assembly language files in the kernel code.
+
+These can probably be overcome by using the Linux tools on Windows, but a large benefit of using the Visual Studio
+toolchain is being able to easily do debugging within Visual Studio!
 
 ## Contributing
 

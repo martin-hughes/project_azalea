@@ -5,11 +5,12 @@
 //#define ENABLE_TRACING
 
 #include "klib/klib.h"
-#include "pthread.h"
-
+#include <thread>
+#include <mutex>
+#include <memory>
 #include <map>
 
-std::map<klib_mutex *, pthread_mutex_t> mutex_map;
+std::map<klib_mutex *, std::unique_ptr<std::mutex>> mutex_map;
 
 // Initialize a mutex object. The owner of the mutex object is responsible for managing the memory associated with it.
 void klib_synch_mutex_init(klib_mutex &mutex)
@@ -25,7 +26,7 @@ void klib_synch_mutex_init(klib_mutex &mutex)
   klib_list_initialize(&mutex.waiting_threads_list);
   klib_synch_spinlock_unlock(mutex.access_lock);
 
-  mutex_map[&mutex] = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
+  mutex_map[&mutex] = std::make_unique<std::mutex>();
 
   KL_TRC_EXIT;
 }
@@ -39,38 +40,31 @@ SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, uint64_t max_wait)
 {
   KL_TRC_ENTRY;
 
-  int pthread_lock_result;
+  bool locked_ok;
   SYNC_ACQ_RESULT our_result;
 
   // This isn't quite right - we don't support timed waits here.
   if (max_wait != 0)
   {
-    pthread_lock_result = pthread_mutex_lock(&mutex_map[&mutex]);
+    mutex_map[&mutex]->lock();
+    locked_ok = true;
   }
   else
   {
-    pthread_lock_result = pthread_mutex_trylock(&mutex_map[&mutex]);
+    locked_ok = mutex_map[&mutex]->try_lock();
   }
 
-  switch (pthread_lock_result)
+  if (locked_ok)
   {
-    case 0:
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Acquired mutex\n");
-      our_result = SYNC_ACQ_ACQUIRED;
-      mutex.mutex_locked = true;
-      break;
-
-    case EDEADLK:
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Already owned mutex\n");
-      our_result = SYNC_ACQ_ALREADY_OWNED;
-      mutex.mutex_locked = true;
-      break;
-
-    default:
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Error occurred or timeout\n");
-      our_result = SYNC_ACQ_TIMEOUT;
-      mutex.mutex_locked = false;
-      break;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Acquired mutex\n");
+    our_result = SYNC_ACQ_ACQUIRED;
+    mutex.mutex_locked = true;
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Already owned mutex\n");
+    our_result = SYNC_ACQ_TIMEOUT;
+    mutex.mutex_locked = true;
   }
 
   KL_TRC_EXIT;
@@ -85,7 +79,7 @@ void klib_synch_mutex_release(klib_mutex &mutex, const bool disregard_owner)
 
   ASSERT(mutex.mutex_locked);
   mutex.mutex_locked = false;
-  pthread_mutex_unlock(&mutex_map[&mutex]);
+  mutex_map[&mutex]->unlock();
 
   KL_TRC_EXIT;
 }

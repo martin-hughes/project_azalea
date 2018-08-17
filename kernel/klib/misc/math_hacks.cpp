@@ -1,5 +1,9 @@
 #include "math_hacks.h"
 
+#ifdef _MSVC_LANG
+#include <intrin.h>
+#endif
+
 // Round a number to the next-highest power of two.
 uint64_t round_to_power_two(uint64_t input)
 {
@@ -17,7 +21,11 @@ uint64_t round_to_power_two(uint64_t input)
     return 0;
   }
 
+#ifndef _MSVC_LANG
   pos = __builtin_clzl(input);
+#else
+  pos = __lzcnt64(input);
+#endif
   output = (uint64_t)1 << (63 - pos);
 
   if (first_in != output)

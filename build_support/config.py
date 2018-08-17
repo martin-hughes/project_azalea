@@ -22,3 +22,9 @@ azalea_dev_folder = '/home/martin/azalea_dev'
 # detect all of them. For example, items still referenced via global variables don't show up. Valgrind can be used to
 # find this kind of leak, but can't be run on code with the Address Sanitizer built in to it.
 test_use_asan = False
+
+# Should we create temporary copies of memory-mapped files? When doing some filesystem tests, a disk image is mapped
+# into RAM so that it can look a little bit like a live disk. However, not all host filesystems support memory mapping
+# - for example, part of my Linux environment - so it is necessary to copy the image elsewhere. When set to True, the
+# test code creates (and deletes) temporary copies of the virtual image in a location specified in the test code.
+test_copy_mem_map_files = False

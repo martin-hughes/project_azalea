@@ -2,16 +2,14 @@
 #define _KLIB_SYNCH_K_LOCKS
 
 #include <stdint.h>
+#include <atomic>
 
-typedef uint64_t kernel_spinlock;
+typedef std::atomic<uint64_t> kernel_spinlock;
 
 void klib_synch_spinlock_init(kernel_spinlock &lock);
-void klib_synch_spinlock_lock(kernel_spinlock &lock);
+extern "C" void klib_synch_spinlock_lock(kernel_spinlock &lock);
 bool klib_synch_spinlock_try_lock(kernel_spinlock &lock);
-void klib_synch_spinlock_unlock(kernel_spinlock &lock);
-
-extern "C" void asm_klib_synch_spinlock_lock(kernel_spinlock *lock);
-extern "C" uint64_t asm_klib_synch_spinlock_try_lock(kernel_spinlock *lock);
+extern "C" void klib_synch_spinlock_unlock(kernel_spinlock &lock);
 
 #define KLOCK_NUM_LOCKS 2
 

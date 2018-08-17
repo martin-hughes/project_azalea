@@ -15,9 +15,7 @@ using namespace std;
 
 // VirtualBox has some trouble with memory-mapping files, so this define causes the test script to copy the disk image
 // to /tmp before attempting to run the test.
-#define COPY_IMAGE_FIRST
-
-#ifdef COPY_IMAGE_FIRST
+#ifdef AZALEA_TEST_COPY_MEM_MAP_FILES
 const char *copy_command = "cp test/assets/fat_disk_image.vdi /tmp/fat_disk_image.vdi";
 const char *sample_image = "/tmp/fat_disk_image.vdi";
 #else
@@ -35,7 +33,7 @@ protected:
 
   FatFsTest()
   {
-    #ifdef COPY_IMAGE_FIRST
+    #ifdef AZALEA_TEST_COPY_MEM_MAP_FILES
     system(copy_command);
     #endif
 

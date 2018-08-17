@@ -29,6 +29,10 @@
 #include "mem/mem.h"
 #include "object_mgr/object_mgr.h"
 
+#ifdef _MSVC_LANG
+#include <intrin.h>
+#endif
+
 namespace
 {
   // A list of all processes known to the system.
@@ -850,7 +854,11 @@ namespace
   {
     while(1)
     {
+#ifndef _MSVC_LANG
       asm("hlt");
+#else
+      __halt();
+#endif
     }
   }
 };

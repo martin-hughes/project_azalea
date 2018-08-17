@@ -5,9 +5,9 @@
 // It will have difficulty with code that allocates physical and virtual ranges
 // and maps them to each other.
 
+#include "processor/processor.h"
 #include "mem/mem.h"
 #include "test/test_core/test.h"
-
 #include <malloc.h>
 #include <iostream>
 using namespace std;
@@ -44,7 +44,12 @@ void mem_map_range(void *physical_start, void* virtual_start, uint32_t len)
 void *mem_allocate_pages(uint32_t num_pages)
 {
   uint64_t requested_ram = num_pages * page_size;
+
+#ifdef _MSVC_LANG
+  return _aligned_malloc(requested_ram, page_size);
+#else
   return memalign(page_size, requested_ram);
+#endif
 }
 
 void mem_deallocate_physical_pages(void *start, uint32_t num_pages)
@@ -64,7 +69,11 @@ void mem_unmap_range(void *virtual_start, uint32_t num_pages)
 
 void mem_deallocate_pages(void *virtual_start, uint32_t num_pages)
 {
+#ifndef _MSVC_LANG
   free(virtual_start);
+#else
+  _aligned_free(virtual_start);
+#endif
 }
 
 void mem_vmm_allocate_specific_range(uint64_t start_addr, uint32_t num_pages, task_process *process_to_use)

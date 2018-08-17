@@ -7,6 +7,7 @@
 #include <vector>
 #include <stdlib.h>
 #include <time.h>
+#include <thread>
 #include "gtest/gtest.h"
 
 #include "klib/memory/memory.h"
@@ -30,14 +31,14 @@ namespace
 
   const uint64_t NUM_THREADS = 2;
 
-  pthread_t test_threads[NUM_THREADS];
+  thread test_threads[NUM_THREADS];
 }
 
-void *memory_test_fuzz_allocation_thread(void *);
+void memory_test_fuzz_allocation_thread();
 
 TEST(KlibMemoryTest, FuzzTests)
 {
-  memory_test_fuzz_allocation_thread(nullptr);
+  memory_test_fuzz_allocation_thread();
 
   test_only_reset_allocator();
 }
@@ -52,20 +53,25 @@ TEST(KlibMemoryTest, MultiThreadFuzzTest)
 
   srand (time(nullptr));
 
+  std::thread **test_threads = new std::thread *[NUM_THREADS];
+
   for (int i = 0; i < NUM_THREADS; i++)
   {
-    pthread_create(&test_threads[i], nullptr, &memory_test_fuzz_allocation_thread, nullptr);
+    test_threads[i] = new std::thread(memory_test_fuzz_allocation_thread);
   }
 
   for (int i = 0; i < NUM_THREADS; i++)
   {
-    pthread_join(test_threads[i], nullptr);
+    test_threads[i]->join();
+    delete test_threads[i];
   }
+
+  delete[] test_threads;
 
   test_only_reset_allocator();
 }
 
-void *memory_test_fuzz_allocation_thread(void *)
+void memory_test_fuzz_allocation_thread()
 {
   bool allocate = false;
   float proportion;
@@ -128,6 +134,4 @@ void *memory_test_fuzz_allocation_thread(void *)
       kfree(this_allocation.ptr);
     }
   }
-
-  return nullptr;
 }

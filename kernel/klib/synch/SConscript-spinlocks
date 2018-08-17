@@ -2,6 +2,7 @@
 
 Import('env')
 obj = env.Library("klib-synch-spinlocks", 
-                  [ "kernel_locks.cpp",
-                    "asm_kernel_locks.asm", ])
+                  [ 
+                    "kernel_locks.cpp",
+                  ])
 Return ("obj") 
