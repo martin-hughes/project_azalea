@@ -176,7 +176,7 @@ void ps2_keyboard_device::handle_irq_slow(uint8_t irq_num)
 
 
   hdr.msg_length = sizeof(keypress_msg);
-  hdr.originating_process = task_get_cur_thread()->parent_process;
+  hdr.originating_process = task_get_cur_thread()->parent_process.get();
 
   while ((proc_read_port(0x64, 8) & 0x1) == 1)
   {

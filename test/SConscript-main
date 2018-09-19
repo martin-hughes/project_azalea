@@ -39,6 +39,10 @@ files = [ "dummy_libs/processor/processor.dummy.cpp",
           "system_tree/system_tree_2.cpp",
           "system_tree/system_tree_3_pipes.cpp",
           "system_tree/system_tree_4_fat.cpp",
+          "system_tree/system_tree_6_proc.cpp",
+
+          "system_tree/fs/mem/mem_fs_1_basic.cpp",
+          "system_tree/fs/mem/mem_fs_2_syscall.cpp",
 
           "tracing/tracing_1.cpp",
         ]

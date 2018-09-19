@@ -83,3 +83,11 @@ void panic_print(const char *message, uint16_t line)
 		}
 	};
 };
+
+/// @brief Provide a way for standard C & C++ library functions to panic - they generally do this where they would have
+///        thrown exceptions.
+extern "C" void abort()
+{
+	panic("Kernel abort called");
+	while(1);
+}

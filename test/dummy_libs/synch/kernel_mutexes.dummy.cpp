@@ -4,6 +4,8 @@
 
 //#define ENABLE_TRACING
 
+#include "test/test_core/test.h"
+
 #include "klib/klib.h"
 #include <thread>
 #include <mutex>

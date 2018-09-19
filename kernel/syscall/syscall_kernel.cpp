@@ -56,6 +56,10 @@ const void *syscall_pointers[] =
       (void *)syscall_wait_for_object,
       (void *)syscall_futex_wait,
       (void *)syscall_futex_wake,
+
+      // New syscalls:
+      (void *)syscall_create_obj_and_handle,
+      (void *)syscall_set_handle_data_len,
     };
 
 const uint64_t syscall_max_idx = (sizeof(syscall_pointers) / sizeof(void *)) - 1;
@@ -123,6 +127,7 @@ ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *ha
 {
   ERR_CODE result;
   KL_TRC_ENTRY;
+  task_thread *cur_thread = task_get_cur_thread();
 
   // Check parameters for robustness
   if ((path == nullptr) || (!SYSCALL_IS_UM_ADDRESS(path)))
@@ -140,27 +145,28 @@ ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *ha
     KL_TRC_TRACE(TRC_LVL::FLOW, "Can't really handle zero-length paths\n");
     result = ERR_CODE::INVALID_PARAM;
   }
+  else if (cur_thread == nullptr)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW< "Couldn't identify current thread\n");
+    result = ERR_CODE::INVALID_OP;
+  }
   // All checks out, try to grab a system_tree object and allocate it a handle.
   else
   {
-    ISystemTreeLeaf *leaf;
+    std::shared_ptr<ISystemTreeLeaf> leaf;
     GEN_HANDLE new_handle;
     std::unique_ptr<char[]> buf = std::make_unique<char[]>(path_len + 1);
     kl_memcpy(path, buf.get(), path_len);
-    buf[path_len + 1] = 0;
+    buf[path_len] = 0;
     kl_string str_path(path);
-    result = system_tree()->get_leaf(str_path, &leaf);
+    result = system_tree()->get_leaf(str_path, leaf);
 
     if (result == ERR_CODE::NO_ERROR)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Successfully got leaf object: ", leaf, "\n");
-
-      new_handle = om_store_object(dynamic_cast<IRefCounted *>(leaf));
+      std::shared_ptr<IHandledObject> leaf_ptr = std::shared_ptr<IHandledObject>(leaf);
+      new_handle = cur_thread->thread_handles.store_object(leaf_ptr);
       *handle = new_handle;
-
-      // This code abandons its view on this object and leaves it in OM. Since we're not using it any more, but we
-      // don't want to delete it, we just release our reference to it and let it live on!
-      leaf->ref_release();
 
       KL_TRC_TRACE(TRC_LVL::EXTRA, "Correlated to handle ", new_handle, "\n");
     }
@@ -188,22 +194,32 @@ ERR_CODE syscall_close_handle(GEN_HANDLE handle)
   KL_TRC_ENTRY;
 
   ERR_CODE result = ERR_CODE::UNKNOWN;
+  task_thread *cur_thread = task_get_cur_thread();
+  std::shared_ptr<IHandledObject> obj;
 
-  IRefCounted *obj = dynamic_cast<IRefCounted *>(om_retrieve_object(handle));
-  if (obj == nullptr)
+  if (cur_thread == nullptr)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Object not found!\n");
-    result = ERR_CODE::NOT_FOUND;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't identify current thread\n");
+    result = ERR_CODE::INVALID_OP;
   }
   else
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Found object: ", obj, " - destroying\n");
+    obj = cur_thread->thread_handles.retrieve_object(handle);
+    if (obj == nullptr)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Object not found!\n");
+      result = ERR_CODE::NOT_FOUND;
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Found object: ", obj, " - destroying\n");
 
-    // Don't delete the object, let the reference counting mechanism take care of it as needed.
-    obj = nullptr;
-    om_remove_object(handle);
+      // Don't delete the object, let the reference counting mechanism take care of it as needed.
+      obj = nullptr;
+      cur_thread->thread_handles.remove_object(handle);
 
-    result = ERR_CODE::NO_ERROR;
+      result = ERR_CODE::NO_ERROR;
+    }
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
@@ -245,6 +261,7 @@ ERR_CODE syscall_read_handle(GEN_HANDLE handle,
   KL_TRC_ENTRY;
 
   ERR_CODE result;
+  task_thread *cur_thread = task_get_cur_thread();
 
   if ((buffer == nullptr) || !SYSCALL_IS_UM_ADDRESS(buffer))
   {
@@ -261,19 +278,24 @@ ERR_CODE syscall_read_handle(GEN_HANDLE handle,
     KL_TRC_TRACE(TRC_LVL::FLOW, "bytes_to_read is invalid\n");
     result = ERR_CODE::INVALID_PARAM;
   }
+  else if (cur_thread == nullptr)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't identify current thread\n");
+    result = ERR_CODE::INVALID_OP;
+  }
   else
   {
     // Parameters check out, try to read.
-    ISystemTreeLeaf *leaf = dynamic_cast<ISystemTreeLeaf *>(om_retrieve_object(handle));
+    std::shared_ptr<IHandledObject> leaf_ptr = cur_thread->thread_handles.retrieve_object(handle);
+    std::shared_ptr<IReadable> file = std::dynamic_pointer_cast<IReadable>(leaf_ptr);
     KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved leaf ", leaf, " from OM\n");
-    if (leaf == nullptr)
+    if (leaf_ptr == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Leaf object not found - bad handle\n");
       result = ERR_CODE::INVALID_PARAM;
     }
     else
     {
-      IReadable *file = dynamic_cast<IReadable *>(leaf);
       if (file == nullptr)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Leaf is not a file, so can't be read.\n");
@@ -317,15 +339,22 @@ ERR_CODE syscall_get_handle_data_len(GEN_HANDLE handle, uint64_t *data_length)
   KL_TRC_ENTRY;
 
   ERR_CODE result;
+  task_thread *cur_thread = task_get_cur_thread();
 
   if ((data_length == nullptr) || !SYSCALL_IS_UM_ADDRESS(data_length))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "data_length ptr not valid.\n");
     result = ERR_CODE::INVALID_PARAM;
   }
+  else if (cur_thread == nullptr)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't identify current thread\n");
+    result = ERR_CODE::INVALID_OP;
+  }
   else
   {
-    ISystemTreeLeaf *leaf = dynamic_cast<ISystemTreeLeaf *>(om_retrieve_object(handle));
+    std::shared_ptr<ISystemTreeLeaf> leaf = 
+      std::dynamic_pointer_cast<ISystemTreeLeaf>(cur_thread->thread_handles.retrieve_object(handle));
     KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved leaf ", leaf, " from OM\n");
     if (leaf == nullptr)
     {
@@ -334,7 +363,7 @@ ERR_CODE syscall_get_handle_data_len(GEN_HANDLE handle, uint64_t *data_length)
     }
     else
     {
-      IBasicFile *file = dynamic_cast<IBasicFile *>(leaf);
+      std::shared_ptr<IBasicFile> file = std::dynamic_pointer_cast<IBasicFile>(leaf);
       if (file == nullptr)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Leaf is not a file, so can't tell size.\n");
@@ -387,6 +416,7 @@ ERR_CODE syscall_write_handle(GEN_HANDLE handle,
   KL_TRC_ENTRY;
 
   ERR_CODE result;
+  task_thread *cur_thread = task_get_cur_thread();
 
   if ((buffer == nullptr) || !SYSCALL_IS_UM_ADDRESS(buffer))
   {
@@ -403,19 +433,25 @@ ERR_CODE syscall_write_handle(GEN_HANDLE handle,
     KL_TRC_TRACE(TRC_LVL::FLOW, "buffer_size is invalid\n");
     result = ERR_CODE::INVALID_PARAM;
   }
+  else if (cur_thread == nullptr)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't identify current thread\n");
+    result = ERR_CODE::INVALID_OP;
+  }
   else
   {
     // Parameters check out, try to read.
-    ISystemTreeLeaf *leaf = dynamic_cast<ISystemTreeLeaf *>(om_retrieve_object(handle));
+    std::shared_ptr<ISystemTreeLeaf> leaf = 
+      std::dynamic_pointer_cast<ISystemTreeLeaf>(cur_thread->thread_handles.retrieve_object(handle));
     KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved leaf ", leaf, " from OM\n");
     if (leaf == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Leaf object not found - bad handle\n");
-      result = ERR_CODE::INVALID_PARAM;
+      result = ERR_CODE::NOT_FOUND;
     }
     else
     {
-      IWritable *file = dynamic_cast<IWritable *>(leaf);
+      std::shared_ptr<IWritable> file = std::dynamic_pointer_cast<IWritable>(leaf);
       if (file == nullptr)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Leaf is not writable.\n");
@@ -473,11 +509,6 @@ ERR_CODE syscall_thread_set_tls_base(TLS_REGISTERS reg, uint64_t value)
     case TLS_REGISTERS::FS:
       KL_TRC_TRACE(TRC_LVL::FLOW, "Setting FS base to ", value, "\n");
       proc_write_msr (PROC_X64_MSRS::IA32_FS_BASE, value);
-
-      //uint64_t fs_reg;
-      //__asm__ __volatile__ ("mov %%fs:0, %0" : "=r" (fs_reg) );
-      //KL_TRC_TRACE(TRC_LVL::FLOW, "Actual value of FS: ", fs_reg, "\n");
-
       break;
 
     case TLS_REGISTERS::GS:
@@ -489,6 +520,114 @@ ERR_CODE syscall_thread_set_tls_base(TLS_REGISTERS reg, uint64_t value)
       KL_TRC_TRACE(TRC_LVL::FLOW, "Unknown register\n");
       result = ERR_CODE::INVALID_PARAM;
     }
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+/// @brief Create a new object in the system tree and retrieve a handle for it.
+///
+/// At present, only leaves will be created. The type of leaf will depend on the position in the tree the new object
+/// is being created. For example, leaves created under a branch of the Mem FS will probably be Mem FS file leaves.
+///
+/// Leaves cannot be created at all places in the tree. For example, no new leaves can be added to a pipe branch.
+///
+/// @param path The position in the tree to create the new object.
+///
+/// @param path_len The length of the path string.
+///
+/// @param[out] handle The handle of the newly created object. If an object isn't created, this is left untouched.
+///
+/// @return A suitable error code.
+ERR_CODE syscall_create_obj_and_handle(const char *path, uint64_t path_len, GEN_HANDLE *handle)
+{
+  ERR_CODE result = ERR_CODE::UNKNOWN;
+  std::shared_ptr<ISystemTreeLeaf> new_leaf;
+  std::shared_ptr<IHandledObject> new_leaf_ptr;
+  kl_string req_path(path, path_len);
+  GEN_HANDLE new_handle;
+  task_thread *cur_thread = task_get_cur_thread();
+
+  KL_TRC_ENTRY;
+
+  if ((path == nullptr) ||
+      !SYSCALL_IS_UM_ADDRESS(path) ||
+      (path_len == 0) ||
+      (handle == nullptr) ||
+      !SYSCALL_IS_UM_ADDRESS(handle))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid parameters\n");
+    result = ERR_CODE::INVALID_PARAM;
+  }
+  else
+  {
+    result = system_tree()->create_leaf(req_path, new_leaf);
+    if (result == ERR_CODE::NO_ERROR)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "New leaf created!\n");
+      new_leaf_ptr = std::dynamic_pointer_cast<IHandledObject >(new_leaf);
+      new_handle = cur_thread->thread_handles.store_object(new_leaf_ptr);
+      *handle = new_handle;
+
+      KL_TRC_TRACE(TRC_LVL::EXTRA, "Correlated to handle ", new_handle, "\n");
+    }
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA< "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+/// @brief Set the length of data associated with the given handle.
+///
+/// If the handle represents a file, then this is equivalent to setting the length of the file. Not all handle types
+/// will support this operation, and the exact outcome depends on the handle type, file system type, etc.
+///
+/// @param handle The handle to set the data length of.
+///
+/// @param length The length of data area that should be associated with the handle.
+///
+/// @return A suitable error code.
+ERR_CODE syscall_set_handle_data_len(GEN_HANDLE handle, uint64_t data_length)
+{
+  KL_TRC_ENTRY;
+
+  ERR_CODE result = ERR_CODE::NO_ERROR;
+  task_thread *cur_thread = task_get_cur_thread();
+  std::shared_ptr<IHandledObject> obj;
+  std::shared_ptr<IBasicFile> file;
+
+  if (cur_thread != nullptr)
+  {
+    obj = cur_thread->thread_handles.retrieve_object(handle);
+    if (obj == nullptr)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "No object for handle\n");
+      result = ERR_CODE::NOT_FOUND;
+    }
+    else
+    {
+      file = std::dynamic_pointer_cast<IBasicFile>(obj);
+      if (file == nullptr)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Object is not a file\n");
+        result = ERR_CODE::INVALID_OP;
+      }
+      else
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Attempting to set size\n");
+        result = file->set_file_size(data_length);
+      }
+    }
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "No current thread defined - so no handles\n");
+    result = ERR_CODE::INVALID_OP;
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");

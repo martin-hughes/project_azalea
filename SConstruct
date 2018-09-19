@@ -53,7 +53,7 @@ def main_build_script(linux_build):
   if linux_build:
     test_script_env['LINKFLAGS'] = '-L/usr/lib/llvm-3.8/lib/clang/3.8.0/lib/linux -Wl,--start-group'
     cxx_flags = '-g -O0 -std=gnu++14 -Wunknown-pragmas'
-    if config.test_use_asan:
+    if config.test_attempt_mem_leak_check:
       test_script_env['LIBS'].append ('clang_rt.asan-x86_64')
       cxx_flags = cxx_flags + ' -fsanitize=address'
     cxx_flags = cxx_flags + additional_defines
@@ -61,6 +61,9 @@ def main_build_script(linux_build):
     test_script_env['LIBS'] = [ 'boost_iostreams', 'pthread' ]
     additional_include_tag = 'CPATH'
   else:
+    additional_defines += ' -D _DEBUG /MTd'
+    if config.test_attempt_mem_leak_check:
+      additional_defines += ' -D UT_MEM_LEAK_CHECK'
     test_script_env['LINKFLAGS'] = '/DEBUG:FULL /MAP:output\\main-tests.map /INCREMENTAL /NOLOGO'
     cxx_flags = additional_defines + ' /nologo /EHac /Od /ZI /Fdoutput\\main-tests.pdb'
     exe_name = 'main-tests.exe'

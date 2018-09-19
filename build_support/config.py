@@ -18,10 +18,12 @@ libc_include = '/home/martin/libc_build/include'
 # it is referenced in the similarly named variable azalea_header_folder
 azalea_dev_folder = '/home/martin/azalea_dev'
 
-# Should the test code be built using the Clang version of Address Sanitizer? This helps detect leaks, but doesn't
-# detect all of them. For example, items still referenced via global variables don't show up. Valgrind can be used to
-# find this kind of leak, but can't be run on code with the Address Sanitizer built in to it.
-test_use_asan = False
+# Should the test code attempt to do memory leak detection? On Linux, this will use the Address Sanitizer that comes
+# with Clang. On Windows, this will use the MSVC runtime memory leak detection methods. This helps detect leaks, but
+# doesn't detect all of them. For example, with ASAN, items still referenced via global variables don't show up.
+# Valgrind can be used to find this kind of leak, but this flag must be set to False because it conflicts with
+# Valgrind.
+test_attempt_mem_leak_check = False
 
 # Should we create temporary copies of memory-mapped files? When doing some filesystem tests, a disk image is mapped
 # into RAM so that it can look a little bit like a live disk. However, not all host filesystems support memory mapping

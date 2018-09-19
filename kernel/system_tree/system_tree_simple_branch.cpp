@@ -1,6 +1,8 @@
 /// @file
 /// @brief Implement `system_tree_simple_branch`, which can be used as a simple branch in system tree.
 
+//#define ENABLE_TRACING
+
 #include "klib/klib.h"
 #include "system_tree/system_tree_simple_branch.h"
 
@@ -26,7 +28,7 @@ ERR_CODE system_tree_simple_branch::get_child_type(const kl_string &name, CHILD_
   uint64_t split_pos;
   kl_string direct_child;
   kl_string lower_child;
-  ISystemTreeBranch *child_branch;
+  std::shared_ptr<ISystemTreeBranch> child_branch;
 
   split_pos = name.find("\\");
 
@@ -72,13 +74,13 @@ ERR_CODE system_tree_simple_branch::get_child_type(const kl_string &name, CHILD_
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Name searched for: ", name, "\n");
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Type: ", static_cast<uint32_t>(type), "\n");
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Error code: ", static_cast<uint32_t>(ret_code), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Error code: ", ret_code, "\n");
   KL_TRC_EXIT;
 
   return ret_code;
 }
 
-ERR_CODE system_tree_simple_branch::get_branch(const kl_string &name, ISystemTreeBranch **branch)
+ERR_CODE system_tree_simple_branch::get_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch)
 {
   KL_TRC_ENTRY;
 
@@ -90,26 +92,21 @@ ERR_CODE system_tree_simple_branch::get_branch(const kl_string &name, ISystemTre
 
   this->split_name(name, our_part, child_part);
 
-  if (branch == nullptr)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Can't store into nullptr\n");
-    ret_code = ERR_CODE::INVALID_PARAM;
-  }
-  else if (!this->child_branches.contains(our_part))
+  if (!this->child_branches.contains(our_part))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Branch not found\n");
     ret_code = ERR_CODE::NOT_FOUND;
-    *branch = nullptr;
+    branch = nullptr;
   }
   else
   {
-    *branch = this->child_branches.search(our_part);
+    branch = this->child_branches.search(our_part);
     KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", *branch, "\n");
 
     if (child_part != "")
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Looking for child branch ", child_part, "\n");
-      ret_code = (*branch)->get_branch(child_part, branch);
+      ret_code = branch->get_branch(child_part, branch);
     }
   }
 
@@ -118,25 +115,21 @@ ERR_CODE system_tree_simple_branch::get_branch(const kl_string &name, ISystemTre
   return ret_code;
 }
 
-ERR_CODE system_tree_simple_branch::get_leaf(const kl_string &name, ISystemTreeLeaf **leaf)
+ERR_CODE system_tree_simple_branch::get_leaf(const kl_string &name, 
+                                             std::shared_ptr<ISystemTreeLeaf> &leaf)
 {
   KL_TRC_ENTRY;
 
   ERR_CODE ret_code = ERR_CODE::NO_ERROR;
   kl_string our_part;
   kl_string child_part;
-  ISystemTreeBranch *branch;
+  std::shared_ptr<ISystemTreeBranch> branch;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Looking for leaf with name ", name, "to store in ", *leaf, "\n");
 
   this->split_name(name, our_part, child_part);
 
-  if (leaf == nullptr)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Can't store into nullptr\n");
-    ret_code = ERR_CODE::INVALID_PARAM;
-  }
-  else if (child_part != "")
+  if (child_part != "")
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Passing to child branch ", our_part, "\n");
 
@@ -149,18 +142,18 @@ ERR_CODE system_tree_simple_branch::get_leaf(const kl_string &name, ISystemTreeL
     else
     {
       ret_code = ERR_CODE::NOT_FOUND;
-      *leaf = nullptr;
+      leaf = nullptr;
     }
   }
   else if (!this->child_leaves.contains(name))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Leaf not found\n");
     ret_code = ERR_CODE::NOT_FOUND;
-    *leaf = nullptr;
+    leaf = nullptr;
   }
   else
   {
-    *leaf = this->child_leaves.search(name);
+    leaf = this->child_leaves.search(name);
     KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", *leaf, "\n");
   }
 
@@ -169,13 +162,16 @@ ERR_CODE system_tree_simple_branch::get_leaf(const kl_string &name, ISystemTreeL
   return ret_code;
 }
 
-ERR_CODE system_tree_simple_branch::add_branch(const kl_string &name, ISystemTreeBranch *branch)
+ERR_CODE system_tree_simple_branch::add_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> branch)
 {
   KL_TRC_ENTRY;
 
   CHILD_TYPE ct;
   ERR_CODE rt = ERR_CODE::NO_ERROR;
   uint64_t split_pos;
+  kl_string next_branch_name;
+  kl_string continuation_name;
+  std::shared_ptr<ISystemTreeBranch> child_branch;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Adding branch with name ", name, " and address ", branch, "\n");
 
@@ -193,8 +189,23 @@ ERR_CODE system_tree_simple_branch::add_branch(const kl_string &name, ISystemTre
   }
   else if (split_pos != kl_string::npos)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Can't directly add sub-branches yet.\n");
-    rt = ERR_CODE::INVALID_NAME;
+    next_branch_name = name.substr(0, split_pos);
+    continuation_name = name.substr(split_pos + 1, kl_string::npos);
+
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Looking for ", continuation_name, " in ", next_branch_name, "\n");
+
+    if (!this->child_branches.contains(next_branch_name))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Child branch not found anyway\n");
+      rt = ERR_CODE::NOT_FOUND;
+    }
+    else
+    {
+      child_branch = this->child_branches.search(next_branch_name);
+      ASSERT(child_branch != nullptr);
+
+      rt = child_branch->add_branch(continuation_name, branch);
+    }
   }
   else if (this->get_child_type(name, ct) != ERR_CODE::NOT_FOUND)
   {
@@ -206,20 +217,23 @@ ERR_CODE system_tree_simple_branch::add_branch(const kl_string &name, ISystemTre
     this->child_branches.insert(name, branch);
   }
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", static_cast<uint32_t>(rt), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", rt, "\n");
 
   KL_TRC_EXIT;
 
   return rt;
 }
 
-ERR_CODE system_tree_simple_branch::add_leaf (const kl_string &name, ISystemTreeLeaf *leaf)
+ERR_CODE system_tree_simple_branch::add_leaf (const kl_string &name, std::shared_ptr<ISystemTreeLeaf> leaf)
 {
   KL_TRC_ENTRY;
 
   CHILD_TYPE ct;
   ERR_CODE rt = ERR_CODE::NO_ERROR;
   uint64_t split_pos;
+  kl_string next_branch_name;
+  kl_string continuation_name;
+  std::shared_ptr<ISystemTreeBranch> child_branch;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Adding leaf with name ", name, " and address ", leaf, "\n");
 
@@ -237,8 +251,23 @@ ERR_CODE system_tree_simple_branch::add_leaf (const kl_string &name, ISystemTree
   }
   else if (split_pos != kl_string::npos)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Can't directly add leaves to child branches yet.\n");
-    rt = ERR_CODE::INVALID_NAME;
+    next_branch_name = name.substr(0, split_pos);
+    continuation_name = name.substr(split_pos + 1, kl_string::npos);
+
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Looking for ", continuation_name, " in ", next_branch_name, "\n");
+
+    if (!this->child_branches.contains(next_branch_name))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Child branch not found anyway\n");
+      rt = ERR_CODE::NOT_FOUND;
+    }
+    else
+    {
+      child_branch = this->child_branches.search(next_branch_name);
+      ASSERT(child_branch != nullptr);
+
+      rt = child_branch->add_leaf(continuation_name, leaf);
+    }
   }
   else if (this->get_child_type(name, ct) != ERR_CODE::NOT_FOUND)
   {
@@ -250,7 +279,7 @@ ERR_CODE system_tree_simple_branch::add_leaf (const kl_string &name, ISystemTree
     this->child_leaves.insert(name, leaf);
   }
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", static_cast<uint32_t>(rt), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", rt, "\n");
 
   KL_TRC_EXIT;
 
@@ -264,8 +293,8 @@ ERR_CODE system_tree_simple_branch::rename_child(const kl_string &old_name, cons
   CHILD_TYPE ct;
   ERR_CODE rt = ERR_CODE::NO_ERROR;
   ERR_CODE intermediate;
-  ISystemTreeBranch *b;
-  ISystemTreeLeaf *l;
+  std::shared_ptr<ISystemTreeBranch> b;
+  std::shared_ptr<ISystemTreeLeaf> l;
   uint64_t old_dir_split;
   uint64_t new_dir_split;
   kl_string child_branch;
@@ -348,7 +377,7 @@ ERR_CODE system_tree_simple_branch::rename_child(const kl_string &old_name, cons
     }
   }
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", static_cast<uint32_t>(rt), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", rt, "\n");
   KL_TRC_EXIT;
 
   return rt;
@@ -363,7 +392,7 @@ ERR_CODE system_tree_simple_branch::delete_child(const kl_string &name)
   uint64_t split_pos;
   kl_string our_branch;
   kl_string grandchild;
-  ISystemTreeBranch *branch;
+  std::shared_ptr<ISystemTreeBranch> branch;
 
   if (this->get_child_type(name, ct) != ERR_CODE::NO_ERROR)
   {
@@ -386,6 +415,7 @@ ERR_CODE system_tree_simple_branch::delete_child(const kl_string &name)
 
       case CHILD_TYPE::LEAF:
         this->child_leaves.remove(name);
+
         break;
 
       default:
@@ -404,8 +434,62 @@ ERR_CODE system_tree_simple_branch::delete_child(const kl_string &name)
     }
   }
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", static_cast<uint32_t>(rt), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", rt, "\n");
   KL_TRC_EXIT;
 
   return rt;
+}
+
+
+ERR_CODE system_tree_simple_branch::create_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch)
+{
+  return ERR_CODE::INVALID_OP;
+}
+
+ERR_CODE system_tree_simple_branch::create_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf)
+{
+  kl_string first_part;
+  kl_string second_part;
+  ERR_CODE result;
+  std::shared_ptr<ISystemTreeBranch> descendant;
+
+  KL_TRC_ENTRY;
+
+  split_name(name, first_part, second_part);
+  if (second_part == "")
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Create a leaf here\n");
+    result = create_leaf_here(leaf);
+
+    if (result == ERR_CODE::NO_ERROR)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Child leaf created, add here\n");
+      result = this->add_leaf(name, leaf);
+
+      // The call to add_leaf() has acquired a second reference to the leaf. One reference is owned by the object
+      // manager. The other is owned by the creator of the leaf (i.e. the calling function)
+    }
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Looking for child branch\n");
+    result = get_branch(first_part, descendant);
+
+    if (result == ERR_CODE::NO_ERROR)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Pass request to child\n");
+      result = descendant->create_leaf(second_part, leaf);
+    }
+
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+ERR_CODE system_tree_simple_branch::create_leaf_here(std::shared_ptr<ISystemTreeLeaf> &leaf)
+{
+  return ERR_CODE::INVALID_OP;
 }

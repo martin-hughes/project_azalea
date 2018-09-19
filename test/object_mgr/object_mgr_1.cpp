@@ -1,3 +1,4 @@
+#include "test/test_core/test.h"
 #include "object_mgr/handles.h"
 
 #include "gtest/gtest.h"

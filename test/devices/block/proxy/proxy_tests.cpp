@@ -1,3 +1,4 @@
+#include "test/test_core/test.h"
 #include "gtest/gtest.h"
 #include "devices/block/proxy/block_proxy.h"
 #include "devices/block/ramdisk/ramdisk.h"

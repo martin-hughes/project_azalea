@@ -33,7 +33,7 @@ int main (int argc, char **argv, char **env_p)
   snprintf(buf, 60, "ooooh %d\n", fs_reg);
   syscall_debug_output(buf, strlen(buf));
 
-  f = fopen("root\\text.txt", "r");
+  f = fopen("temp\\hello.txt", "r");
   if (f == NULL)
   {
     SC_DEBUG_MSG("Couldn't open file\n");
@@ -50,6 +50,21 @@ int main (int argc, char **argv, char **env_p)
   }
 
   printf("Hello, world!\n");
+
+  f = fopen("proc\\0\\id", "r");
+  if (f == NULL)
+  {
+    SC_DEBUG_MSG("Couldn't check ID\n");
+  }
+  else
+  {
+    memset(buf, 0, 60);
+    fgets(buf, 22, f);
+    printf("Process ID: %s\n", buf);
+
+    fclose(f);
+    f = NULL;
+  }
 
   while(1) { };
 

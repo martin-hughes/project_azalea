@@ -23,7 +23,7 @@ namespace
   volatile bool thread_2_locked = false;
 }
 
-TEST(KlibSynchTest, Spinlocks1)
+TEST(KlibSpinlockTest, Spinlocks1)
 {
   cout << "Synch test 1 - Spinlocks." << endl;
   cout << "This test takes 10 seconds to complete." << endl;
@@ -59,14 +59,14 @@ void test_1_second_part()
 }
 
 // This test aggressively locks and unlocks the lock to see if both threads ever think they're locked at the same time.
-TEST(KlibSynchTest, Spinlocks2)
+TEST(KlibSpinlockTest, Spinlocks2)
 {
   cout << "This test takes several seconds to complete." << endl;
 
   klib_synch_spinlock_init(main_lock);
   thread other_thread(test_2_second_part);
 
-  const uint32_t cycles = 100000;  
+  const uint32_t cycles = 100000;
   for (uint32_t i = 0; i < cycles; i++)
   {
     klib_synch_spinlock_lock(main_lock);
@@ -82,8 +82,8 @@ TEST(KlibSynchTest, Spinlocks2)
 }
 
 void test_2_second_part()
-{  
-  const uint32_t cycles = 111111;  
+{
+  const uint32_t cycles = 111111;
   for (uint32_t i = 0; i < cycles; i++)
   {
     klib_synch_spinlock_lock(main_lock);

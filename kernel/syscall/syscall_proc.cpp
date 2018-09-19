@@ -6,10 +6,10 @@
 #include "user_interfaces/syscall.h"
 #include "syscall/syscall_kernel.h"
 #include "syscall/syscall_kernel-int.h"
+#include "processor/processor.h"
+#include "processor/processor-int.h"
 #include "object_mgr/object_mgr.h"
 #include "klib/klib.h"
-
-#include "processor/processor-int.h"
 
 /// @brief Create a new process
 ///
@@ -17,17 +17,18 @@
 /// mapped apart from a single stack for the initial thread, so it will be necessary to map and populate memory pages
 /// before calling `syscall_start_process`.
 ///
-/// @param entry_point_addr[in] The virtual memory starting address for the new process, in the context of the new
+/// @param[in] entry_point_addr The virtual memory starting address for the new process, in the context of the new
 ///                             process. As noted above, it is necessary to create the memory mappings to fulfil this
 ///                             entry point before calling `syscall_start_process`
 ///
-/// @param proc_handle[out] Storage for a handle to the new process.
+/// @param[out] proc_handle Storage for a handle to the new process.
 ///
 /// @return ERR_CODE::INVALID_PARAM if either parameter contains an invalid address. ERR_CODE::NO_ERROR otherwise.
 ERR_CODE syscall_create_process(void *entry_point_addr, GEN_HANDLE *proc_handle)
 {
   ERR_CODE result = ERR_CODE::UNKNOWN;
-  task_process *new_process;
+  std::shared_ptr<task_process> new_process;
+  task_thread *cur_thread = task_get_cur_thread();
 
   KL_TRC_ENTRY;
 
@@ -39,26 +40,20 @@ ERR_CODE syscall_create_process(void *entry_point_addr, GEN_HANDLE *proc_handle)
     KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid parameters\n");
     result = ERR_CODE::INVALID_PARAM;
   }
+  else if (cur_thread == nullptr)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't identify current thread\n");
+    result = ERR_CODE::INVALID_OP;
+  }
   else
   {
-    new_process = task_create_new_process(reinterpret_cast<ENTRY_PROC>(entry_point_addr));
+    new_process = task_process::create(reinterpret_cast<ENTRY_PROC>(entry_point_addr));
 
-    if (new_process != nullptr)
-    {
-      *proc_handle = om_store_object(new_process);
-      KL_TRC_TRACE(TRC_LVL::FLOW, "New process (", new_process, ") created, handle: ", *proc_handle, "\n");
+    std::shared_ptr<IHandledObject> proc_ptr = std::dynamic_pointer_cast<IHandledObject>(new_process);
+    *proc_handle = cur_thread->thread_handles.store_object(proc_ptr);
+    KL_TRC_TRACE(TRC_LVL::FLOW, "New process (", new_process, ") created, handle: ", *proc_handle, "\n");
 
-      // The creation of the process has caused this code to be a reference holder of the process object, but we want
-      // the only reference holder to be the handle - so release our reference now.
-      new_process->ref_release();
-
-      result = ERR_CODE::NO_ERROR;
-    }
-    else
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Unable to create process\n");
-      result = ERR_CODE::INVALID_OP;
-    }
+    result = ERR_CODE::NO_ERROR;
   }
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Result: ", result, "\n");
@@ -80,19 +75,18 @@ ERR_CODE syscall_start_process(GEN_HANDLE proc_handle)
   KL_TRC_ENTRY;
 
   ERR_CODE result = ERR_CODE::UNKNOWN;
-  IRefCounted *om_obj = nullptr;
-  task_process *proc_obj = nullptr;
+  std::shared_ptr<task_process> proc_obj;
+  task_thread *cur_thread = task_get_cur_thread();
 
-  om_obj = om_retrieve_object(proc_handle);
-
-  if (om_obj == nullptr)
+  if (cur_thread == nullptr)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Process not found\n");
-    result = ERR_CODE::NOT_FOUND;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't identify current thread\n");
+    result = ERR_CODE::INVALID_OP;
   }
   else
   {
-    proc_obj = dynamic_cast<task_process *>(om_obj);
+    proc_obj = std::dynamic_pointer_cast<task_process>(cur_thread->thread_handles.retrieve_object(proc_handle));
+
     if (proc_obj == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Wrong object type\n");
@@ -101,7 +95,7 @@ ERR_CODE syscall_start_process(GEN_HANDLE proc_handle)
     else
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Starting ", thread_obj, "\n");
-      task_start_process(proc_obj);
+      proc_obj->start_process();
       result = ERR_CODE::NO_ERROR;
     }
   }
@@ -126,19 +120,19 @@ ERR_CODE syscall_stop_process(GEN_HANDLE proc_handle)
   KL_TRC_ENTRY;
 
   ERR_CODE result = ERR_CODE::UNKNOWN;
-  IRefCounted *om_obj = nullptr;
-  task_process *proc_obj = nullptr;
+  std::shared_ptr<task_process> proc_obj;
+  task_thread *cur_thread = task_get_cur_thread();
 
-  om_obj = om_retrieve_object(proc_handle);
 
-  if (om_obj == nullptr)
+  if (cur_thread == nullptr)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Thread not found\n");
-    result = ERR_CODE::NOT_FOUND;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't identify current thread\n");
+    result = ERR_CODE::INVALID_OP;
   }
   else
   {
-    proc_obj = dynamic_cast<task_process *>(om_obj);
+    proc_obj = std::dynamic_pointer_cast<task_process>(cur_thread->thread_handles.retrieve_object(proc_handle));
+
     if (proc_obj == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Wrong object type\n");
@@ -146,7 +140,7 @@ ERR_CODE syscall_stop_process(GEN_HANDLE proc_handle)
     }
     else
     {
-      task_stop_process(proc_obj);
+      proc_obj->stop_process();
       result = ERR_CODE::NO_ERROR;
     }
   }
@@ -171,19 +165,18 @@ ERR_CODE syscall_destroy_process(GEN_HANDLE proc_handle)
   KL_TRC_ENTRY;
 
   ERR_CODE result = ERR_CODE::UNKNOWN;
-  IRefCounted *om_obj = nullptr;
-  task_process *proc_obj = nullptr;
+  std::shared_ptr<task_process> proc_obj;
+  task_thread *cur_thread = task_get_cur_thread();
 
-  om_obj = om_retrieve_object(proc_handle);
-
-  if (om_obj == nullptr)
+  if (cur_thread == nullptr)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Thread not found\n");
-    result = ERR_CODE::NOT_FOUND;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't identify current thread\n");
+    result = ERR_CODE::INVALID_OP;
   }
   else
   {
-    proc_obj = dynamic_cast<task_process *>(om_obj);
+    proc_obj = std::dynamic_pointer_cast<task_process>(cur_thread->thread_handles.retrieve_object(proc_handle));
+
     if (proc_obj == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Wrong object type\n");
@@ -191,9 +184,8 @@ ERR_CODE syscall_destroy_process(GEN_HANDLE proc_handle)
     }
     else
     {
-      // This also releases the handle's reference to the thread.
-      om_remove_object(proc_handle);
-      task_destroy_process(proc_obj);
+      cur_thread->thread_handles.remove_object(proc_handle);
+      proc_obj->destroy_process();
       result = ERR_CODE::NO_ERROR;
     }
   }
@@ -213,12 +205,12 @@ void syscall_exit_process()
 {
   KL_TRC_ENTRY;
 
-  task_process *this_proc;
+  std::shared_ptr<task_process> this_proc;
   task_thread *this_thread;
   this_thread = task_get_cur_thread();
   this_proc = this_thread->parent_process;
 
-  task_destroy_process(this_proc);
+  this_proc->destroy_process();
 
   panic("Reached end of syscall_exit_process!");
   KL_TRC_EXIT;
@@ -239,8 +231,8 @@ ERR_CODE syscall_create_thread(void (*entry_point)(), GEN_HANDLE *thread_handle)
   KL_TRC_ENTRY;
 
   ERR_CODE result = ERR_CODE::UNKNOWN;
-  task_thread *new_thread = nullptr;
-  task_thread *cur_thread = nullptr;
+  std::shared_ptr<task_thread> new_thread = nullptr;
+  task_thread *cur_thread = task_get_cur_thread();
 
   if ((entry_point == nullptr) ||
       (!SYSCALL_IS_UM_ADDRESS(entry_point)) ||
@@ -250,25 +242,24 @@ ERR_CODE syscall_create_thread(void (*entry_point)(), GEN_HANDLE *thread_handle)
     KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid parameters\n");
     result = ERR_CODE::INVALID_PARAM;
   }
+  else if (cur_thread == nullptr)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't identify current thread\n");
+    result = ERR_CODE::INVALID_OP;
+  }
   else
   {
-    cur_thread = task_get_cur_thread();
-    if ((cur_thread != nullptr) &&
-        (cur_thread->parent_process != nullptr) &&
+    if ((cur_thread->parent_process != nullptr) &&
         (cur_thread->parent_process->kernel_mode == false))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Creating thread with entry point ", entry_point, "\n");
-      new_thread = task_create_new_thread(entry_point, cur_thread->parent_process);
+      new_thread = task_thread::create(entry_point, cur_thread->parent_process);
     }
 
     if (new_thread != nullptr)
     {
-      *thread_handle = om_store_object(new_thread);
+      *thread_handle = cur_thread->thread_handles.store_object(new_thread);
       KL_TRC_TRACE(TRC_LVL::FLOW, "New thread (", new_thread, ") created, handle: ", *thread_handle, "\n");
-
-      // The creation of the thread has caused this code to be a reference holder of the thread object, but we want the
-      // only reference holder to be the handle - so release our reference now.
-      new_thread->ref_release();
 
       result = ERR_CODE::NO_ERROR;
     }
@@ -298,34 +289,37 @@ ERR_CODE syscall_start_thread(GEN_HANDLE thread_handle)
   KL_TRC_ENTRY;
 
   ERR_CODE result = ERR_CODE::UNKNOWN;
-  IRefCounted *om_obj = nullptr;
-  task_thread *thread_obj = nullptr;
+  bool thread_started = false;
+  std::shared_ptr<task_thread> thread_obj = nullptr;
+  task_thread *cur_thread = task_get_cur_thread();
 
-  om_obj = om_retrieve_object(thread_handle);
-
-  if (om_obj == nullptr)
+  if (cur_thread == nullptr)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Thread not found\n");
-    result = ERR_CODE::NOT_FOUND;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't identify current thread\n");
+    result = ERR_CODE::INVALID_OP;
   }
   else
   {
-    thread_obj = dynamic_cast<task_thread *>(om_obj);
+    thread_obj = std::dynamic_pointer_cast<task_thread>(cur_thread->thread_handles.retrieve_object(thread_handle));
+
     if (thread_obj == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Wrong object type\n");
       result = ERR_CODE::NOT_FOUND;
     }
-    else if (thread_obj->thread_destroyed)
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Can't start destroyed thread\n");
-      result = ERR_CODE::INVALID_OP;
-    }
     else
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Starting ", thread_obj, "\n");
-      task_start_thread(thread_obj);
-      result = ERR_CODE::NO_ERROR;
+      thread_started = thread_obj->start_thread();
+      if (thread_started)
+      {
+        result = ERR_CODE::NO_ERROR;
+      }
+      else
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't start thread - it is being destroyed\n");
+        result = ERR_CODE::INVALID_OP;
+      }
     }
   }
 
@@ -343,38 +337,32 @@ ERR_CODE syscall_start_thread(GEN_HANDLE thread_handle)
 /// @param thread_handle A handle for the thread to stop.
 ///
 /// @return ERR_CODE::NOT_FOUND if the handle does not correlate correctly to a thread. ERR_CODE::NO_ERROR otherwise -
-///         the thread was stopped successfully.
+///         the thread was stopped successfully, or was stopped already.
 ERR_CODE syscall_stop_thread(GEN_HANDLE thread_handle)
 {
   KL_TRC_ENTRY;
 
   ERR_CODE result = ERR_CODE::UNKNOWN;
-  IRefCounted *om_obj = nullptr;
-  task_thread *thread_obj = nullptr;
+  std::shared_ptr<task_thread> thread_obj;
+  task_thread *cur_thread = task_get_cur_thread();
 
-  om_obj = om_retrieve_object(thread_handle);
-
-  if (om_obj == nullptr)
+  if (cur_thread == nullptr)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Thread not found\n");
-    result = ERR_CODE::NOT_FOUND;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't identify current thread\n");
+    result = ERR_CODE::INVALID_OP;
   }
   else
   {
-    thread_obj = dynamic_cast<task_thread *>(om_obj);
+    thread_obj = std::dynamic_pointer_cast<task_thread>(cur_thread->thread_handles.retrieve_object(thread_handle));
+
     if (thread_obj == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Wrong object type\n");
       result = ERR_CODE::NOT_FOUND;
     }
-    else if (thread_obj->thread_destroyed)
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Can't stop destroyed thread\n");
-      result = ERR_CODE::INVALID_OP;
-    }
     else
     {
-      task_stop_thread(thread_obj);
+      thread_obj->stop_thread();
       result = ERR_CODE::NO_ERROR;
     }
   }
@@ -399,19 +387,18 @@ ERR_CODE syscall_destroy_thread(GEN_HANDLE thread_handle)
   KL_TRC_ENTRY;
 
   ERR_CODE result = ERR_CODE::UNKNOWN;
-  IRefCounted *om_obj = nullptr;
-  task_thread *thread_obj = nullptr;
+  std::shared_ptr<task_thread> thread_obj;
+  task_thread *cur_thread = task_get_cur_thread();
 
-  om_obj = om_retrieve_object(thread_handle);
-
-  if (om_obj == nullptr)
+  if (cur_thread == nullptr)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Thread not found\n");
-    result = ERR_CODE::NOT_FOUND;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't identify current thread\n");
+    result = ERR_CODE::INVALID_OP;
   }
   else
   {
-    thread_obj = dynamic_cast<task_thread *>(om_obj);
+    thread_obj = std::dynamic_pointer_cast<task_thread>(cur_thread->thread_handles.retrieve_object(thread_handle));
+
     if (thread_obj == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Wrong object type\n");
@@ -420,8 +407,8 @@ ERR_CODE syscall_destroy_thread(GEN_HANDLE thread_handle)
     else
     {
       // This also releases the handle's reference to the thread.
-      om_remove_object(thread_handle);
-      task_destroy_thread(thread_obj);
+      cur_thread->thread_handles.remove_object(thread_handle);
+      thread_obj->destroy_thread();
       result = ERR_CODE::NO_ERROR;
     }
   }
@@ -441,7 +428,7 @@ void syscall_exit_thread()
 
   task_thread *this_thread;
   this_thread = task_get_cur_thread();
-  task_destroy_thread(this_thread);
+  this_thread->destroy_thread();
 
   panic("Reached end of syscall_exit_thread!");
   KL_TRC_EXIT;

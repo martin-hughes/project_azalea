@@ -1,5 +1,6 @@
 #define ENABLE_TRACING
 
+#include "test/test_core/test.h"
 #include "klib/data_structures/red_black_tree.h"
 #include "klib/tracing/tracing.h"
 #include "klib/panic/panic.h"

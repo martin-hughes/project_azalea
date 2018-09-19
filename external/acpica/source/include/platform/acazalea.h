@@ -48,8 +48,8 @@
 /* Use the library's own caching system. */
 #define ACPI_USE_LOCAL_CACHE
 
-/* Use our own definition of the va_ functions. */
-#include "klib/misc/vargs.h"
+/* Use the Clang intrinsics for variable length argument lists. */
+#include <stdarg.h>
 
 #ifdef __KERNEL__
 

@@ -5,9 +5,9 @@
 // It will have difficulty with code that allocates physical and virtual ranges
 // and maps them to each other.
 
+#include "test/test_core/test.h"
 #include "processor/processor.h"
 #include "mem/mem.h"
-#include "test/test_core/test.h"
 #include <malloc.h>
 #include <iostream>
 using namespace std;
@@ -22,19 +22,23 @@ void mem_gen_init()
   panic("mem_gen_init not written");
 }
 
-void *mem_allocate_physical_pages(int32_t num_pages)
+void *mem_allocate_physical_pages(uint32_t num_pages)
 {
   panic("mem_allocate_physical_pages not implemented");
   return nullptr;
 }
 
-void *mem_allocate_virtual_range(uint32_t num_pages)
+void *mem_allocate_virtual_range(uint32_t num_pages, task_process *process_to_use)
 {
   panic("mem_allocate_virtual_range Not implemented");
   return nullptr;
 }
 
-void mem_map_range(void *physical_start, void* virtual_start, uint32_t len)
+void mem_map_range(void *physical_start,
+                   void* virtual_start,
+                   uint32_t len,
+                   task_process *context,
+                   MEM_CACHE_MODES cache_mode)
 {
   panic("mem_map_range Not implemented");
 }
@@ -79,4 +83,16 @@ void mem_deallocate_pages(void *virtual_start, uint32_t num_pages)
 void mem_vmm_allocate_specific_range(uint64_t start_addr, uint32_t num_pages, task_process *process_to_use)
 {
   // Do nothing.
+}
+
+void *mem_get_phys_addr(void *virtual_addr, task_process *context)
+{
+  panic("mem_get_phys_addr not implemented");
+  return nullptr;
+}
+
+bool mem_is_valid_virt_addr(uint64_t virtual_addr)
+{
+  // It's reasonable to assume 'yes' in the test code, because all allocations ultimately come from the OS.
+  return true;
 }

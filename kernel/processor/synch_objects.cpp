@@ -40,7 +40,7 @@ void WaitObject::wait_for_signal()
   klib_synch_spinlock_lock(this->_list_lock);
   task_continue_this_thread();
 
-  task_stop_thread(cur_thread);
+  cur_thread->stop_thread();
   klib_list_add_tail(&this->_waiting_threads, list_item);
   klib_synch_spinlock_unlock(this->_list_lock);
 
@@ -85,7 +85,7 @@ void WaitObject::cancel_waiting_thread(task_thread *thread)
     delete list_item;
     list_item = nullptr;
 
-    task_start_thread(thread);
+    thread->start_thread();
   }
 
   klib_synch_spinlock_unlock(this->_list_lock);
@@ -124,7 +124,7 @@ void WaitObject::trigger_next_thread()
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Starting thread ", list_item->item, "\n");
     klib_list_remove (list_item);
-    task_start_thread(list_item->item);
+    list_item->item->start_thread();
     delete list_item;
     list_item = nullptr;
   }

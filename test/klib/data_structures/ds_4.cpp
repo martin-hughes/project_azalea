@@ -1,5 +1,6 @@
 #define ENABLE_TRACING
 
+#include "test/test_core/test.h"
 #include "klib/data_structures/string.h"
 #include "klib/tracing/tracing.h"
 #include "klib/panic/panic.h"
@@ -86,4 +87,7 @@ TEST(DataStructuresTest, Strings1)
 
   kl_string string_g;
   ASSERT(string_g == "");
+
+  kl_string string_h("Hello!", 4);
+  ASSERT_EQ(string_h, "Hell");
 }

@@ -4,7 +4,7 @@
 // Changes from the original are marked by // Change by Martin and // End of change comments.
 
 // Change by Martin - add required headers and definitions.
-#include "klib/misc/vargs.h"
+#include <stdarg.h>
 #include "external/vsnprintf/vsnprintf.h"
 #include "klib/memory/memory.h"
 

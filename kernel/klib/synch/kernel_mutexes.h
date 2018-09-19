@@ -4,6 +4,8 @@
 #include "klib/synch/kernel_locks.h"
 #include "processor/processor.h"
 
+#include <memory>
+
 const uint64_t MUTEX_MAX_WAIT = 0xFFFFFFFFFFFFFFFF;
 
 // Defines a mutex structure. There's no inherent reason this couldn't be the basis of a mutex for user space too, but
@@ -18,7 +20,7 @@ struct klib_mutex
   task_thread *owner_thread;
 
   // Which processes are waiting to grab this mutex?
-  klib_list<task_thread *> waiting_threads_list;
+  klib_list<std::shared_ptr<task_thread>> waiting_threads_list;
 
   // This lock is used to synchronize access to the fields in this structure.
   kernel_spinlock access_lock;

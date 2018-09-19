@@ -35,6 +35,14 @@ public:
   /// @param s The string to move to this one.
   kl_string(kl_string &&s);
 
+  /// @brief Constructor that copies the provided string, but with a limited length.
+  ///
+  /// @param s The string to copy in to this one.
+  ///
+  /// @param len The maximum length of string to copy. If the string terminates in less than len bytes, the string will
+  ///            only be copied up to the terminator.
+  kl_string(const char *s, uint64_t len);
+
   /// @brief Standard destructor
   ~kl_string();
 

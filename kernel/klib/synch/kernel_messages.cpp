@@ -260,7 +260,7 @@ ERR_CODE msg_retrieve_next_msg(klib_message_hdr &msg)
 
   task_thread *thread = task_get_cur_thread();
   ASSERT(thread != nullptr);
-  task_process *proc = thread->parent_process;
+  std::shared_ptr<task_process> proc = thread->parent_process;
   ASSERT(proc != nullptr);
 
   if (!proc->accepts_msgs)
@@ -319,7 +319,7 @@ ERR_CODE msg_retrieve_cur_msg(klib_message_hdr &msg)
 
   task_thread *thread = task_get_cur_thread();
   ASSERT(thread != nullptr);
-  task_process *proc = thread->parent_process;
+  std::shared_ptr<task_process> proc = thread->parent_process;
   ASSERT(proc != nullptr);
 
   if (!proc->accepts_msgs)
@@ -370,7 +370,7 @@ ERR_CODE msg_msg_complete(klib_message_hdr &msg)
 
   task_thread *thread = task_get_cur_thread();
   ASSERT(thread != nullptr);
-  task_process *proc = thread->parent_process;
+  std::shared_ptr<task_process> proc = thread->parent_process;
   ASSERT(proc != nullptr);
   if (!proc->accepts_msgs)
   {

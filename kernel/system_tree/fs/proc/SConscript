@@ -1,0 +1,9 @@
+# 'Proc' pseudo-filesystem Library.
+
+Import('env')
+files = [ "proc_fs_root.cpp",
+          "proc_fs_proc.cpp",
+          "proc_fs_zero_proxy.cpp",
+        ]
+obj = env.Library("proc_fs", files)
+Return ("obj")

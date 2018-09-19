@@ -14,6 +14,7 @@ kernel = [
     '#kernel/klib/synch/SConscript-messages',
     '#kernel/klib/synch/SConscript-spinlocks',
     '#kernel/syscall/SConscript-kernel',
+    '#kernel/syscall/SConscript-kernel-x64',
     '#kernel/acpi/SConscript',
     '#external/SConscript-ACPICA',
     '#external/vsnprintf/Sconscript',
@@ -32,6 +33,8 @@ kernel = [
     # Filesystems
     '#kernel/system_tree/fs/fat/SConscript',
     '#kernel/system_tree/fs/pipe/SConscript',
+    '#kernel/system_tree/fs/mem/SConscript',
+    '#kernel/system_tree/fs/proc/SConscript',
   ]
 
 init_program = [
@@ -49,6 +52,7 @@ main_tests = [
     '#kernel/klib/tracing/SConscript',
     '#kernel/processor/Sconscript-generic',
     '#kernel/object_mgr/SConscript',
+    '#kernel/syscall/SConscript-kernel',
     '#kernel/system_tree/SConscript',
     '#test/SConscript-main',
     '#test/dummy_libs/core_mem/SConscript',
@@ -62,4 +66,6 @@ main_tests = [
     '#kernel/devices/block/proxy/SConscript',
     '#kernel/system_tree/fs/pipe/SConscript',
     '#kernel/system_tree/fs/fat/SConscript',
+    '#kernel/system_tree/fs/proc/SConscript',
+    '#kernel/system_tree/fs/mem/SConscript',
   ]

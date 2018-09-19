@@ -26,6 +26,12 @@ pipe_branch::pipe_branch() : _buffer(new uint8_t[NORMAL_BUFFER_SIZE])
   KL_TRC_EXIT;
 }
 
+
+std::shared_ptr<pipe_branch> pipe_branch::create()
+{
+  return std::shared_ptr<pipe_branch>(new pipe_branch());
+}
+
 // This fails for the time being because we don't yet have a way of removing objects from object_mgr, so child objects
 // can still be in use after being deleted.
 pipe_branch::~pipe_branch()
@@ -54,7 +60,7 @@ ERR_CODE pipe_branch::get_child_type(const kl_string &name, CHILD_TYPE &type)
   return ret;
 }
 
-ERR_CODE pipe_branch::get_branch(const kl_string &name, ISystemTreeBranch **branch)
+ERR_CODE pipe_branch::get_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch)
 {
   KL_TRC_ENTRY;
   KL_TRC_EXIT;
@@ -63,25 +69,21 @@ ERR_CODE pipe_branch::get_branch(const kl_string &name, ISystemTreeBranch **bran
   return ERR_CODE::NOT_FOUND;
 }
 
-ERR_CODE pipe_branch::get_leaf(const kl_string &name, ISystemTreeLeaf **leaf)
+ERR_CODE pipe_branch::get_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf)
 {
   ERR_CODE ret = ERR_CODE::NOT_FOUND;
   KL_TRC_ENTRY;
 
-  if (leaf == nullptr)
-  {
-    ret = ERR_CODE::INVALID_PARAM;
-  }
-  else if (name == read_leaf_name)
+  if (name == read_leaf_name)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Requested read leaf\n");
-    *leaf = new pipe_branch::pipe_read_leaf(this);
+    leaf = std::make_shared<pipe_branch::pipe_read_leaf>(shared_from_this());
     ret = ERR_CODE::NO_ERROR;
   }
   else if (name == write_leaf_name)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Requested write leaf\n");
-    *leaf = new pipe_branch::pipe_write_leaf(this);
+    leaf = std::make_shared<pipe_branch::pipe_write_leaf>(shared_from_this());
     ret = ERR_CODE::NO_ERROR;
   }
 
@@ -91,7 +93,7 @@ ERR_CODE pipe_branch::get_leaf(const kl_string &name, ISystemTreeLeaf **leaf)
   return ret;
 }
 
-ERR_CODE pipe_branch::add_branch(const kl_string &name, ISystemTreeBranch *branch)
+ERR_CODE pipe_branch::add_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> branch)
 {
   KL_TRC_ENTRY;
   KL_TRC_EXIT;
@@ -100,7 +102,7 @@ ERR_CODE pipe_branch::add_branch(const kl_string &name, ISystemTreeBranch *branc
   return ERR_CODE::INVALID_OP;
 }
 
-ERR_CODE pipe_branch::add_leaf(const kl_string &name, ISystemTreeLeaf *leaf)
+ERR_CODE pipe_branch::add_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> leaf)
 {
   KL_TRC_ENTRY;
   KL_TRC_EXIT;
@@ -127,7 +129,8 @@ ERR_CODE pipe_branch::delete_child(const kl_string &name)
   return ERR_CODE::INVALID_OP;
 }
 
-pipe_branch::pipe_read_leaf::pipe_read_leaf(pipe_branch *parent) : _parent(parent)
+pipe_branch::pipe_read_leaf::pipe_read_leaf(std::shared_ptr<pipe_branch> parent) : 
+  _parent(std::weak_ptr<pipe_branch>(parent))
 {
   ASSERT(parent != nullptr);
 }
@@ -149,9 +152,16 @@ ERR_CODE pipe_branch::pipe_read_leaf::read_bytes(uint64_t start,
   uint64_t wp;
   uint64_t buf_start;
 
+  std::shared_ptr<pipe_branch> parent_branch = this->_parent.lock();
+
   KL_TRC_ENTRY;
 
-  if (buffer == nullptr)
+  if (!parent_branch)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Parent branch deleted\n");
+    ret = ERR_CODE::INVALID_OP;
+  }
+  else if (buffer == nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid buffer ptr\n");
     ret = ERR_CODE::INVALID_PARAM;
@@ -159,11 +169,11 @@ ERR_CODE pipe_branch::pipe_read_leaf::read_bytes(uint64_t start,
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Try to read from the pipe\n");
-    klib_synch_spinlock_lock(this->_parent->_pipe_lock);
+    klib_synch_spinlock_lock(parent_branch->_pipe_lock);
 
-    rp = reinterpret_cast<uint64_t>(this->_parent->_read_ptr);
-    wp = reinterpret_cast<uint64_t>(this->_parent->_write_ptr);
-    buf_start = reinterpret_cast<uint64_t>(this->_parent->_buffer.get());
+    rp = reinterpret_cast<uint64_t>(parent_branch->_read_ptr);
+    wp = reinterpret_cast<uint64_t>(parent_branch->_write_ptr);
+    buf_start = reinterpret_cast<uint64_t>(parent_branch->_buffer.get());
 
     if (wp >= rp)
     {
@@ -192,20 +202,20 @@ ERR_CODE pipe_branch::pipe_read_leaf::read_bytes(uint64_t start,
     bytes_read = 0;
     for (int i = 0; i < read_length; i++, bytes_read++)
     {
-      *buffer = *this->_parent->_read_ptr;
+      *buffer = *parent_branch->_read_ptr;
       buffer++;
-      this->_parent->_read_ptr++;
-      rp = reinterpret_cast<uint64_t>(this->_parent->_read_ptr);
+      parent_branch->_read_ptr++;
+      rp = reinterpret_cast<uint64_t>(parent_branch->_read_ptr);
       if (rp > buf_start + NORMAL_BUFFER_SIZE)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Read pointer wrapped\n");
-        this->_parent->_read_ptr = this->_parent->_buffer.get();
+        parent_branch->_read_ptr = parent_branch->_buffer.get();
       }
     }
 
     ASSERT(read_length == bytes_read);
 
-    klib_synch_spinlock_unlock(this->_parent->_pipe_lock);
+    klib_synch_spinlock_unlock(parent_branch->_pipe_lock);
 
     ret = ERR_CODE::NO_ERROR;
   }
@@ -215,7 +225,8 @@ ERR_CODE pipe_branch::pipe_read_leaf::read_bytes(uint64_t start,
   return ret;
 }
 
-pipe_branch::pipe_write_leaf::pipe_write_leaf(pipe_branch *parent) : _parent(parent)
+pipe_branch::pipe_write_leaf::pipe_write_leaf(std::shared_ptr<pipe_branch> parent) :
+  _parent(std::weak_ptr<pipe_branch>(parent))
 {
   ASSERT(parent != nullptr);
 }
@@ -237,10 +248,16 @@ ERR_CODE pipe_branch::pipe_write_leaf::write_bytes(uint64_t start,
   uint64_t rp;
   uint64_t wp;
   uint64_t buf_start;
+  std::shared_ptr<pipe_branch> parent_branch = this->_parent.lock();
 
   KL_TRC_ENTRY;
 
-  if (buffer == nullptr)
+  if (!parent_branch)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Parent branch deleted\n");
+    ret = ERR_CODE::INVALID_OP;
+  }
+  else if (buffer == nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid buffer ptr\n");
     ret = ERR_CODE::INVALID_PARAM;
@@ -248,11 +265,11 @@ ERR_CODE pipe_branch::pipe_write_leaf::write_bytes(uint64_t start,
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Try to write from the pipe\n");
-    klib_synch_spinlock_lock(this->_parent->_pipe_lock);
+    klib_synch_spinlock_lock(parent_branch->_pipe_lock);
 
-    rp = reinterpret_cast<uint64_t>(this->_parent->_read_ptr);
-    wp = reinterpret_cast<uint64_t>(this->_parent->_write_ptr);
-    buf_start = reinterpret_cast<uint64_t>(this->_parent->_buffer.get());
+    rp = reinterpret_cast<uint64_t>(parent_branch->_read_ptr);
+    wp = reinterpret_cast<uint64_t>(parent_branch->_write_ptr);
+    buf_start = reinterpret_cast<uint64_t>(parent_branch->_buffer.get());
 
     if (rp > wp)
     {
@@ -281,20 +298,20 @@ ERR_CODE pipe_branch::pipe_write_leaf::write_bytes(uint64_t start,
     bytes_written = 0;
     for (int i = 0; i < write_length; i++, bytes_written++)
     {
-      *this->_parent->_write_ptr = *buffer;
+      *parent_branch->_write_ptr = *buffer;
       buffer++;
-      this->_parent->_write_ptr++;
-      wp = reinterpret_cast<uint64_t>(this->_parent->_write_ptr);
+      parent_branch->_write_ptr++;
+      wp = reinterpret_cast<uint64_t>(parent_branch->_write_ptr);
       if (wp > buf_start + NORMAL_BUFFER_SIZE)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Write pointer wrapped\n");
-        this->_parent->_write_ptr = this->_parent->_buffer.get();
+        parent_branch->_write_ptr = parent_branch->_buffer.get();
       }
     }
 
     ASSERT(write_length == bytes_written);
 
-    klib_synch_spinlock_unlock(this->_parent->_pipe_lock);
+    klib_synch_spinlock_unlock(parent_branch->_pipe_lock);
 
     ret = ERR_CODE::NO_ERROR;
   }
@@ -302,4 +319,16 @@ ERR_CODE pipe_branch::pipe_write_leaf::write_bytes(uint64_t start,
   KL_TRC_EXIT;
 
   return ret;
+}
+
+ERR_CODE pipe_branch::create_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch)
+{
+  // You can't add extra branches to a pipe branch.
+  return ERR_CODE::INVALID_OP;
+}
+
+ERR_CODE pipe_branch::create_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf)
+{
+  // You can't add extra branches to a pipe branch.
+  return ERR_CODE::INVALID_OP;
 }

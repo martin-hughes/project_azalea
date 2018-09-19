@@ -1,3 +1,4 @@
+#include "test/test_core/test.h"
 #include "system_tree/system_tree.h"
 #include "system_tree/fs/pipe/pipe_fs.h"
 
@@ -11,10 +12,10 @@ const uint64_t buffer_size = 50;
 // A simple test of the pipes objects within ST.
 TEST(SystemTreeTest, GeneralPipes)
 {
-  pipe_branch pipe_obj;
-  pipe_branch::pipe_read_leaf *reader;
-  pipe_branch::pipe_write_leaf *writer;
-  ISystemTreeLeaf *leaf;
+  std::shared_ptr<pipe_branch> pipe_obj = pipe_branch::create();
+  shared_ptr<pipe_branch::pipe_read_leaf> reader;
+  shared_ptr<pipe_branch::pipe_write_leaf> writer;
+  shared_ptr<ISystemTreeLeaf> leaf;
   std::unique_ptr<uint8_t[]> buf(new uint8_t [buffer_size]);
   uint64_t total_written = 0;
   uint64_t written_this_time = 0;
@@ -28,19 +29,19 @@ TEST(SystemTreeTest, GeneralPipes)
   }
 
   // Start with some simple checks on what leaves are available
-  r = pipe_obj.get_leaf("nope", &leaf);
+  r = pipe_obj->get_leaf("nope", leaf);
   ASSERT_EQ(r, ERR_CODE::NOT_FOUND);
 
-  r = pipe_obj.get_leaf("read", &leaf);
+  r = pipe_obj->get_leaf("read", leaf);
   ASSERT_EQ(r, ERR_CODE::NO_ERROR);
   ASSERT_NE(leaf, nullptr);
-  reader = dynamic_cast<pipe_branch::pipe_read_leaf *>(leaf);
+  reader = dynamic_pointer_cast<pipe_branch::pipe_read_leaf>(leaf);
   ASSERT_NE(reader, nullptr);
 
-  r = pipe_obj.get_leaf("write", &leaf);
+  r = pipe_obj->get_leaf("write", leaf);
   ASSERT_EQ(r, ERR_CODE::NO_ERROR);
   ASSERT_NE(leaf, nullptr);
-  writer = dynamic_cast<pipe_branch::pipe_write_leaf *>(leaf);
+  writer = dynamic_pointer_cast<pipe_branch::pipe_write_leaf>(leaf);
   ASSERT_NE(reader, nullptr);
 
   for (int i = 0; i < pipe_size; i += buffer_size)
@@ -66,7 +67,4 @@ TEST(SystemTreeTest, GeneralPipes)
   r = reader->read_bytes(0, buffer_size, buf.get(), buffer_size, read_this_time);
   ASSERT_EQ(r, ERR_CODE::NO_ERROR);
   ASSERT_EQ(read_this_time, 0);
-
-  delete reader;
-  delete writer;
 }

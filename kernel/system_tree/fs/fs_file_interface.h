@@ -90,6 +90,18 @@ public:
   ///
   /// @return An appropriate choice from `ERR_CODE`
   virtual ERR_CODE get_file_size(uint64_t &file_size) = 0;
+
+  /// @brief Set the length of the file.
+  ///
+  /// After the operation completes, this will be the number of bytes in the file if it were fully read into memory -
+  /// it is not necessarily the same number of bytes the file actually occupies in its storage medium.
+  ///
+  /// This function can be used to both truncate and extend files. If a file is extended, it is padded with zeroes.
+  ///
+  /// @param file_size The number of bytes to set the size of the file to.
+  ///
+  /// @return An appropriate choice from `ERR_CODE`
+  virtual ERR_CODE set_file_size(uint64_t file_size) = 0;
 };
 
 #endif

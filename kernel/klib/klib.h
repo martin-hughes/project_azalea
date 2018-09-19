@@ -9,6 +9,19 @@
 #define KLIB_DEBUG
 #endif
 
+// If we're building the unit test program on Windows then add the Microsoft Debug Heap instrumentation to any source
+// file using KLib. This won't instrument *everything* - but it's close enough.
+#ifdef UT_MEM_LEAK_CHECK
+
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+
+#define DEBUG_NEW new(_NORMAL_BLOCK ,__FILE__, __LINE__)
+#define new DEBUG_NEW
+
+#endif
+
 #include <stdint.h>
 
 #include "user_interfaces/kernel_types.h"
@@ -23,7 +36,6 @@
 #include "misc/assert.h"
 #include "memory/memory.h"
 #include "misc/math_hacks.h"
-#include "misc/vargs.h"
 #include "tracing/tracing.h"
 #include "synch/kernel_locks.h"
 #include "synch/kernel_mutexes.h"

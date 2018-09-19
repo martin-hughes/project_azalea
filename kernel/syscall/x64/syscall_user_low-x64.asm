@@ -52,3 +52,7 @@ GENERIC_SYSCALL 25, syscall_unmap_memory
 GENERIC_SYSCALL 26, syscall_wait_for_object
 GENERIC_SYSCALL 27, syscall_futex_wait
 GENERIC_SYSCALL 28, syscall_futex_wake
+
+; New syscalls
+GENERIC_SYSCALL 29, syscall_create_obj_and_handle
+GENERIC_SYSCALL 30, syscall_set_handle_data_len

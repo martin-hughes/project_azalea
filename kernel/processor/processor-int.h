@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include "processor.h"
 
+class proc_fs_root_branch;
+
 /// @brief Storage space for the stack of an x64 process.
 ///
 /// This structure is only valid if the process is not currently running.
@@ -34,7 +36,7 @@ struct task_x64_saved_stack
   // These fields are pushed by the processor by it jumping to an interrupt.
   uint64_t proc_rip; ///< RIP to use when task restarts. Set by processor during interrupt.
   uint64_t proc_cs;  ///< CS of task. Set by processor during interrupt.
-  uint64_t proc_rflags; /// RFLAGS. Set by processor during interrupt.
+  uint64_t proc_rflags; ///< RFLAGS. Set by processor during interrupt.
   uint64_t proc_rsp; ///< RSP. Set by processor during interrupt.
   uint64_t proc_ss; ///< SS. Set by processor during interrupt.
 };
@@ -80,7 +82,7 @@ struct task_x64_exec_context
 void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thread);
 void task_int_delete_exec_context(task_thread *old_thread);
 
-task_thread *task_get_next_thread();
+task_thread *task_get_next_thread(bool abandon_this_thread);
 extern "C" task_x64_exec_context *task_int_swap_task(uint64_t stack_addr, uint64_t cr3_value);
 
 void task_install_task_switcher();
@@ -89,6 +91,14 @@ void task_platform_init();
 extern "C" void proc_handle_irq(uint8_t irq_number);
 void proc_irq_slowpath_thread();
 
-task_process *task_create_system_process();
+std::shared_ptr<task_process> task_create_system_process();
+
+void task_thread_cycle_add(task_thread *new_thread);
+void task_thread_cycle_remove(task_thread *thread);
+void task_thread_cycle_lock();
+void task_thread_cycle_unlock();
+void task_idle_thread_cycle();
+
+extern bool *abandon_thread;
 
 #endif

@@ -320,7 +320,7 @@ void mem_deallocate_virtual_range(void *start, uint32_t num_pages, task_process 
 
 /// Initialize the virtual-memory manager specific process data structure.
 ///
-/// @param proc_data_ptr The process data structure to initialize.
+/// @param proc_data_ref The process data structure to initialize.
 void mem_vmm_init_proc_data(vmm_process_data &proc_data_ref)
 {
   klib_list_item<vmm_range_data *> *root_item;

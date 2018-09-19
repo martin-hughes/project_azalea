@@ -9,8 +9,7 @@
 #include "klib/data_structures/lists.h"
 #include "klib/synch/kernel_locks.h"
 #include "mem/mem.h"
-#include "object_mgr/handles.h"
-#include "object_mgr/ref_counter.h"
+#include "object_mgr/object_mgr.h"
 #include "system_tree/system_tree_leaf.h"
 #include "klib/data_structures/string.h"
 #include "klib/synch/kernel_messages.h"
@@ -28,14 +27,33 @@ class task_thread;
 
 /// Structure to hold information about a process. All information is stored here, to be accessed by the various
 /// components as needed. This removes the need for per-component lookup tables for each process.
-class task_process : public IRefCounted, public WaitObject
+class task_process : public IHandledObject, public WaitObject, public std::enable_shared_from_this<task_process>
 {
+protected:
+  task_process(ENTRY_PROC entry_point, bool kernel_mode = false, mem_process_info *mem_info = nullptr);
+
 public:
+  static std::shared_ptr<task_process> create(ENTRY_PROC entry_point, 
+                                              bool kernel_mode = false, 
+                                              mem_process_info *mem_info = nullptr);
+  virtual ~task_process();
+
+  void start_process();
+  void stop_process();
+  void destroy_process();
+
+protected:
+  friend task_thread;
+  void add_new_thread(std::shared_ptr<task_thread> new_thread);
+  void thread_ending(task_thread *thread);
+
+public:
+
   /// Refer ourself back to the process list.
   klib_list_item<task_process *> process_list_item;
 
   /// A list of all child threads.
-  klib_list<task_thread *> child_threads;
+  klib_list<std::shared_ptr<task_thread>> child_threads;
 
   /// A pointer to the memory manager's information for this task.
   mem_process_info *mem_info;
@@ -64,12 +82,6 @@ public:
 
   /// Is this process currently being destroyed?
   bool being_destroyed;
-
-  /// Called externally when all child threads are destroyed.
-  void destroy_process();
-
-protected:
-  void ref_counter_zero();
 };
 
 /// @brief Class to hold information about a thread.
@@ -79,31 +91,18 @@ protected:
 ///
 /// task_thread derives from WaitObject, but doesn't change the default logic of that class. The WaitObject is
 /// signalled when the thread is scheduled for destruction.
-class task_thread : public IRefCounted, public WaitObject
+class task_thread : public IHandledObject, public WaitObject
 {
+protected:
+  task_thread(ENTRY_PROC entry_point, std::shared_ptr<task_process> parent);
+
 public:
+  static std::shared_ptr<task_thread> create(ENTRY_PROC entry_point, std::shared_ptr<task_process> parent);
+  virtual ~task_thread();
+
+  bool start_thread();
+  bool stop_thread();
   void destroy_thread();
-
-  /// This thread's parent process. The process defines the address space, permissions, etc.
-  task_process *parent_process;
-
-  /// An entry for the parent's thread list.
-  klib_list_item<task_thread *> process_list_item;
-
-  /// A pointer to the thread's execution context. This is processor specific, so no specific structure can
-  /// be pointed to. Only processor-specific code should access this field.
-  void *execution_context;
-
-  /// Is the thread running? It will only be considered for execution if so.
-  volatile bool permit_running;
-
-  /// Should the scheduler release it's acquisition of this thread? The thread will delete itself when no-one is
-  /// interested in it any more. This should only be set by task_destroy_thread().
-  bool release_thread;
-
-  /// Has the thread been destroyed? Various operations are not permitted on a destroyed thread. This object will
-  /// continue to exist until all references to it have been released.
-  bool thread_destroyed;
 
   /// A pointer to the next thread. In normal operation, these form a cycle of threads, and the task manager is able
   /// to manipulate this cycle without breaking the chain.
@@ -115,13 +114,36 @@ public:
   /// - The scheduler might be running this thread, in which case no other processor should run it as well
   kernel_spinlock cycle_lock;
 
-  // This item is used to associate the thread with the list of threads waiting for a mutex, semaphore or other
-  // synchronization primitive. The list itself is owned by that primitive, but this item must be initialized with the
-  // rest of this structure.
-  klib_list_item<task_thread *> synch_list_item;
+  /// Is the thread running? It will only be considered for execution if so.
+  volatile bool permit_running;
+
+  /// This thread's parent process. The process defines the address space, permissions, etc.
+  std::shared_ptr<task_process> parent_process;
+
+  /// An entry for the parent's thread list.
+  klib_list_item<std::shared_ptr<task_thread>> *process_list_item;
+
+  /// A pointer to the thread's execution context. This is processor specific, so no specific structure can
+  /// be pointed to. Only processor-specific code should access this field.
+  void *execution_context;
+
+  /// This item is used to associate the thread with the list of threads waiting for a mutex, semaphore or other
+  /// synchronization primitive. The list itself is owned by that primitive, but this item must be initialized with the
+  /// rest of this structure.
+  klib_list_item<std::shared_ptr<task_thread>> *synch_list_item;
+
+  /// Store handles and the objects they correlate to.
+  object_manager thread_handles;
 
 protected:
-  void ref_counter_zero();
+  /// Has the thread been destroyed? Various operations are not permitted on a destroyed thread. This object will
+  /// continue to exist until all references to it have been released.
+  bool thread_destroyed;
+
+
+#ifdef AZALEA_TEST_CODE
+  friend void test_only_reset_task_mgr();
+#endif
 };
 
 /// @brief Processor-specific information.
@@ -174,37 +196,19 @@ void proc_stop_interrupts();
 void proc_start_interrupts();
 
 // Initialise the task management system.
-task_process *task_init();
+std::shared_ptr<task_process> task_init();
 void task_gen_init();
 
 // Begin multi-tasking
 void task_start_tasking();
 
-// Create a new process, with a thread starting at entry_point.
-task_process *task_create_new_process(ENTRY_PROC entry_point,
-    bool kernel_mode = false,
-    mem_process_info *mem_info = nullptr);
-
 void task_set_start_params(task_process * process, uint64_t argc, char **argv, char **env);
-
-// Create a new thread starting at entry_point, with parent parent_process.
-task_thread *task_create_new_thread(ENTRY_PROC entry_point, task_process *parent_process);
-
-// Destroy a thread immediately.
-void task_destroy_thread(task_thread *unlucky_thread);
-
-// Destroy a process (and by definition, all threads within it) immediately.
-void task_destroy_process(task_process *unlucky_process);
 
 // Return information about a specific task. This is intended to allow the various components to access their data,
 // without having to store a parallel task list internally.
 task_thread *task_get_cur_thread();
 
-// Start and stop threads and processes
-void task_start_process(task_process *process);
-void task_stop_process(task_process *process);
-void task_start_thread(task_thread *thread);
-void task_stop_thread(task_thread *thread);
+// Force a reschedule on this processor.
 void task_yield();
 
 // Multiple processor control functions
@@ -218,6 +222,9 @@ void proc_mp_receive_signal(PROC_IPI_MSGS msg);
 // to avoid being preempted in a state that might leave it in a deadlock. Naturally, it must be used with extreme care!
 void task_continue_this_thread();
 void task_resume_scheduling();
+
+// Simply abandon this thread when it is next scheduled. This is used when a thread is being destroyed.
+void task_abandon_this_thread();
 
 uint64_t proc_read_port(const uint64_t port_id, const uint8_t width);
 void proc_write_port(const uint64_t port_id, const uint64_t value, const uint8_t width);

@@ -1,4 +1,7 @@
+#include "test/test_core/test.h"
+
 #include "processor/processor.h"
+#include "processor/x64/processor-x64.h"
 
 namespace
 {
@@ -23,12 +26,12 @@ void task_platform_init()
 
 void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thread)
 {
-  return (void *)&fake_ptr_target;
+  return new char[8];
 }
 
 void task_int_delete_exec_context(task_thread *t)
 {
-  // Still nothing to do.
+  delete[] ((char *)t->execution_context);
 }
 
 mem_process_info *mem_task_create_task_entry()
@@ -59,4 +62,17 @@ void test_only_set_cur_thread(task_thread *thread)
 void task_yield()
 {
   // Not much that can be done here.
+}
+
+// This function is deliberately empty. It can be used by functions needing to provide an entry point in test code
+// where it is known that entry point is never actually executed - for example, while creating process or thread
+// objects.
+void dummy_thread_fn()
+{
+  // Doesn't do anything.
+}
+
+void proc_write_msr(PROC_X64_MSRS msr, uint64_t value)
+{
+  panic("Can't write MSRs in test code");
 }

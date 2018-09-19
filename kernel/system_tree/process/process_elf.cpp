@@ -5,6 +5,7 @@
 
 //#define ENABLE_TRACING
 
+#include <memory>
 #include "klib/klib.h"
 #include "system_tree/system_tree.h"
 #include "system_tree/fs/fs_file_interface.h"
@@ -24,7 +25,7 @@ typedef void (*fn_ptr)();
 /// param binary_name The System Tree name for an ELF file to load into a new process.
 ///
 /// return A task_process control structure for the new process.
-task_process *proc_load_elf_file(kl_string binary_name)
+std::shared_ptr<task_process> proc_load_elf_file(kl_string binary_name)
 {
   KL_TRC_ENTRY;
 
@@ -34,11 +35,11 @@ task_process *proc_load_elf_file(kl_string binary_name)
   // Copy it into that mapping.
   // Release the kernel side of that mapping.
 
-  ISystemTreeLeaf *disk_prog;
-  IBasicFile *new_prog_file;
+  std::shared_ptr<ISystemTreeLeaf> disk_prog;
+  std::shared_ptr<IBasicFile> new_prog_file;
   uint64_t prog_size;
   uint64_t bytes_read;
-  task_process *new_proc;
+  std::shared_ptr<task_process> new_proc;
   uint8_t* load_buffer;
   elf64_file_header *file_header;
   elf64_program_header *prog_header;
@@ -49,11 +50,11 @@ task_process *proc_load_elf_file(kl_string binary_name)
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Attempting to load binary ", binary_name, "\n");
 
-  ASSERT(system_tree()->get_leaf(binary_name, &disk_prog) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->get_leaf(binary_name, disk_prog) == ERR_CODE::NO_ERROR);
 
   // Check the file will fit into a single page. This means we know the copy below has enough space.
   // There's no technical reason why it must fit in one page, but it makes it easier for the time being.
-  new_prog_file = dynamic_cast<IBasicFile*>(disk_prog);
+  new_prog_file = std::dynamic_pointer_cast<IBasicFile>(disk_prog);
   ASSERT(new_prog_file != nullptr);
   new_prog_file->get_file_size(prog_size);
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Binary file size ", prog_size, "\n");
@@ -84,7 +85,7 @@ task_process *proc_load_elf_file(kl_string binary_name)
   // Create a task context with the correct entry point - this is needed before we can map pages to copy the image in
   // to.
   fn_ptr start_addr_ptr = reinterpret_cast<fn_ptr>(file_header->entry_addr);
-  new_proc = task_create_new_process(start_addr_ptr, false);
+  new_proc = task_process::create(start_addr_ptr, false);
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Created new process with entry point ", start_addr_ptr, "\n");
 
   // The kernel does writes in its own address space, to avoid accidentally trampling over the current process.
@@ -140,17 +141,17 @@ task_process *proc_load_elf_file(kl_string binary_name)
 
         // Is there already a page for this mapped into the process's address space? If not, create one. In all cases,
         // map it into the kernel's space so we can write onto it.
-        backing_addr = mem_get_phys_addr(reinterpret_cast<void *>(this_page), new_proc);
+        backing_addr = mem_get_phys_addr(reinterpret_cast<void *>(this_page), new_proc.get());
         if (backing_addr == nullptr)
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "No space for that allocated in the child process, grabbing a new page...\n");
           backing_addr = mem_allocate_physical_pages(1);
 
           KL_TRC_TRACE(TRC_LVL::EXTRA, "Allocating this page in the process's tables\n");
-          mem_vmm_allocate_specific_range(this_page, 1, new_proc);
+          mem_vmm_allocate_specific_range(this_page, 1, new_proc.get());
 
           KL_TRC_TRACE(TRC_LVL::EXTRA, "Mapping new page ", backing_addr, " to ", this_page, "\n");
-          mem_map_range(backing_addr, reinterpret_cast<void *>(this_page), 1, new_proc);
+          mem_map_range(backing_addr, reinterpret_cast<void *>(this_page), 1, new_proc.get());
         }
 
         KL_TRC_TRACE(TRC_LVL::EXTRA, "Mapping page ", backing_addr, " to ", kernel_write_window, " for kernel writing\n");

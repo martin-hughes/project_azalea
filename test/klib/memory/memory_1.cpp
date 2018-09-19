@@ -4,11 +4,12 @@
 // More complex tests to prove that the allocator works as expected are covered
 // by later tests.
 
+#include "test/test_core/test.h"
+
 #include <iostream>
 #include "gtest/gtest.h"
 
 #include "klib/memory/memory.h"
-#include "test/test_core/test.h"
 
 using namespace std;
 
@@ -23,7 +24,6 @@ void memory_test_1_try_size(uint32_t size);
 
 TEST(KlibMemoryTest, BasicTests)
 {
-  void *result;
   cout << "Memory test 1" << endl;
 
   for (int i = 0; i < NUM_SIZES; i++)

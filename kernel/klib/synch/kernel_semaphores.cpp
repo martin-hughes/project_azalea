@@ -57,19 +57,19 @@ SYNC_ACQ_RESULT klib_synch_semaphore_wait(klib_semaphore &semaphore, uint64_t ma
 
     // Wait for the semaphore to become free. Add this thread to the list of waiting threads, then suspend this thread.
     task_thread *this_thread = task_get_cur_thread();
-    klib_list_item<task_thread *> *item = new klib_list_item<task_thread *>;
+    klib_list_item<std::shared_ptr<task_thread>> *item = new klib_list_item<std::shared_ptr<task_thread>>;
 
     ASSERT(semaphore.cur_user_count == semaphore.max_users);
 
     klib_list_item_initialize(item);
-    item->item = this_thread;
+    item->item = this_thread->synch_list_item->item;
 
     klib_list_add_tail(&semaphore.waiting_threads_list, item);
 
     // To avoid marking this thread as not being scheduled before freeing the lock - which would deadlock anyone else
     // trying to use this semaphore - stop scheduling for the time being.
     task_continue_this_thread();
-    task_stop_thread(this_thread);
+    this_thread->stop_thread();
 
     // Freeing the lock means that we could immediately become the owner thread. That's OK, we'll check once we come
     // back to this code after yielding.
@@ -99,7 +99,7 @@ void klib_synch_semaphore_clear(klib_semaphore &semaphore)
 {
   KL_TRC_ENTRY;
 
-  klib_list_item<task_thread *> *next_owner;
+  klib_list_item<std::shared_ptr<task_thread>> *next_owner;
 
   klib_synch_spinlock_lock(semaphore.access_lock);
 
@@ -116,7 +116,7 @@ void klib_synch_semaphore_clear(klib_semaphore &semaphore)
     KL_TRC_TRACE(TRC_LVL::EXTRA, "Next user is", next_owner->item, "\n");
     ASSERT(semaphore.cur_user_count == semaphore.max_users);
     klib_list_remove(next_owner);
-    task_start_thread((task_thread *)next_owner->item);
+    next_owner->item->start_thread();
     delete next_owner;
     next_owner = nullptr;
   }

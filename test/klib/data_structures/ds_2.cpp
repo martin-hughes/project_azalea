@@ -1,3 +1,4 @@
+#include "test/test_core/test.h"
 #include "klib/data_structures/binary_tree.h"
 #include "klib/tracing/tracing.h"
 #include "klib/panic/panic.h"

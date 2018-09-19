@@ -1,5 +1,6 @@
 #include "object_mgr/handles.h"
 #include "object_mgr/object_mgr.h"
+#include "system_tree/system_tree.h"
 #include "processor/processor.h"
 #include "processor/processor-int.h"
 #include <iostream>
@@ -9,16 +10,14 @@
 
 using namespace std;
 
-void test_1_fake_task();
-
 // Create a new list, add and delete items, check the list is still valid.
 TEST(SchedulerTest, SimpleTests)
 {
-  task_process *sys_proc;
-  task_process *proc_a;
+  shared_ptr<task_process> sys_proc;
+  shared_ptr<task_process> proc_a;
   task_thread *thread_a;
   task_thread *idle_thread_a;
-  task_process *proc_b;
+  shared_ptr<task_process> proc_b;
   task_thread *thread_b;
   task_thread *expected_next;
   task_thread *ret_thread;
@@ -27,57 +26,57 @@ TEST(SchedulerTest, SimpleTests)
   cout << "Scheduler task cycle tests" << endl;
 
   hm_gen_init();
-  om_gen_init();
+  system_tree_init();
   sys_proc = task_init();
 
   // Don't run any threads from the system process, it just confuses the rest of the test.
-  task_stop_process(sys_proc);
+  sys_proc->stop_process();
 
-  proc_a = task_create_new_process(test_1_fake_task);
-  task_start_process(proc_a);
+  proc_a = task_process::create(dummy_thread_fn);
+  proc_a->start_process();
 
   // At the moment, there is only one thread, so it should be returned to us repeatedly.
-  thread_a = task_get_next_thread();
+  thread_a = task_get_next_thread(false);
   cout << "Thread A: " << thread_a << endl;
   ASSERT_NE(thread_a, nullptr);
   for (i = 0; i < 10; i++)
   {
-    ASSERT_EQ(thread_a, task_get_next_thread());
+    ASSERT_EQ(thread_a, task_get_next_thread(false));
   }
 
   // Set it to not permit running. Ensure we get a different thread - should be the idle thread.
   thread_a->permit_running = false;
 
-  idle_thread_a = task_get_next_thread();
+  idle_thread_a = task_get_next_thread(false);
   cout << "Idle thread: " << idle_thread_a << endl;
   ASSERT_NE(thread_a, idle_thread_a);
 
   // Now, we should get the idle thread repeatedly.
   for (i = 0; i < 10; i++)
   {
-    ASSERT_EQ(idle_thread_a, task_get_next_thread());
+    ASSERT_EQ(idle_thread_a, task_get_next_thread(false));
   }
 
   // Permit the first thread to run again, now we should get that repeatedly.
   thread_a->permit_running = true;
   for (i = 0; i < 10; i++)
   {
-    ASSERT_EQ(thread_a, task_get_next_thread());
+    ASSERT_EQ(thread_a, task_get_next_thread(false));
   }
 
-  proc_b = task_create_new_process(test_1_fake_task, true);
-  thread_b = (task_thread *)proc_b->child_threads.head->item;
+  proc_b = task_process::create(dummy_thread_fn, true);
+  thread_b = proc_b->child_threads.head->item.get();
   cout << "Thread B: " << thread_b << endl;
-  task_start_process(proc_b);
+  proc_b->start_process();
 
-  ret_thread = task_get_next_thread();
+  ret_thread = task_get_next_thread(false);
   cout << "Alternation test: received " << ret_thread << endl;
   ASSERT_TRUE((ret_thread == thread_b) || (ret_thread == thread_a));
 
   for (i = 0; i < 10; i++)
   {
     expected_next = (ret_thread == thread_a) ? thread_b : thread_a;
-    ret_thread = task_get_next_thread();
+    ret_thread = task_get_next_thread(false);
     cout << "Expected: " << expected_next << ", Got: " << ret_thread << endl;
     ASSERT_EQ(expected_next, ret_thread);
   }
@@ -86,7 +85,7 @@ TEST(SchedulerTest, SimpleTests)
   thread_b->permit_running = false;
   for (int i = 0; i < 10; i++)
   {
-    ASSERT_EQ(thread_a, task_get_next_thread());
+    ASSERT_EQ(thread_a, task_get_next_thread(false));
   }
 
   // Switch to thread A, and check the same.
@@ -94,7 +93,7 @@ TEST(SchedulerTest, SimpleTests)
   thread_b->permit_running = true;
   for (int i = 0; i < 10; i++)
   {
-    ASSERT_EQ(thread_b, task_get_next_thread());
+    ASSERT_EQ(thread_b, task_get_next_thread(false));
   }
 
   // Disable both, and check we get the idle process
@@ -102,18 +101,12 @@ TEST(SchedulerTest, SimpleTests)
   thread_b->permit_running = false;
   for (int i = 0; i < 10; i++)
   {
-    ASSERT_EQ(idle_thread_a, task_get_next_thread());
+    ASSERT_EQ(idle_thread_a, task_get_next_thread(false));
   }
 
-  task_destroy_process(proc_a);
-  task_destroy_process(proc_b);
+  proc_a->destroy_process();
+  proc_b->destroy_process();
 
-  test_only_reset_om();
   test_only_reset_task_mgr();
-}
-
-
-void test_1_fake_task()
-{
-
+  test_only_reset_system_tree();
 }

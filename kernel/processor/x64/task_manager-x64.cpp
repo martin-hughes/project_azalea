@@ -54,7 +54,7 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
   KL_TRC_ENTRY;
 
   ASSERT(new_thread != nullptr);
-  parent_process = new_thread->parent_process;
+  parent_process = new_thread->parent_process.get();
   ASSERT(parent_process != nullptr);
   memmgr_data = parent_process->mem_info;
   ASSERT(memmgr_data != nullptr);
@@ -194,7 +194,7 @@ void task_set_start_params(task_process *process, uint64_t argc, char **argv, ch
 
   ASSERT(process != nullptr);
   ASSERT(process->child_threads.head != nullptr);
-  first_thread = process->child_threads.head->item;
+  first_thread = process->child_threads.head->item.get();
   ASSERT(first_thread != nullptr);
   ASSERT(first_thread->permit_running == false);
 
@@ -228,12 +228,13 @@ task_x64_exec_context *task_int_swap_task(uint64_t stack_addr, uint64_t cr3_valu
   task_x64_exec_context *next_context;
   task_thread *next_thread;
   void *stack_ptr = reinterpret_cast<void *>(stack_addr);
+  bool abandon_this_thread = abandon_thread[proc_mp_this_proc_id()];
 
   KL_TRC_ENTRY;
 
   current_thread = task_get_cur_thread();
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Current: ", current_thread, " (", stack_ptr, ")\n");
-  if (current_thread != nullptr)
+  if ((current_thread != nullptr) && (abandon_this_thread == false))
   {
     current_context = reinterpret_cast<task_x64_exec_context *>(current_thread->execution_context);
     current_context->cr3_value = (void *)cr3_value;
@@ -250,7 +251,7 @@ task_x64_exec_context *task_int_swap_task(uint64_t stack_addr, uint64_t cr3_valu
     KL_TRC_TRACE(TRC_LVL::FLOW, "Not storing old thread\n");
   }
 
-  next_thread = task_get_next_thread();
+  next_thread = task_get_next_thread(abandon_this_thread);
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Next: ", next_thread, "\n");
   next_context = reinterpret_cast<task_x64_exec_context *>(next_thread->execution_context);
 

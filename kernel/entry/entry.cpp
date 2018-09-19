@@ -20,6 +20,7 @@
 #include "devices/legacy/ps2/ps2_controller.h"
 #include "system_tree/fs/fat/fat_fs.h"
 #include "system_tree/fs/pipe/pipe_fs.h"
+#include "system_tree/fs/mem/mem_fs.h"
 
 #include "entry/multiboot.h"
 
@@ -41,24 +42,32 @@
 // - Permit full ACPI.
 // - Load the user-mode "init" task (currently done by temporary code)
 
+// Known deficiencies:
+// Where to begin!
+// - The mapping of a pipe leaf to the process stdout is sketchy, at best. It will be improved once a bit more work is
+//   done on loading processes.
+
 extern "C" int main(unsigned int magic_number, multiboot_hdr *mb_header);
-void kernel_start();
+void kernel_start() throw ();
 void simple_terminal();
 void setup_task_parameters(task_process *startup_proc);
 
 // Temporary procedures and storage while the kernel is being developed. Eventually, the full kernel start procedure
 // will cause these to become unused.
-void setup_initial_fs();
+std::shared_ptr<fat_filesystem> setup_initial_fs();
 // Some variables to support loading a filesystem.
 generic_ata_device *first_hdd;
-fat_filesystem *first_fs;
 gen_ps2_controller_device *ps2_controller;
+
+std::shared_ptr<task_process> *system_process;
+std::shared_ptr<task_process> *kernel_start_process;
 
 volatile bool wait_for_term;
 
 // Assumptions used throughout the kernel
-static_assert(sizeof(unsigned int) == 4, "Unsigned long assumed to be length 4.");
 static_assert(sizeof(uint64_t) == sizeof(uintptr_t), "Code throughout assumes pointers are 64-bits long.");
+
+// There are a few places to check before this assert can be removed - ACPI headers for example.
 static_assert(sizeof(unsigned long) == 8, "Unsigned long must be 8 bytes");
 
 // Main kernel entry point. This is called by an assembly-language loader that should do as little as possible. On x64,
@@ -84,18 +93,21 @@ int main(uint32_t magic_number, multiboot_hdr *mb_header)
   proc_gen_init();
   mem_gen_init(&e820_ptr);
   hm_gen_init();
-  om_gen_init();
   system_tree_init();
   acpi_init_table_system();
   time_gen_init();
   proc_mp_init();
   syscall_gen_init();
-  task_init();
+
+  system_process = new std::shared_ptr<task_process>();
+  kernel_start_process = new std::shared_ptr<task_process>();
+
+  *system_process = task_init();
 
   KL_TRC_TRACE(TRC_LVL::IMPORTANT, "Welcome to the OS!\n");
 
-  task_process *kernel_process = task_create_new_process(kernel_start, true, mem_task_get_task0_entry());
-  task_start_process(kernel_process);
+  *kernel_start_process = task_process::create(kernel_start, true, mem_task_get_task0_entry());
+  (*kernel_start_process)->start_process();
 
   task_start_tasking();
 
@@ -111,7 +123,7 @@ int main(uint32_t magic_number, multiboot_hdr *mb_header)
 };
 
 // Main kernel start procedure.
-void kernel_start()
+void kernel_start() throw ()
 {
   KL_TRC_TRACE(TRC_LVL::FLOW,
                "Entered kernel start - thread: ",
@@ -119,7 +131,11 @@ void kernel_start()
                "\n");
 
   ACPI_STATUS status;
-  task_process *initial_proc;
+  std::shared_ptr<task_process> initial_proc;
+  std::shared_ptr<ISystemTreeLeaf> leaf;
+  char proc_ptr_buffer[34];
+  const char hello_string[] = "Hello, world!";
+  uint64_t br;
 
   // Bring the ACPI system up to full readiness.
   status = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
@@ -134,20 +150,33 @@ void kernel_start()
   ps2_controller = new gen_ps2_controller_device();
 
   // Setup a basic file system.
-  setup_initial_fs();
+  std::shared_ptr<fat_filesystem> first_fs = setup_initial_fs();
   ASSERT(first_fs != nullptr);
-  ASSERT(system_tree()->add_branch("root", first_fs) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->add_branch("root", std::dynamic_pointer_cast<ISystemTreeBranch>(first_fs)) == ERR_CODE::NO_ERROR);
 
   wait_for_term = true;
 
   initial_proc = proc_load_elf_file("root\\initprog");
-  setup_task_parameters(initial_proc);
+  setup_task_parameters(initial_proc.get());
   ASSERT(initial_proc != nullptr);
 
+  // Create a temporary in-RAM file system.
+  std::shared_ptr<mem_fs_branch> ram_branch = mem_fs_branch::create();
+  ASSERT(ram_branch != nullptr);
+  ASSERT(system_tree()->add_branch("temp", ram_branch) == ERR_CODE::NO_ERROR);
+  std::shared_ptr<mem_fs_leaf> ram_file = std::make_shared<mem_fs_leaf>(ram_branch);
+  ASSERT(ram_file != nullptr);
+  ASSERT(system_tree()->add_leaf("temp\\hello.txt", ram_file) == ERR_CODE::NO_ERROR);
+  ASSERT(ram_file->write_bytes(0,
+                               kl_strlen(hello_string, sizeof(hello_string)),
+                               reinterpret_cast<const uint8_t *>(hello_string),
+                               sizeof(hello_string), br) == ERR_CODE::NO_ERROR);
+  ASSERT(br == sizeof(hello_string) - 1);
+
   // Start a simple terminal process.
-  task_process *term = task_create_new_process(simple_terminal, true);
+  std::shared_ptr<task_process> term = task_process::create(simple_terminal, true);
   KL_TRC_TRACE(TRC_LVL::FLOW, "Starting terminal\n");
-  task_start_process(term);
+  term->start_process();
 
   ps2_keyboard_device *keyboard = dynamic_cast<ps2_keyboard_device *>(ps2_controller->chan_1_dev);
   ASSERT(keyboard != nullptr);
@@ -157,13 +186,20 @@ void kernel_start()
 
   }
 
+  // Setup the write end of the terminal pipe. This is a bit dubious, it doesn't do any reference counting...
+  ASSERT(system_tree()->get_leaf("pipes\\terminal\\write", leaf) == ERR_CODE::NO_ERROR);
+  klib_snprintf(proc_ptr_buffer, 34, "proc\\%p\\stdout", initial_proc.get());
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "proc: ", (const char *)proc_ptr_buffer, "\n");
+  ASSERT(system_tree()->add_leaf(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
+
   // Process should be good to go!
-  task_start_process(initial_proc);
+  initial_proc->start_process();
 
   if (keyboard != nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Setting up keyboard messages\n");
-    keyboard->recipient = initial_proc;
+    keyboard->recipient = initial_proc.get();
   }
 
   // If (when!) the initial process exits, we want the system to shut down. But since we don't really do shutting down
@@ -175,7 +211,7 @@ void kernel_start()
 
 // Configure the filesystem of the (presumed) boot device as part of System Tree.
 const unsigned int base_reg_a = 0x1F0;
-void setup_initial_fs()
+std::shared_ptr<fat_filesystem> setup_initial_fs()
 {
   KL_TRC_ENTRY;
 
@@ -200,12 +236,13 @@ void setup_initial_fs()
   kl_memcpy(sector_buffer.get() + 458, &sector_count, 4);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "First partition: ", (uint64_t)start_sector, " -> +", (uint64_t)sector_count, "\n");
-  block_proxy_device *pd = new block_proxy_device(first_hdd, start_sector, sector_count);
+  std::shared_ptr<block_proxy_device> pd = std::make_shared<block_proxy_device>(first_hdd, start_sector, sector_count);
 
   // Initialise the filesystem based on that information
-  first_fs = new fat_filesystem(pd);
+  std::shared_ptr<fat_filesystem> first_fs = fat_filesystem::create(pd);
 
   KL_TRC_EXIT;
+  return first_fs;
 }
 
 // A simple text based terminal outputting on the main display.
@@ -213,8 +250,8 @@ void simple_terminal()
 {
   KL_TRC_ENTRY;
 
-  ISystemTreeLeaf *leaf;
-  IReadable *reader;
+  std::shared_ptr<ISystemTreeLeaf> leaf;
+  std::shared_ptr<IReadable> reader;
   const uint64_t buffer_size = 10;
   unsigned char buffer[buffer_size];
   uint64_t bytes_read;
@@ -227,13 +264,13 @@ void simple_terminal()
   uint16_t cur_offset = 0;
 
   // Set up the input pipe
-  ISystemTreeBranch *pipes_br = new system_tree_simple_branch();
+  std::shared_ptr<ISystemTreeBranch> pipes_br = std::make_shared<system_tree_simple_branch>();
   ASSERT(pipes_br != nullptr);
   ASSERT(system_tree() != nullptr);
   ASSERT(system_tree()->add_branch("pipes", pipes_br) == ERR_CODE::NO_ERROR);
-  ASSERT(pipes_br->add_branch("terminal", new pipe_branch()) == ERR_CODE::NO_ERROR);
-  ASSERT(system_tree()->get_leaf("pipes\\terminal\\read", &leaf) == ERR_CODE::NO_ERROR);
-  reader = dynamic_cast<IReadable *>(leaf);
+  ASSERT(pipes_br->add_branch("terminal", pipe_branch::create()) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->get_leaf("pipes\\terminal\\read", leaf) == ERR_CODE::NO_ERROR);
+  reader = std::dynamic_pointer_cast<IReadable>(leaf);
   ASSERT(reader != nullptr);
 
   // Map and then clear the display
@@ -285,7 +322,7 @@ void setup_task_parameters(task_process *startup_proc)
 {
   // The default user mode stack starts from this position - 16 and grows downwards, we put the task parameters above
   // this position.
-  const unsigned long default_posn = 0x000000000F200000;
+  const uintptr_t default_posn = 0x000000000F200000;
 
   KL_TRC_ENTRY;
 
@@ -327,7 +364,7 @@ void setup_task_parameters(task_process *startup_proc)
   string_ptr_k += 10;
   string_ptr_u += 10;
 
-  environ_ptr_k = reinterpret_cast<char **>(reinterpret_cast<unsigned long>(kernel_map) + 64);
+  environ_ptr_k = reinterpret_cast<char **>(reinterpret_cast<uint64_t>(kernel_map) + 64);
   environ_ptr_u = reinterpret_cast<char **>(default_posn + 64);
   environ_ptr_k[1] = nullptr;
   string_ptr_k = reinterpret_cast<char *>(environ_ptr_k + 2);

@@ -20,22 +20,20 @@
 ///         continue.
 extern "C" ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle)
 {
-  ERR_CODE result = ERR_CODE::UNKNOWN;
-  IRefCounted *om_obj;
-  WaitObject *wait_obj;
-
   KL_TRC_ENTRY;
 
-  om_obj = om_retrieve_object(wait_object_handle);
-  if (om_obj == nullptr)
+  ERR_CODE result = ERR_CODE::UNKNOWN;
+  std::shared_ptr<WaitObject> wait_obj;
+  task_thread *cur_thread = task_get_cur_thread();
+
+  if (cur_thread == nullptr)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Not found on OM\n");
-    result = ERR_CODE::NOT_FOUND;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't identify current thread\n");
+    result = ERR_CODE::INVALID_OP;
   }
   else
   {
-    wait_obj = dynamic_cast<WaitObject *>(om_obj);
-
+    wait_obj = std::dynamic_pointer_cast<WaitObject>(cur_thread->thread_handles.retrieve_object(wait_object_handle));
     if (wait_obj == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Not a wait object\n");

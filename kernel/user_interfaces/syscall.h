@@ -26,6 +26,8 @@ ERR_CODE syscall_write_handle(GEN_HANDLE handle,
                               unsigned char *buffer,
                               uint64_t buffer_size,
                               uint64_t *bytes_written);
+ERR_CODE syscall_create_obj_and_handle(const char *path, uint64_t path_len, GEN_HANDLE *handle);
+ERR_CODE syscall_set_handle_data_len(GEN_HANDLE handle, uint64_t data_length);
 
 /* Message passing. */
 ERR_CODE syscall_register_for_mp();

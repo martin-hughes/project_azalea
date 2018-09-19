@@ -11,7 +11,7 @@ FAT_TYPE determine_fat_type(fat32_bpb &bpb);
 
 const uint64_t ASSUMED_SECTOR_SIZE = 512;
 
-fat_filesystem::fat_filesystem(IBlockDevice *parent_device) :
+fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
     _storage(parent_device), _status(DEV_STATUS::OK), _buffer(new uint8_t[ASSUMED_SECTOR_SIZE])
 {
   fat32_bpb* temp_bpb;
@@ -92,6 +92,11 @@ fat_filesystem::fat_filesystem(IBlockDevice *parent_device) :
   klib_synch_spinlock_unlock(this->gen_lock);
 }
 
+std::shared_ptr<fat_filesystem> fat_filesystem::create(std::shared_ptr<IBlockDevice> parent_device)
+{
+  return std::shared_ptr<fat_filesystem>(new fat_filesystem(parent_device));
+}
+
 fat_filesystem::~fat_filesystem()
 {
 
@@ -102,36 +107,28 @@ ERR_CODE fat_filesystem::get_child_type(const kl_string &name, CHILD_TYPE &type)
   return ERR_CODE::UNKNOWN;
 }
 
-ERR_CODE fat_filesystem::get_branch(const kl_string &name, ISystemTreeBranch **branch)
+ERR_CODE fat_filesystem::get_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch)
 {
   return ERR_CODE::UNKNOWN;
 }
 
-ERR_CODE fat_filesystem::get_leaf(const kl_string &name, ISystemTreeLeaf **leaf)
+ERR_CODE fat_filesystem::get_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf)
 {
   KL_TRC_ENTRY;
 
   ERR_CODE ec = ERR_CODE::UNKNOWN;
   fat_dir_entry fde;
-  fat_file *file_obj;
+  std::shared_ptr<fat_file> file_obj;
 
-  if (leaf == nullptr)
+  ec = this->get_dir_entry(name, true, 0, fde);
+
+  if (ec == ERR_CODE::NO_ERROR)
   {
-    KL_TRC_TRACE(TRC_LVL::ERROR, "leaf parameter must not be NULL\n");
-    ec = ERR_CODE::INVALID_PARAM;
-  }
-  else
-  {
-    ec = this->get_dir_entry(name, true, 0, fde);
+    uint64_t cluster = (((uint64_t)fde.first_cluster_high) << 16) + fde.first_cluster_low;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "First cluster: ", cluster, "\n");
 
-    if (ec == ERR_CODE::NO_ERROR)
-    {
-      uint64_t cluster = (((uint64_t)fde.first_cluster_high) << 16) + fde.first_cluster_low;
-      KL_TRC_TRACE(TRC_LVL::FLOW, "First cluster: ", cluster, "\n");
-
-      file_obj = new fat_file(fde, this);
-      *leaf = static_cast<ISystemTreeLeaf *>(file_obj);
-    }
+    file_obj = std::make_shared<fat_file>(fde, shared_from_this());
+    leaf = std::dynamic_pointer_cast<ISystemTreeLeaf>(file_obj);
   }
 
   KL_TRC_EXIT;
@@ -139,12 +136,12 @@ ERR_CODE fat_filesystem::get_leaf(const kl_string &name, ISystemTreeLeaf **leaf)
 }
 
 // For the time being, only read operations are supported.
-ERR_CODE fat_filesystem::add_branch(const kl_string &name, ISystemTreeBranch *branch)
+ERR_CODE fat_filesystem::add_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> branch)
 {
   return ERR_CODE::INVALID_OP;
 }
 
-ERR_CODE fat_filesystem::add_leaf(const kl_string &name, ISystemTreeLeaf *leaf)
+ERR_CODE fat_filesystem::add_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> leaf)
 {
   return ERR_CODE::INVALID_OP;
 }
@@ -477,4 +474,14 @@ bool fat_filesystem::is_normal_cluster_number(uint64_t cluster_num)
   }
 
   return is_normal;
+}
+
+ERR_CODE fat_filesystem::create_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch)
+{
+  return ERR_CODE::UNKNOWN;
+}
+
+ERR_CODE fat_filesystem::create_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf)
+{
+  return ERR_CODE::UNKNOWN;
 }

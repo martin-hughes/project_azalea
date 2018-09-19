@@ -7,6 +7,9 @@
 #include "processor/processor-int.h"
 #include "processor/synch_objects.h"
 #include "object_mgr/object_mgr.h"
+#include "system_tree/system_tree.h"
+
+using namespace std;
 
 class TestWaitObject : public WaitObject
 {
@@ -15,12 +18,10 @@ public:
   void test_trigger() { this->trigger_next_thread(); }
 };
 
-void test_fake_task();
-
 TEST(ProcessorTests, WaitObjects)
 {
-  task_process *sys_proc;
-  task_process *proc_a;
+  shared_ptr<task_process> sys_proc;
+  shared_ptr<task_process> proc_a;
   task_thread *thread_a;
   task_thread *idle_thread_a;
   task_thread *ret_thread;
@@ -28,75 +29,73 @@ TEST(ProcessorTests, WaitObjects)
   int i;
 
   hm_gen_init();
-  om_gen_init();
+  system_tree_init();
   sys_proc = task_init();
 
   // Don't run any threads from the system process, it just confuses the rest of the test.
-  task_stop_process(sys_proc);
+  sys_proc->stop_process();
 
-  proc_a = task_create_new_process(test_fake_task);
-  task_start_process(proc_a);
+  proc_a = task_process::create(dummy_thread_fn);
+  proc_a->start_process();
 
   // At the moment, there is only one thread, so it should be returned to us repeatedly.
-  thread_a = task_get_next_thread();
+  thread_a = task_get_next_thread(false);
   ASSERT_NE(thread_a, nullptr);
   for (i = 0; i < 10; i++)
   {
-    ASSERT_EQ(thread_a, task_get_next_thread());
+    ASSERT_EQ(thread_a, task_get_next_thread(false));
   }
 
   // Make thread A wait for the wait object, then we should get an idle thread repeatedly.
   test_only_set_cur_thread(thread_a);
   wait_obj.wait_for_signal();
 
-  idle_thread_a = task_get_next_thread();
+  idle_thread_a = task_get_next_thread(false);
   ASSERT_NE(thread_a, idle_thread_a);
 
   // Now, we should get the idle thread repeatedly.
   for (i = 0; i < 10; i++)
   {
-    ASSERT_EQ(idle_thread_a, task_get_next_thread());
+    ASSERT_EQ(idle_thread_a, task_get_next_thread(false));
   }
 
   // Permit the first thread to run again, now we should get that repeatedly.
   wait_obj.cancel_waiting_thread(thread_a);
   for (i = 0; i < 10; i++)
   {
-    ASSERT_EQ(thread_a, task_get_next_thread());
+    ASSERT_EQ(thread_a, task_get_next_thread(false));
   }
 
   // Make thread A wait for the wait object, then we should get an idle thread repeatedly.
   test_only_set_cur_thread(thread_a);
   wait_obj.wait_for_signal();
 
-  idle_thread_a = task_get_next_thread();
+  idle_thread_a = task_get_next_thread(false);
   ASSERT_NE(thread_a, idle_thread_a);
 
   // Now, we should get the idle thread repeatedly.
   for (i = 0; i < 10; i++)
   {
-    ASSERT_EQ(idle_thread_a, task_get_next_thread());
+    ASSERT_EQ(idle_thread_a, task_get_next_thread(false));
   }
 
   // Signal the thread, then we should get that again repeatedly.
   wait_obj.test_trigger();
   for (i = 0; i < 10; i++)
   {
-    ASSERT_EQ(thread_a, task_get_next_thread());
+    ASSERT_EQ(thread_a, task_get_next_thread(false));
   }
 
   // Switch to having the idle thread be current. It is necessary to unschedule all tasks as otherwise
   // test_only_reset_task_mgr() gets stuck waiting for the thread to be unscheduled.
-  task_stop_process(proc_a);
-  task_get_next_thread();
+  proc_a->stop_process();
+  task_get_next_thread(false);
   test_only_set_cur_thread(nullptr);
-  task_destroy_process(proc_a);
+  proc_a->destroy_process();
 
-  test_only_reset_om();
+  proc_a = nullptr;
+  sys_proc = nullptr;
+
   test_only_reset_task_mgr();
-}
-
-void test_fake_task()
-{
-
+  test_only_reset_system_tree();
 }

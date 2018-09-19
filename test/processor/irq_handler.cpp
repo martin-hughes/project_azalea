@@ -6,6 +6,7 @@
 // Known defects:
 // - If the IrqHandling test fails midway through it won't tidy up properly and future tests may crash.
 
+#include "test/test_core/test.h"
 #include "gtest/gtest.h"
 #include "devices/device_interface.h"
 #include "processor/processor.h"

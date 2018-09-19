@@ -694,7 +694,7 @@ uint64_t *get_pml4_table_addr(task_process *context)
     if(cur_thread != nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Provide process specific data\n");
-      cur_process = cur_thread->parent_process;
+      cur_process = cur_thread->parent_process.get();
       ASSERT(cur_process != nullptr);
       mem_info = cur_process->mem_info;
       ASSERT(mem_info != nullptr);

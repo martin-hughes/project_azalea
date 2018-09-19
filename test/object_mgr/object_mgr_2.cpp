@@ -6,6 +6,8 @@
 
 #include "gtest/gtest.h"
 
+using namespace std;
+
 const uint32_t NUM_OBJECTS = 5;
 
 class simple_object : public ISystemTreeLeaf
@@ -17,60 +19,23 @@ public:
 // A very simple test of the handle manager.
 TEST(ObjectManagerTest, StoreAndRetrieve)
 {
-  simple_object objects[NUM_OBJECTS];
+  shared_ptr<simple_object> objects[NUM_OBJECTS];
   GEN_HANDLE handles[NUM_OBJECTS];
-
-  om_gen_init();
+  unique_ptr<object_manager> om = std::make_unique<object_manager>();
 
   for (int i = 0; i < NUM_OBJECTS; i++)
   {
-    handles[i] = om_store_object(dynamic_cast<IRefCounted *>(&objects[i]));
+    objects[i] = make_shared<simple_object>();
+    handles[i] = om->store_object(dynamic_pointer_cast<IHandledObject>(objects[i]));
   }
 
   for (int i = 0; i < NUM_OBJECTS; i++)
   {
-    ASSERT_EQ(&objects[i], dynamic_cast<simple_object *>(om_retrieve_object(handles[i])));
+    ASSERT_EQ(objects[i], dynamic_pointer_cast<simple_object >(om->retrieve_object(handles[i])));
   }
 
   for (int i = 0; i < NUM_OBJECTS; i++)
   {
-    om_remove_object(handles[i]);
+    om->remove_object(handles[i]);
   }
-
-  test_only_reset_om();
-}
-
-TEST(ObjectManagerTest, ThreadSpecificHandles)
-{
-  simple_object objects[NUM_OBJECTS];
-  GEN_HANDLE handles[NUM_OBJECTS];
-  task_thread threads[NUM_OBJECTS];
-  int j;
-
-  om_gen_init();
-
-  for (int i = 0; i < NUM_OBJECTS; i++)
-  {
-    test_only_set_cur_thread(&threads[i]);
-    handles[i] = om_store_object(dynamic_cast<IRefCounted *>(&objects[i]));
-  }
-
-  for (int i = 0; i < NUM_OBJECTS; i++)
-  {
-    // It should only be possible to retrieve objects when they are associated with the currently running thread.
-    test_only_set_cur_thread(&threads[i]);
-    ASSERT_EQ(&objects[i], dynamic_cast<simple_object *>(om_retrieve_object(handles[i])));
-
-    j = (i == 0) ? NUM_OBJECTS - 1 : i - 1;
-    test_only_set_cur_thread(&threads[j]);
-    ASSERT_EQ(nullptr, dynamic_cast<simple_object *>(om_retrieve_object(handles[i])));
-  }
-
-  for (int i = 0; i < NUM_OBJECTS; i++)
-  {
-    test_only_set_cur_thread(&threads[i]);
-    om_remove_object(handles[i]);
-  }
-
-  test_only_reset_om();
 }

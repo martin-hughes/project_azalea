@@ -68,12 +68,13 @@ protected:
   /// @brief The root of this node.
   tree_node *root;
 
+  /// @brief How many leaves are in this tree.
+  unsigned long number_of_leaves;
+
 public:
   /// @brief Standard constructor. No copy or other constructor is provided at present.
-  kl_rb_tree()
+  kl_rb_tree() : root(nullptr), left_side_last(false), number_of_leaves(0)
   {
-    root = nullptr;
-    left_side_last = false;
   }
 
   /// @brief Standard destructor.
@@ -82,11 +83,25 @@ public:
   /// the user.
   ~kl_rb_tree()
   {
+    clear_tree();
+  }
+
+  /// @brief Delete all leaves within the tree.
+  void clear_tree()
+  {
     if (root != nullptr)
     {
       delete_node(root);
       root = nullptr;
     }
+  }
+
+  /// @brief Return the number of leaves in the tree.
+  ///
+  /// @return The number of leaves in the tree.
+  unsigned long num_leaves()
+  {
+    return number_of_leaves;
   }
 
   /// @brief Insert a key-value pair in to the tree
@@ -246,6 +261,8 @@ public:
         ASSERT((new_node->right == nullptr) || (new_node->right->is_black));
       }
     }
+
+    number_of_leaves++;
   }
 
   /// @brief Remove the node associated with key from the tree
@@ -282,6 +299,16 @@ public:
     ASSERT((result != nullptr) && (result->key == key));
 
     return result->value;
+  }
+
+  bool get_root_node_key(key_type &out)
+  {
+    if (root != nullptr)
+    {
+      out = root->key;
+      return true;
+    }
+    return false;
   }
 
   /// @brief Verifies the tree is a valid Red-Black Tree.
@@ -554,6 +581,8 @@ protected:
       delete node;
       node = nullptr;
     }
+
+    number_of_leaves--;
   }
 
   /// @brief Rebalance the RB tree after deleting a black node with a black child.

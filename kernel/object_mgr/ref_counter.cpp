@@ -4,6 +4,8 @@
 // Known defects:
 // - This won't deal very well with copying of a reference-counted object.
 
+//#define ENABLE_TRACING
+
 #include "ref_counter.h"
 #include "klib/klib.h"
 

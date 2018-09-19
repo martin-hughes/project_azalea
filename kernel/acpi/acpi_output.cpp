@@ -11,7 +11,10 @@ extern "C"
 #include "accommon.h"
 }
 
-#include "klib/klib.h"
+#include <stdint.h>
+#include "klib/panic/panic.h"
+#include "klib/c_helpers/printf_fns.h"
+#include "klib/tracing/tracing.h"
 
 /*******************************************************************************
  *

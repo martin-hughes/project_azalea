@@ -31,7 +31,7 @@ ERR_CODE syscall_register_for_mp()
   }
   else
   {
-    res = msg_register_process(ct->parent_process);
+    res = msg_register_process(ct->parent_process.get());
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
@@ -90,7 +90,7 @@ ERR_CODE syscall_send_message(uint64_t target_proc_id,
     msg.msg_contents = kernel_buffer;
     msg.msg_id = message_id;
     msg.msg_length = message_len;
-    msg.originating_process = this_thread->parent_process;
+    msg.originating_process = this_thread->parent_process.get();
 
     // It feels a lot like we should stop using raw pointers as IDs...
     res = msg_send_to_process(reinterpret_cast<task_process *>(target_proc_id), msg);

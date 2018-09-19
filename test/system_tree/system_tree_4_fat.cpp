@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sys/stat.h>
 
+#include "test/test_core/test.h"
 #include "devices/block/ramdisk/ramdisk.h"
 #include "devices/block/proxy/block_proxy.h"
 #include "system_tree/fs/fat/fat_fs.h"
@@ -27,9 +28,9 @@ const uint32_t block_size = 512;
 class FatFsTest : public ::testing::Test
 {
 protected:
-  unique_ptr<virtual_disk_dummy_device> backing_storage;
-  unique_ptr<fat_filesystem> filesystem;
-  unique_ptr<block_proxy_device> proxy;
+  shared_ptr<virtual_disk_dummy_device> backing_storage;
+  shared_ptr<fat_filesystem> filesystem;
+  shared_ptr<block_proxy_device> proxy;
 
   FatFsTest()
   {
@@ -37,8 +38,7 @@ protected:
     system(copy_command);
     #endif
 
-    this->backing_storage = unique_ptr<virtual_disk_dummy_device>
-                              (new virtual_disk_dummy_device(sample_image, block_size));
+    this->backing_storage = make_shared<virtual_disk_dummy_device>(sample_image, block_size);
     std::unique_ptr<uint8_t[]> sector_buffer(new uint8_t[512]);
     uint32_t start_sector;
     uint32_t sector_count;
@@ -55,12 +55,12 @@ protected:
     memcpy(&start_sector, sector_buffer.get() + 454, 4);
     memcpy(&sector_count, sector_buffer.get() + 458, 4);
 
-    proxy = unique_ptr<block_proxy_device>(new block_proxy_device(backing_storage.get(), start_sector, sector_count));
+    proxy = make_shared<block_proxy_device>(backing_storage.get(), start_sector, sector_count);
 
     EXPECT_EQ(DEV_STATUS::OK, proxy->get_device_status());
 
     // Initialise the filesystem based on that information
-    filesystem = unique_ptr<fat_filesystem>(new fat_filesystem(proxy.get()));
+    filesystem = fat_filesystem::create(proxy);
   }
 
   virtual ~FatFsTest()
@@ -72,8 +72,8 @@ protected:
 // contain the text "This is a test." (15 characters.)
 TEST_F(FatFsTest, FatReading)
 {
-  ISystemTreeLeaf *basic_leaf;
-  IBasicFile *input_file;
+  shared_ptr<ISystemTreeLeaf> basic_leaf;
+  shared_ptr<IBasicFile> input_file;
   const kl_string filename = "TESTREAD.TXT";
   const char *expected_text = "This is a test.";
   const uint32_t expected_file_size = strlen(expected_text);
@@ -82,8 +82,8 @@ TEST_F(FatFsTest, FatReading)
   uint64_t bytes_read;
   uint64_t actual_size;
 
-  ASSERT_EQ(ERR_CODE::NO_ERROR, filesystem->get_leaf(filename, &basic_leaf)) << "Failed to open file on disk";
-  input_file = dynamic_cast<IBasicFile *>(basic_leaf);
+  ASSERT_EQ(ERR_CODE::NO_ERROR, filesystem->get_leaf(filename, basic_leaf)) << "Failed to open file on disk";
+  input_file = dynamic_pointer_cast<IBasicFile>(basic_leaf);
 
   ASSERT_NE(nullptr, input_file) << "FAT leaf is not a file??";
 
@@ -98,5 +98,4 @@ TEST_F(FatFsTest, FatReading)
   ASSERT_EQ(0, strcmp(expected_text, (char *)buffer.get()));
 
   input_file = nullptr;
-  basic_leaf->ref_release();
 }

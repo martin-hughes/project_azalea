@@ -59,8 +59,8 @@ Being a hobby project, there are some fairly specific requirements for this proj
 To compile the full system, you will need the following tools and libraries installed:
 - Azalea-libc - this can be built as part of compiling the kernel, as described below.
 - Python 2.6 or later (*)
-- GCC 5.4 or later
-- Clang 3.8.0 or later
+- GCC 5.4 or later (no longer tested)
+- Clang 6.0.0 or later (earlier versions may work, but are not tested)
 - SCons (*)
 - NASM (*)
 - Boost iostreams (*) - only used in the test scripts.
@@ -71,7 +71,7 @@ To compile the full system, you will need the following tools and libraries inst
 - Doxygen - Only needed to generate documentation. (optional)
 - Visual Studio - only needed if doing a Windows build (optional, see below)
 
-Items marked with a (*) are the only ones required if doing a unit test program build on Windows. 
+Items marked with a (*) are the only ones required if doing a unit test program build on Windows.
 
 Full compilation has been tested using Ubuntu 16.04. It may work on the Windows Subsystem for Linux, but is untested.
 

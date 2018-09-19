@@ -3,6 +3,8 @@
 
 #define ENABLE_TRACING
 
+#include "test/test_core/test.h"
+
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <iostream>
 #include <cstring>

@@ -25,6 +25,16 @@ kl_string::kl_string(const char *s)
   kl_memcpy(s, this->string_contents, sl);
 }
 
+kl_string::kl_string(const char *s, uint64_t len)
+{
+  uint64_t sl = kl_strlen(s, len) + 1;
+  this->string_contents = new char [sl];
+  this->buffer_length = sl;
+
+  kl_memcpy(s, this->string_contents, sl - 1);
+  this->string_contents[sl - 1] = 0;
+}
+
 kl_string::kl_string(const kl_string &s)
 {
   this->buffer_length = s.buffer_length;

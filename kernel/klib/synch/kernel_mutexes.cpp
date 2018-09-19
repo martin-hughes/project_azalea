@@ -58,17 +58,17 @@ SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, uint64_t max_wait)
     // Wait for the mutex to become free. Add this thread to the list of waiting threads, then suspend this thread.
     task_thread *this_thread = task_get_cur_thread();
     ASSERT(this_thread != nullptr);
-    ASSERT(!klib_list_item_is_in_any_list(&this_thread->synch_list_item));
-    ASSERT(this_thread->synch_list_item.item == this_thread);
+    ASSERT(!klib_list_item_is_in_any_list(this_thread->synch_list_item));
+    ASSERT(this_thread->synch_list_item->item.get() == this_thread);
 
     ASSERT(mutex.owner_thread != nullptr);
 
-    klib_list_add_tail(&mutex.waiting_threads_list, &this_thread->synch_list_item);
+    klib_list_add_tail(&mutex.waiting_threads_list, this_thread->synch_list_item);
 
     // To avoid marking this thread as not being scheduled before freeing the lock - which would deadlock anyone else
     // trying to use this mutex, stop scheduling for the time being.
     task_continue_this_thread();
-    task_stop_thread(this_thread);
+    this_thread->stop_thread();
 
     // Freeing the lock means that we could immediately become the owner thread. That's OK, we'll check once we come
     // back to this code after yielding.
@@ -115,7 +115,7 @@ void klib_synch_mutex_release(klib_mutex &mutex, const bool disregard_owner)
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Releasing mutex ", &mutex, " from thread ", task_get_cur_thread(), "\n");
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Owner thread: ", mutex.owner_thread, "\n");
 
-  klib_list_item<task_thread *> *next_owner;
+  klib_list_item<std::shared_ptr<task_thread>> *next_owner;
 
   ASSERT(mutex.mutex_locked);
   ASSERT((disregard_owner) || (mutex.owner_thread == task_get_cur_thread()));
@@ -131,9 +131,9 @@ void klib_synch_mutex_release(klib_mutex &mutex, const bool disregard_owner)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Getting next owner from the head of list\n");
     KL_TRC_TRACE(TRC_LVL::EXTRA, "Next owner is", next_owner->item, "\n");
-    mutex.owner_thread = next_owner->item;
+    mutex.owner_thread = next_owner->item.get();
     klib_list_remove(next_owner);
-    task_start_thread(next_owner->item);
+    next_owner->item->start_thread();
   }
 
   KL_TRC_EXIT;

@@ -2,6 +2,7 @@
 #define KLIB_SEMAPHORE
 
 #include <stdint.h>
+#include <memory>
 
 #include "klib/synch/kernel_locks.h"
 #include "processor/processor.h"
@@ -20,7 +21,7 @@ struct klib_semaphore
   uint64_t max_users;
 
   // Which processes are waiting to grab this mutex?
-  klib_list<task_thread *> waiting_threads_list;
+  klib_list<std::shared_ptr<task_thread>> waiting_threads_list;
 
   // This lock is used to synchronize access to the fields in this structure.
   kernel_spinlock access_lock;

@@ -112,63 +112,71 @@ enum class FAT_TYPE
   FAT32,
 };
 
-class fat_filesystem: public ISystemTreeBranch
+class fat_filesystem: public ISystemTreeBranch, public std::enable_shared_from_this<fat_filesystem>
 {
+protected:
+  fat_filesystem(std::shared_ptr<IBlockDevice> parent_device);
+
 public:
-  fat_filesystem(IBlockDevice *parent_device);
+  static std::shared_ptr<fat_filesystem> create(std::shared_ptr<IBlockDevice> parent_device);
   virtual ~fat_filesystem();
 
-  virtual ERR_CODE get_child_type(const kl_string &name, CHILD_TYPE &type);
-  virtual ERR_CODE get_branch(const kl_string &name, ISystemTreeBranch **branch);
-  virtual ERR_CODE get_leaf(const kl_string &name, ISystemTreeLeaf **leaf);
-  virtual ERR_CODE add_branch(const kl_string &name, ISystemTreeBranch *branch);
-  virtual ERR_CODE add_leaf(const kl_string &name, ISystemTreeLeaf *leaf);
-  virtual ERR_CODE rename_child(const kl_string &old_name, const kl_string &new_name);
-  virtual ERR_CODE delete_child(const kl_string &name);
+  virtual ERR_CODE get_child_type(const kl_string &name, CHILD_TYPE &type) override;
+  virtual ERR_CODE get_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch) override;
+  virtual ERR_CODE get_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf) override;
+  virtual ERR_CODE add_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> branch) override;
+  virtual ERR_CODE add_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> leaf) override;
+  virtual ERR_CODE rename_child(const kl_string &old_name, const kl_string &new_name) override;
+  virtual ERR_CODE delete_child(const kl_string &name) override;
+  virtual ERR_CODE create_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch) override;
+  virtual ERR_CODE create_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf) override;
 
   class fat_folder: public ISystemTreeBranch
   {
   public:
-    fat_folder(fat_filesystem *parent_fs, kl_string folder_path);
+    fat_folder(std::shared_ptr<fat_filesystem> parent_fs, kl_string folder_path);
     virtual ~fat_folder();
 
-    virtual ERR_CODE get_child_type(const kl_string &name, CHILD_TYPE &type);
-    virtual ERR_CODE get_branch(const kl_string &name, ISystemTreeBranch **branch);
-    virtual ERR_CODE get_leaf(const kl_string &name, ISystemTreeLeaf **leaf);
-    virtual ERR_CODE add_branch(const kl_string &name, ISystemTreeBranch *branch);
-    virtual ERR_CODE add_leaf(const kl_string &name, ISystemTreeLeaf *leaf);
-    virtual ERR_CODE rename_child(const kl_string &old_name, const kl_string &new_name);
-    virtual ERR_CODE delete_child(const kl_string &name);
+    virtual ERR_CODE get_child_type(const kl_string &name, CHILD_TYPE &type) override;
+    virtual ERR_CODE get_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch) override;
+    virtual ERR_CODE get_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf) override;
+    virtual ERR_CODE add_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> branch) override;
+    virtual ERR_CODE add_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> leaf) override;
+    virtual ERR_CODE rename_child(const kl_string &old_name, const kl_string &new_name) override;
+    virtual ERR_CODE delete_child(const kl_string &name) override;
+    virtual ERR_CODE create_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch) override;
+    virtual ERR_CODE create_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf) override;
   };
 
   class fat_file: public IBasicFile, public ISystemTreeLeaf
   {
     public:
 
-    fat_file(fat_dir_entry file_data_record, fat_filesystem *parent);
+    fat_file(fat_dir_entry file_data_record, std::shared_ptr<fat_filesystem> parent);
     virtual ~fat_file();
 
     virtual ERR_CODE read_bytes(uint64_t start,
                           uint64_t length,
                           uint8_t *buffer,
                           uint64_t buffer_length,
-                          uint64_t &bytes_read);
+                          uint64_t &bytes_read) override;
 
     virtual ERR_CODE write_bytes(uint64_t start,
                                  uint64_t length,
                                  const uint8_t *buffer,
                                  uint64_t buffer_length,
-                                 uint64_t &bytes_written);
+                                 uint64_t &bytes_written) override;
 
-    virtual ERR_CODE get_file_size(uint64_t &file_size);
+    virtual ERR_CODE get_file_size(uint64_t &file_size) override;
+    virtual ERR_CODE set_file_size(uint64_t file_size) override;
 
     protected:
     fat_dir_entry _file_record;
-    fat_filesystem *_parent;
+    std::weak_ptr<fat_filesystem> _parent;
   };
 
 protected:
-  IBlockDevice *_storage;
+  std::shared_ptr<IBlockDevice> _storage;
   DEV_STATUS _status;
   std::unique_ptr<uint8_t[]> _buffer;
   std::unique_ptr<uint8_t[]> _raw_fat;

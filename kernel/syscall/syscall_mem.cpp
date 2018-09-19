@@ -60,7 +60,7 @@ ERR_CODE syscall_allocate_backing_memory(uint64_t pages, void **map_addr)
       cur_thread = task_get_cur_thread();
       ASSERT(cur_thread != nullptr);
       ASSERT(cur_thread->parent_process != nullptr);
-      *map_addr = mem_allocate_virtual_range(pages, cur_thread->parent_process);
+      *map_addr = mem_allocate_virtual_range(pages, cur_thread->parent_process.get());
 
       KL_TRC_TRACE(TRC_LVL::FLOW, "Proposed space: ", *map_addr, "\n");
     }
@@ -150,11 +150,12 @@ ERR_CODE syscall_map_memory(GEN_HANDLE proc_mapping_in,
                             void *extant_addr)
 {
   ERR_CODE result = ERR_CODE::UNKNOWN;
-  task_process *receiving_proc;
-  task_process *originating_proc;
+  std::shared_ptr<task_process> receiving_proc;
+  std::shared_ptr<task_process> originating_proc;
   uint64_t map_addr_l = reinterpret_cast<uint64_t>(map_addr);
   uint64_t extant_addr_l = reinterpret_cast<uint64_t>(extant_addr);
   void *phys_addr;
+  task_thread *cur_thread = task_get_cur_thread();
 
   KL_TRC_ENTRY;
 
@@ -169,26 +170,33 @@ ERR_CODE syscall_map_memory(GEN_HANDLE proc_mapping_in,
     KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid params\n");
     result = ERR_CODE::INVALID_PARAM;
   }
+  else if (cur_thread == nullptr)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't identify current thread\n");
+    result = ERR_CODE::INVALID_OP;
+  }
   else
   {
     if (proc_mapping_in != 0)
     {
-      receiving_proc = dynamic_cast<task_process *>(om_retrieve_object(proc_mapping_in));
+      receiving_proc = 
+        std::dynamic_pointer_cast<task_process>(cur_thread->thread_handles.retrieve_object(proc_mapping_in));
     }
     else
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Map in this process\n");
-      receiving_proc = task_get_cur_thread()->parent_process;
+      receiving_proc = std::shared_ptr<task_process>(task_get_cur_thread()->parent_process);
     }
 
     if (proc_already_in != 0)
     {
-      originating_proc = dynamic_cast<task_process *>(om_retrieve_object(proc_already_in));
+      originating_proc = 
+        std::dynamic_pointer_cast<task_process>(cur_thread->thread_handles.retrieve_object(proc_already_in));
     }
     else
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Map from this process\n");
-      originating_proc = task_get_cur_thread()->parent_process;
+      originating_proc = std::shared_ptr<task_process>(task_get_cur_thread()->parent_process);
     }
 
     if ((receiving_proc == nullptr) || (originating_proc == nullptr))
@@ -202,7 +210,7 @@ ERR_CODE syscall_map_memory(GEN_HANDLE proc_mapping_in,
            i < (length / MEM_PAGE_SIZE);
            i++, map_addr_l += MEM_PAGE_SIZE)
       {
-        phys_addr = mem_get_phys_addr(reinterpret_cast<void *>(map_addr_l), receiving_proc);
+        phys_addr = mem_get_phys_addr(reinterpret_cast<void *>(map_addr_l), receiving_proc.get());
         if (phys_addr != nullptr)
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "Duplicate allocation attempt\n");
@@ -219,8 +227,8 @@ ERR_CODE syscall_map_memory(GEN_HANDLE proc_mapping_in,
             i < (length / MEM_PAGE_SIZE);
             i++, extant_addr_l += MEM_PAGE_SIZE, map_addr_l += MEM_PAGE_SIZE)
         {
-          phys_addr = mem_get_phys_addr(reinterpret_cast<void *>(extant_addr_l), originating_proc);
-          mem_map_range(phys_addr, reinterpret_cast<void *>(map_addr_l), 1, receiving_proc);
+          phys_addr = mem_get_phys_addr(reinterpret_cast<void *>(extant_addr_l), originating_proc.get());
+          mem_map_range(phys_addr, reinterpret_cast<void *>(map_addr_l), 1, receiving_proc.get());
         }
 
         result = ERR_CODE::NO_ERROR;

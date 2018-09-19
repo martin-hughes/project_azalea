@@ -1,8 +1,10 @@
 # Klib C-environment helpers library.
 
 Import('env')
-obj = env.Library("klib-c-helpers", [ "buffers.cpp",
+obj = env.Library("klib-c-helpers", [
+                                      "allocator_templates.cpp",
+                                      "buffers.cpp",
                                       "printf_fns.cpp",
                                       "string_fns.cpp",
                                     ])
-Return ("obj") 
+Return ("obj")
