@@ -4,8 +4,6 @@
 
 //#define ENABLE_TRACING
 
-#include "test/test_core/test.h"
-
 #include "klib/klib.h"
 #include <thread>
 #include <mutex>
@@ -84,4 +82,9 @@ void klib_synch_mutex_release(klib_mutex &mutex, const bool disregard_owner)
   mutex_map[&mutex]->unlock();
 
   KL_TRC_EXIT;
+}
+
+void test_only_free_mutex(klib_mutex &mutex)
+{
+  mutex_map.erase(&mutex);
 }

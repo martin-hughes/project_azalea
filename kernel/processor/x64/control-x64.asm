@@ -37,17 +37,17 @@ asm_proc_read_port:
   cmp rsi, 8
   jne aprp_try_16
     in al, dx
-    jmp apwp_done
+    jmp aprp_done
 
   aprp_try_16:
   cmp rsi, 16
-  jne apwp_try_32
+  jne aprp_try_32
     in ax, dx
-    jmp apwp_done
+    jmp aprp_done
 
   aprp_try_32:
   cmp rsi, 32
-  jne apwp_done
+  jne aprp_done
     in eax, dx
 
   aprp_done:

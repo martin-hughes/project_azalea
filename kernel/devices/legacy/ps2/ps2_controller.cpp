@@ -10,9 +10,9 @@
 #include "ps2_controller.h"
 
 gen_ps2_controller_device::gen_ps2_controller_device() :
-  _name("Generic PS/2 controller"),
   chan_1_dev(nullptr),
-  chan_2_dev(nullptr)
+  chan_2_dev(nullptr),
+  _name("Generic PS/2 controller")
 {
   KL_TRC_ENTRY;
 
@@ -207,8 +207,6 @@ ERR_CODE gen_ps2_controller_device::send_ps2_command(uint8_t command,
                                                      uint8_t &response)
 {
   KL_TRC_ENTRY;
-
-  uint8_t status;
 
   proc_write_port(PS2_COMMAND_PORT, command, 8);
 

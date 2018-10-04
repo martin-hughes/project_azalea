@@ -25,7 +25,21 @@ pow2_test rounding_tests[] = {
     { 0x1000000000000001, 0 },
 };
 
+pow2_test log_base_two_tests[] = {
+  { 0, 0 },
+  { 1, 0 },
+  { 2, 1 },
+  { 3, 1 },
+  { 4, 2 },
+  { 5, 2 },
+  { 7, 2 },
+  { 8, 3 },
+  { 31, 4 },
+  { 32, 5 },
+};
+
 const uint64_t num_rounding_tests = sizeof (rounding_tests) / sizeof (pow2_test);
+const uint64_t num_log_tests = sizeof(log_base_two_tests) / sizeof(pow2_test);
 
 class MathsTest : public ::testing::Test
 {
@@ -40,7 +54,7 @@ protected:
 };
 
 // Create a new list, add and delete items, check the list is still valid.
-TEST(MathsTest, maths_test_1)
+TEST(MathsTest, RoundToNextPowerTwo)
 {
   uint64_t actual_output;
 
@@ -59,7 +73,17 @@ TEST(MathsTest, maths_test_1)
     else
     {
       cout << " FAIL" << endl;
-      ASSERT(actual_output == rounding_tests[i].expected_output);
+      ASSERT_EQ(actual_output, rounding_tests[i].expected_output);
     }
+  }
+}
+
+TEST(MathsTest, FindPowerOfTwo)
+{
+  uint64_t output;
+  for (int i = 0; i < num_log_tests; i++)
+  {
+    output = which_power_of_two(log_base_two_tests[i].input);
+    ASSERT_EQ(output, log_base_two_tests[i].expected_output);
   }
 }

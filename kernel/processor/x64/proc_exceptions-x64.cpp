@@ -4,6 +4,7 @@
 #define ENABLE_TRACING
 
 #include "processor/x64/processor-x64-int.h"
+#include "processor/x64/proc_interrupt_handlers-x64.h"
 #include "klib/klib.h"
 
 void proc_div_by_zero_fault_handler()

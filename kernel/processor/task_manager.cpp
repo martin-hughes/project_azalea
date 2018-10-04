@@ -150,7 +150,7 @@ std::shared_ptr<task_process> task_create_system_process()
   ASSERT(task0_mem_info != nullptr);
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Creating system process\n");
-  system_process = task_process::create(proc_irq_slowpath_thread, true, task0_mem_info);
+  system_process = task_process::create(proc_interrupt_slowpath_thread, true, task0_mem_info);
   ASSERT(system_process != nullptr);
   system_process->start_process();
 

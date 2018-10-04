@@ -12,19 +12,19 @@
 class gen_ps2_controller_device;
 class task_process;
 
-class gen_ps2_device : public IDevice, IIrqReceiver
+class gen_ps2_device : public IDevice, IInterruptReceiver
 {
 public:
   gen_ps2_device(gen_ps2_controller_device *parent, bool second_channel);
   virtual ~gen_ps2_device();
 
   // Core IDevice interface
-  virtual const kl_string device_name();
-  virtual DEV_STATUS get_device_status();
+  virtual const kl_string device_name() override;
+  virtual DEV_STATUS get_device_status() override;
 
   // IIrqReceiver interface
-  virtual bool handle_irq_fast(uint8_t irq_number);
-  virtual void handle_irq_slow(uint8_t irq_number);
+  virtual bool handle_interrupt_fast(uint8_t irq_number) override;
+  virtual void handle_interrupt_slow(uint8_t irq_number) override;
 
 protected:
   void enable_irq();
@@ -49,8 +49,8 @@ public:
   ps2_keyboard_device(gen_ps2_controller_device *parent, bool second_channel);
 
   // IIrqReceiver interface.
-  virtual bool handle_irq_fast(uint8_t irq_number);
-  virtual void handle_irq_slow(uint8_t irq_number);
+  virtual bool handle_interrupt_fast(uint8_t irq_number) override;
+  virtual void handle_interrupt_slow(uint8_t irq_number) override;
 
   // Process that should receive key press messages. This is only intended to be temporary, until the driver structure
   // gets a bit more flesh in it.

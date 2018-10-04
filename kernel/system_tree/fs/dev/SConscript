@@ -1,0 +1,8 @@
+# Devices pseudo-filesystem Library.
+
+Import('env')
+files = [
+          "dev_fs.cpp",
+        ]
+obj = env.Library("dev_fs", files)
+Return ("obj")

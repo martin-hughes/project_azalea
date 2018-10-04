@@ -46,7 +46,7 @@ uint8_t mem_x64_pat_get_val(const uint8_t cache_type, bool first_half)
 {
   KL_TRC_ENTRY;
 
-  uint8_t result;
+  uint8_t result = 255;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Requested cache type", cache_type, "\n");
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Must be first half?", first_half, "\n");

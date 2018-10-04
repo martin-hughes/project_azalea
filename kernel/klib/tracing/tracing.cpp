@@ -10,8 +10,13 @@
 //   be fairly easy to understand that this only works in the test code!
 
 #include "processor/x64/processor-x64-int.h"
+
+#ifdef KL_TRACE_BY_SERIAL_PORT
 const uint16_t TRC_COM1_BASE_PORT = 0x3F8;
+#endif
+#ifdef KL_TRACE_BY_MAGIC_PORT
 const uint16_t TRC_MAGIC_PORT = 0xE9;
+#endif
 
 #ifdef KL_TRACE_BY_STDOUT
 #include <iostream>

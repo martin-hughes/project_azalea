@@ -1,6 +1,8 @@
 #ifndef __PROCESSOR_X64_H
 #define __PROCESSOR_X64_H
 
+#include "processor/processor.h"
+
 /// @brief Processor information block - x64
 ///
 /// Contains information the system will use to manage x64 processors.
@@ -48,5 +50,7 @@ extern "C" void asm_proc_read_cpuid(uint64_t eax_value,
                                     uint64_t ecx_value,
                                     uint64_t *ebx_eax,
                                     uint64_t *edx_ecx);
+
+uint64_t proc_x64_generate_msi_address(uint32_t kernel_proc_id);
 
 #endif

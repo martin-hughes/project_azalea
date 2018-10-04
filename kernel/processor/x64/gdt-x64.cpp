@@ -16,7 +16,6 @@ extern "C" uint8_t main_gdt_pointer[10];
 extern "C" uint8_t initial_gdt_table;
 extern "C" uint8_t initial_end_of_gdt_table;
 
-const uint16_t gdt_entry_len = 16;
 const uint8_t TSS_SEG_LENGTH = 104;
 
 uint16_t proc_gdt_calc_req_len(uint32_t num_procs);
@@ -40,7 +39,6 @@ void proc_recreate_gdt(uint32_t num_procs)
 
   uint16_t length_of_gdt;
   uint16_t initial_gdt_len;
-  uint64_t gdt_loc;
   uint16_t offset;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Number of processors to create for", num_procs, "\n");

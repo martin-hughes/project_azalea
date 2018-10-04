@@ -215,7 +215,6 @@ const uint64_t kl_string::length() const
 kl_string kl_string::substr(uint64_t start, uint64_t len) const
 {
   kl_string ret_string;
-  uint64_t true_end;
   uint64_t our_len = this->length();
 
   if ((start > our_len) || (len == 0))

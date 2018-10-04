@@ -74,7 +74,6 @@ void proc_mp_init()
   acpi_subtable_header *subtable;
   acpi_madt_local_apic *lapic_table;
   uint32_t procs_saved = 0;
-  uint64_t pure64_nmi_handler_loc;
   uint32_t trampoline_length;
   uint64_t start_time;
   uint64_t wait_offset;
@@ -267,7 +266,7 @@ uint32_t proc_mp_this_proc_id()
 {
   bool apic_id_found = false;
   uint32_t lapic_id;
-  uint32_t proc_id;
+  uint32_t proc_id = 0;
 
   KL_TRC_ENTRY;
 

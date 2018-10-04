@@ -229,8 +229,13 @@ void task_abandon_this_thread();
 uint64_t proc_read_port(const uint64_t port_id, const uint8_t width);
 void proc_write_port(const uint64_t port_id, const uint64_t value, const uint8_t width);
 
-void proc_register_irq_handler(uint8_t irq_number, IIrqReceiver *receiver);
-void proc_unregister_irq_handler(uint8_t irq_number, IIrqReceiver *receiver);
+// Allow drivers to handle IRQs and normal interrupts.
+void proc_register_irq_handler(uint8_t irq_number, IInterruptReceiver *receiver);
+void proc_unregister_irq_handler(uint8_t irq_number, IInterruptReceiver *receiver);
+void proc_register_interrupt_handler(uint8_t interrupt_number, IInterruptReceiver *receiver);
+void proc_unregister_interrupt_handler(uint8_t interrupt_number, IInterruptReceiver *receiver);
+
+bool proc_request_interrupt_block(uint8_t num_interrupts, uint8_t &start_vector);
 
 #ifdef AZALEA_TEST_CODE
 void test_only_reset_task_mgr();

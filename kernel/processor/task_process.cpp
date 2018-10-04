@@ -18,8 +18,8 @@
 ///                 processes except the initial kernel start procedure, this should be NULL.
 task_process::task_process(ENTRY_PROC entry_point, bool kernel_mode,  mem_process_info *mem_info) :
   kernel_mode(kernel_mode),
-  being_destroyed(false),
-  accepts_msgs(false)
+  accepts_msgs(false),
+  being_destroyed(false)
 {
   KL_TRC_ENTRY;
 
@@ -42,8 +42,8 @@ task_process::task_process(ENTRY_PROC entry_point, bool kernel_mode,  mem_proces
   KL_TRC_EXIT;
 }
 
-std::shared_ptr<task_process> task_process::create(ENTRY_PROC entry_point, 
-                                                   bool kernel_mode, 
+std::shared_ptr<task_process> task_process::create(ENTRY_PROC entry_point,
+                                                   bool kernel_mode,
                                                    mem_process_info *mem_info)
 {
   std::shared_ptr<task_thread> first_thread;

@@ -9,96 +9,106 @@
 //   item!
 // - proc_irq_slowpath_thread has a pretty weak algorithm, and doesn't even attempt to sleep!
 
+// It's a really bad idea to enable tracing in the live system!
+//#define ENABLE_TRACING
+
 #include "klib/klib.h"
 #include "processor/processor.h"
 #include "processor/processor-int.h"
 #include "devices/device_interface.h"
 
-// It's a really bad idea to enable tracing in the live system!
-//#define ENABLE_TRACING
-
 namespace
 {
-  // This structure is used to store details about an individual IRQ handler.
-  struct proc_irq_handler
-  {
-    // The receiver that should be called.
-    IIrqReceiver *receiver;
-
-    // Whether this receiver has requested the slow path, but not yet had the slow path executed.
-    bool slow_path_reqd;
-  };
-
-  const uint8_t MAX_IRQ = 16;
-  klib_list<proc_irq_handler *> irq_handlers[MAX_IRQ] = { { nullptr, nullptr },
-                                                          { nullptr, nullptr },
-                                                          { nullptr, nullptr },
-                                                          { nullptr, nullptr },
-                                                          { nullptr, nullptr },
-                                                          { nullptr, nullptr },
-                                                          { nullptr, nullptr },
-                                                          { nullptr, nullptr },
-                                                          { nullptr, nullptr },
-                                                          { nullptr, nullptr },
-                                                          { nullptr, nullptr },
-                                                          { nullptr, nullptr },
-                                                          { nullptr, nullptr },
-                                                          { nullptr, nullptr },
-                                                          { nullptr, nullptr },
-                                                          { nullptr, nullptr }
-                                                          };
+  bool interrupt_table_cfgd = false;
 }
 
-/// @brief Register an IRQ handler
+/// @brief Configure the kernel's interrupt data table.
 ///
-/// Devices may request that they be invoked for a given IRQ by providing an IRQ Receiver. Details of receivers are
-/// given in the documentation for `IIrqReceiver`.
-///
-/// @param irq_number The IRQ that the receiver wishes to handle.
-///
-/// @param receiver Pointer to an IRQ receiver that will be executed in response to the IRQ with the number given by
-///                 `irq_number`
-void proc_register_irq_handler(uint8_t irq_number, IIrqReceiver *receiver)
+/// Note that this is not the same as the system IDT. The IDT tells the processor where to execute code when an
+/// interrupt begins, the kernel then looks in this table to determine which objects have interrupt handlers to
+/// execute.
+void proc_config_interrupt_table()
 {
   KL_TRC_ENTRY;
 
-  ASSERT(receiver != nullptr);
-  ASSERT(irq_number < MAX_IRQ);
+  // We only want to execute this function once. This isn't perfect locking, but it'll do - this function gets called
+  // very early on in the setup process, well before any multi-tasking, so any mistaken calls later on will definitely
+  // get caught by this assert.
+  ASSERT(interrupt_table_cfgd == false);
+  interrupt_table_cfgd = true;
 
-  klib_list_item<proc_irq_handler *> *new_item = new klib_list_item<proc_irq_handler *>;
+  for (int i = 0; i < PROC_NUM_INTERRUPTS; i++)
+  {
+    klib_list_initialize(&proc_interrupt_data_table[i].interrupt_handlers);
+    proc_interrupt_data_table[i].reserved = false;
+    proc_interrupt_data_table[i].is_irq = false;
+  }
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Register an Interrupt handler
+///
+/// Devices may request that they be invoked for a given interrupt by providing an interrupt Receiver. Details of
+/// receivers are given in the documentation for `IInterruptReceiver`.
+///
+/// @param interrupt_number The interrupt that the receiver wishes to handle.
+///
+/// @param receiver Pointer to an interrupt receiver that will be executed in response to the interrupt with the number
+///                 given by `interrupt_number`
+void proc_register_interrupt_handler(uint8_t interrupt_number, IInterruptReceiver *receiver)
+{
+
+  KL_TRC_ENTRY;
+
+  ASSERT(receiver != nullptr);
+  ASSERT(interrupt_table_cfgd);
+  ASSERT(interrupt_number < PROC_NUM_INTERRUPTS);
+
+  // Don't allow an attempt to register a handler for a system-reserved interrupt unless it's to register a handler for
+  // an IRQ.
+  ASSERT((proc_interrupt_data_table[interrupt_number].reserved == false) ||
+         (proc_interrupt_data_table[interrupt_number].is_irq == true));
+
+  klib_list_item<proc_interrupt_handler *> *new_item = new klib_list_item<proc_interrupt_handler *>;
   klib_list_item_initialize(new_item);
 
-  proc_irq_handler *new_handler = new proc_irq_handler;
+  proc_interrupt_handler *new_handler = new proc_interrupt_handler;
   new_handler->receiver = receiver;
   new_handler->slow_path_reqd = false;
 
   new_item->item = new_handler;
 
-  klib_list_add_tail(&irq_handlers[irq_number], new_item);
+  klib_list_add_tail(&proc_interrupt_data_table[interrupt_number].interrupt_handlers, new_item);
 
   KL_TRC_EXIT;
 }
 
-/// @brief Unregister an IRQ handler
+/// @brief Unregister an interrupt handler
 ///
-/// Stop sending IRQ events to this handler.
+/// Stop sending interrupt events to this handler.
 ///
-/// @param irq_number The IRQ that the receiver should no longer be called for.
+/// @param interrupt_number The interrupt that the receiver should no longer be called for.
 ///
 /// @param receiver The receiver to unregister.
-void proc_unregister_irq_handler(uint8_t irq_number, IIrqReceiver *receiver)
+void proc_unregister_interrupt_handler(uint8_t interrupt_number, IInterruptReceiver *receiver)
 {
   KL_TRC_ENTRY;
 
   ASSERT(receiver != nullptr);
-  ASSERT(irq_number < MAX_IRQ);
-  ASSERT(!klib_list_is_empty(&irq_handlers[irq_number]));
+  ASSERT(interrupt_table_cfgd);
+
+  // Don't allow an attempt to unregister a handler for a system-reserved interrupt unless it's to register a handler
+  // for an IRQ.
+  ASSERT((proc_interrupt_data_table[interrupt_number].reserved == false) ||
+         (proc_interrupt_data_table[interrupt_number].is_irq == true));
+  ASSERT(!klib_list_is_empty(&proc_interrupt_data_table[interrupt_number].interrupt_handlers));
 
   bool found_receiver = false;
-  klib_list_item<proc_irq_handler *> *cur_item;
-  proc_irq_handler *item;
+  klib_list_item<proc_interrupt_handler *> *cur_item;
+  proc_interrupt_handler *item;
 
-  cur_item = irq_handlers[irq_number].head;
+  cur_item = proc_interrupt_data_table[interrupt_number].interrupt_handlers.head;
 
   while(cur_item != nullptr)
   {
@@ -125,19 +135,103 @@ void proc_unregister_irq_handler(uint8_t irq_number, IIrqReceiver *receiver)
   KL_TRC_EXIT;
 }
 
-/// @brief The main IRQ handling code.
+/// @brief Register an IRQ handler
 ///
-/// Called by the processor-specific code.
+/// Devices may request that they be invoked for a given IRQ by providing an interrupt Receiver. Details of receivers
+/// are given in the documentation for `IInterruptReceiver`. When the receiver is invoked, it will be given the number
+/// of the IRQ rather than the underlying interrupt number.
 ///
-/// @param irq_number The number of the IRQ that fired.
-void proc_handle_irq(uint8_t irq_number)
+/// @param irq_number The IRQ that the receiver wishes to handle.
+///
+/// @param receiver Pointer to an interrupt receiver that will be executed in response to the IRQ with the number given
+///                 by `irq_number`
+void proc_register_irq_handler(uint8_t irq_number, IInterruptReceiver *receiver)
 {
   KL_TRC_ENTRY;
 
-  ASSERT(irq_number < MAX_IRQ);
+  ASSERT(irq_number < PROC_NUM_IRQS);
 
-  klib_list_item<proc_irq_handler *> *cur_item = irq_handlers[irq_number].head;
-  proc_irq_handler *handler;
+  proc_register_interrupt_handler(irq_number + PROC_IRQ_BASE, receiver);
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Unregister an IRQ handler
+///
+/// Stop sending IRQ events to this handler.
+///
+/// @param irq_number The IRQ that the receiver should no longer be called for.
+///
+/// @param receiver The receiver to unregister.
+void proc_unregister_irq_handler(uint8_t irq_number, IInterruptReceiver *receiver)
+{
+  KL_TRC_ENTRY;
+
+  ASSERT(irq_number < PROC_NUM_IRQS);
+
+  proc_unregister_interrupt_handler(irq_number + PROC_IRQ_BASE, receiver);
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Request a contiguous set of interrupt vector numbers for a driver to use.
+///
+/// If it is able to, this function will allocate a block of interrupt vectors of the requested size, returning the
+/// first vector in `start_vector`. The block of allocated vectors is contiguous, finishing with the last vector at
+/// `start_vector + num_interrupts - 1`. These interrupts may be shared with other drivers.
+///
+/// `start_vector` will be aligned on an integer multiple of num_interrupts, if necessary rounded up to the next power
+/// of two.
+///
+/// @param[in] num_interrupts How many interrupts the caller requests. Need not be a power of two. Maximum of 32.
+///
+/// @param[out] start_vector The first vector in the allocated block. Will always be on an integer multiple of
+///             num_interrupts (rounded up to the next power of two if necessary).
+///
+/// @return True if the request could be fulfilled and interrupts allocated. False if, for some reason, the requested
+///         block of interrupts could not be allocated.
+bool proc_request_interrupt_block(uint8_t num_interrupts, uint8_t &start_vector)
+{
+  uint16_t rounded_num_ints;
+  bool result = true;
+
+  KL_TRC_ENTRY;
+
+  // For the time being, make no attempt to even try and shared out interrupts. That will be a later performance
+  //improvement.
+
+  rounded_num_ints = round_to_power_two(num_interrupts);
+
+  if (rounded_num_ints > 32)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Too many interrupts\n");
+    result = false;
+  }
+  else
+  {
+    // To clear the processor and IRQ areas.
+    start_vector = 64;
+  }
+
+  KL_TRC_EXIT;
+  return result;
+}
+
+/// @brief The main interrupt handling code.
+///
+/// Called by the processor-specific code.
+///
+/// @param interrupt_number The number of the IRQ that fired.
+void proc_handle_interrupt(uint16_t interrupt_number)
+{
+  KL_TRC_ENTRY;
+
+  ASSERT(interrupt_number < PROC_NUM_INTERRUPTS);
+  ASSERT(interrupt_table_cfgd);
+
+  klib_list_item<proc_interrupt_handler *> *cur_item =
+    proc_interrupt_data_table[interrupt_number].interrupt_handlers.head;
+  proc_interrupt_handler *handler;
 
   while (cur_item != nullptr)
   {
@@ -145,7 +239,7 @@ void proc_handle_irq(uint8_t irq_number)
     handler = cur_item->item;
     ASSERT(handler != nullptr);
 
-    if (handler->receiver->handle_irq_fast(irq_number))
+    if (handler->receiver->handle_interrupt_fast(interrupt_number))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Slow path requested\n");
       handler->slow_path_reqd = true;
@@ -157,20 +251,57 @@ void proc_handle_irq(uint8_t irq_number)
   KL_TRC_EXIT;
 }
 
-/// @brief Iterates across all IRQ handlers to determine whether any of them have requested that the slow path be
+/// @brief The main IRQ handling code.
+///
+/// Called by the processor-specific code.
+///
+/// @param irq_number The number of the IRQ that fired.
+void proc_handle_irq(uint8_t irq_number)
+{
+  uint16_t interrupt_number = irq_number + PROC_IRQ_BASE;
+
+  KL_TRC_ENTRY;
+
+  ASSERT(irq_number < PROC_NUM_IRQS);
+  ASSERT(interrupt_table_cfgd);
+
+  klib_list_item<proc_interrupt_handler *> *cur_item =
+    proc_interrupt_data_table[interrupt_number].interrupt_handlers.head;
+  proc_interrupt_handler *handler;
+
+  while (cur_item != nullptr)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Receiver: ", cur_item->item, "\n");
+    handler = cur_item->item;
+    ASSERT(handler != nullptr);
+
+    if (handler->receiver->handle_interrupt_fast(irq_number))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Slow path requested\n");
+      handler->slow_path_reqd = true;
+    }
+
+    cur_item = cur_item->next;
+  }
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Iterates across all interrupt handlers to determine whether any of them have requested that the slow path be
 ///        handled.
 ///
-/// If a slow IRQ handler is outstanding, it is called.
-void proc_irq_slowpath_thread()
+/// If a slow interrupt handler is outstanding, it is called.
+void proc_interrupt_slowpath_thread()
 {
-  klib_list_item<proc_irq_handler *> *cur_item;
-  proc_irq_handler *item;
+  klib_list_item<proc_interrupt_handler *> *cur_item;
+  proc_interrupt_handler *item;
+  ASSERT(interrupt_table_cfgd);
 
   while(1)
   {
-    for (uint32_t i = 0; i < MAX_IRQ; i++)
+    for (uint32_t i = 0; i < PROC_NUM_INTERRUPTS; i++)
     {
-      cur_item = irq_handlers[i].head;
+      cur_item = proc_interrupt_data_table[i].interrupt_handlers.head;
 
       while(cur_item != nullptr)
       {
@@ -179,7 +310,7 @@ void proc_irq_slowpath_thread()
         if (item->slow_path_reqd == true)
         {
           item->slow_path_reqd = false;
-          item->receiver->handle_irq_slow(i);
+          item->receiver->handle_interrupt_slow(i);
         }
 
         cur_item = cur_item->next;

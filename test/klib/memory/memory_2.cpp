@@ -3,6 +3,8 @@
 // Contains two tests that fuzz the Klib allocator by randomly allocating and deallocating blocks of RAM. One does this
 // single-threaded, the other multi-threaded.
 
+#include "klib/memory/memory.h"
+
 #include <iostream>
 #include <vector>
 #include <stdlib.h>
@@ -10,7 +12,6 @@
 #include <thread>
 #include "gtest/gtest.h"
 
-#include "klib/memory/memory.h"
 #include "test/test_core/test.h"
 
 using namespace std;

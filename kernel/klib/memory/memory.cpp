@@ -32,8 +32,8 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/data_structures/lists.h"
 #include "memory.h"
+#include "klib/data_structures/lists.h"
 #include "klib/c_helpers/buffers.h"
 #include "klib/panic/panic.h"
 #include "klib/misc/assert.h"
@@ -68,7 +68,6 @@ namespace
   const uint32_t NUM_CHUNKS_PER_SLAB[] = {258041, 32703, 8187, 2047, 7};
   const uint32_t FIRST_OFFSET_IN_SLAB[] = {32824, 4160, 1280, 1024, 262144};
   const uint32_t NUM_SLAB_LISTS = (sizeof(CHUNK_SIZES) / sizeof(CHUNK_SIZES[0]));
-  const uint32_t MAX_CHUNK_SIZE = CHUNK_SIZES[NUM_SLAB_LISTS - 1];
   const uint32_t FIRST_BITMAP_ENTRY_OFFSET = 40;
   const uint32_t MAX_FREE_SLABS = 5;
 
@@ -263,7 +262,7 @@ void kfree(void *mem_block)
   klib_list<void *> *list_ptr;
   uint64_t list_ptr_base_num_a;
   uint64_t list_ptr_base_num_b;
-  uint32_t chunk_size_idx;
+  uint32_t chunk_size_idx = 0;
   const uint64_t list_array_size = sizeof(free_slabs_list);
   bool slab_was_full = false;
   uint32_t chunk_offset;
@@ -629,6 +628,7 @@ bool slab_is_empty(void* slab, uint32_t chunk_size_idx)
 /// **Note:** This invalidates any allocations done using kmalloc. Test code must not reuse those allocations after
 /// calling this function.
 #ifdef AZALEA_TEST_CODE
+void test_only_free_mutex(klib_mutex &mutex);
 void test_only_reset_allocator()
 {
   KL_TRC_ENTRY;
@@ -662,8 +662,9 @@ void test_only_reset_allocator()
     }
 
     allocator_initialized = false;
+    test_only_free_mutex(allocator_gen_lock);
   }
-  
+
   KL_TRC_EXIT;
 }
 #endif

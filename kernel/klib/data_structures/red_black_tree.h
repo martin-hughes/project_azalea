@@ -73,7 +73,7 @@ protected:
 
 public:
   /// @brief Standard constructor. No copy or other constructor is provided at present.
-  kl_rb_tree() : root(nullptr), left_side_last(false), number_of_leaves(0)
+  kl_rb_tree() : root(nullptr), number_of_leaves(0), left_side_last(false)
   {
   }
 
@@ -503,7 +503,6 @@ protected:
   void remove_node(tree_node *node)
   {
     tree_node *successor = nullptr;
-    tree_node *sibling = nullptr;
     tree_node *child = nullptr;
     bool child_was_black = true;
     bool left_side_deleted = false;

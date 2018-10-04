@@ -4,6 +4,7 @@
 //#define ENABLE_TRACING
 
 #include "processor/processor.h"
+#include "processor/processor-int.h"
 #include "klib/klib.h"
 
 #include "processor/x64/processor-x64.h"
@@ -35,6 +36,9 @@ void proc_gen_init()
   // Fill in the GDT, and select an appropriate set of segments. The TSS descriptor and segment will
   // come later.
   asm_proc_load_gdt();
+
+  // Establish the interrupt data table.
+  proc_config_interrupt_table();
 
   // Fill in the IDT now, so we at least handle our own exceptions.
   proc_configure_idt();
@@ -171,4 +175,39 @@ void *proc_x64_allocate_stack()
   KL_TRC_EXIT;
 
   return new_stack;
+}
+
+/// @brief Generate the contents of the MSI address register for PCI MSIs
+///
+/// This value can then be used in the PCI MSI capabilities register. At present, no attempt is made to support any of
+/// the redirection features mentioned in the Intel System Programming Guide.
+///
+/// @param The ID of the processor to send messages to, as identified by the kernel.
+///
+/// @param A suitable address, if one could be generated, or zero otherwise.
+uint64_t proc_x64_generate_msi_address(uint32_t kernel_proc_id)
+{
+  uint32_t lapic_id;
+  uint64_t result;
+
+  KL_TRC_ENTRY;
+
+  ASSERT(processor_count > 0);
+  if (kernel_proc_id >= processor_count)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid processor ID\n");
+    result = 0;
+  }
+  else
+  {
+    lapic_id = proc_info_block[kernel_proc_id].platform_data.lapic_id;
+    lapic_id = lapic_id & 0xff;
+
+    result = 0xFEE00000 | (lapic_id << 12);
+  }
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
 }

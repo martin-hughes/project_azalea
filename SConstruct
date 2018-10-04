@@ -15,8 +15,8 @@ def main_build_script(linux_build):
     kernel_env.Install(ui_folder, headers)
 
     # Main kernel part
-    kernel_env['CXXFLAGS'] = '-mno-red-zone -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=gnu++14 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
-    kernel_env['CFLAGS'] = '-mno-red-zone -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
+    kernel_env['CXXFLAGS'] = '-Wall -mno-red-zone -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=gnu++14 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
+    kernel_env['CFLAGS'] = '-Wall -mno-red-zone -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
     kernel_env['LINKFLAGS'] = "-T build_support/kernel_stage.ld --start-group"
     kernel_env['LINK'] = 'ld -Map output/kernel_map.map'
     kernel_env.AppendENVPath('CPATH', '#/kernel')
@@ -27,8 +27,8 @@ def main_build_script(linux_build):
 
     # Init program
     init_prog_env = build_default_env(linux_build)
-    init_prog_env['CXXFLAGS'] = '-mno-red-zone -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=gnu++14 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
-    init_prog_env['CFLAGS'] = '-mno-red-zone -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
+    init_prog_env['CXXFLAGS'] = '-Wall -mno-red-zone -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=gnu++14 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
+    init_prog_env['CFLAGS'] = '-Wall -mno-red-zone -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
     init_prog_env['LIBPATH'] = config.libc_location
     init_prog_env.AppendENVPath('CPATH', os.path.join(config.libc_location, "include"))
     init_prog_env.AppendENVPath('CPATH', headers_folder)

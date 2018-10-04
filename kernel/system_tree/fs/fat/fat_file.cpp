@@ -35,7 +35,6 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
   uint64_t bytes_from_this_sector = 0;
 
   ERR_CODE ec = ERR_CODE::NO_ERROR;
-  ERR_CODE sub_err_code;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Start", start, "\n");
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Length", length, "\n");

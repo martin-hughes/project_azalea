@@ -12,13 +12,13 @@
 ///
 /// @param parent The process this thread is part of.
 task_thread::task_thread(ENTRY_PROC entry_point, std::shared_ptr<task_process> parent) :
-  parent_process(parent),
   permit_running(false),
+  parent_process(parent),
   thread_destroyed(false)
 {
   KL_TRC_ENTRY;
   ASSERT(parent_process != nullptr);
-  
+
   this->execution_context = task_int_create_exec_context(entry_point, this);
   this->process_list_item = new klib_list_item<std::shared_ptr<task_thread>>();
   this->synch_list_item = new klib_list_item<std::shared_ptr<task_thread>>();
@@ -58,7 +58,6 @@ task_thread::~task_thread()
 {
   ASSERT(thread_destroyed);
   task_int_delete_exec_context(this);
-  
   delete this->process_list_item;
   delete this->synch_list_item;
 }
@@ -86,7 +85,7 @@ void task_thread::destroy_thread()
       this->stop_thread();
       klib_synch_spinlock_lock(this->cycle_lock);
     }
-    
+
     task_thread_cycle_remove(this);
     this->parent_process->thread_ending(this);
     this->parent_process = nullptr;

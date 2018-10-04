@@ -10,6 +10,7 @@
 #include "processor/x64/pic/apic.h"
 #include "processor/x64/pic/ioapic-x64.h"
 #include "processor/processor.h"
+#include "processor/processor-int.h"
 #include "processor/x64/processor-x64.h"
 #include "processor/x64/processor-x64-int.h"
 #include "klib/klib.h"
@@ -106,7 +107,7 @@ void proc_configure_global_int_ctrlrs()
     ASSERT(proc_x64_ioapic_get_count() > 0);
 
     // Remap what would have been called IRQ 0-15 into interrupts 80-95. Point them all towards the BSP for now.
-    proc_x64_ioapic_remap_interrupts(0, IRQ_BASE, bsp_apic_id);
+    proc_x64_ioapic_remap_interrupts(0, (uint8_t)PROC_IRQ_BASE, bsp_apic_id);
   }
 
   // Some more stuff too, but I don't know what yet.
@@ -122,7 +123,6 @@ APIC_TYPES proc_x64_detect_pic_type()
   KL_TRC_ENTRY;
 
   APIC_TYPES detected_pic = APIC_TYPES::LEGACY_PIC;
-  uint64_t apic_det_result;
   uint64_t ebx_eax;
   uint64_t edx_ecx;
 

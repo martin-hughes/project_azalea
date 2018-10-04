@@ -1,7 +1,10 @@
-/// @file Basic tests of the IRQ handling system.
+/// @file Basic tests of the interrupt handling system.
 ///
 /// Obviously this can't test that the low-level ASM part works properly, so these tests cover the adding and removing
 /// of receivers, and that the list system generally works correctly.
+///
+/// Despite the name, this actually tests the interrupt handling system. Originally, drivers could only request to
+/// handle IRQs and not 'true' interrupts - hence the name of the test.
 
 // Known defects:
 // - If the IrqHandling test fails midway through it won't tidy up properly and future tests may crash.
@@ -12,12 +15,12 @@
 #include "processor/processor.h"
 #include "processor/processor-int.h"
 
-class TestIrqHandler : public IIrqReceiver
+class TestIrqHandler : public IInterruptReceiver
 {
 public:
   TestIrqHandler();
-  virtual bool handle_irq_fast(uint8_t irq_number);
-  virtual void handle_irq_slow();
+  virtual bool handle_interrupt_fast(uint8_t irq_number) override;
+  virtual void handle_interrupt_slow(uint8_t irq_number) override;
 
   bool irq_fired;
 };
@@ -63,14 +66,14 @@ TEST(ProcessorTests, IrqHandling)
 
 TestIrqHandler::TestIrqHandler() : irq_fired(false) {}
 
-bool TestIrqHandler::handle_irq_fast(uint8_t irq_number)
+bool TestIrqHandler::handle_interrupt_fast(uint8_t irq_number)
 {
   this->irq_fired = true;
   return false;
 }
 
 // There's no test that the slow path IRQ handler gets fired, sadly.
-void TestIrqHandler::handle_irq_slow()
+void TestIrqHandler::handle_interrupt_slow(uint8_t irq_number)
 {
 
 }

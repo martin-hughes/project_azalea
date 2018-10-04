@@ -7,7 +7,7 @@
 #include "user_interfaces/messages.h"
 #include <queue>
 
-struct task_process;
+class task_process;
 
 struct klib_message_hdr
 {

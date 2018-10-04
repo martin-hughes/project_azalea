@@ -50,10 +50,10 @@ ERR_CODE mem_fs_branch::create_leaf_here(std::shared_ptr<ISystemTreeLeaf> &leaf)
   return result;
 }
 
-mem_fs_leaf::mem_fs_leaf(std::shared_ptr<mem_fs_branch> parent) : 
-  _buffer_length(0), 
+mem_fs_leaf::mem_fs_leaf(std::shared_ptr<mem_fs_branch> parent) :
   _parent(std::weak_ptr<mem_fs_branch>(parent)),
-  _buffer(nullptr)
+  _buffer(nullptr),
+  _buffer_length(0)
 {
   KL_TRC_ENTRY;
 

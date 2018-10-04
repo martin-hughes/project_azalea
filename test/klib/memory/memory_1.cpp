@@ -40,14 +40,14 @@ void memory_test_1_try_size(uint32_t size)
 
   cout << "Testing size: " << size << endl;
 
-  void *result;
+  void *result = nullptr;
   uint64_t result_store[PASSES];
   uint64_t last_diff = 0;
 
   // Allocate the correct number of chunks.
   for (uint32_t i = 0; i < PASSES; i++)
   {
-    result = kmalloc(8);
+    result = kmalloc(size);
     result_store[i] = (uint64_t)result;
   }
 
@@ -55,7 +55,7 @@ void memory_test_1_try_size(uint32_t size)
   last_diff = result_store[1] - result_store[0];
   for (uint32_t i = 1; i < PASSES; i++)
   {
-    ASSERT(last_diff == (result_store[i] - result_store[i - 1]));
+    ASSERT_EQ(last_diff, (result_store[i] - result_store[i - 1]));
   }
 
   // Deallocate all of the results

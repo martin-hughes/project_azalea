@@ -216,7 +216,6 @@ ERR_CODE msg_send_to_process(task_process *proc, klib_message_hdr &msg)
   KL_TRC_ENTRY;
 
   ERR_CODE res = ERR_CODE::NO_ERROR;
-  klib_message_hdr our_header = msg;
 
   // Don't error code this one, the kernel should know better than to throw null pointers around!
   ASSERT(proc != nullptr);
@@ -366,7 +365,6 @@ ERR_CODE msg_msg_complete(klib_message_hdr &msg)
   KL_TRC_ENTRY;
 
   ERR_CODE res = ERR_CODE::NO_ERROR;
-  klib_message_hdr last_msg;
 
   task_thread *thread = task_get_cur_thread();
   ASSERT(thread != nullptr);

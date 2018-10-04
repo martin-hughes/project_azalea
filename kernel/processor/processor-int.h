@@ -79,6 +79,31 @@ struct task_x64_exec_context
 };
 #pragma pack ( pop )
 
+
+/// @brief Stores details about an individual interrupt handler.
+///
+struct proc_interrupt_handler
+{
+  /// @brief The receiver that should be called.
+  ///
+  IInterruptReceiver *receiver;
+
+  /// @brief Whether this receiver has requested the slow path, but not yet had the slow path executed.
+  ///
+  bool slow_path_reqd;
+};
+
+/// @brief Stores details for an individual interrupt number.
+///
+struct proc_interrupt_data
+{
+  bool reserved; ///< Has the interrupt number been reserved by the architecture, and is thus unavailable to drivers?
+
+  bool is_irq; ///< Is this interrupt number actually an IRQ interrupt?
+
+  klib_list<proc_interrupt_handler *> interrupt_handlers; ///< List of handlers for this interrupt.
+};
+
 void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thread);
 void task_int_delete_exec_context(task_thread *old_thread);
 
@@ -88,8 +113,12 @@ extern "C" task_x64_exec_context *task_int_swap_task(uint64_t stack_addr, uint64
 void task_install_task_switcher();
 void task_platform_init();
 
+// Interrupt handling:
+// -------------------
+void proc_config_interrupt_table();
+extern "C" void proc_handle_interrupt(uint16_t interrupt_num);
 extern "C" void proc_handle_irq(uint8_t irq_number);
-void proc_irq_slowpath_thread();
+void proc_interrupt_slowpath_thread();
 
 std::shared_ptr<task_process> task_create_system_process();
 
@@ -100,5 +129,11 @@ void task_thread_cycle_unlock();
 void task_idle_thread_cycle();
 
 extern bool *abandon_thread;
+
+extern const uint16_t PROC_NUM_INTERRUPTS;
+extern const uint16_t PROC_IRQ_BASE;
+extern const uint16_t PROC_NUM_IRQS;
+
+extern proc_interrupt_data proc_interrupt_data_table[];
 
 #endif

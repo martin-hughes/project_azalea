@@ -21,6 +21,7 @@
 #include "system_tree/fs/fat/fat_fs.h"
 #include "system_tree/fs/pipe/pipe_fs.h"
 #include "system_tree/fs/mem/mem_fs.h"
+#include "system_tree/fs/dev/dev_fs.h"
 
 #include "entry/multiboot.h"
 
@@ -145,6 +146,11 @@ void kernel_start() throw ()
   // Code below here is not intended to be part of the permanent kernel start procedure, but will sit here until the //
   // kernel is more well-developed.                                                                                  //
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  // Start the device management system.
+  std::shared_ptr<dev_root_branch> dev_root = std::make_shared<dev_root_branch>();
+  ASSERT(system_tree()->add_branch("dev", dev_root) == ERR_CODE::NO_ERROR);
+  dev_root->scan_for_devices();
 
   // Enable the PS/2 controller.
   ps2_controller = new gen_ps2_controller_device();

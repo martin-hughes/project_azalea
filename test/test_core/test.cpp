@@ -3,8 +3,6 @@
 // interface and features common to most tests.
 //------------------------------------------------------------------------------
 
-#include <iostream>
-#include <chrono>
 #include "test.h"
 
 #include <iostream>
@@ -19,6 +17,9 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
+  // Initialise a shared data structure that doesn't need to always be reset.
+  test_init_proc_interrupt_table();
+
   ::testing::InitGoogleTest(&argc, argv);
 
 #ifdef UT_MEM_LEAK_CHECK

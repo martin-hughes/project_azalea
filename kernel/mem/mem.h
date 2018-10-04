@@ -17,8 +17,8 @@
 // To define lists
 #include "klib/data_structures/lists.h"
 
-struct task_process;
-struct task_thread;
+class task_process;
+class task_thread;
 
 /// @brief Stores information about whether a specific address range is allocated or not.
 struct vmm_range_data

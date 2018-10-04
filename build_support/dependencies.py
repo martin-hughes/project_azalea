@@ -29,12 +29,15 @@ kernel = [
     '#kernel/devices/block/proxy/SConscript',
     '#kernel/devices/legacy/ps2/SConscript',
     '#kernel/devices/generic/SConscript',
+    '#kernel/devices/pci/SConscript',
+    '#kernel/devices/usb/SConscript',
 
     # Filesystems
     '#kernel/system_tree/fs/fat/SConscript',
     '#kernel/system_tree/fs/pipe/SConscript',
     '#kernel/system_tree/fs/mem/SConscript',
     '#kernel/system_tree/fs/proc/SConscript',
+    '#kernel/system_tree/fs/dev/SConscript',
   ]
 
 init_program = [

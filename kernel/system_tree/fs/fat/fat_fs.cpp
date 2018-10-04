@@ -124,9 +124,6 @@ ERR_CODE fat_filesystem::get_leaf(const kl_string &name, std::shared_ptr<ISystem
 
   if (ec == ERR_CODE::NO_ERROR)
   {
-    uint64_t cluster = (((uint64_t)fde.first_cluster_high) << 16) + fde.first_cluster_low;
-    KL_TRC_TRACE(TRC_LVL::FLOW, "First cluster: ", cluster, "\n");
-
     file_obj = std::make_shared<fat_file>(fde, shared_from_this());
     leaf = std::dynamic_pointer_cast<ISystemTreeLeaf>(file_obj);
   }
@@ -305,6 +302,7 @@ ERR_CODE fat_filesystem::get_dir_entry(const kl_string &name,
   }
   else
   {
+    sector_to_look_at = 0;
     INCOMPLETE_CODE("Only deals with root directory just now");
   }
   ret_code = this->_storage->read_blocks(sector_to_look_at, 1, this->_buffer.get(), ASSUMED_SECTOR_SIZE);

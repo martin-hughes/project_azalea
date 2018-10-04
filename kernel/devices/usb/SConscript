@@ -1,0 +1,10 @@
+# Generic USB drivers.
+
+Import('env')
+obj = env.Library("dev-usb",
+                  [
+                    "controllers/usb_gen_controller.cpp",
+                    "controllers/usb_xhci_controller.cpp",
+                    "controllers/usb_xhci_trb_ring.cpp",
+                  ])
+Return ("obj")

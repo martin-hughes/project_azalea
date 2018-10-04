@@ -1,0 +1,12 @@
+# Generic PCI drivers.
+
+Import('env')
+obj = env.Library("dev-pci",
+                  [
+                    "pci.cpp",
+                    "pci_root.cpp",
+                    "generic_device/pci_generic_device.cpp",
+                    "generic_device/pci_generic_device_msi.cpp",
+                    "pci_generic_bus.cpp",
+                  ])
+Return ("obj")

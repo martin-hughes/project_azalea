@@ -47,12 +47,12 @@ DEV_STATUS gen_ps2_device::get_device_status()
   return _status;
 }
 
-bool gen_ps2_device::handle_irq_fast(uint8_t irq_number)
+bool gen_ps2_device::handle_interrupt_fast(uint8_t irq_number)
 {
   return false;
 }
 
-void gen_ps2_device::handle_irq_slow(uint8_t irq_number)
+void gen_ps2_device::handle_interrupt_slow(uint8_t irq_number)
 {
 
 }
@@ -72,7 +72,7 @@ void gen_ps2_device::enable_irq()
   irq_num = this->_second_channel ? 12 : 1;
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Registering for IRQ: ", irq_num, "\n");
 
-  proc_register_irq_handler(irq_num, dynamic_cast<IIrqReceiver *>(this));
+  proc_register_irq_handler(irq_num, dynamic_cast<IInterruptReceiver *>(this));
 
   gen_ps2_controller_device::ps2_config_register reg;
   reg = _parent->read_config();
@@ -107,7 +107,7 @@ void gen_ps2_device::disable_irq()
   irq_num = this->_second_channel ? 12 : 1;
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Unregistering IRQ: ", irq_num, "\n");
 
-  proc_unregister_irq_handler(irq_num, dynamic_cast<IIrqReceiver *>(this));
+  proc_unregister_irq_handler(irq_num, dynamic_cast<IInterruptReceiver *>(this));
 
   gen_ps2_controller_device::ps2_config_register reg;
   reg = _parent->read_config();
@@ -142,9 +142,9 @@ ps2_mouse_device::ps2_mouse_device(gen_ps2_controller_device *parent, bool secon
 ps2_keyboard_device::ps2_keyboard_device(gen_ps2_controller_device *parent, bool second_channel) :
   gen_ps2_device(parent, second_channel),
   recipient(nullptr),
+  _spec_keys_down({ false, false, false, false, false, false, false }),
   _next_key_is_release(false),
   _next_key_is_special(false),
-  _spec_keys_down({ false, false, false, false, false, false, false }),
   _pause_seq_chars(0)
 {
   KL_TRC_ENTRY;
@@ -157,13 +157,13 @@ ps2_keyboard_device::ps2_keyboard_device(gen_ps2_controller_device *parent, bool
   KL_TRC_EXIT;
 }
 
-bool ps2_keyboard_device::handle_irq_fast(uint8_t irq_num)
+bool ps2_keyboard_device::handle_interrupt_fast(uint8_t irq_num)
 {
   // Simply do all of our handling in the slow path part of the handler.
   return true;
 }
 
-void ps2_keyboard_device::handle_irq_slow(uint8_t irq_num)
+void ps2_keyboard_device::handle_interrupt_slow(uint8_t irq_num)
 {
   KL_TRC_ENTRY;
   uint8_t scancode;

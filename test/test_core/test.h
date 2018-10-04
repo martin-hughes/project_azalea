@@ -2,8 +2,8 @@
 #define _TEST_CORE_H
 
 #ifdef UT_MEM_LEAK_CHECK
-#define _CRTDBG_MAP_ALLOC  
-#include <stdlib.h>  
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
 #include <crtdbg.h>
 
 #define DEBUG_NEW new(_NORMAL_BLOCK ,__FILE__, __LINE__)
@@ -33,5 +33,6 @@ void test_spin_sleep(uint64_t sleep_time_ns);
 class task_thread;
 void test_only_set_cur_thread(task_thread *thread);
 void dummy_thread_fn();
+void test_init_proc_interrupt_table();
 
 #endif

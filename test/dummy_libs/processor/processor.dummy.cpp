@@ -1,7 +1,18 @@
 #include "test/test_core/test.h"
 
 #include "processor/processor.h"
+#include "processor/processor-int.h"
 #include "processor/x64/processor-x64.h"
+
+const uint16_t PROC_NUM_INTERRUPTS = 256;
+const uint16_t PROC_NUM_IRQS = 16;
+const uint16_t PROC_IRQ_BASE = 32;
+proc_interrupt_data proc_interrupt_data_table[PROC_NUM_INTERRUPTS];
+
+void test_init_proc_interrupt_table()
+{
+  proc_config_interrupt_table();
+}
 
 namespace
 {

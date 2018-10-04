@@ -10,6 +10,7 @@ files = ["timing/timing.cpp",
          "x64/gdt-x64.cpp",
          "x64/gdt-low-x64.asm",
          "x64/interrupts-low-x64.asm",
+         "x64/interrupt_handlers-x64.asm",
          "x64/task_manager-low-x64.asm",
          "x64/interrupts-x64.cpp",
          "x64/processor-x64.cpp",
@@ -25,4 +26,4 @@ files = ["timing/timing.cpp",
          "multi_processor.cpp",
         ]
 obj = env.Library("processor_x64", files)
-Return ("obj") 
+Return ("obj")

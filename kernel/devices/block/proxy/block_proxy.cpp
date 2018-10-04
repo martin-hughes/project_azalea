@@ -11,7 +11,7 @@
 #include "klib/klib.h"
 
 block_proxy_device::block_proxy_device(IBlockDevice *parent, uint64_t start_block, uint64_t num_blocks) :
-    _name("Generic block device"), _start_block(start_block), _num_blocks(num_blocks), _parent(parent)
+    _name("Generic block device"), _parent(parent), _start_block(start_block), _num_blocks(num_blocks)
 {
   KL_TRC_ENTRY;
 

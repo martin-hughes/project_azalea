@@ -12,6 +12,7 @@
 #include "processor/processor-int.h"
 #include "processor/x64/processor-x64.h"
 #include "processor/x64/processor-x64-int.h"
+#include "processor/x64/proc_interrupt_handlers-x64.h"
 #include "mem/x64/mem-x64-int.h"
 #include "processor/x64/pic/pic.h"
 
@@ -25,7 +26,8 @@ namespace
   const uint64_t DEF_CS_USER = 0x18;
   const uint64_t DEF_SS_USER = 0x20;
 
-  const uint32_t TM_INTERRUPT_NUM = IRQ_BASE;
+  // Setting one const equal to another of a different size seems to confuse the linker...!
+  const uint32_t TM_INTERRUPT_NUM = 32; //(const uint32_t) PROC_IRQ_BASE;
 
   const uint64_t DEF_USER_MODE_STACK_PAGE = 0x000000000F000000;
 
@@ -331,8 +333,6 @@ void task_yield()
 task_thread *task_get_cur_thread()
 {
   KL_TRC_ENTRY;
-
-  uint32_t proc_id;
 
   task_thread *ret_thread;
   task_x64_exec_context *context;

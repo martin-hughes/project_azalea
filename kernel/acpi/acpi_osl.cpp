@@ -19,14 +19,14 @@ extern "C"
 ///
 /// An object of this class can then be registered with the IRQ handling system. It simply passes on the IRQ to
 /// ACPICA to handle.
-class AcpiIrqHandler : public IIrqReceiver
+class AcpiIrqHandler : public IInterruptReceiver
 {
 public:
   AcpiIrqHandler(ACPI_OSD_HANDLER irq_handler, void *irq_context);
   virtual ~AcpiIrqHandler() { };
 
-  virtual bool handle_irq_fast(uint8_t irq_number);
-  virtual void handle_irq_slow(uint8_t irq_number) { };
+  virtual bool handle_interrupt_fast(uint8_t irq_number);
+  virtual void handle_interrupt_slow(uint8_t irq_number) { };
 
 private:
   ACPI_OSD_HANDLER _irq_handler;
@@ -178,7 +178,7 @@ ACPI_STATUS AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Time
   KL_TRC_ENTRY;
   uint64_t wait = Timeout;
   SYNC_ACQ_RESULT res;
-  ACPI_STATUS retval;
+  ACPI_STATUS retval = AE_ERROR;
   klib_semaphore *sp = (klib_semaphore *)Handle;
 
   if (sp == nullptr) return AE_BAD_PARAMETER;
@@ -253,7 +253,7 @@ ACPI_STATUS AcpiOsAcquireMutex(ACPI_MUTEX Handle, UINT16 Timeout)
   KL_TRC_ENTRY;
   klib_mutex *mutex = (klib_mutex *)Handle;
   uint64_t wait = Timeout;
-  ACPI_STATUS retval;
+  ACPI_STATUS retval = AE_ERROR;
   SYNC_ACQ_RESULT res;
   ASSERT(mutex != nullptr);
 
@@ -400,7 +400,7 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDL
   else
   {
     acpi_int_handler = new AcpiIrqHandler(ServiceRoutine, Context);
-    proc_register_irq_handler(InterruptNumber, dynamic_cast<IIrqReceiver *>(acpi_int_handler));
+    proc_register_irq_handler(InterruptNumber, dynamic_cast<IInterruptReceiver *>(acpi_int_handler));
   }
 
   KL_TRC_EXIT;
@@ -772,7 +772,7 @@ AcpiIrqHandler::AcpiIrqHandler(ACPI_OSD_HANDLER irq_handler, void *irq_context) 
 {
 }
 
-bool AcpiIrqHandler::handle_irq_fast(uint8_t irq_number)
+bool AcpiIrqHandler::handle_interrupt_fast(uint8_t irq_number)
 {
   // If ACPI IRQs start to give grief then note that this function returns a UINT and maybe it had some purpose after
   // all...
