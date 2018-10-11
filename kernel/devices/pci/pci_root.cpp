@@ -65,14 +65,14 @@ void pci_root_device::scan_for_devices()
 
         kl_string new_branch_name(name);
 
-        ASSERT(this->add_branch(new_branch_name, new_bus) == ERR_CODE::NO_ERROR);
+        ASSERT(this->add_child(new_branch_name, new_bus) == ERR_CODE::NO_ERROR);
       }
     }
   }
   else
   {
     new_bus = std::make_shared<pci_generic_bus>(0, this);
-    ASSERT(this->add_branch("bus000", new_bus) == ERR_CODE::NO_ERROR);
+    ASSERT(this->add_child("bus000", new_bus) == ERR_CODE::NO_ERROR);
   }
 
   KL_TRC_EXIT;

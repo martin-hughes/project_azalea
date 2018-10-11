@@ -82,7 +82,7 @@ TEST_F(FatFsTest, FatReading)
   uint64_t bytes_read;
   uint64_t actual_size;
 
-  ASSERT_EQ(ERR_CODE::NO_ERROR, filesystem->get_leaf(filename, basic_leaf)) << "Failed to open file on disk";
+  ASSERT_EQ(ERR_CODE::NO_ERROR, filesystem->get_child(filename, basic_leaf)) << "Failed to open file on disk";
   input_file = dynamic_pointer_cast<IBasicFile>(basic_leaf);
 
   ASSERT_NE(nullptr, input_file) << "FAT leaf is not a file??";

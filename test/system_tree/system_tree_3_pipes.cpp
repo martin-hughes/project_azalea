@@ -29,16 +29,16 @@ TEST(SystemTreeTest, GeneralPipes)
   }
 
   // Start with some simple checks on what leaves are available
-  r = pipe_obj->get_leaf("nope", leaf);
+  r = pipe_obj->get_child("nope", leaf);
   ASSERT_EQ(r, ERR_CODE::NOT_FOUND);
 
-  r = pipe_obj->get_leaf("read", leaf);
+  r = pipe_obj->get_child("read", leaf);
   ASSERT_EQ(r, ERR_CODE::NO_ERROR);
   ASSERT_NE(leaf, nullptr);
   reader = dynamic_pointer_cast<pipe_branch::pipe_read_leaf>(leaf);
   ASSERT_NE(reader, nullptr);
 
-  r = pipe_obj->get_leaf("write", leaf);
+  r = pipe_obj->get_child("write", leaf);
   ASSERT_EQ(r, ERR_CODE::NO_ERROR);
   ASSERT_NE(leaf, nullptr);
   writer = dynamic_pointer_cast<pipe_branch::pipe_write_leaf>(leaf);

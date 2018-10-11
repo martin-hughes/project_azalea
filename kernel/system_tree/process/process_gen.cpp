@@ -52,7 +52,7 @@ std::shared_ptr<task_process> proc_load_binary_file(kl_string binary_name)
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Attempting to load binary ", binary_name, "\n");
 
-  ASSERT(system_tree()->get_leaf(binary_name, disk_prog) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->get_child(binary_name, disk_prog) == ERR_CODE::NO_ERROR);
 
   // Check the file will fit into a single page. This means we know the copy below has enough space.
   // There's no technical reason why it must fit in one page, but it makes it easier for the time being.

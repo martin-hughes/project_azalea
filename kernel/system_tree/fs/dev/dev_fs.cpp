@@ -31,7 +31,7 @@ void dev_root_branch::scan_for_devices()
 
   // Add a PCI root device. This will scan for its own devices automatically.
   std::shared_ptr<pci_root_device> pci_root = std::make_shared<pci_root_device>();
-  this->add_branch("pci", pci_root);
+  this->add_child("pci", pci_root);
 
   KL_TRC_EXIT;
 }

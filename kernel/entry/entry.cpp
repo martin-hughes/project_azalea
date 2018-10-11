@@ -149,7 +149,7 @@ void kernel_start() throw ()
 
   // Start the device management system.
   std::shared_ptr<dev_root_branch> dev_root = std::make_shared<dev_root_branch>();
-  ASSERT(system_tree()->add_branch("dev", dev_root) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->add_child("dev", dev_root) == ERR_CODE::NO_ERROR);
   dev_root->scan_for_devices();
 
   // Enable the PS/2 controller.
@@ -158,7 +158,7 @@ void kernel_start() throw ()
   // Setup a basic file system.
   std::shared_ptr<fat_filesystem> first_fs = setup_initial_fs();
   ASSERT(first_fs != nullptr);
-  ASSERT(system_tree()->add_branch("root", std::dynamic_pointer_cast<ISystemTreeBranch>(first_fs)) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->add_child("root", std::dynamic_pointer_cast<ISystemTreeBranch>(first_fs)) == ERR_CODE::NO_ERROR);
 
   wait_for_term = true;
 
@@ -169,10 +169,10 @@ void kernel_start() throw ()
   // Create a temporary in-RAM file system.
   std::shared_ptr<mem_fs_branch> ram_branch = mem_fs_branch::create();
   ASSERT(ram_branch != nullptr);
-  ASSERT(system_tree()->add_branch("temp", ram_branch) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->add_child("temp", ram_branch) == ERR_CODE::NO_ERROR);
   std::shared_ptr<mem_fs_leaf> ram_file = std::make_shared<mem_fs_leaf>(ram_branch);
   ASSERT(ram_file != nullptr);
-  ASSERT(system_tree()->add_leaf("temp\\hello.txt", ram_file) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->add_child("temp\\hello.txt", ram_file) == ERR_CODE::NO_ERROR);
   ASSERT(ram_file->write_bytes(0,
                                kl_strlen(hello_string, sizeof(hello_string)),
                                reinterpret_cast<const uint8_t *>(hello_string),
@@ -193,11 +193,11 @@ void kernel_start() throw ()
   }
 
   // Setup the write end of the terminal pipe. This is a bit dubious, it doesn't do any reference counting...
-  ASSERT(system_tree()->get_leaf("pipes\\terminal\\write", leaf) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->get_child("pipes\\terminal\\write", leaf) == ERR_CODE::NO_ERROR);
   klib_snprintf(proc_ptr_buffer, 34, "proc\\%p\\stdout", initial_proc.get());
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "proc: ", (const char *)proc_ptr_buffer, "\n");
-  ASSERT(system_tree()->add_leaf(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
 
   // Process should be good to go!
   initial_proc->start_process();
@@ -273,9 +273,9 @@ void simple_terminal()
   std::shared_ptr<ISystemTreeBranch> pipes_br = std::make_shared<system_tree_simple_branch>();
   ASSERT(pipes_br != nullptr);
   ASSERT(system_tree() != nullptr);
-  ASSERT(system_tree()->add_branch("pipes", pipes_br) == ERR_CODE::NO_ERROR);
-  ASSERT(pipes_br->add_branch("terminal", pipe_branch::create()) == ERR_CODE::NO_ERROR);
-  ASSERT(system_tree()->get_leaf("pipes\\terminal\\read", leaf) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->add_child("pipes", pipes_br) == ERR_CODE::NO_ERROR);
+  ASSERT(pipes_br->add_child("terminal", pipe_branch::create()) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->get_child("pipes\\terminal\\read", leaf) == ERR_CODE::NO_ERROR);
   reader = std::dynamic_pointer_cast<IReadable>(leaf);
   ASSERT(reader != nullptr);
 

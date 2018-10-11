@@ -55,9 +55,9 @@ std::shared_ptr<task_process> task_process::create(ENTRY_PROC entry_point,
     new task_process(entry_point, kernel_mode, mem_info));
 
   // Add it to the "proc" tree of processes.
-  std::shared_ptr<ISystemTreeBranch> branch_ptr;
+  std::shared_ptr<ISystemTreeLeaf> branch_ptr;
   std::shared_ptr<proc_fs_root_branch> proc_fs_root_ptr;
-  system_tree()->get_branch("proc", branch_ptr);
+  system_tree()->get_child("proc", branch_ptr);
   proc_fs_root_ptr = std::dynamic_pointer_cast<proc_fs_root_branch>(branch_ptr);
   ASSERT(proc_fs_root_ptr);
   proc_fs_root_ptr->add_process(new_proc);
@@ -94,9 +94,9 @@ void task_process::destroy_process()
 
     this->trigger_all_threads();
 
-    std::shared_ptr<ISystemTreeBranch> branch_ptr;
+    std::shared_ptr<ISystemTreeLeaf> branch_ptr;
     std::shared_ptr<proc_fs_root_branch> proc_fs_root_ptr;
-    system_tree()->get_branch("proc", branch_ptr);
+    system_tree()->get_child("proc", branch_ptr);
     proc_fs_root_ptr = std::dynamic_pointer_cast<proc_fs_root_branch>(branch_ptr);
     ASSERT(proc_fs_root_ptr);
     proc_fs_root_ptr->remove_process(shared_from_this());

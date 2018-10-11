@@ -41,35 +41,7 @@ pipe_branch::~pipe_branch()
   KL_TRC_EXIT;
 }
 
-ERR_CODE pipe_branch::get_child_type(const kl_string &name, CHILD_TYPE &type)
-{
-  ERR_CODE ret = ERR_CODE::NOT_FOUND;
-
-  KL_TRC_ENTRY;
-
-  type = CHILD_TYPE::NOT_FOUND;
-  if ((name == read_leaf_name) || (name == write_leaf_name))
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Matches read or write leaf names\n");
-    type = CHILD_TYPE::LEAF;
-    ret = ERR_CODE::NO_ERROR;
-  }
-
-  KL_TRC_EXIT;
-
-  return ret;
-}
-
-ERR_CODE pipe_branch::get_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch)
-{
-  KL_TRC_ENTRY;
-  KL_TRC_EXIT;
-
-  // Always return NOT_FOUND because there are no child branches to any pipe.
-  return ERR_CODE::NOT_FOUND;
-}
-
-ERR_CODE pipe_branch::get_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf)
+ERR_CODE pipe_branch::get_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child)
 {
   ERR_CODE ret = ERR_CODE::NOT_FOUND;
   KL_TRC_ENTRY;
@@ -77,13 +49,13 @@ ERR_CODE pipe_branch::get_leaf(const kl_string &name, std::shared_ptr<ISystemTre
   if (name == read_leaf_name)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Requested read leaf\n");
-    leaf = std::make_shared<pipe_branch::pipe_read_leaf>(shared_from_this());
+    child = std::make_shared<pipe_branch::pipe_read_leaf>(shared_from_this());
     ret = ERR_CODE::NO_ERROR;
   }
   else if (name == write_leaf_name)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Requested write leaf\n");
-    leaf = std::make_shared<pipe_branch::pipe_write_leaf>(shared_from_this());
+    child = std::make_shared<pipe_branch::pipe_write_leaf>(shared_from_this());
     ret = ERR_CODE::NO_ERROR;
   }
 
@@ -93,16 +65,7 @@ ERR_CODE pipe_branch::get_leaf(const kl_string &name, std::shared_ptr<ISystemTre
   return ret;
 }
 
-ERR_CODE pipe_branch::add_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> branch)
-{
-  KL_TRC_ENTRY;
-  KL_TRC_EXIT;
-
-  // Pipes cannot contain child branches.
-  return ERR_CODE::INVALID_OP;
-}
-
-ERR_CODE pipe_branch::add_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> leaf)
+ERR_CODE pipe_branch::add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child)
 {
   KL_TRC_ENTRY;
   KL_TRC_EXIT;
@@ -321,14 +284,8 @@ ERR_CODE pipe_branch::pipe_write_leaf::write_bytes(uint64_t start,
   return ret;
 }
 
-ERR_CODE pipe_branch::create_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch)
+ERR_CODE pipe_branch::create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child)
 {
-  // You can't add extra branches to a pipe branch.
-  return ERR_CODE::INVALID_OP;
-}
-
-ERR_CODE pipe_branch::create_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf)
-{
-  // You can't add extra branches to a pipe branch.
+  // You can't add extra children to a pipe branch.
   return ERR_CODE::INVALID_OP;
 }

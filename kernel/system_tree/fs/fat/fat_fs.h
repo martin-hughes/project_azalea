@@ -120,16 +120,12 @@ protected:
 public:
   static std::shared_ptr<fat_filesystem> create(std::shared_ptr<IBlockDevice> parent_device);
   virtual ~fat_filesystem();
-
-  virtual ERR_CODE get_child_type(const kl_string &name, CHILD_TYPE &type) override;
-  virtual ERR_CODE get_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch) override;
-  virtual ERR_CODE get_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf) override;
-  virtual ERR_CODE add_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> branch) override;
-  virtual ERR_CODE add_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> leaf) override;
+  
+  virtual ERR_CODE get_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+  virtual ERR_CODE add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
   virtual ERR_CODE rename_child(const kl_string &old_name, const kl_string &new_name) override;
   virtual ERR_CODE delete_child(const kl_string &name) override;
-  virtual ERR_CODE create_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch) override;
-  virtual ERR_CODE create_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf) override;
+  virtual ERR_CODE create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
 
   class fat_folder: public ISystemTreeBranch
   {
@@ -137,15 +133,11 @@ public:
     fat_folder(std::shared_ptr<fat_filesystem> parent_fs, kl_string folder_path);
     virtual ~fat_folder();
 
-    virtual ERR_CODE get_child_type(const kl_string &name, CHILD_TYPE &type) override;
-    virtual ERR_CODE get_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch) override;
-    virtual ERR_CODE get_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf) override;
-    virtual ERR_CODE add_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> branch) override;
-    virtual ERR_CODE add_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> leaf) override;
+    virtual ERR_CODE get_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+    virtual ERR_CODE add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
     virtual ERR_CODE rename_child(const kl_string &old_name, const kl_string &new_name) override;
     virtual ERR_CODE delete_child(const kl_string &name) override;
-    virtual ERR_CODE create_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch) override;
-    virtual ERR_CODE create_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf) override;
+    virtual ERR_CODE create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf) override;
   };
 
   class fat_file: public IBasicFile, public ISystemTreeLeaf

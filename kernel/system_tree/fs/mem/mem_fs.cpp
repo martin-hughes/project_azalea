@@ -30,7 +30,7 @@ mem_fs_branch::~mem_fs_branch()
 
 }
 
-ERR_CODE mem_fs_branch::create_leaf_here(std::shared_ptr<ISystemTreeLeaf> &leaf)
+ERR_CODE mem_fs_branch::create_child_here(std::shared_ptr<ISystemTreeLeaf> &leaf)
 {
   ERR_CODE result = ERR_CODE::NO_ERROR;
 
