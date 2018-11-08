@@ -20,7 +20,7 @@ system_tree_simple_branch::~system_tree_simple_branch()
   KL_TRC_EXIT;
 }
 
-ERR_CODE system_tree_simple_branch::get_child(const kl_string &name, 
+ERR_CODE system_tree_simple_branch::get_child(const kl_string &name,
                                               std::shared_ptr<ISystemTreeLeaf> &child)
 {
   KL_TRC_ENTRY;
@@ -37,9 +37,9 @@ ERR_CODE system_tree_simple_branch::get_child(const kl_string &name,
 
   if (children.contains(our_part))
   {
-    KL_TRC_TRACE("Retrieve direct child\n");
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieve direct child\n");
     direct_child = children.search(our_part);
-  
+
     if (child_part != "")
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Attempt to pass request to child\n");
@@ -82,7 +82,7 @@ ERR_CODE system_tree_simple_branch::add_child (const kl_string &name, std::share
   kl_string continuation_name;
   std::shared_ptr<ISystemTreeBranch> child_branch;
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Adding leaf with name ", name, " and address ", leaf, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Adding leaf with name ", name, " and address ", child.get(), "\n");
 
   split_pos = name.find("\\");
 
@@ -192,7 +192,6 @@ ERR_CODE system_tree_simple_branch::rename_child(const kl_string &old_name, cons
 {
   KL_TRC_ENTRY;
   ERR_CODE rt = ERR_CODE::NO_ERROR;
-  ERR_CODE intermediate;
   std::shared_ptr<ISystemTreeBranch> b;
   std::shared_ptr<ISystemTreeLeaf> l;
   uint64_t old_dir_split;
@@ -337,7 +336,7 @@ std::shared_ptr<ISystemTreeBranch> system_tree_simple_branch::get_child_branch(c
     child = std::dynamic_pointer_cast<ISystemTreeBranch>(direct_child);
   }
 
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Result: ", child, "\n");
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Result: ", child.get(), "\n");
   KL_TRC_EXIT;
 
   return child;

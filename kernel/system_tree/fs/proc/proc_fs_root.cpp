@@ -27,11 +27,50 @@ proc_fs_root_branch::~proc_fs_root_branch()
 //
 ERR_CODE proc_fs_root_branch::add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child)
 {
+  kl_string first_part;
+  kl_string second_part;
+  std::shared_ptr<ISystemTreeBranch> child_branch;
+
+  ERR_CODE result;
   KL_TRC_ENTRY;
+
+  split_name(name, first_part, second_part);
+
+  if (second_part != "")
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Attempt to add child to existing branch\n");
+
+    if (!this->children.contains(first_part))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Child branch not found anyway\n");
+      result = ERR_CODE::NOT_FOUND;
+    }
+    else
+    {
+      child_branch = std::dynamic_pointer_cast<ISystemTreeBranch>(this->children.search(first_part));
+      if (child_branch != nullptr)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Try to add child to branch\n");
+        result = child_branch->add_child(second_part, child);
+      }
+      else
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Can't add a child here.\n");
+        result = ERR_CODE::INVALID_OP;
+      }
+    }
+  }
+  else
+  {
+    // The only way to add an extra branch is to create a new process.
+    result = ERR_CODE::INVALID_OP;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
 
-  // The only way to add an extra branch is to create a new process.
-  return ERR_CODE::INVALID_OP;
+  return result;
+
 }
 
 ERR_CODE proc_fs_root_branch::rename_child(const kl_string &old_name, const kl_string &new_name)
@@ -81,7 +120,7 @@ ERR_CODE proc_fs_root_branch::add_process(std::shared_ptr<task_process> new_proc
     if (!this->_zero_proxy)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Zero proxy branch doesn't yet exist - create it\n");
-      
+
       this->_zero_proxy = std::make_shared<proc_fs_zero_proxy_branch>(shared_from_this());
       system_tree_simple_branch::add_child("0", std::dynamic_pointer_cast<ISystemTreeBranch>(this->_zero_proxy));
     }
