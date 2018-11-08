@@ -1,7 +1,7 @@
 #include "test/test_core/test.h"
 #include "processor/processor.h"
 #include "system_tree/system_tree.h"
-#include "system_tree/fs/pipe/pipe_fs.h"
+#include "system_tree/fs/fs_file_interface.h"
 #include "test/test_core/test.h"
 
 #include "gtest/gtest.h"
@@ -23,6 +23,7 @@ TEST(SystemTreeTest, ProcFsCreateAndDestroy)
 TEST(SystemTreeTest, ProcFsOneProcessIdFile)
 {
   shared_ptr<ISystemTreeBranch> zero_branch;
+  shared_ptr<ISystemTreeLeaf> branch_leaf;
   shared_ptr<ISystemTreeLeaf> id_leaf;
   shared_ptr<IBasicFile> id_file;
   ERR_CODE ec;
@@ -38,10 +39,12 @@ TEST(SystemTreeTest, ProcFsOneProcessIdFile)
 
   test_only_set_cur_thread(proc->child_threads.head->item.get());
 
-  ec = system_tree()->get_branch("proc\\0", zero_branch);
+  ec = system_tree()->get_child("proc\\0", branch_leaf);
+  zero_branch = dynamic_pointer_cast<ISystemTreeBranch>(branch_leaf);
   ASSERT_EQ(ec, ERR_CODE::NO_ERROR);
+  ASSERT_NE(zero_branch, nullptr);
 
-  ec = zero_branch->get_leaf("id", id_leaf);
+  ec = zero_branch->get_child("id", id_leaf);
   ASSERT_EQ(ec, ERR_CODE::NO_ERROR);
 
   id_file = dynamic_pointer_cast<IBasicFile>(id_leaf);

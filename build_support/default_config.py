@@ -4,10 +4,6 @@
 # the project root directory, and add your amended values there. This will help prevent the default config being
 # changed in the git repository.
 
-# As described in docs/Introduction.md, it is necessary to mount a disk image to copy the kernel file in to so that
-# image can then be given to an virtual machine for testing. This is that location.
-disk_image_folder = '/home/martin/disk_mount'
-
 # The location of a C Library suitable for building Azalea programs. Azalea libc is recommended. If Azalea libc is
 # being used, this should be the same as the value install_folder in the libc SConstruct file.
 libc_location = '/home/martin/libc_build/'
@@ -32,3 +28,13 @@ test_attempt_mem_leak_check = False
 # - for example, part of my Linux environment - so it is necessary to copy the image elsewhere. When set to True, the
 # test code creates (and deletes) temporary copies of the virtual image in a location specified in the test code.
 test_copy_mem_map_files = False
+
+# Folder that is the root of a filesystem for an Azalea system - imagine that if you were running Linux, it would be a
+# folder you could chroot too. When built, the important system files end up here. If you choose to construct a virtual
+# machine disk image using `scons make_image` then any file in this folder will end up in that image.
+#
+# If you change this folder then make sure to edit "create_disk_image.sh" as well.
+system_root_folder = 'output/system_root'
+
+# Additional parameters to pass to qemu-system-x86_64 when starting the demo virtual machine.
+demo_machine_extra_params = ''

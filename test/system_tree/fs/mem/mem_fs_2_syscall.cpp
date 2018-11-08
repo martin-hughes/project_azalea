@@ -29,7 +29,7 @@ protected:
 
     root_branch = mem_fs_branch::create();
 
-    ec = system_tree()->add_branch("mem", root_branch);
+    ec = system_tree()->add_child("mem", root_branch);
     ASSERT_EQ(ec, ERR_CODE::NO_ERROR);
   };
 

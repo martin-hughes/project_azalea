@@ -102,17 +102,7 @@ fat_filesystem::~fat_filesystem()
 
 }
 
-ERR_CODE fat_filesystem::get_child_type(const kl_string &name, CHILD_TYPE &type)
-{
-  return ERR_CODE::UNKNOWN;
-}
-
-ERR_CODE fat_filesystem::get_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch)
-{
-  return ERR_CODE::UNKNOWN;
-}
-
-ERR_CODE fat_filesystem::get_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf)
+ERR_CODE fat_filesystem::get_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child)
 {
   KL_TRC_ENTRY;
 
@@ -125,20 +115,14 @@ ERR_CODE fat_filesystem::get_leaf(const kl_string &name, std::shared_ptr<ISystem
   if (ec == ERR_CODE::NO_ERROR)
   {
     file_obj = std::make_shared<fat_file>(fde, shared_from_this());
-    leaf = std::dynamic_pointer_cast<ISystemTreeLeaf>(file_obj);
+    child = std::dynamic_pointer_cast<ISystemTreeLeaf>(file_obj);
   }
 
   KL_TRC_EXIT;
   return ec;
 }
 
-// For the time being, only read operations are supported.
-ERR_CODE fat_filesystem::add_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> branch)
-{
-  return ERR_CODE::INVALID_OP;
-}
-
-ERR_CODE fat_filesystem::add_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> leaf)
+ERR_CODE fat_filesystem::add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child)
 {
   return ERR_CODE::INVALID_OP;
 }
@@ -474,12 +458,7 @@ bool fat_filesystem::is_normal_cluster_number(uint64_t cluster_num)
   return is_normal;
 }
 
-ERR_CODE fat_filesystem::create_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch)
-{
-  return ERR_CODE::UNKNOWN;
-}
-
-ERR_CODE fat_filesystem::create_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf)
+ERR_CODE fat_filesystem::create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child)
 {
   return ERR_CODE::UNKNOWN;
 }

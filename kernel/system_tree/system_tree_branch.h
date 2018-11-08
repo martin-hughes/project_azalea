@@ -9,18 +9,6 @@
 #include "klib/data_structures/string.h"
 #include "system_tree/system_tree_leaf.h"
 
-/// @brief The type of a child of a branch in System Tree.
-///
-/// In System Tree, branches can contain two types of children. Other branches and leaves. Leaves cannot themselves
-/// contain other branches. This type allows the caller to determine whether a given name in System Tree refers to a
-/// branch or a leaf.
-enum class CHILD_TYPE
-{
-  BRANCH,    ///< Named child is a branch
-  LEAF,      ///< Named child is a leaf
-  NOT_FOUND, ///< The named child could not be found.
-};
-
 /// @brief The interface which all branch implementations must implement.
 ///
 /// System Tree is capable of storing any object that implements this interface, calling it a "branch". It is up to the
@@ -31,62 +19,41 @@ enum class CHILD_TYPE
 ///
 /// It is not necessary for deriving classes to re-document the members of this interface unless there is anything
 /// interesting to say.
-class ISystemTreeBranch : public IHandledObject
+class ISystemTreeBranch : public ISystemTreeLeaf
 {
 public:
   /// @brief Standard virtual destructor
   virtual ~ISystemTreeBranch() { };
 
-  /// @brief Return the type of the named child
+  /// @brief Get a pointer to the named child
   ///
-  /// @param[in] name The name of a child to look for in System Tree
+  /// @param[in] name The name of the child to return
   ///
-  /// @param[out] type The type of the child. If the child does not exist, `type` is set to `NOT_FOUND`
+  /// @param[out] child If the named child can be found, a pointer to it is stored in child.
   ///
   /// @return An appropriate choice from `ERR_CODE`
-  virtual ERR_CODE get_child_type(const kl_string &name, CHILD_TYPE &type) = 0;
+  virtual ERR_CODE get_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) = 0;
 
-  /// @brief Get a pointer to the named branch
+  /// @brief Add a child to this branch of System Tree.
   ///
-  /// @param[in] name The name of the child branch to return
+  /// @param name The name of the child to add. The name must not conflict with any other child of this branch.
   ///
-  /// @param[out] branch If the named branch can be found, a pointer to it is stored in *branch.
-  ///
-  /// @return An appropriate choice from `ERR_CODE`
-  virtual ERR_CODE get_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch) = 0;
-
-  /// @brief Get a pointer to the named leaf
-  ///
-  /// @param[in] name The name of the child leaf to return
-  ///
-  /// @param[out] leaf If the named leaf can be found, a pointer to it is stored in *leaf.
+  /// @param child The child to add.
   ///
   /// @return An appropriate choice from `ERR_CODE`
-  virtual ERR_CODE get_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf) = 0;
-
-  /// @brief Add a branch to System Tree.
+  virtual ERR_CODE add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child) = 0;
+  
+  /// @brief Create a new child and add to System Tree.
   ///
-  /// @param name The name of the branch to add. The name must not conflict with any other branch or leaf that is a
-  ///             child of this branch.
+  /// The child that is created will be of a type determined by the implementer of this virtual function. The idea is
+  /// that a filesystem will provide children of the correct type for it.
   ///
-  /// @param branch The branch to add. The caller is responsible for not destroying the branch before removing it as a
-  ///               child of this one.
+  /// @param name The name of the child to create. The name must not conflict with any other child of this branch.
   ///
-  /// @return An appropriate choice from `ERR_CODE`
-  virtual ERR_CODE add_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> branch) = 0;
-
-  /// @brief Add a leaf to System Tree.
-  ///
-  /// System Tree will acquire a reference to the leaf.
-  ///
-  /// @param name The name of the leaf to add. The name must not conflict with any other branch or leaf that is a
-  ///             child of this branch.
-  ///
-  /// @param leaf The leaf to add. The caller is responsible for not destroying the leaf before removing it as a child
-  ///             of this one.
+  /// @param[out] child A pointer to the newly created child object.
   ///
   /// @return An appropriate choice from `ERR_CODE`
-  virtual ERR_CODE add_leaf (const kl_string &name, std::shared_ptr<ISystemTreeLeaf> leaf) = 0;
+  virtual ERR_CODE create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) = 0;
 
   /// @brief Rename a child of this branch.
   ///
@@ -136,35 +103,6 @@ public:
       second_part = name_to_split.substr(split_pos + 1, kl_string::npos);
     }
   }
-
-  /// @brief Create a new branch and add to System Tree.
-  ///
-  /// The branch that is created will be of a type determined by the implementer of this virtual function. The idea is
-  /// that a filesystem will provide branches of the correct type for it.
-  ///
-  /// @param name The name of the branch to create. The name must not conflict with any other branch or leaf that is a
-  ///             child of this branch.
-  ///
-  /// @param[out] branch A pointer to the newly created branch object.
-  ///
-  /// @return An appropriate choice from `ERR_CODE`
-  virtual ERR_CODE create_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch) = 0;
-
-  /// @brief Create a new leaf and add to System Tree.
-  ///
-  /// The leaf that is created will be of a type determined by the implementer of this virtual function. The idea is
-  /// that a filesystem will provide leaves of the correct type for it.
-  ///
-  /// The new leaf will have two references acquired on it. One is owned by System Tree, the other by the caller of
-  /// this function.
-  ///
-  /// @param name The name of the leaf to create. The name must not conflict with any other branch or leaf that is a
-  ///             child of this branch.
-  ///
-  /// @param[out] leaf A pointer to the newly created leaf object.
-  ///
-  /// @return An appropriate choice from `ERR_CODE`
-  virtual ERR_CODE create_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf) = 0;
 };
 
 #endif

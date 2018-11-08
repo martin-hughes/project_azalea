@@ -106,7 +106,7 @@ void task_gen_init()
 
   std::shared_ptr<proc_fs_root_branch> proc_fs_root_ptr;
   proc_fs_root_ptr = std::make_shared<proc_fs_root_branch>();
-  ec = system_tree()->add_branch("proc", proc_fs_root_ptr);
+  ec = system_tree()->add_child("proc", proc_fs_root_ptr);
   ASSERT(ec == ERR_CODE::NO_ERROR);
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Preparing the processor\n");

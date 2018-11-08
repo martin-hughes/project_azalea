@@ -159,7 +159,7 @@ ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *ha
     kl_memcpy(path, buf.get(), path_len);
     buf[path_len] = 0;
     kl_string str_path(path);
-    result = system_tree()->get_leaf(str_path, leaf);
+    result = system_tree()->get_child(str_path, leaf);
 
     if (result == ERR_CODE::NO_ERROR)
     {
@@ -564,7 +564,7 @@ ERR_CODE syscall_create_obj_and_handle(const char *path, uint64_t path_len, GEN_
   }
   else
   {
-    result = system_tree()->create_leaf(req_path, new_leaf);
+    result = system_tree()->create_child(req_path, new_leaf);
     if (result == ERR_CODE::NO_ERROR)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "New leaf created!\n");

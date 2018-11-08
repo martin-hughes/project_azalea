@@ -14,6 +14,7 @@ NBD_DEVICE=/dev/nbd0
 NBD_PARTITION=/dev/nbd0p1
 TEMP_MOUNT_POINT=output/disk_mount
 TEMP_MAP_FILE=output/grubmap
+SYSTEM_ROOT=output/system_root
 
 # Create the output folder, if it doesn't already exist.
 if [ ! -d "$OUTPUT_FOLDER" ]; then
@@ -56,6 +57,9 @@ grub-install --no-floppy \
              --boot-directory="${TEMP_MOUNT_POINT}/boot" \
              --grub-mkdevicemap="$TEMP_MAP_FILE" \
               "$NBD_DEVICE"
+
+# Copy all files into the disk
+cp -r "$SYSTEM_ROOT"/*  "$TEMP_MOUNT_POINT"
 
 # Tidy up.
 rm "$TEMP_MAP_FILE"

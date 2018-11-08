@@ -95,7 +95,7 @@ void pci_generic_bus::add_new_device(uint8_t slot, uint8_t func)
     KL_TRC_TRACE(TRC_LVL::FLOW, "Adding new device branch: ", (char const *)dev_name, "\n");
     kl_string leaf_name(dev_name);
 
-    ASSERT(this->add_leaf(leaf_name, new_device) == ERR_CODE::NO_ERROR);
+    ASSERT(this->add_child(leaf_name, new_device) == ERR_CODE::NO_ERROR);
   }
 
   KL_TRC_EXIT;

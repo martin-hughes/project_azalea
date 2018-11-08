@@ -30,7 +30,7 @@ proc_fs_root_branch::proc_fs_proc_branch::proc_fs_proc_branch(std::shared_ptr<ta
   ec = _id_file->write_bytes(0, strl + 1, reinterpret_cast<const uint8_t *>(id_buffer), 22, br);
   ASSERT(ec == ERR_CODE::NO_ERROR);
   ASSERT(br == strl + 1);
-  ec = system_tree_simple_branch::add_leaf("id", _id_file);
+  ec = system_tree_simple_branch::add_child("id", _id_file);
   ASSERT(ec == ERR_CODE::NO_ERROR);
 
   KL_TRC_EXIT;

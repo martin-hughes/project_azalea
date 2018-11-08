@@ -17,15 +17,11 @@ public:
   static std::shared_ptr<pipe_branch> create();
   virtual ~pipe_branch();
 
-  virtual ERR_CODE get_child_type(const kl_string &name, CHILD_TYPE &type) override;
-  virtual ERR_CODE get_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch) override;
-  virtual ERR_CODE get_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf) override;
-  virtual ERR_CODE add_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> branch) override;
-  virtual ERR_CODE add_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> leaf) override;
+  virtual ERR_CODE get_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+  virtual ERR_CODE add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
   virtual ERR_CODE rename_child(const kl_string &old_name, const kl_string &new_name) override;
   virtual ERR_CODE delete_child(const kl_string &name) override;
-  virtual ERR_CODE create_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch) override;
-  virtual ERR_CODE create_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf) override;
+  virtual ERR_CODE create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
 
   class pipe_read_leaf: public IReadable, public ISystemTreeLeaf
   {

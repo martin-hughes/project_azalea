@@ -5,7 +5,7 @@ import build_support.dependencies as dependencies
 import build_support.config as config
 
 def main_build_script(linux_build):
-  # Most components are excluded from the Windows build. Only the test program builds on Windows.
+  # Most components and options are excluded from the Windows build. Only the test program builds on Windows.
   if linux_build:
     # Kernel headers
     kernel_env = build_default_env(linux_build)
@@ -21,9 +21,8 @@ def main_build_script(linux_build):
     kernel_env['LINK'] = 'ld -Map output/kernel_map.map'
     kernel_env.AppendENVPath('CPATH', '#/kernel')
     kernel_obj = default_build_script(dependencies.kernel, "kernel64.sys", kernel_env, "kernel")
-    kernel_install_obj = kernel_env.Install(config.disk_image_folder, kernel_obj)
+    kernel_install_obj = kernel_env.Install(config.system_root_folder, kernel_obj)
     kernel_env.AddPostAction(kernel_obj, disasm_action)
-    kernel_env.AddPostAction(kernel_install_obj, disk_build_action)
 
     # Init program
     init_prog_env = build_default_env(linux_build)
@@ -35,11 +34,12 @@ def main_build_script(linux_build):
     init_prog_env['LINK'] = 'ld -Map output/init_program.map'
     init_prog_env['LIBS'] = [ 'azalea_libc', ]
     init_prog_obj = default_build_script(dependencies.init_program, "initprog", init_prog_env, "init_program")
-    init_install_obj = init_prog_env.Install(config.disk_image_folder, init_prog_obj)
+    init_install_obj = init_prog_env.Install(config.system_root_folder, init_prog_obj)
     init_prog_env.AddPostAction(init_prog_obj, disasm_action)
-    init_prog_env.AddPostAction(init_install_obj, disk_build_action)
 
     kernel_env.Alias('install-headers', ui_folder)
+    PhonyTargets(kernel_env, start_demo = demo_machine_action)
+    PhonyTargets(kernel_env, build_image = disk_build_action)
     Default(kernel_install_obj)
     Default(init_install_obj)
 
@@ -135,8 +135,7 @@ def default_build_script(deps, output_name, env, part_name):
   return env.Program(os.path.join('output', output_name), dependencies_out)
 
 def disk_image_builder(target, source, env):
-  os.system('sync')
-  os.system('cp kernel_disc_image.vdi kernel_disc_image_nonlive.vdi')
+  os.system('build_support/create_disk_image.sh')
   return None
 
 def disassemble_cmd(target, source, env):
@@ -146,11 +145,29 @@ def disassemble_cmd(target, source, env):
 
   return None
 
-# Create a custom disassembly action that is quiet.
-disasm_action = Action(disassemble_cmd, "Disassembling $TARGET")
+def demo_machine_cmd(target, source, env):
+  qemu_params = ["qemu-system-x86_64",
+                 "-drive file=fat:rw:fat-type=16:output/system_root,format=raw",
+                 "-no-reboot",
+                 "-smp cpus=2",
+                 "-cpu Haswell,+x2apic",
+                 "-serial stdio", # Could change this to -debugcon stdio to put the monitor on stdio.
+                 "-device nec-usb-xhci",
+                 "-kernel output/system_root/kernel64.sys",
+                ]
+  qemu_cmd = " ".join(qemu_params) + " " + config.demo_machine_extra_params
+  os.system(qemu_cmd)
 
-# Likewise for the disk image disk_image_builder
+  return None
+
+def PhonyTargets(env, **kw):
+  for target, action in kw.items():
+      env.AlwaysBuild(env.Alias(target, [], action))
+
+# Create actions for our custom commands.
+disasm_action = Action(disassemble_cmd, "Disassembling $TARGET")
 disk_build_action = Action(disk_image_builder, "Creating disk image")
+demo_machine_action = Action(demo_machine_cmd, "Starting demo machine")
 
 # Determine whether this is a Linux or Windows-based build.
 sys_name = platform.system()

@@ -3,6 +3,7 @@
 
 #include "klib/klib.h"
 
+#include "system_tree/system_tree_leaf.h"
 #include "system_tree/system_tree_branch.h"
 #include "system_tree/fs/fs_file_interface.h"
 #include "system_tree/fs/mem/mem_fs.h"
@@ -16,7 +17,7 @@ public:
   proc_fs_root_branch();
   virtual ~proc_fs_root_branch();
 
-  virtual ERR_CODE add_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> branch) override;
+  virtual ERR_CODE add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
   virtual ERR_CODE rename_child(const kl_string &old_name, const kl_string &new_name) override;
   virtual ERR_CODE delete_child(const kl_string &name) override;
 
@@ -49,15 +50,11 @@ protected:
     proc_fs_zero_proxy_branch(std::shared_ptr<proc_fs_root_branch> parent);
     virtual ~proc_fs_zero_proxy_branch();
 
-    virtual ERR_CODE get_child_type(const kl_string &name, CHILD_TYPE &type) override;
-    virtual ERR_CODE get_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch) override;
-    virtual ERR_CODE get_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf) override;
-    virtual ERR_CODE add_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> branch) override;
-    virtual ERR_CODE add_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> leaf) override;
+    virtual ERR_CODE get_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+    virtual ERR_CODE add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
     virtual ERR_CODE rename_child(const kl_string &old_name, const kl_string &new_name) override;
     virtual ERR_CODE delete_child(const kl_string &name) override;
-    virtual ERR_CODE create_branch(const kl_string &name, std::shared_ptr<ISystemTreeBranch> &branch) override;
-    virtual ERR_CODE create_leaf(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf) override;
+    virtual ERR_CODE create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
 
   protected:
     std::shared_ptr<ISystemTreeBranch> get_current_proc_branch();
