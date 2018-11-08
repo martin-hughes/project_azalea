@@ -7,6 +7,7 @@
 - [Choosing a Name](#choosing-a-name)
 - [Requirements](#requirements)
 - [Getting Started - Full build](#getting-started---full-build)
+- [Getting Started - Build a disk image](#getting-started---build-a-disk-image)
 - [Getting Started - Windows build](#getting-started---windows-builds)
 - [Contributing](#contributing)
 - [Find out more](#find-out-more)
@@ -64,8 +65,7 @@ To compile the full system, you will need the following tools and libraries inst
 - SCons (*)
 - NASM (*)
 - Boost iostreams (*) - only used in the test scripts.
-- Qemu - the default test script runs on qemu, and qemu-nbd is required to create disk images from scratch (which is
-  optional). Depending on how you choose to mount this disk images you might need qemu-nbd.
+- Qemu - The demo virtual machine runs on qemu, and qemu-nbd is required to create disk images from scratch. (optional)
 - Virtualbox - Required to generate disk images from scratch (optional) and can be used as a test system.
 - GRUB2 2.02 beta 2 or later - Required to generate disk images from scratch. (optional)
 - Doxygen - Only needed to generate documentation. (optional)
@@ -73,7 +73,9 @@ To compile the full system, you will need the following tools and libraries inst
 
 Items marked with a (*) are the only ones required if doing a unit test program build on Windows.
 
-Full compilation has been tested using Ubuntu 16.04. It may work on the Windows Subsystem for Linux, but is untested.
+Full compilation has been tested using Ubuntu 18.04. It will also work on the Windows Subsystem For Linux version of
+Ubuntu, although it is not possible to build disk images there. This is because the disk image builder relies on the
+NBD kernel module, and WSL doesn't support kernel modules.
 
 The project is routinely tested in qemu-system-x86_64 and Virtual Box, and very rarely on real hardware. Real hardware
 bugs would be interesting to hear about!
@@ -85,16 +87,14 @@ from scratch, do the following:
 
 1. Get a copy of the code on your system, using your favourite method.
 2. Also, get a copy of the Azalea-libc code.
-3. Follow the instructions in `extras/configure_disk_images.txt`. Remember to mount the disk image whenever necessary
-(e.g. after a reboot)
-4. Configure the values in build_support/config.py and the Azalea-libc SConstruct file as appropriate.
-5. From the root directory of the kernel, execute `scons install-headers` and check there are no errors.
-6. In the Azalea-libc root directory, execute `scons` followed by `scons install` - again, check for errors.
-7. Back in the kernel code tree, execute `scons` and check there are no errors.
-8. Finally, execute `build_support/start_test_machine.sh`.
+3. Configure the values in build_support/config.py and the Azalea-libc SConstruct file as appropriate.
+4. From the root directory of the kernel, execute `scons install-headers` and check there are no errors.
+5. In the Azalea-libc root directory, execute `scons` followed by `scons install` - again, check for errors.
+6. Back in the kernel code tree, execute `scons` and check there are no errors.
+7. Finally, if you wish to see a QEMU demonstration of the kernel, execute `scons start_demo`.
 
-If you have already executed these steps, you will probably only need to execute steps 6-8 again if you make changes.
-Execute step 5 again if you make changes to the user interface headers.
+If you have already executed these steps, you will probably only need to execute step 6 (and 7, if desired) again if
+you make changes. Execute step 4 onwards again if you make changes to the user interface headers.
 
 The system should now start! Assuming that everything went well, you will see two things:
 
@@ -106,6 +106,16 @@ If something goes wrong, you will get a blue screen of death - which is a bug so
 
 The system will start a program called 'initprog' from the root of its disk image and run it in user mode. At the
 moment, 'initprog' is compiled from the source in `extras/demo_program` as part of the main build script.
+
+## Getting Started - Build a disk image
+
+As described above, the Project Azalea SConstruct script includes a "start_demo" mode that boots the kernel using QEMU.
+However, you may prefer to use a different virtual machine for this, so there is a convenience script for automatically
+building a virtual machine disk image.
+
+To do this, execute `scons build_image` *as root*. A disk image will be produced that uses GRUB to start the kernel.
+
+This requires the QEMU NBD kernel module, `qemu-nbd`, `vboxmanage` and `grub-install` tools be installed.
 
 ## Getting Started - Windows Builds
 
