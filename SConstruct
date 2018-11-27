@@ -47,8 +47,6 @@ def main_build_script(linux_build):
   test_script_env = build_default_env(linux_build)
 
   additional_defines = ' -D AZALEA_TEST_CODE -D KL_TRACE_BY_STDOUT'
-  if config.test_copy_mem_map_files:
-    additional_defines += ' -D AZALEA_TEST_COPY_MEM_MAP_FILES'
 
   if linux_build:
     test_script_env['LINKFLAGS'] = '-L/usr/lib/llvm-3.8/lib/clang/3.8.0/lib/linux -Wl,--start-group'
@@ -58,7 +56,7 @@ def main_build_script(linux_build):
       cxx_flags = cxx_flags + ' -fsanitize=address'
     cxx_flags = cxx_flags + additional_defines
     exe_name = 'main-tests'
-    test_script_env['LIBS'] = [ 'boost_iostreams', 'pthread' ]
+    test_script_env['LIBS'] = [ 'libvirtualdisk', 'pthread' ]
     additional_include_tag = 'CPATH'
   else:
     additional_defines += ' -D _DEBUG /MTd'

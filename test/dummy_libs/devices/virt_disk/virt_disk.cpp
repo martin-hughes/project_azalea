@@ -5,8 +5,6 @@
 
 #include "test/test_core/test.h"
 
-#include <boost/iostreams/device/mapped_file.hpp>
-#include <iostream>
 #include <cstring>
 
 #include "virt_disk.h"
@@ -14,37 +12,21 @@
 using namespace std;
 
 virtual_disk_dummy_device::virtual_disk_dummy_device(const char *filename, uint64_t block_size) :
-  _name("Virtual disk"), _status(DEV_STATUS::FAILED), _block_size(block_size), _num_blocks(0)
+  _name{"Virtual disk"}, _status{DEV_STATUS::FAILED}, _block_size{block_size}, _num_blocks{0}
 {
-  this->_backing_file.open(filename);
-
-  if (this->_backing_file.is_open())
+  try
   {
-    this->_backing_file_data_ptr = this->_backing_file.data();
-    this->_file_header = reinterpret_cast<vdi_header *>(this->_backing_file_data_ptr);
-
-    if ((this->_file_header->magic_number == virtual_disk_dummy_device::VDI_MAGIC_NUM) &&
-        (this->_file_header->version_major == 1) &&
-        (this->_file_header->version_minor == 1) &&
-        (this->_file_header->image_block_extra_size == 0) &&
-        ((this->_file_header->file_type == virtual_disk_dummy_device::VDI_TYPE_NORMAL) ||
-          (this->_file_header->file_type == virtual_disk_dummy_device::VDI_TYPE_FIXED_SIZE)))
-    {
-      this->_data_ptr = this->_backing_file_data_ptr + this->_file_header->image_data_offset;
-      this->_block_data_ptr = reinterpret_cast<uint32_t *>
-                                (this->_backing_file_data_ptr + this->_file_header->block_data_offset);
-
-      this->_block_size = this->_file_header->sector_size;
-      this->_num_blocks = this->_file_header->disk_size / this->_block_size;
-
-      this->_sectors_per_block = this->_file_header->image_block_size / this->_block_size;
-
-      if ((this->_sectors_per_block * this->_block_size) == this->_file_header->image_block_size)
-      {
-        this->_status = DEV_STATUS::OK;
-      }
-    }
+    backing_device = std::unique_ptr<virt_disk::virt_disk>(
+                       virt_disk::virt_disk::create_virtual_disk(std::string(filename)));
   }
+  catch (std::fstream::failure &f)
+  {
+    // The device status has already been initialized as failed, so just bail out.
+    return;
+  }
+
+  _num_blocks = backing_device->get_length() / _block_size;
+  _status = DEV_STATUS::OK;
 }
 
 virtual_disk_dummy_device::~virtual_disk_dummy_device()
@@ -79,7 +61,7 @@ ERR_CODE virtual_disk_dummy_device::read_blocks(uint64_t start_block,
                                                 void *buffer,
                                                 uint64_t buffer_length)
 {
-  ERR_CODE return_val = ERR_CODE::UNKNOWN;
+  ERR_CODE return_val = ERR_CODE::NO_ERROR;
 
   if ((start_block > this->_num_blocks) ||
       ((start_block + num_blocks) > this->_num_blocks) ||
@@ -94,15 +76,13 @@ ERR_CODE virtual_disk_dummy_device::read_blocks(uint64_t start_block,
   }
   else
   {
-    char *buffer_ptr = reinterpret_cast<char *>(buffer);
-
-    for (int i = 0; i < num_blocks; i++, buffer_ptr += this->_block_size, start_block++)
+    try
     {
-      return_val = this->read_one_block(start_block, reinterpret_cast<void *>(buffer_ptr));
-      if (return_val != ERR_CODE::NO_ERROR)
-      {
-        break;
-      }
+      backing_device->read(buffer, start_block * this->_block_size, num_blocks * this->_block_size, buffer_length);
+    }
+    catch (std::fstream::failure &f)
+    {
+      return_val = ERR_CODE::DEVICE_FAILED;
     }
   }
 
@@ -131,52 +111,8 @@ ERR_CODE virtual_disk_dummy_device::write_blocks(uint64_t start_block,
   }
   else
   {
-    char *buffer_ptr = reinterpret_cast<char *>(buffer);
-
-    for (int i = 0; i < num_blocks; i++, buffer_ptr += this->_block_size, start_block++)
-    {
-      return_val = this->write_one_block(start_block, reinterpret_cast<void *>(buffer_ptr));
-      if (return_val != ERR_CODE::NO_ERROR)
-      {
-        break;
-      }
-    }
+    INCOMPLETE_CODE("VIRTUAL DISK WRITE BLOCK");
   }
 
   return return_val;
-}
-
-ERR_CODE virtual_disk_dummy_device::read_one_block(uint64_t start_sector, void *buffer)
-{
-  ERR_CODE result = ERR_CODE::UNKNOWN;
-  uint32_t block = start_sector / this->_sectors_per_block;
-
-  // How many bytes into the image block is this sector?
-  uint32_t sector_offset = (start_sector % this->_sectors_per_block) * this->_block_size;
-
-  // Which block within the file represents this block on disk?
-  uint32_t block_offset = this->_block_data_ptr[block];
-
-  // For now, only support already extant blocks
-  if ((block_offset == ~0) || (block_offset == ((~0) - 1)))
-  {
-    result = ERR_CODE::INVALID_OP;
-  }
-  else
-  {
-    char *data_ptr = this->_data_ptr +
-                     (block_offset * this->_file_header->image_block_size) +
-                     sector_offset;
-
-    memcpy(buffer, data_ptr, this->_block_size);
-
-    result = ERR_CODE::NO_ERROR;
-  }
-
-  return result;
-}
-
-ERR_CODE virtual_disk_dummy_device::write_one_block(uint64_t start_sector, void *buffer)
-{
-  return ERR_CODE::UNKNOWN;
 }

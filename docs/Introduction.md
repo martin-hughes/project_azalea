@@ -64,7 +64,7 @@ To compile the full system, you will need the following tools and libraries inst
 - Clang 6.0.0 or later (earlier versions may work, but are not tested)
 - SCons (*)
 - NASM (*)
-- Boost iostreams (*) - only used in the test scripts.
+- libvirtualdisk (https://github.com/martin-hughes/libvirtualdisk) (*) - only used in the test scripts.
 - Qemu - The demo virtual machine runs on qemu, and qemu-nbd is required to create disk images from scratch. (optional)
 - Virtualbox - Required to generate disk images from scratch (optional) and can be used as a test system.
 - GRUB2 2.02 beta 2 or later - Required to generate disk images from scratch. (optional)

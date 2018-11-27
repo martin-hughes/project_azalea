@@ -14,14 +14,7 @@
 
 using namespace std;
 
-// VirtualBox has some trouble with memory-mapping files, so this define causes the test script to copy the disk image
-// to /tmp before attempting to run the test.
-#ifdef AZALEA_TEST_COPY_MEM_MAP_FILES
-const char *copy_command = "cp test/assets/fat_disk_image.vdi /tmp/fat_disk_image.vdi";
-const char *sample_image = "/tmp/fat_disk_image.vdi";
-#else
-const char *sample_image = "test/assets/fat_disk_image.vdi";
-#endif
+const char *sample_image = "test/assets/fat16_disk_image.vhd";
 
 const uint32_t block_size = 512;
 
@@ -34,10 +27,6 @@ protected:
 
   FatFsTest()
   {
-    #ifdef AZALEA_TEST_COPY_MEM_MAP_FILES
-    system(copy_command);
-    #endif
-
     this->backing_storage = make_shared<virtual_disk_dummy_device>(sample_image, block_size);
     std::unique_ptr<uint8_t[]> sector_buffer(new uint8_t[512]);
     uint32_t start_sector;

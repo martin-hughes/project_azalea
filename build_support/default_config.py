@@ -23,12 +23,6 @@ azalea_dev_folder = '/home/martin/azalea_dev'
 # Valgrind.
 test_attempt_mem_leak_check = False
 
-# Should we create temporary copies of memory-mapped files? When doing some filesystem tests, a disk image is mapped
-# into RAM so that it can look a little bit like a live disk. However, not all host filesystems support memory mapping
-# - for example, part of my Linux environment - so it is necessary to copy the image elsewhere. When set to True, the
-# test code creates (and deletes) temporary copies of the virtual image in a location specified in the test code.
-test_copy_mem_map_files = False
-
 # Folder that is the root of a filesystem for an Azalea system - imagine that if you were running Linux, it would be a
 # folder you could chroot too. When built, the important system files end up here. If you choose to construct a virtual
 # machine disk image using `scons make_image` then any file in this folder will end up in that image.
