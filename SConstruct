@@ -93,6 +93,7 @@ def copy_environ_param(name, env_dict):
 def build_default_env(linux_build):
   env_to_copy_in = { }
   copy_environ_param('PATH', env_to_copy_in)
+  copy_environ_param('CPATH', env_to_copy_in)
   copy_environ_param('TEMP', env_to_copy_in)
   copy_environ_param('TMP', env_to_copy_in)
   copy_environ_param('INCLUDE', env_to_copy_in)

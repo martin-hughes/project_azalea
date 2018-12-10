@@ -1,5 +1,5 @@
 /// @file
-/// @brief Dummy disk device that operates on .VDI files.
+/// @brief Dummy disk device that operates on virtual hard disk files.
 
 #define ENABLE_TRACING
 
@@ -14,10 +14,10 @@ using namespace std;
 virtual_disk_dummy_device::virtual_disk_dummy_device(const char *filename, uint64_t block_size) :
   _name{"Virtual disk"}, _status{DEV_STATUS::FAILED}, _block_size{block_size}, _num_blocks{0}
 {
+  std::string fn(filename);
   try
   {
-    backing_device = std::unique_ptr<virt_disk::virt_disk>(
-                       virt_disk::virt_disk::create_virtual_disk(std::string(filename)));
+    backing_device = std::unique_ptr<virt_disk::virt_disk>(virt_disk::virt_disk::create_virtual_disk(fn));
   }
   catch (std::fstream::failure &f)
   {
