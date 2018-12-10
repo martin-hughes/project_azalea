@@ -10,7 +10,7 @@
 
 class pipe_branch: public ISystemTreeBranch, public std::enable_shared_from_this<pipe_branch>
 {
-protected:  
+protected:
   pipe_branch();
 
 public:
@@ -35,8 +35,11 @@ public:
                                 uint64_t buffer_length,
                                 uint64_t &bytes_read) override;
 
+    virtual void set_block_on_read(bool block);
+
   protected:
     std::weak_ptr<pipe_branch> _parent;
+    bool block_on_read;
   };
 
   class pipe_write_leaf: public IWritable, public ISystemTreeLeaf

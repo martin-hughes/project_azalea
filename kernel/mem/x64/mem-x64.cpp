@@ -68,6 +68,9 @@ void mem_gen_init(e820_pointer *e820_ptr)
   // Configure the x64 PAT system, so that caching works as expected.
   mem_x64_pat_init();
 
+  // Setup the page use counter table, so that pages physical pages can be automatically released.
+  mem_map_init_counters();
+
   // Determine the maximum physical address length, and as a result a bit mask that can be used to mask out invalid
   // bits.
   phys_addr_width = mem_x64_get_max_phys_addr();
@@ -95,7 +98,8 @@ void mem_gen_init(e820_pointer *e820_ptr)
   mem_x64_kernel_stack_ptr = mem_allocate_virtual_range(1);
 
   // At the minute, all process actually just use the same stack, so back that up with a physical page.
-  mem_map_range(mem_allocate_physical_pages(1), mem_x64_kernel_stack_ptr, 1);
+  mem_x64_map_virtual_page(reinterpret_cast<uint64_t>(mem_x64_kernel_stack_ptr),
+                           reinterpret_cast<uint64_t>(mem_allocate_physical_pages(1)));
 
   KL_TRC_EXIT;
 }
@@ -195,10 +199,10 @@ void mem_gen_phys_pages_bitmap(e820_pointer *e820_ptr, uint64_t *bitmap_loc, uin
 /// @param context The process that the mapping should occur in. Defaults to the currently running process.
 ///
 /// @param cache_mode Which cache mode is required. Defaults to WRITE_BACK.
-void mem_map_virtual_page(uint64_t virt_addr,
-                          uint64_t phys_addr,
-                          task_process *context,
-                          MEM_CACHE_MODES cache_mode)
+void mem_x64_map_virtual_page(uint64_t virt_addr,
+                              uint64_t phys_addr,
+                              task_process *context,
+                              MEM_CACHE_MODES cache_mode)
 {
   KL_TRC_ENTRY;
 
@@ -327,7 +331,7 @@ void mem_map_virtual_page(uint64_t virt_addr,
 /// @brief Break the connection between a virtual memory address and its physical backing.
 ///
 /// @param virt_addr The virtual memory address that will become unmapped.
-void mem_unmap_virtual_page(uint64_t virt_addr)
+void mem_x64_unmap_virtual_page(uint64_t virt_addr, task_process *context)
 {
   KL_TRC_ENTRY;
 
@@ -335,7 +339,7 @@ void mem_unmap_virtual_page(uint64_t virt_addr)
   uint64_t pml4_entry_idx;
   uint64_t page_dir_ptr_entry_idx;
   uint64_t page_dir_entry_idx;
-  uint64_t *table_addr = get_pml4_table_addr();
+  uint64_t *table_addr = get_pml4_table_addr(context);
   uint64_t *encoded_entry;
   void *table_phys_addr;
 
@@ -618,43 +622,6 @@ void *mem_get_phys_addr(void *virtual_addr, task_process *context)
   KL_TRC_EXIT;
 
   return return_addr_found ? reinterpret_cast<void *>(phys_addr) : nullptr;
-}
-
-/// @brief Create the memory manager specific part of a process's information block.
-///
-/// Fill in a process memory information struct, which is provided back to the task manager, for it to live with all the
-/// other process information.
-///
-/// @return A new, filled in, mem_process_info block. It is the callers responsibility to call
-///         mem_task_destroy_task_entry when it is no longer needed.
-mem_process_info *mem_task_create_task_entry()
-{
-  KL_TRC_ENTRY;
-
-  mem_process_info *new_proc_info;
-  process_x64_data *new_x64_proc_info;
-
-  new_proc_info = new mem_process_info;
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Created new memory manager information at", new_proc_info, "\n");
-
-  new_x64_proc_info = new process_x64_data;
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Created new x64 information at", new_x64_proc_info, "\n");
-
-  mem_x64_pml4_allocate(*new_x64_proc_info);
-  mem_vmm_init_proc_data(new_proc_info->process_vmm_data);
-
-  new_proc_info->arch_specific_data = (void *)new_x64_proc_info;
-
-  KL_TRC_EXIT;
-  return new_proc_info;
-}
-
-/// @brief Destroy a task's memory manager information block.
-void mem_task_destroy_task_entry()
-{
-  panic("mem_task_destroy_task_entry not implemented");
-
-  //Something to do with mem_x64_pml4_deallocate, eventually.
 }
 
 /// @brief Get the virtual address of the PML4 table for the currently running process.

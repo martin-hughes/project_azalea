@@ -15,7 +15,8 @@ dev_root_branch::dev_root_branch()
 {
   KL_TRC_ENTRY;
 
-  // Nothing further to do.
+  dev_slash_null = std::make_shared<null_file>();
+  ASSERT(this->add_child("null", dev_slash_null) == ERR_CODE::NO_ERROR);
 
   KL_TRC_EXIT;
 }

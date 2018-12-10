@@ -112,7 +112,7 @@ void *mem_allocate_virtual_range(uint32_t num_pages, task_process *process_to_us
 
 
   acquired_lock = mem_vmm_lock(proc_data_ptr);
-  KL_TRC_TRACE(TRC_LFL::FLOW, "Lock acquired?", acquired_lock, "\n");
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Lock acquired?", acquired_lock, "\n");
 
   // How many pages are we actually going to allocate. If num_pages is exactly
   // a power of two, it will be used. Otherwise, it will be rounded up to the
@@ -327,6 +327,11 @@ void mem_vmm_init_proc_data(vmm_process_data &proc_data_ref)
   vmm_range_data *root_data;
   KL_TRC_ENTRY;
 
+  if (!vmm_initialized)
+  {
+    mem_vmm_initialize();
+  }
+
   proc_data_ref.vmm_lock = 0;
   klib_list_initialize(&proc_data_ref.vmm_range_data_list);
   proc_data_ref.vmm_user_thread_id = nullptr;
@@ -344,6 +349,113 @@ void mem_vmm_init_proc_data(vmm_process_data &proc_data_ref)
   root_data->number_of_pages = 0x2000000;
 
   KL_TRC_EXIT;
+}
+
+/// @brief Unmaps and frees all allocated virtual ranges from this process.
+///
+/// This function is called at process termination. We do this to ensure that physical pages that are now unused are
+/// released.
+///
+/// @param proc_data_ref The x64 process data of the terminating process.
+void mem_vmm_free_proc_data(task_process *process)
+{
+  klib_list_item<vmm_range_data *> *cur_item;
+  uint64_t idx;
+  uint64_t page_start;
+
+  ASSERT(process != nullptr);
+  ASSERT(process->mem_info != nullptr);
+  vmm_process_data &range_data = process->mem_info->process_vmm_data;
+
+  KL_TRC_ENTRY;
+
+  // Keep going in this loop until there's only one range item left.
+  while (range_data.vmm_range_data_list.head->next != nullptr)
+  {
+    cur_item = range_data.vmm_range_data_list.head;
+    ASSERT(cur_item != nullptr);
+    ASSERT(cur_item->item != nullptr);
+    while (!cur_item->item->allocated)
+    {
+      cur_item = cur_item->next;
+      // This asserts that we don't simply have a whole list of unallocated ranges - if we do, the merging process has
+      // failed somehow.
+      ASSERT(cur_item != nullptr);
+      ASSERT(cur_item->item != nullptr);
+    }
+
+    ASSERT(cur_item->item->allocated);
+    for (idx = 0; idx < cur_item->item->number_of_pages; idx++)
+    {
+      page_start = cur_item->item->start + (idx * MEM_PAGE_SIZE);
+      if (mem_get_phys_addr(reinterpret_cast<void *>(page_start), process) != 0)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Unmap page starting at: ", page_start, "\n");
+        mem_unmap_virtual_page(page_start, process, true);
+      }
+    }
+    mem_deallocate_virtual_range(reinterpret_cast<void *>(cur_item->item->start),
+                                 cur_item->item->number_of_pages,
+                                 process);
+  }
+
+  // We should now be left with one range pointing to all of memory and claiming to be unallocated.
+  ASSERT(range_data.vmm_range_data_list.head->item->allocated == false);
+  ASSERT(range_data.vmm_range_data_list.head->item->start == 0);
+  ASSERT(range_data.vmm_range_data_list.head->item->number_of_pages == 0x2000000);
+  mem_vmm_free_range_item(range_data.vmm_range_data_list.head->item);
+  mem_vmm_free_list_item(range_data.vmm_range_data_list.head);
+
+  range_data.vmm_range_data_list.head = nullptr;
+  range_data.vmm_range_data_list.tail = nullptr;
+
+  KL_TRC_EXIT;
+}
+
+
+uint64_t mem_get_virtual_allocation_size(uint64_t start_addr, task_process *context)
+{
+  klib_list_item<vmm_range_data *> *cur_item;
+  uint64_t alloc_size = 0;
+
+  KL_TRC_ENTRY;
+
+  if (context == nullptr)
+  {
+    task_thread *thread;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Assume current process\n");
+
+    thread = task_get_cur_thread();
+    ASSERT(thread != nullptr);
+    context = thread->parent_process.get();;
+  }
+
+  ASSERT(context != nullptr);
+  ASSERT(context->mem_info != nullptr);
+  vmm_process_data &range_data = context->mem_info->process_vmm_data;
+
+  cur_item = range_data.vmm_range_data_list.head;
+
+  while (cur_item != nullptr)
+  {
+    if (cur_item->item->start == start_addr)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Match found. ");
+      if (cur_item->item->allocated)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Is allocated");
+        alloc_size = cur_item->item->number_of_pages;
+      }
+      KL_TRC_TRACE(TRC_LVL::FLOW, "\n");
+      break;
+    }
+    cur_item = cur_item->next;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", alloc_size, "\n");
+  KL_TRC_EXIT;
+
+  return alloc_size;
 }
 
 //------------------------------------------------------------------------------
@@ -557,7 +669,7 @@ namespace
     this_data = (vmm_range_data *)start_point->item;
     ASSERT(this_data->allocated == false);
     next_block_size = this_data->number_of_pages * 2;
-    first_half_of_pair = ((this_data->start % next_block_size) == 0);
+    first_half_of_pair = ((this_data->start % (next_block_size * MEM_PAGE_SIZE)) == 0);
 
     // Based on the address and range size, select which range it may be possible
     // to merge with.
@@ -569,38 +681,46 @@ namespace
     {
       partner_item = start_point->prev;
     }
-    partner_data = (vmm_range_data *)partner_item->item;
 
-    if ((!partner_data->allocated) &&
-        (partner_data->number_of_pages == this_data->number_of_pages))
+    if (partner_item != nullptr)
     {
-      // Since both this range and its partner are deallocated and the same size
-      // they can be merged. This means that one of the ranges can be freed.
-      if (first_half_of_pair)
-      {
-        survivor_item = start_point;
-        survivor_data = this_data;
-        released_item = partner_item;
-        released_data = partner_data;
-      }
-      else
-      {
-        released_item = start_point;
-        released_data = this_data;
-        survivor_item = partner_item;
-        survivor_data = partner_data;
-      }
+      partner_data = (vmm_range_data *)partner_item->item;
 
-      // Make the survivor twice as large and free the range that's no longer
-      // relevant.
-      survivor_data->number_of_pages = survivor_data->number_of_pages * 2;
-      klib_list_remove(released_item);
-      mem_vmm_free_list_item(released_item);
-      mem_vmm_free_range_item(released_data);
+      if ((!partner_data->allocated) &&
+          (partner_data->number_of_pages == this_data->number_of_pages))
+      {
+        // Since both this range and its partner are deallocated and the same size
+        // they can be merged. This means that one of the ranges can be freed.
+        if (first_half_of_pair)
+        {
+          survivor_item = start_point;
+          survivor_data = this_data;
+          released_item = partner_item;
+          released_data = partner_data;
+        }
+        else
+        {
+          released_item = start_point;
+          released_data = this_data;
+          survivor_item = partner_item;
+          survivor_data = partner_data;
+        }
 
-      // Since we've merged at this level, it's possible that the newly-enlarged
-      // range can be merged with the its partner too.
-      mem_vmm_resolve_merges(survivor_item);
+        // Make the survivor twice as large and free the range that's no longer
+        // relevant.
+        survivor_data->number_of_pages = survivor_data->number_of_pages * 2;
+        klib_list_remove(released_item);
+        mem_vmm_free_list_item(released_item);
+        mem_vmm_free_range_item(released_data);
+
+        // Since we've merged at this level, it's possible that the newly-enlarged
+        // range can be merged with the its partner too.
+        mem_vmm_resolve_merges(survivor_item);
+      }
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "No partner pair\n");
     }
 
     KL_TRC_EXIT;

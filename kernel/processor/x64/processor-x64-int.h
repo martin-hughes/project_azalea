@@ -41,4 +41,5 @@ extern "C" void proc_mp_ap_startup();
 
 // Helper functions
 void *proc_x64_allocate_stack();
+void proc_x64_deallocate_stack(void *stack_ptr);
 

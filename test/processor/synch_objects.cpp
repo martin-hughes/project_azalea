@@ -39,57 +39,57 @@ TEST(ProcessorTests, WaitObjects)
   proc_a->start_process();
 
   // At the moment, there is only one thread, so it should be returned to us repeatedly.
-  thread_a = task_get_next_thread(false);
+  thread_a = task_get_next_thread();
   ASSERT_NE(thread_a, nullptr);
   for (i = 0; i < 10; i++)
   {
-    ASSERT_EQ(thread_a, task_get_next_thread(false));
+    ASSERT_EQ(thread_a, task_get_next_thread());
   }
 
   // Make thread A wait for the wait object, then we should get an idle thread repeatedly.
   test_only_set_cur_thread(thread_a);
   wait_obj.wait_for_signal();
 
-  idle_thread_a = task_get_next_thread(false);
+  idle_thread_a = task_get_next_thread();
   ASSERT_NE(thread_a, idle_thread_a);
 
   // Now, we should get the idle thread repeatedly.
   for (i = 0; i < 10; i++)
   {
-    ASSERT_EQ(idle_thread_a, task_get_next_thread(false));
+    ASSERT_EQ(idle_thread_a, task_get_next_thread());
   }
 
   // Permit the first thread to run again, now we should get that repeatedly.
   wait_obj.cancel_waiting_thread(thread_a);
   for (i = 0; i < 10; i++)
   {
-    ASSERT_EQ(thread_a, task_get_next_thread(false));
+    ASSERT_EQ(thread_a, task_get_next_thread());
   }
 
   // Make thread A wait for the wait object, then we should get an idle thread repeatedly.
   test_only_set_cur_thread(thread_a);
   wait_obj.wait_for_signal();
 
-  idle_thread_a = task_get_next_thread(false);
+  idle_thread_a = task_get_next_thread();
   ASSERT_NE(thread_a, idle_thread_a);
 
   // Now, we should get the idle thread repeatedly.
   for (i = 0; i < 10; i++)
   {
-    ASSERT_EQ(idle_thread_a, task_get_next_thread(false));
+    ASSERT_EQ(idle_thread_a, task_get_next_thread());
   }
 
   // Signal the thread, then we should get that again repeatedly.
   wait_obj.test_trigger();
   for (i = 0; i < 10; i++)
   {
-    ASSERT_EQ(thread_a, task_get_next_thread(false));
+    ASSERT_EQ(thread_a, task_get_next_thread());
   }
 
   // Switch to having the idle thread be current. It is necessary to unschedule all tasks as otherwise
   // test_only_reset_task_mgr() gets stuck waiting for the thread to be unscheduled.
   proc_a->stop_process();
-  task_get_next_thread(false);
+  task_get_next_thread();
   test_only_set_cur_thread(nullptr);
   proc_a->destroy_process();
 

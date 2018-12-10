@@ -18,9 +18,8 @@
 namespace
 {
   // In the page allocation bitmap, a 1 indicates that the page is FREE.
-  const uint64_t MAX_SUPPORTED_PAGES = 2048;
   const uint64_t SIZE_OF_PAGE = 2097152;
-  const uint64_t BITMAP_SIZE = MAX_SUPPORTED_PAGES / 64;
+  const uint64_t BITMAP_SIZE = MEM_MAX_SUPPORTED_PAGES / 64;
 
   // Determines whether or not a page has been allocated. A 1 indicates free, 0 indicates allocated.
   uint64_t phys_pages_alloc_bitmap[BITMAP_SIZE];
@@ -47,7 +46,7 @@ void mem_init_gen_phys_sys(e820_pointer *e820_ptr)
   ASSERT((e820_ptr != nullptr) && (e820_ptr->table_ptr != nullptr));
 
   // Fill in the free pages bitmap appropriately.
-  mem_gen_phys_pages_bitmap(e820_ptr, phys_pages_alloc_bitmap, MAX_SUPPORTED_PAGES);
+  mem_gen_phys_pages_bitmap(e820_ptr, phys_pages_alloc_bitmap, MEM_MAX_SUPPORTED_PAGES);
 
   kl_memcpy(phys_pages_alloc_bitmap, phys_pages_exist_bitmap, sizeof(phys_pages_alloc_bitmap));
 
@@ -94,7 +93,7 @@ void *mem_allocate_physical_pages(uint32_t num_pages)
   // Spin through the list, looking for a free page. Upon finding one, mark it
   // as in use and return the relevant address.
   klib_synch_spinlock_lock(bitmap_lock);
-  for (uint64_t i = 0; i < MAX_SUPPORTED_PAGES / 64; i++)
+  for (uint64_t i = 0; i < MEM_MAX_SUPPORTED_PAGES / 64; i++)
   {
     mask = 0x8000000000000000;
     ASSERT(mask == 0x8000000000000000);
@@ -110,6 +109,7 @@ void *mem_allocate_physical_pages(uint32_t num_pages)
 
         KL_TRC_TRACE(TRC_LVL::EXTRA, "Address found\n");
         KL_TRC_EXIT;
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Free pages -: ", free_pages, "\n");
         klib_synch_spinlock_unlock(bitmap_lock);
         return (void *)addr;
       }
@@ -137,11 +137,14 @@ void mem_deallocate_physical_pages(void *start, uint32_t num_pages)
 
   uint64_t start_num = (uint64_t)start;
 
+  klib_synch_spinlock_lock(bitmap_lock);
   ASSERT(num_pages == 1);
   ASSERT(start_num % SIZE_OF_PAGE == 0);
   ASSERT(!mem_is_bitmap_page_bit_set(start_num));
   mem_set_bitmap_page_bit(start_num, false);
   free_pages++;
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Free pages +: ", free_pages, "\n");
+  klib_synch_spinlock_unlock(bitmap_lock);
 
   KL_TRC_EXIT;
 }
@@ -163,7 +166,7 @@ void mem_set_bitmap_page_bit(uint64_t page_addr, const bool ignore_checks)
   uint64_t bitmap_idx;
   uint64_t mask;
 
-  ASSERT((page_addr / SIZE_OF_PAGE) < MAX_SUPPORTED_PAGES);
+  ASSERT((page_addr / SIZE_OF_PAGE) < MEM_MAX_SUPPORTED_PAGES);
 
   bitmap_idx = (page_addr / SIZE_OF_PAGE) % 64;
   bitmap_qword = (page_addr / SIZE_OF_PAGE) / 64;
@@ -195,7 +198,7 @@ void mem_clear_bitmap_page_bit(uint64_t page_addr)
   uint64_t bitmap_idx;
   uint64_t mask;
 
-  ASSERT((page_addr / SIZE_OF_PAGE) < MAX_SUPPORTED_PAGES);
+  ASSERT((page_addr / SIZE_OF_PAGE) < MEM_MAX_SUPPORTED_PAGES);
 
   bitmap_idx = (page_addr / SIZE_OF_PAGE) % 64;
   bitmap_qword = (page_addr / SIZE_OF_PAGE) / 64;
@@ -227,7 +230,7 @@ bool mem_is_bitmap_page_bit_set(uint64_t page_addr)
   uint64_t bitmap_idx;
   uint64_t mask;
 
-  ASSERT((page_addr / SIZE_OF_PAGE) < MAX_SUPPORTED_PAGES);
+  ASSERT((page_addr / SIZE_OF_PAGE) < MEM_MAX_SUPPORTED_PAGES);
 
   bitmap_idx = (page_addr / SIZE_OF_PAGE) % 64;
   bitmap_qword = (page_addr / SIZE_OF_PAGE) / 64;

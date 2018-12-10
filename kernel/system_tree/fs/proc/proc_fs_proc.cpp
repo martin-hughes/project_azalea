@@ -36,7 +36,7 @@ proc_fs_root_branch::proc_fs_proc_branch::proc_fs_proc_branch(std::shared_ptr<ta
   KL_TRC_EXIT;
 }
 
-std::shared_ptr<proc_fs_root_branch::proc_fs_proc_branch> 
+std::shared_ptr<proc_fs_root_branch::proc_fs_proc_branch>
   proc_fs_root_branch::proc_fs_proc_branch::create(std::shared_ptr<task_process> related_proc)
 {
   return std::shared_ptr<proc_fs_root_branch::proc_fs_proc_branch>(

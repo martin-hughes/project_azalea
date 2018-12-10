@@ -1,0 +1,6 @@
+# Beginnings of a simple terminal program
+
+Import('env')
+files = [ "simple_shell.cpp"]
+obj = env.Object("simple_shell", files)
+Return ("obj")

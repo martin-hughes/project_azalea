@@ -28,6 +28,12 @@ struct process_x64_data
   uint64_t pml4_virt_addr;
 };
 
+void mem_x64_map_virtual_page(uint64_t virt_addr,
+                              uint64_t phys_addr,
+                              task_process *context = nullptr,
+                              MEM_CACHE_MODES cache_mode = MEM_WRITE_BACK);
+void mem_x64_unmap_virtual_page(uint64_t virt_addr, task_process *context);
+
 uint64_t mem_encode_page_table_entry(page_table_entry &pte);
 page_table_entry mem_decode_page_table_entry(uint64_t encoded);
 void mem_set_working_page_dir(uint64_t phys_page_addr);

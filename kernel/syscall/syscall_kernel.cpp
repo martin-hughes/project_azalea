@@ -60,6 +60,7 @@ const void *syscall_pointers[] =
       // New syscalls:
       (void *)syscall_create_obj_and_handle,
       (void *)syscall_set_handle_data_len,
+      (void *)syscall_set_startup_params,
     };
 
 const uint64_t syscall_max_idx = (sizeof(syscall_pointers) / sizeof(void *)) - 1;
@@ -147,7 +148,7 @@ ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *ha
   }
   else if (cur_thread == nullptr)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW< "Couldn't identify current thread\n");
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't identify current thread\n");
     result = ERR_CODE::INVALID_OP;
   }
   // All checks out, try to grab a system_tree object and allocate it a handle.
@@ -163,7 +164,7 @@ ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *ha
 
     if (result == ERR_CODE::NO_ERROR)
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Successfully got leaf object: ", leaf, "\n");
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Successfully got leaf object: ", leaf.get(), "\n");
       std::shared_ptr<IHandledObject> leaf_ptr = std::shared_ptr<IHandledObject>(leaf);
       new_handle = cur_thread->thread_handles.store_object(leaf_ptr);
       *handle = new_handle;
@@ -212,11 +213,11 @@ ERR_CODE syscall_close_handle(GEN_HANDLE handle)
     }
     else
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Found object: ", obj, " - destroying\n");
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Found object: ", obj.get(), " - destroying\n");
 
       // Don't delete the object, let the reference counting mechanism take care of it as needed.
-      obj = nullptr;
       cur_thread->thread_handles.remove_object(handle);
+      obj = nullptr;
 
       result = ERR_CODE::NO_ERROR;
     }
@@ -288,7 +289,7 @@ ERR_CODE syscall_read_handle(GEN_HANDLE handle,
     // Parameters check out, try to read.
     std::shared_ptr<IHandledObject> leaf_ptr = cur_thread->thread_handles.retrieve_object(handle);
     std::shared_ptr<IReadable> file = std::dynamic_pointer_cast<IReadable>(leaf_ptr);
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved leaf ", leaf, " from OM\n");
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved leaf ", leaf_ptr.get(), " from OM\n");
     if (leaf_ptr == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Leaf object not found - bad handle\n");
@@ -308,7 +309,7 @@ ERR_CODE syscall_read_handle(GEN_HANDLE handle,
           KL_TRC_TRACE(TRC_LVL::FLOW, "Trimming bytes_to_read to max buffer length\n");
           bytes_to_read = buffer_size;
         }
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Going to attempt a read on file: ", file, "\n");
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Going to attempt a read on file: ", file.get(), "\n");
         result = file->read_bytes(start_offset, bytes_to_read, buffer, buffer_size, *bytes_read);
 
         KL_TRC_TRACE(TRC_LVL::FLOW, "bytes read: ", *bytes_read, "\n");
@@ -353,9 +354,9 @@ ERR_CODE syscall_get_handle_data_len(GEN_HANDLE handle, uint64_t *data_length)
   }
   else
   {
-    std::shared_ptr<ISystemTreeLeaf> leaf = 
+    std::shared_ptr<ISystemTreeLeaf> leaf =
       std::dynamic_pointer_cast<ISystemTreeLeaf>(cur_thread->thread_handles.retrieve_object(handle));
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved leaf ", leaf, " from OM\n");
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved leaf ", leaf.get(), " from OM\n");
     if (leaf == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Leaf object not found - bad handle\n");
@@ -441,9 +442,9 @@ ERR_CODE syscall_write_handle(GEN_HANDLE handle,
   else
   {
     // Parameters check out, try to read.
-    std::shared_ptr<ISystemTreeLeaf> leaf = 
+    std::shared_ptr<ISystemTreeLeaf> leaf =
       std::dynamic_pointer_cast<ISystemTreeLeaf>(cur_thread->thread_handles.retrieve_object(handle));
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved leaf ", leaf, " from OM\n");
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved leaf ", leaf.get(), " from OM\n");
     if (leaf == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Leaf object not found - bad handle\n");
@@ -464,7 +465,7 @@ ERR_CODE syscall_write_handle(GEN_HANDLE handle,
           KL_TRC_TRACE(TRC_LVL::FLOW, "Trimming bytes_to_write to max buffer length\n");
           bytes_to_write = buffer_size;
         }
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Going to attempt a write on file: ", file, "\n");
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Going to attempt a write on file: ", file.get(), "\n");
         result = file->write_bytes(start_offset, bytes_to_write, buffer, buffer_size, *bytes_written);
 
         KL_TRC_TRACE(TRC_LVL::FLOW, "bytes written: ", *bytes_written, "\n");
@@ -568,7 +569,7 @@ ERR_CODE syscall_create_obj_and_handle(const char *path, uint64_t path_len, GEN_
     if (result == ERR_CODE::NO_ERROR)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "New leaf created!\n");
-      new_leaf_ptr = std::dynamic_pointer_cast<IHandledObject >(new_leaf);
+      new_leaf_ptr = std::dynamic_pointer_cast<IHandledObject>(new_leaf);
       new_handle = cur_thread->thread_handles.store_object(new_leaf_ptr);
       *handle = new_handle;
 
@@ -576,7 +577,7 @@ ERR_CODE syscall_create_obj_and_handle(const char *path, uint64_t path_len, GEN_
     }
   }
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA< "Result: ", result, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
 
   return result;

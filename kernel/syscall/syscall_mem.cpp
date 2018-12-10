@@ -16,15 +16,18 @@
 // - Having run out of RAM in syscall_allocate_backing_memory, we should deallocate some rather than just sitting tight.
 // - Attempting to double-map a virtual range causes a kernel panic.
 // - The way that VMM requires power-of-two sizes might cause trouble one day.
+// - mem_vmm_allocate_specific_range can trigger an ASSERT if a duplicate allocation is made.
 
 /// @brief Back a virtual address range in the calling process with physical RAM.
 ///
-/// This function will allocate physical RAM to back this allocation. Processes are responsible for managing their own
-/// virtual address spaces, so map_addr is an input, not an output.
+/// This function will allocate physical RAM to back this allocation.
 ///
 /// @param pages The number of pages to allocate.
 ///
-/// @param map_addr Pointer to the beginning of the range to be backed with RAM.
+/// @param map_addr Pointer to the beginning of the range to be backed with RAM. If *map_addr is nullptr, the kernel
+///                 will allocate virtual memory addresses on behalf of the process, returning the address of the
+///                 allocated memory in *map_addr. Otherwise, the kernel simply maps physical pages to the address
+///                 given by *map_addr.
 ///
 /// @return ERR_CODE::NO_ERROR if the allocated succeeded. ERR_CODE::INVALID_PARAM if the length is zero, or
 ///         `map_addr` does not point to a valid memory range. ERR_CODE::INVALID_OP if this virtual address range is
@@ -107,14 +110,45 @@ ERR_CODE syscall_allocate_backing_memory(uint64_t pages, void **map_addr)
 
 /// @brief Deallocate a virtual memory range from the requesting process.
 ///
-/// At present this function is not working, since the kernel doesn't really track virtual allocations by process...
+/// This function will deallocate the same number of pages as were previously allocated when dealloc_ptr was allocated.
 ///
 /// @param dealloc_ptr Pointer to the beginning of the range to deallocate.
 ///
-/// @return ERR_CODE::INVALID_OP in all cases, until the kernel works better.
+/// @return ERR_CODE::INVALID_OP if trying to deallocate kernel space, ERR_CODE::NOT_FOUND if dealloc_ptr doesn't point
+///         to the beginning of an allocation, and ERR_CODE::NO_ERROR otherwise - the deallocation succeeded.
 ERR_CODE syscall_release_backing_memory(void *dealloc_ptr)
 {
-  return ERR_CODE::INVALID_OP;
+  ERR_CODE result = ERR_CODE::NO_ERROR;
+  uint64_t num_pages;
+
+  KL_TRC_ENTRY;
+
+  if (!SYSCALL_IS_UM_ADDRESS(dealloc_ptr))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Can't deallocate kernel pages...\n");
+    result = ERR_CODE::INVALID_OP;
+  }
+  else
+  {
+    num_pages = mem_get_virtual_allocation_size(reinterpret_cast<uint64_t>(dealloc_ptr), nullptr);
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Allocation size: ", num_pages, "\n");
+
+    if (num_pages == 0)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Can only deallocate previously allocated space\n");
+      result = ERR_CODE::NOT_FOUND;
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Unmap that space\n");
+      mem_unmap_range(dealloc_ptr, num_pages, nullptr, true);
+    }
+  }
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
 }
 
 /// @brief Map a memory range to be shared between two processes.
@@ -179,7 +213,7 @@ ERR_CODE syscall_map_memory(GEN_HANDLE proc_mapping_in,
   {
     if (proc_mapping_in != 0)
     {
-      receiving_proc = 
+      receiving_proc =
         std::dynamic_pointer_cast<task_process>(cur_thread->thread_handles.retrieve_object(proc_mapping_in));
     }
     else
@@ -190,7 +224,7 @@ ERR_CODE syscall_map_memory(GEN_HANDLE proc_mapping_in,
 
     if (proc_already_in != 0)
     {
-      originating_proc = 
+      originating_proc =
         std::dynamic_pointer_cast<task_process>(cur_thread->thread_handles.retrieve_object(proc_already_in));
     }
     else
@@ -228,6 +262,7 @@ ERR_CODE syscall_map_memory(GEN_HANDLE proc_mapping_in,
             i++, extant_addr_l += MEM_PAGE_SIZE, map_addr_l += MEM_PAGE_SIZE)
         {
           phys_addr = mem_get_phys_addr(reinterpret_cast<void *>(extant_addr_l), originating_proc.get());
+          mem_vmm_allocate_specific_range(map_addr_l, 1, receiving_proc.get());
           mem_map_range(phys_addr, reinterpret_cast<void *>(map_addr_l), 1, receiving_proc.get());
         }
 

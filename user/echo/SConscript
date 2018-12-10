@@ -1,0 +1,6 @@
+# Beginnings of a simple echo program
+
+Import('env')
+files = [ "echo.cpp"]
+obj = env.Object("echo", files)
+Return ("obj")

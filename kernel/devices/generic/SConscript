@@ -1,6 +1,10 @@
 # Generic drivers.
 
 Import('env')
-obj = env.Library("dev-generic", [ "gen_keyboard.cpp",
-                                 ])
+obj = env.Library("dev-generic",
+                  [
+                    "gen_keyboard.cpp",
+                    "gen_terminal.cpp",
+                  ]
+                 )
 Return ("obj")

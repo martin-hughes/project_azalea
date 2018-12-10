@@ -51,12 +51,67 @@ ERR_CODE syscall_create_process(void *entry_point_addr, GEN_HANDLE *proc_handle)
 
     std::shared_ptr<IHandledObject> proc_ptr = std::dynamic_pointer_cast<IHandledObject>(new_process);
     *proc_handle = cur_thread->thread_handles.store_object(proc_ptr);
-    KL_TRC_TRACE(TRC_LVL::FLOW, "New process (", new_process, ") created, handle: ", *proc_handle, "\n");
+    KL_TRC_TRACE(TRC_LVL::FLOW, "New process (", new_process.get(), ") created, handle: ", *proc_handle, "\n");
 
     result = ERR_CODE::NO_ERROR;
   }
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+/// @brief Setup argc, argv and the environment for a newly created process.
+///
+/// Once a process has been started for the first time, this system call fail.
+///
+/// @param proc_handle The process to set parameters for.
+///
+/// @param argc The conventional C argc.
+///
+/// @param argv_ptr Pointer to traditional argv array.
+///
+/// @param environ_ptr Pointer to the traditional environment array.
+///
+/// @return A suitable error code - ERR_CODE::INVALID_OP if the process is already running.
+ERR_CODE syscall_set_startup_params(GEN_HANDLE proc_handle, uint64_t argc, uint64_t argv_ptr, uint64_t environ_ptr)
+{
+  ERR_CODE result = ERR_CODE::NO_ERROR;
+  std::shared_ptr<task_process> proc_obj;
+  task_thread *cur_thread = task_get_cur_thread();
+
+  KL_TRC_ENTRY;
+
+  if (cur_thread == nullptr)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't identify current thread\n");
+    result = ERR_CODE::INVALID_OP;
+  }
+  else
+  {
+    proc_obj = std::dynamic_pointer_cast<task_process>(cur_thread->thread_handles.retrieve_object(proc_handle));
+
+    if (proc_obj == nullptr)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Wrong object type\n");
+      result = ERR_CODE::NOT_FOUND;
+    }
+    else if (proc_obj->has_ever_started)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Can't set parameters for a task that has already been started before\n");
+      result = ERR_CODE::INVALID_OP;
+    }
+    else
+    {
+      task_set_start_params(proc_obj.get(),
+                            argc,
+                            reinterpret_cast<char **>(argv_ptr),
+                            reinterpret_cast<char **>(environ_ptr));
+    }
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
 
   return result;
@@ -94,7 +149,7 @@ ERR_CODE syscall_start_process(GEN_HANDLE proc_handle)
     }
     else
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Starting ", thread_obj, "\n");
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Starting ", proc_obj.get(), "\n");
       proc_obj->start_process();
       result = ERR_CODE::NO_ERROR;
     }
@@ -205,10 +260,14 @@ void syscall_exit_process()
 {
   KL_TRC_ENTRY;
 
-  std::shared_ptr<task_process> this_proc;
+  task_process *this_proc;
   task_thread *this_thread;
+
+  // Get a pointer to the process object instead of a shared one, because exiting the process means the shared pointer
+  // object will never go out of scope, leaving the process object hanging forever. Using the raw pointer is safe
+  // because we know the process must exist at the moment, since we're running in it.
   this_thread = task_get_cur_thread();
-  this_proc = this_thread->parent_process;
+  this_proc = this_thread->parent_process.get();
 
   this_proc->destroy_process();
 
@@ -259,7 +318,7 @@ ERR_CODE syscall_create_thread(void (*entry_point)(), GEN_HANDLE *thread_handle)
     if (new_thread != nullptr)
     {
       *thread_handle = cur_thread->thread_handles.store_object(new_thread);
-      KL_TRC_TRACE(TRC_LVL::FLOW, "New thread (", new_thread, ") created, handle: ", *thread_handle, "\n");
+      KL_TRC_TRACE(TRC_LVL::FLOW, "New thread (", new_thread.get(), ") created, handle: ", *thread_handle, "\n");
 
       result = ERR_CODE::NO_ERROR;
     }
@@ -309,7 +368,7 @@ ERR_CODE syscall_start_thread(GEN_HANDLE thread_handle)
     }
     else
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Starting ", thread_obj, "\n");
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Starting ", thread_obj.get(), "\n");
       thread_started = thread_obj->start_thread();
       if (thread_started)
       {

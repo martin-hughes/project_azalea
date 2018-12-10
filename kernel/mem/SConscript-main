@@ -1,8 +1,8 @@
 # Kernel Memory library.
 
-files = ["misc.cpp",
+files = [
+         "misc.cpp",
          "physical.cpp",
-         "virtual.cpp",
          "x64/mem-x64.cpp",
          "x64/mem_pml4-x64.cpp",
          "x64/mem_support-x64.asm",
@@ -10,5 +10,5 @@ files = ["misc.cpp",
         ]
 
 Import('env')
-obj = env.Library("mem", files)
-Return ("obj") 
+obj = env.Library("mem-main", files)
+Return ("obj")
