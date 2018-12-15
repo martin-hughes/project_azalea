@@ -30,8 +30,12 @@ TEST(SchedulerTest, ProcessStartOneThreadAndExitThread)
 
   child_thread->destroy_thread();
 
+  child_thread = nullptr;
+  new_proc = nullptr;
+
   test_only_reset_task_mgr();
   test_only_reset_system_tree();
+  test_only_reset_allocator();
 }
 
 TEST(SchedulerTest, ProcessStartOneThreadAndExitProcess)
@@ -53,6 +57,10 @@ TEST(SchedulerTest, ProcessStartOneThreadAndExitProcess)
 
   new_proc->destroy_process();
 
+  new_proc = nullptr;
+  child_thread = nullptr;
+
   test_only_reset_task_mgr();
   test_only_reset_system_tree();
+  test_only_reset_allocator();
 }

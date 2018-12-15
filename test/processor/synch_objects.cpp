@@ -98,4 +98,5 @@ TEST(ProcessorTests, WaitObjects)
 
   test_only_reset_task_mgr();
   test_only_reset_system_tree();
+  test_only_reset_allocator();
 }

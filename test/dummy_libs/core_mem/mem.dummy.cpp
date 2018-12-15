@@ -87,7 +87,7 @@ void mem_x64_unmap_virtual_page(uint64_t virt_addr, task_process *context)
   // as above.
 }
 
-class process_x64_data;
+struct process_x64_data;
 
 void mem_x64_pml4_allocate(process_x64_data &new_proc_data)
 {

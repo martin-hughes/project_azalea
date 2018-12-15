@@ -59,7 +59,9 @@ TEST(SystemTreeTest, ProcFsOneProcessIdFile)
 
   test_only_set_cur_thread(nullptr);
   proc->destroy_process();
+  proc = nullptr;
 
   test_only_reset_task_mgr();
   test_only_reset_system_tree();
+  test_only_reset_allocator();
 }

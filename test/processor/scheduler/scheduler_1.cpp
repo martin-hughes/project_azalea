@@ -106,7 +106,10 @@ TEST(SchedulerTest, SimpleTests)
 
   proc_a->destroy_process();
   proc_b->destroy_process();
+  proc_a = nullptr;
+  proc_b = nullptr;
 
   test_only_reset_task_mgr();
   test_only_reset_system_tree();
+  test_only_reset_allocator();
 }
