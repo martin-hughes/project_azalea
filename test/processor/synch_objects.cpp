@@ -40,7 +40,7 @@ TEST(ProcessorTests, WaitObjects)
 
   // At the moment, there is only one thread, so it should be returned to us repeatedly.
   thread_a = task_get_next_thread();
-  ASSERT_NE(thread_a, nullptr);
+  ASSERT_TRUE(thread_a != nullptr);
   for (i = 0; i < 10; i++)
   {
     ASSERT_EQ(thread_a, task_get_next_thread());

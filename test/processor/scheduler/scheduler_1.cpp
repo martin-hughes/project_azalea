@@ -38,7 +38,7 @@ TEST(SchedulerTest, SimpleTests)
   // At the moment, there is only one thread, so it should be returned to us repeatedly.
   thread_a = task_get_next_thread();
   cout << "Thread A: " << thread_a << endl;
-  ASSERT_NE(thread_a, nullptr);
+  ASSERT_NE(thread_a, (task_thread *)nullptr);
   for (i = 0; i < 10; i++)
   {
     ASSERT_EQ(thread_a, task_get_next_thread());

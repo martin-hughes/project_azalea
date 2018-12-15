@@ -86,7 +86,7 @@ def main_build_script(linux_build):
     if config.test_attempt_mem_leak_check:
       additional_defines += ' -D UT_MEM_LEAK_CHECK'
     test_script_env['LINKFLAGS'] = '/DEBUG:FULL /MAP:output\\main-tests.map /INCREMENTAL /NOLOGO'
-    cxx_flags = additional_defines + ' /nologo /EHac /Od /ZI /Fdoutput\\main-tests.pdb'
+    cxx_flags = additional_defines + ' /nologo /EHac /Od /ZI /Fdoutput\\main-tests.pdb /std:c++17 /Zc:__cplusplus /permissive-'
     exe_name = 'main-tests.exe'
     additional_include_tag = 'INCLUDE'
 

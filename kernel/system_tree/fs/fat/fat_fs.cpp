@@ -2,6 +2,13 @@
 ///
 /// Implements all of FAT12/16/32
 
+// Known deficiencies
+// - We're very lazy at reusing objects
+// - There's no thread safety (although not a problem while read-only)
+// - Does fat_folder really need to know its own name?
+// - Some parameter orders are inconsistent
+// - Some return types are inconsistent.
+
 //#define ENABLE_TRACING
 
 #include "fat_fs.h"
@@ -80,13 +87,24 @@ fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
     kl_memcpy(temp_bpb, &this->bpb_32, sizeof(this->bpb_32));
     root_dir_start_sector = 0;
     root_dir_sector_count = 0;
-    first_data_sector = 0;
-
-    this->_status = DEV_STATUS::FAILED;
 
     shared_bpb = &this->bpb_32.shared;
 
-    INCOMPLETE_CODE(NO FAT 32);
+    this->fat_length_bytes = this->bpb_32.fat_size_32 * this->bpb_32.shared.bytes_per_sec;
+
+    _raw_fat = std::make_unique<uint8_t[]>(fat_length_bytes);
+    r = this->_storage->read_blocks(bpb_32.shared.rsvd_sec_cnt,
+                                    bpb_32.fat_size_32,
+                                    _raw_fat.get(),
+                                    fat_length_bytes);
+    if (r != ERR_CODE::NO_ERROR)
+    {
+      KL_TRC_TRACE(TRC_LVL::ERROR, "Failed to read FAT to RAM\n");
+      this->_status = DEV_STATUS::FAILED;
+    }
+
+    first_data_sector = bpb_32.shared.rsvd_sec_cnt
+                        + (bpb_32.shared.num_fats * bpb_32.fat_size_32);
   }
 
   klib_synch_spinlock_unlock(this->gen_lock);
@@ -99,7 +117,9 @@ std::shared_ptr<fat_filesystem> fat_filesystem::create(std::shared_ptr<IBlockDev
 
 fat_filesystem::~fat_filesystem()
 {
+  KL_TRC_ENTRY;
 
+  KL_TRC_EXIT;
 }
 
 ERR_CODE fat_filesystem::get_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child)
@@ -109,15 +129,27 @@ ERR_CODE fat_filesystem::get_child(const kl_string &name, std::shared_ptr<ISyste
   ERR_CODE ec = ERR_CODE::UNKNOWN;
   fat_dir_entry fde;
   std::shared_ptr<fat_file> file_obj;
+  kl_string first_part;
+  kl_string second_part;
 
-  ec = this->get_dir_entry(name, true, 0, fde);
-
-  if (ec == ERR_CODE::NO_ERROR)
+  // We create an object corresponding to the root directory here, because it relies on a shared
+  // pointer to this object, so it can't be created in this class's constructor.
+  if (!root_directory)
   {
-    file_obj = std::make_shared<fat_file>(fde, shared_from_this());
-    child = std::dynamic_pointer_cast<ISystemTreeLeaf>(file_obj);
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Create root directory.\n");
+    kl_memset(&fde, 0, sizeof(fat_dir_entry));
+    if (this->type == FAT_TYPE::FAT32)
+    {
+      fde.first_cluster_high = bpb_32.root_cluster >> 16;
+      fde.first_cluster_low = bpb_32.root_cluster & 0xFFFF;
+      fde.attributes.directory = 1;
+    }
+    root_directory = std::make_shared<fat_folder>(fde, shared_from_this(), true);
   }
 
+  ec = root_directory->get_child(name, child);
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", ec, "\n");
   KL_TRC_EXIT;
   return ec;
 }
@@ -135,6 +167,11 @@ ERR_CODE fat_filesystem::rename_child(const kl_string &old_name, const kl_string
 ERR_CODE fat_filesystem::delete_child(const kl_string &name)
 {
   return ERR_CODE::INVALID_OP;
+}
+
+ERR_CODE fat_filesystem::create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+{
+  return ERR_CODE::UNKNOWN;
 }
 
 /// @brief Determine the FAT type from the provided parameters block
@@ -191,155 +228,56 @@ FAT_TYPE determine_fat_type(fat32_bpb &bpb)
   return ret;
 }
 
-ERR_CODE fat_filesystem::get_dir_entry(const kl_string &name,
-                                       bool start_in_root,
-                                       uint64_t dir_first_cluster,
-                                       fat_dir_entry &storage)
+/// @brief What is the next sector to be read from this file?
+///
+/// This function only returns valid results for 'normal' files - it does not work for sectors outside of the data area
+/// (for example, when reading the root director on FAT12/FAT16 partitions).
+///
+/// @param current_sector_num The sector of the file currently being read.
+///
+/// @param next_sector_num[out] The next sector that should be read to continue this file. If there is no valid next
+///                             sector this value will be unchanged and the function will return false.
+///
+/// @return true if there is a valid next sector to read. False otherwise.
+bool fat_filesystem::get_next_read_sector(uint64_t current_sector_num, uint64_t &next_sector_num)
 {
+  bool result = true;
+  uint64_t cur_cluster;
+  uint16_t cur_offset;
+
   KL_TRC_ENTRY;
 
-  ERR_CODE ret_code = ERR_CODE::NO_ERROR;
-  bool continue_looking = true;
-  uint64_t sector_to_look_at;
-  fat_dir_entry *cur_entry;
-  kl_string first_part;
-  kl_string ext_part;
-  uint64_t dot_pos;
-  char short_name[12] =
-  { 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00 };
-
-  //KL_TRC_TRACE(TRC_LVL::EXTRA, "Looking for name: ", name.);
-
-  // Validate the name as an 8.3 file name.
-  if (name.find("\\") != kl_string::npos)
+  if (!convert_sector_to_cluster_num(current_sector_num, cur_cluster, cur_offset))
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Can't search subdirectories\n");
-    ret_code = ERR_CODE::INVALID_PARAM;
-  }
-  else if (name.length() > 12)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Only 8.3 names supported at the mo\n");
-    ret_code = ERR_CODE::INVALID_NAME;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid current sector\n");
+    result = false;
   }
   else
   {
-    dot_pos = name.find(".");
-    if (dot_pos == kl_string::npos)
+    if (cur_offset == (this->shared_bpb->secs_per_cluster - 1))
     {
-      if (name.length() > 8)
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Move to next cluster\n");
+      cur_cluster = get_next_cluster_num(cur_cluster);
+      if (this->is_normal_cluster_number(cur_cluster))
       {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid 8.3. name, first part too long\n");
-        ret_code = ERR_CODE::INVALID_NAME;
+        next_sector_num = convert_cluster_to_sector_num(cur_cluster);
       }
       else
       {
-        first_part = name;
-        ext_part = "";
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Next cluster is invalid\n");
+        result = false;
       }
-    }
-    else if (dot_pos > 8)
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid 8.3 name - dot too late");
-      ret_code = ERR_CODE::INVALID_NAME;
     }
     else
     {
-      first_part = name.substr(0, dot_pos);
-      ext_part = name.substr(dot_pos + 1, name.length());
-
-      if ((first_part.length() > 8) || (ext_part.length() > 3))
-      {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid 8.3 name - parts wrong length");
-        ret_code = ERR_CODE::INVALID_NAME;
-      }
-    }
-
-    if (ret_code == ERR_CODE::NO_ERROR)
-    {
-      for (int i = 0; i < first_part.length(); i++)
-      {
-        short_name[i] = first_part[i];
-        if ((short_name[i] >= 'a') && (short_name[i] <= 'z'))
-        {
-          short_name[i] = short_name[i] - 'a' + 'A';
-        }
-      }
-
-      for (int i = 0; i < ext_part.length(); i++)
-      {
-        short_name[i + 8] = ext_part[i];
-        if ((short_name[i + 8] >= 'a') && (short_name[i + 8] <= 'z'))
-        {
-          short_name[i + 8] = short_name[i + 8] - 'a' + 'A';
-        }
-      }
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Increment sector number\n");
+      next_sector_num = current_sector_num + 1;
     }
   }
 
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Looking for short name: ", short_name, "\n");
-
-  klib_synch_spinlock_lock(this->gen_lock);
-
-  if ((start_in_root) && (this->type != FAT_TYPE::FAT32))
-  {
-    sector_to_look_at = root_dir_start_sector;
-  }
-  else
-  {
-    sector_to_look_at = 0;
-    INCOMPLETE_CODE("Only deals with root directory just now");
-  }
-  ret_code = this->_storage->read_blocks(sector_to_look_at, 1, this->_buffer.get(), ASSUMED_SECTOR_SIZE);
-
-  if (ret_code != ERR_CODE::NO_ERROR)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Read error: ", ret_code, "\n");
-  }
-
-  while (continue_looking && (ret_code == ERR_CODE::NO_ERROR))
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Looking in the next sector\n");
-    cur_entry = reinterpret_cast<fat_dir_entry *>(this->_buffer.get());
-    for (int i = 0; i < ASSUMED_SECTOR_SIZE / sizeof(fat_dir_entry); i++, cur_entry++)
-    {
-      //KL_TRC_TRACE(TRC_LVL::FLOW, "Examining: ", cur_entry->name, "\n");
-      if (kl_memcmp(&cur_entry->name, short_name, 11) == 0)
-      {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Found entry\n");
-        kl_memcpy(cur_entry, &storage, sizeof(fat_dir_entry));
-        continue_looking = false;
-        break;
-      }
-    }
-
-    if (continue_looking)
-    {
-      if (start_in_root && (this->type != FAT_TYPE::FAT32))
-      {
-        sector_to_look_at++;
-        if (sector_to_look_at >= (this->root_dir_start_sector + this->root_dir_sector_count))
-        {
-          KL_TRC_TRACE(TRC_LVL::FLOW, "File not found\n");
-          ret_code = ERR_CODE::NOT_FOUND;
-        }
-      }
-      else
-      {
-        INCOMPLETE_CODE("Only root directory");
-      }
-
-      if (ret_code == ERR_CODE::NO_ERROR)
-      {
-        ret_code = this->_storage->read_blocks(sector_to_look_at, 1, this->_buffer.get(), ASSUMED_SECTOR_SIZE);
-      }
-    }
-  }
-
-  klib_synch_spinlock_unlock(this->gen_lock);
-
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
-
-  return ret_code;
+  return result;
 }
 
 /// @brief For a given cluster number, return the next cluster in the chain, as indicated by the FAT.
@@ -458,7 +396,62 @@ bool fat_filesystem::is_normal_cluster_number(uint64_t cluster_num)
   return is_normal;
 }
 
-ERR_CODE fat_filesystem::create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+/// @brief Returns the number of the first sector in a given cluster.
+///
+/// @param cluster_num The cluster number to retrieve the first sector of.
+///
+/// @return The number of the first sector in the given cluster. If the cluster number is invalid, returns ~0.
+uint64_t fat_filesystem::convert_cluster_to_sector_num(uint64_t cluster_num)
 {
-  return ERR_CODE::UNKNOWN;
+  uint64_t sector_num;
+
+  KL_TRC_ENTRY;
+
+  if (is_normal_cluster_number(cluster_num))
+  {
+    sector_num = ((cluster_num - 2) * this->shared_bpb->secs_per_cluster) + this->first_data_sector;
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Is special cluster\n");
+    sector_num = ~0;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", sector_num, "\n");
+  KL_TRC_EXIT;
+  return sector_num;
+}
+
+/// @brief Converts a known sector number into the number of the cluster it resides in, and the offset within it.
+///
+/// @param sector_num The number of the sector to find the cluster for.
+///
+/// @param cluster_num[out] The number of the cluster the sector resides in.
+///
+/// @param offset[out] How many sectors in to the cluster the sector is.
+///
+/// @return True if the sector is in a normal cluster, false otherwise. If false, the output parameters are invalid.
+bool fat_filesystem::convert_sector_to_cluster_num(uint64_t sector_num, uint64_t &cluster_num, uint16_t &offset)
+{
+  bool result = true;
+  uint64_t sectors_in_to_data_region;
+
+  KL_TRC_ENTRY;
+
+  if ((sector_num < this->first_data_sector) || (sector_num > this->max_sectors))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Sector out of range\n");
+    result = false;
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Normal sector\n");
+    sectors_in_to_data_region = sector_num - this->first_data_sector;
+    cluster_num = (sectors_in_to_data_region / this->shared_bpb->secs_per_cluster) + 2;
+    offset = sectors_in_to_data_region % this->shared_bpb->secs_per_cluster;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+  return result;
 }
