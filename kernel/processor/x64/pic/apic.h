@@ -20,6 +20,8 @@ void proc_apic_send_ipi(const uint32_t apic_dest,
                         const unsigned char vector,
                         const bool wait_for_delivery);
 
+/// @brief The memory-mapped registers of a Local APIC device.
+///
 struct apic_registers
 {
   uint64_t reserved_1[4] __attribute__ ((aligned (16)));

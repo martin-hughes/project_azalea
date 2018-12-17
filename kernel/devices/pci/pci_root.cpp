@@ -1,4 +1,5 @@
-/// @file Implements a driver that controls all other PCI devices.
+/// @file
+/// @brief Implements a driver that controls all other PCI devices.
 
 //#define ENABLE_TRACING
 

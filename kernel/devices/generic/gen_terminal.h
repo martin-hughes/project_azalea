@@ -13,6 +13,9 @@
 
 #include <memory>
 
+/// @brief A very simple terminal device that displays text on a VGA device.
+///
+/// There is scope for this to be *significantly* improved in future versions.
 class generic_terminal : public IDevice
 {
 public:

@@ -1,7 +1,8 @@
 #ifndef _MEM_INTERNAL_H
 #define _MEM_INTERNAL_H
 
-struct vmm_process_data;
+#include <stdint.h>
+#include "mem.h"
 
 const uint64_t MEM_MAX_SUPPORTED_PAGES = 2048;
 

@@ -5,9 +5,12 @@
 #include <stdint.h>
 
 #include "klib/klib.h"
+
 extern "C"
 {
+#ifndef DOXYGEN_BUILD
 #include "external/acpica/source/include/acpi.h"
+#endif
 }
 #include "processor/processor.h"
 #include "processor/timing/timing.h"

@@ -1,4 +1,5 @@
-/// @file Processor-generic functionality.
+/// @file
+/// @brief Processor-generic functionality.
 ///
 /// Some processor management functionality is common to all usual processor types, and that is handled in this file.
 

@@ -10,14 +10,18 @@ const uint64_t SM_PCHAR = 3;
 
 /* System message structures */
 
-/* Used for both key pressed and key released messages. */
+/**
+ * @brief Message that is sent whenever a key is pressed or released.
+ **/
 struct keypress_msg
 {
   KEYS key_pressed;
   special_keys modifiers;
 };
 
-/* Used to indicate that a printable character was pressed, and what that character is. */
+/**
+ * @brief Message that is used to indicate that a printable character was pressed, and what that character is.
+ **/
 struct key_char_msg
 {
   char pressed_character;

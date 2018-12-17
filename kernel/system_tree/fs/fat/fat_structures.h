@@ -6,6 +6,9 @@
 #include <stdint.h>
 
 #pragma pack ( push , 1 )
+
+/// @brief Fields of the FAT BPB that are generic to all sizes of FAT filesystem.
+///
 struct fat_generic_bpb
 {
   char jmp_code[3];
@@ -26,6 +29,8 @@ struct fat_generic_bpb
 
 static_assert(sizeof(fat_generic_bpb) == 36, "Size of FAT Generic BPB wrong.");
 
+/// @brief A FAT12 and FAT16 style BPB.
+//
 struct fat16_bpb
 {
   fat_generic_bpb shared;
@@ -40,6 +45,8 @@ struct fat16_bpb
 
 static_assert(sizeof(fat16_bpb) == 62, "Sizeof FAT12/16 BPB wrong.");
 
+/// @brief A FAT32 style BPB.
+///
 struct fat32_bpb
 {
   fat_generic_bpb shared;
@@ -61,6 +68,8 @@ struct fat32_bpb
 
 static_assert(sizeof(fat32_bpb) == 90, "Size of FAT32 BPB wrong.");
 
+/// @brief FAT style time storage structure.
+///
 struct fat_time
 {
   uint16_t two_seconds :5;
@@ -68,6 +77,8 @@ struct fat_time
   uint16_t hours :5;
 };
 
+/// @brief FAT style date storage structure.
+///
 struct fat_date
 {
   uint16_t day :5;
@@ -75,6 +86,8 @@ struct fat_date
   uint16_t year :7;
 };
 
+/// @brief FAT long filename directory entry structure.
+///
 struct fat_long_filename_entry
 {
   uint8_t entry_idx;
@@ -107,6 +120,9 @@ struct fat_long_filename_entry
   }
 };
 
+/// @brief FAT directory entry structure.
+///
+/// Can be used for both long and short forms.
 struct fat_dir_entry
 {
   union
@@ -148,6 +164,8 @@ static_assert(sizeof(fat16_bpb) == 62, "Sizeof FAT12/16 BPB is wrong");
 static_assert(sizeof(fat32_bpb) == 90, "Sizeof FAT32 BPB is wrong");
 static_assert(sizeof(fat_dir_entry) == 32, "Sizeof FAT entry is wrong");
 
+/// @brief Defines the types of FAT the kernel understands.
+///
 enum class FAT_TYPE
 {
   FAT12,

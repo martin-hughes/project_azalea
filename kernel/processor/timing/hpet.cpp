@@ -7,7 +7,9 @@
 #include "processor/timing/hpet.h"
 extern "C"
 {
+#ifndef DOXYGEN_BUILD
 #include "external/acpica/source/include/acpi.h"
+#endif
 }
 
 hpet_hardware_cfg_block *hpet_config = nullptr;

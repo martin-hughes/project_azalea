@@ -5,6 +5,10 @@
 
 #include "user_interfaces/keyboard.h"
 
+/// @brief The properties of a single keyboard key
+///
+/// These structures are combined into a list of key properties for each scancode of a keyboard, so that key presses
+/// can be converted in to actual input.
 struct key_props
 {
   bool printable;

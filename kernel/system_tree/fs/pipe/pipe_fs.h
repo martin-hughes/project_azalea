@@ -8,6 +8,9 @@
 
 #include <memory>
 
+/// @brief A system tree branch that implements a pipe using two leaves.
+///
+/// One leaf is a read-only leaf representing the output of the pipe, the other is a write-only 'input' leaf.
 class pipe_branch: public ISystemTreeBranch, public std::enable_shared_from_this<pipe_branch>
 {
 protected:
@@ -23,6 +26,8 @@ public:
   virtual ERR_CODE delete_child(const kl_string &name) override;
   virtual ERR_CODE create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
 
+  /// @brief The read-only output leaf of a pipe branch.
+  ///
   class pipe_read_leaf: public IReadable, public ISystemTreeLeaf
   {
   public:
@@ -42,6 +47,8 @@ public:
     bool block_on_read;
   };
 
+  /// @brief The write-only input leaf of a pipe branch.
+  ///
   class pipe_write_leaf: public IWritable, public ISystemTreeLeaf
   {
   public:

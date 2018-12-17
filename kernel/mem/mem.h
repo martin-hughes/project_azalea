@@ -1,3 +1,6 @@
+/// @file
+/// @brief Generic memory handling interface.
+
 #ifndef MEM_H_
 #define MEM_H_
 
@@ -72,6 +75,8 @@ enum MEM_CACHE_MODES
 };
 
 #pragma pack(push,1)
+/// @brief A single record within an E820 memory map.
+///
 struct e820_record
 {
   uint32_t size;
@@ -83,6 +88,9 @@ struct e820_record
 
 static_assert(sizeof(e820_record) == 24, "e820 record size wrong");
 
+/// @brief Pointer to an 'E820' memory map.
+///
+/// This is usually provided by a multiboot compliant bootloader.
 struct e820_pointer
 {
   e820_record *table_ptr;

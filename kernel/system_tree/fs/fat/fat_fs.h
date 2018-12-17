@@ -25,7 +25,10 @@ public:
   virtual ERR_CODE delete_child(const kl_string &name) override;
   virtual ERR_CODE create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
 
-
+  /// @brief Represents a single file on a FAT partition.
+  ///
+  /// Since directories are basically stored like normal files but with the directory attribute set, this can also read
+  /// the contents of directory 'files'.
   class fat_file: public IBasicFile, public ISystemTreeLeaf
   {
   public:
@@ -59,6 +62,8 @@ public:
                                  std::shared_ptr<fat_filesystem> parent_ptr);
   };
 
+  /// @brief Represents a single directory on a FAT partition.
+  ///
   class fat_folder: public ISystemTreeBranch
   {
   public:

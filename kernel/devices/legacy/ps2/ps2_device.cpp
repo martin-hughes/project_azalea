@@ -1,4 +1,5 @@
-/// @file Generic implementation of the two main PS/2 device types - mouse and keyboard.
+/// @file
+/// @brief Generic implementation of the two main PS/2 device types - mouse and keyboard.
 ///
 /// Many functions in this file have no particular documentation, since the documentation would be the same as the
 /// interface class they derive from.

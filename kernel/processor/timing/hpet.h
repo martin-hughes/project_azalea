@@ -34,6 +34,9 @@ uint64_t time_hpet_compute_wait(uint64_t wait_in_ns);
 160-3FFh Reserved for Timers 3-31*/
 
 #pragma pack(push, 1)
+
+/// @brief Structure representing the configuration of a single timer within a HPET device.
+///
 struct hpet_timer_cfg
 {
   uint64_t cfg_and_caps;
@@ -42,6 +45,8 @@ struct hpet_timer_cfg
   uint64_t reserved;
 };
 
+/// @brief Structure representing the configuration of a HPET device in memory-mapped space.
+///
 struct hpet_hardware_cfg_block
 {
   uint64_t gen_cap_and_id;

@@ -1,4 +1,5 @@
-/// @file PS/2 device drivers header. Provides generic PS/2 device drivers that can be extended as needed by anything
+/// @file
+/// @brief PS/2 device drivers header. Provides generic PS/2 device drivers that can be extended as needed by anything
 /// more fancy
 
 #ifndef DEVICE_PS2_DEVICE_HDR
@@ -12,6 +13,9 @@
 class gen_ps2_controller_device;
 class task_process;
 
+/// @brief A generic PS/2 device.
+///
+/// This driver does nothing, to actually communicate with a PS/2 device it is necessary to write a derived class.
 class gen_ps2_device : public IDevice, IInterruptReceiver
 {
 public:
@@ -37,12 +41,16 @@ protected:
   bool _irq_enabled;
 };
 
+/// @brief Driver for a generic PS/2 mouse.
+///
 class ps2_mouse_device : public gen_ps2_device
 {
 public:
   ps2_mouse_device(gen_ps2_controller_device *parent, bool second_channel);
 };
 
+/// @brief Driver for a generic PS/2 keyboard.
+///
 class ps2_keyboard_device : public gen_ps2_device
 {
 public:

@@ -20,6 +20,8 @@ struct page_table_entry
   uint8_t cache_type;
 };
 
+/// @brief Memory-manager data that is per-process and specific to the x64 architecture.
+///
 struct process_x64_data
 {
   klib_list_item<process_x64_data *> pml4_list_item;

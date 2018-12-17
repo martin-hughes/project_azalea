@@ -11,6 +11,10 @@
 
 #include <memory>
 
+/// @brief System Tree object for the root of the 'proc' tree.
+///
+/// The proc tree contains dynamic information in a similar way to the Linux equivalent. At present, this is only data
+/// relating to running processes.
 class proc_fs_root_branch: public system_tree_simple_branch, public std::enable_shared_from_this<proc_fs_root_branch>
 {
 public:
@@ -24,11 +28,15 @@ public:
   virtual ERR_CODE add_process(std::shared_ptr<task_process> new_process);
   virtual ERR_CODE remove_process(std::shared_ptr<task_process> old_process);
 
+  /// @brief A wrapper around mem_fs_leaf
+  ///
   class proc_fs_simple_leaf : public mem_fs_leaf
   {
     virtual ~proc_fs_simple_leaf();
   };
 
+  /// @brief Branch representing a single running process.
+  ///
   class proc_fs_proc_branch : public system_tree_simple_branch
   {
   protected:
@@ -44,6 +52,11 @@ public:
   };
 
 protected:
+
+  /// @brief Branch that returns the child objects of the currently running process.
+  ///
+  /// It is intended that there will be a single 'proc\\0\\' branch that represents the current process, so a process
+  /// does not need to know it's own process ID to access details about itself from proc.
   class proc_fs_zero_proxy_branch : public ISystemTreeBranch
   {
   public:

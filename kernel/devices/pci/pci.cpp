@@ -1,4 +1,5 @@
-/// @file Generic PCI code
+/// @file
+/// @brief Generic PCI code
 ///
 /// Functions useful for all PCI drivers that don't really fit in a particular place.
 
