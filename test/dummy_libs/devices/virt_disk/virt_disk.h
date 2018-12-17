@@ -7,6 +7,8 @@
 #include "user_interfaces/error_codes.h"
 #include "klib/data_structures/string.h"
 
+#include <memory>
+
 class virtual_disk_dummy_device: public IBlockDevice
 {
 public:

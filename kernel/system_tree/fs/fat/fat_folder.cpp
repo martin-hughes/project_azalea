@@ -5,13 +5,10 @@
 #include "klib/klib.h"
 #include "fat_fs.h"
 
-const uint64_t ASSUMED_SECTOR_SIZE = 512;
-
 fat_filesystem::fat_folder::fat_folder(fat_dir_entry file_data_record,
                                        std::shared_ptr<fat_filesystem> parent,
                                        bool root_directory) :
   parent{parent},
-  storage_info{storage_info},
   is_root_dir{root_directory},
   underlying_file{file_data_record, parent, root_directory}
 {
@@ -285,7 +282,7 @@ ERR_CODE fat_filesystem::fat_folder::read_one_dir_entry(uint32_t entry_idx, fat_
 /// @return True if the filename could be converted, false otherwise.
 bool fat_filesystem::fat_folder::populate_short_name(kl_string filename, char *short_name)
 {
-  bool result;
+  bool result = true;
   kl_string first_part;
   kl_string ext_part;
   uint64_t dot_pos;
@@ -514,14 +511,14 @@ bool fat_filesystem::fat_folder::is_valid_filename_char(uint16_t ch, bool long_f
            (ch == '#') ||
            (ch == '&') ||
            (long_filename &&
-            (ch == '+') ||
-            (ch == ',') ||
-            (ch == ';') ||
-            (ch == '=') ||
-            (ch == '[') ||
-            (ch == ']') ||
-            (ch == ' ') ||
-            (ch == '.'));
+            ((ch == '+') ||
+             (ch == ',') ||
+             (ch == ';') ||
+             (ch == '=') ||
+             (ch == '[') ||
+             (ch == ']') ||
+             (ch == ' ') ||
+             (ch == '.')));
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;

@@ -74,7 +74,6 @@ public:
   protected:
     std::weak_ptr<fat_filesystem> parent;
     bool is_root_dir;
-    fat_dir_entry storage_info;
     fat_file underlying_file;
 
     ERR_CODE get_dir_entry(const kl_string &name, fat_dir_entry &storage);

@@ -17,7 +17,7 @@ def main_build_script(linux_build):
     kernel_env.Install(ui_folder, user_headers)
 
     # Main kernel part
-    kernel_env['CXXFLAGS'] = '-Wall -mno-red-zone -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=gnu++14 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
+    kernel_env['CXXFLAGS'] = '-Wall -mno-red-zone -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=c++17 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
     kernel_env['CFLAGS'] = '-Wall -mno-red-zone -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
     kernel_env['LINKFLAGS'] = "-T build_support/kernel_stage.ld --start-group"
     kernel_env['LINK'] = 'ld -Map output/kernel_map.map'
@@ -28,7 +28,7 @@ def main_build_script(linux_build):
 
     # User mode API and programs environment
     user_mode_env = build_default_env(linux_build)
-    user_mode_env['CXXFLAGS'] = '-Wall -mno-red-zone -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=gnu++14 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
+    user_mode_env['CXXFLAGS'] = '-Wall -mno-red-zone -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=c++17 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
     user_mode_env['CFLAGS'] = '-Wall -mno-red-zone -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
     user_mode_env['LIBPATH'] = [config.libc_location, ]
     user_mode_env.AppendENVPath('CPATH', os.path.join(config.libc_location, "include"))
@@ -71,7 +71,7 @@ def main_build_script(linux_build):
 
   if linux_build:
     test_script_env['LINKFLAGS'] = '-L/usr/lib/llvm-6.0/lib/clang/6.0.0/lib/linux -Wl,--start-group'
-    cxx_flags = '-g -O0 -std=gnu++14 -Wunknown-pragmas'
+    cxx_flags = '-g -O0 -std=c++17 -Wunknown-pragmas'
     test_script_env['LIBS'] = [ ]
     if config.test_attempt_mem_leak_check:
       test_script_env['LIBS'].append ('clang_rt.asan-x86_64')
