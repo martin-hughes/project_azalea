@@ -1,10 +1,9 @@
-#include <azalea/syscall.h>
-#include <azalea/messages.h>
-#include <azalea/system_properties.h>
+// Azalea's initialization program.
+//
+// At present, all this does is start the shell program, repeatedly.
+
+#include <azalea/azalea.h>
 #include <string.h>
-#include <stdlib.h>
-#include <limits.h>
-#include <stdio.h>
 
 #define SC_DEBUG_MSG(string) \
   syscall_debug_output((string), strlen((string)) )
@@ -13,60 +12,26 @@ extern "C" int main (int argc, char **argv, char **env_p);
 
 int main (int argc, char **argv, char **env_p)
 {
-  SC_DEBUG_MSG("Hello!\n");
+  GEN_HANDLE proc_handle;
 
-  FILE *f;
-  const char *hw = "Hello, world!";
+  SC_DEBUG_MSG("Azalea initialization program\n");
 
-  if (argc != 2)
+  while (1)
   {
-    SC_DEBUG_MSG("Wrong argc\n");
+    SC_DEBUG_MSG("Start shell\n");
+    if (exec_file("root\\shell", 11, &proc_handle, nullptr, nullptr) != ERR_CODE::NO_ERROR)
+    {
+      SC_DEBUG_MSG("Failed to execute shell\n");
+      break;
+    }
+    else
+    {
+      SC_DEBUG_MSG("Done\n");
+      syscall_wait_for_object(proc_handle);
+      syscall_close_handle(proc_handle);
+      SC_DEBUG_MSG("Shell terminated - restart.\n");
+    }
   }
-
-  syscall_debug_output(argv[0], strlen(argv[0]));
-
-  char buf[60];
-  unsigned long fs_reg = 5;
-
-  __asm__ __volatile__ ("mov %%fs:0, %0" : "=r" (fs_reg) );
-
-  snprintf(buf, 60, "ooooh %d\n", fs_reg);
-  syscall_debug_output(buf, strlen(buf));
-
-  f = fopen("temp\\hello.txt", "r");
-  if (f == NULL)
-  {
-    SC_DEBUG_MSG("Couldn't open file\n");
-  }
-  else
-  {
-    fgets(buf, 60, f);
-    SC_DEBUG_MSG("Read input: ");
-    SC_DEBUG_MSG(buf);
-    SC_DEBUG_MSG("\nDone.\n");
-
-    fclose(f);
-    f = NULL;
-  }
-
-  printf("Hello, world!\n");
-
-  f = fopen("proc\\0\\id", "r");
-  if (f == NULL)
-  {
-    SC_DEBUG_MSG("Couldn't check ID\n");
-  }
-  else
-  {
-    memset(buf, 0, 60);
-    fgets(buf, 22, f);
-    printf("Process ID: %s\n", buf);
-
-    fclose(f);
-    f = NULL;
-  }
-
-  while(1) { };
 
   return 0;
 }

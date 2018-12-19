@@ -3,7 +3,10 @@
 //#define ENABLE_TRACING
 
 #include "klib/klib.h"
+
+#ifndef DOXYGEN_BUILD
 #include "acpi_if.h"
+#endif
 
 void acpi_init_table_system()
 {

@@ -1,4 +1,5 @@
-/// @file Generic keyboard functions.
+/// @file
+/// @brief Generic keyboard functions.
 ///
 /// At present these don't form a true driver so they seem a bit misplaced.
 

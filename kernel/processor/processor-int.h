@@ -76,6 +76,10 @@ struct task_x64_exec_context
 
   /// Value of GS Base for the process
   uint64_t gs_base;
+
+  /// The original value of syscall_stack, to be used when the process exits to delete the stack (in case
+  /// syscall_stack ever changes)
+  void *orig_syscall_stack;
 };
 #pragma pack ( pop )
 
@@ -107,7 +111,7 @@ struct proc_interrupt_data
 void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thread);
 void task_int_delete_exec_context(task_thread *old_thread);
 
-task_thread *task_get_next_thread(bool abandon_this_thread);
+task_thread *task_get_next_thread();
 extern "C" task_x64_exec_context *task_int_swap_task(uint64_t stack_addr, uint64_t cr3_value);
 
 void task_install_task_switcher();
@@ -119,6 +123,7 @@ void proc_config_interrupt_table();
 extern "C" void proc_handle_interrupt(uint16_t interrupt_num);
 extern "C" void proc_handle_irq(uint8_t irq_number);
 void proc_interrupt_slowpath_thread();
+void proc_tidyup_thread();
 
 std::shared_ptr<task_process> task_create_system_process();
 
@@ -128,12 +133,12 @@ void task_thread_cycle_lock();
 void task_thread_cycle_unlock();
 void task_idle_thread_cycle();
 
-extern bool *abandon_thread;
-
 extern const uint16_t PROC_NUM_INTERRUPTS;
 extern const uint16_t PROC_IRQ_BASE;
 extern const uint16_t PROC_NUM_IRQS;
 
 extern proc_interrupt_data proc_interrupt_data_table[];
+
+extern klib_list<std::shared_ptr<task_thread>> dead_thread_list;
 
 #endif

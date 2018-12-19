@@ -5,10 +5,12 @@
 
 #include <stdint.h>
 
+#ifndef DOXYGEN_BUILD
 extern "C"
 {
 #include "external/acpica/source/include/acpi.h"
 }
+#endif
 
 void acpi_init_table_system();
 

@@ -14,42 +14,56 @@
 
 using namespace std;
 
-// VirtualBox has some trouble with memory-mapping files, so this define causes the test script to copy the disk image
-// to /tmp before attempting to run the test.
-#ifdef AZALEA_TEST_COPY_MEM_MAP_FILES
-const char *copy_command = "cp test/assets/fat_disk_image.vdi /tmp/fat_disk_image.vdi";
-const char *sample_image = "/tmp/fat_disk_image.vdi";
-#else
-const char *sample_image = "test/assets/fat_disk_image.vdi";
-#endif
+struct test_file_details
+{
+  const char *filename;
+  bool success_expected;
+  ERR_CODE result_expected;
+  const char *expected_contents;
+};
+
+test_file_details test_list[] = {
+  { "TESTREAD.TXT", true, ERR_CODE::NO_ERROR, "This is a test." },
+  { "SHORTDIR\\TESTFILE.txt", true, ERR_CODE::NO_ERROR, "This file is in a directory."},
+  { "Long file name.txt", true, ERR_CODE::NO_ERROR, "This file has a long name."},
+  { "Long directory\\Long child name.txt", true, ERR_CODE::NO_ERROR, "This file has a long path."},
+  { "BAD.TXT", false, ERR_CODE::NOT_FOUND, ""},
+  { "This file really does not exist.blah.no", false, ERR_CODE::NOT_FOUND, ""},
+};
+
+const char *test_images[] = {
+  "test/assets/fat12_disk_image.vhd",
+  "test/assets/fat16_disk_image.vhd",
+  "test/assets/fat32_disk_image.vhd",
+};
 
 const uint32_t block_size = 512;
 
-class FatFsTest : public ::testing::Test
+class FatFsTest : public ::testing::TestWithParam<std::tuple<test_file_details, const char *>>
 {
 protected:
   shared_ptr<virtual_disk_dummy_device> backing_storage;
   shared_ptr<fat_filesystem> filesystem;
   shared_ptr<block_proxy_device> proxy;
 
-  FatFsTest()
-  {
-    #ifdef AZALEA_TEST_COPY_MEM_MAP_FILES
-    system(copy_command);
-    #endif
+  FatFsTest() = default;
+  ~FatFsTest() = default;
 
-    this->backing_storage = make_shared<virtual_disk_dummy_device>(sample_image, block_size);
+  void SetUp() override
+  {
+    auto [test_details, disk_image_name] = GetParam();
+    this->backing_storage = make_shared<virtual_disk_dummy_device>(disk_image_name, block_size);
     std::unique_ptr<uint8_t[]> sector_buffer(new uint8_t[512]);
     uint32_t start_sector;
     uint32_t sector_count;
     uint32_t write_blocks;
 
     memset(sector_buffer.get(), 0, 512);
-    EXPECT_EQ(ERR_CODE::NO_ERROR, backing_storage->read_blocks(0, 1, sector_buffer.get(), 512)) << "Virt. disk failed";
+    ASSERT_EQ(ERR_CODE::NO_ERROR, backing_storage->read_blocks(0, 1, sector_buffer.get(), 512)) << "Virt. disk failed";
 
     // Confirm that we've loaded a valid MBR
-    EXPECT_EQ(0x55, sector_buffer[510]) << "Invalid MBR";
-    EXPECT_EQ(0xAA, sector_buffer[511]) << "Invalid MBR";
+    ASSERT_EQ(0x55, sector_buffer[510]) << "Invalid MBR";
+    ASSERT_EQ(0xAA, sector_buffer[511]) << "Invalid MBR";
 
     // Parse the MBR to find the first partition.
     memcpy(&start_sector, sector_buffer.get() + 454, 4);
@@ -57,45 +71,61 @@ protected:
 
     proxy = make_shared<block_proxy_device>(backing_storage.get(), start_sector, sector_count);
 
-    EXPECT_EQ(DEV_STATUS::OK, proxy->get_device_status());
+    ASSERT_EQ(DEV_STATUS::OK, proxy->get_device_status());
 
     // Initialise the filesystem based on that information
     filesystem = fat_filesystem::create(proxy);
-  }
+  };
 
-  virtual ~FatFsTest()
+  void TearDown() override
   {
-  }
+
+  };
 };
+
+INSTANTIATE_TEST_CASE_P(FileList,
+                        FatFsTest,
+                        ::testing::Combine(::testing::ValuesIn(test_list),
+                                           ::testing::ValuesIn(test_images)));
 
 // Attempt to read data from a file on the test disk image. This file has a plain 8.3 filename and should simply
 // contain the text "This is a test." (15 characters.)
-TEST_F(FatFsTest, FatReading)
+TEST_P(FatFsTest, FatReading)
 {
   shared_ptr<ISystemTreeLeaf> basic_leaf;
   shared_ptr<IBasicFile> input_file;
-  const kl_string filename = "TESTREAD.TXT";
-  const char *expected_text = "This is a test.";
+  auto [test_details, disk_image_name] = GetParam();
+  const kl_string filename = test_details.filename;
+  const char *expected_text = test_details.expected_contents;
   const uint32_t expected_file_size = strlen(expected_text);
   unique_ptr<uint8_t[]> buffer = unique_ptr<uint8_t[]>(new uint8_t[expected_file_size + 1]);
   buffer[expected_file_size] = 0;
   uint64_t bytes_read;
   uint64_t actual_size;
+  ERR_CODE result;
 
-  ASSERT_EQ(ERR_CODE::NO_ERROR, filesystem->get_child(filename, basic_leaf)) << "Failed to open file on disk";
-  input_file = dynamic_pointer_cast<IBasicFile>(basic_leaf);
+  result = filesystem->get_child(filename, basic_leaf);
 
-  ASSERT_NE(nullptr, input_file) << "FAT leaf is not a file??";
+  if (test_details.success_expected)
+  {
+    ASSERT_EQ(ERR_CODE::NO_ERROR, result) << "Failed to open file on disk";
+    input_file = dynamic_pointer_cast<IBasicFile>(basic_leaf);
 
+    ASSERT_TRUE(input_file) << "FAT leaf is not a file??";
 
-  // Check the file is the expected size.
-  ASSERT_EQ(ERR_CODE::NO_ERROR, input_file->get_file_size(actual_size));
-  ASSERT_EQ(expected_file_size, actual_size);
+    // Check the file is the expected size.
+    ASSERT_EQ(ERR_CODE::NO_ERROR, input_file->get_file_size(actual_size));
+    ASSERT_EQ(expected_file_size, actual_size);
 
-  ASSERT_EQ(ERR_CODE::NO_ERROR,
-            input_file->read_bytes(0, expected_file_size, buffer.get(), expected_file_size + 1, bytes_read));
+    ASSERT_EQ(ERR_CODE::NO_ERROR,
+              input_file->read_bytes(0, expected_file_size, buffer.get(), expected_file_size + 1, bytes_read));
 
-  ASSERT_EQ(0, strcmp(expected_text, (char *)buffer.get()));
+    ASSERT_EQ(0, strcmp(expected_text, (char *)buffer.get()));
 
-  input_file = nullptr;
+    input_file = nullptr;
+  }
+  else
+  {
+    ASSERT_EQ(result, test_details.result_expected);
+  }
 }

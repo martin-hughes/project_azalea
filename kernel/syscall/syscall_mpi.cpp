@@ -1,4 +1,5 @@
-/// @file Message passing functions part of the syscall interface.
+/// @file
+/// @brief Message passing functions part of the syscall interface.
 
 #include "user_interfaces/syscall.h"
 #include "syscall/syscall_kernel.h"

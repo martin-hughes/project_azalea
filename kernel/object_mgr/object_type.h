@@ -5,7 +5,8 @@
 
 #include <memory>
 
-// Stores and object and related data in the object manager.
+/// @brief Stores an object and related data in the object manager.
+///
 struct object_data
 {
   std::shared_ptr<IHandledObject> object_ptr;

@@ -1,3 +1,6 @@
+/// @file
+/// @brief Implements a very simple non-thread-safe list.
+
 #pragma once
 
 #include "klib/panic/panic.h"
@@ -6,20 +9,53 @@
 
 template <typename T> struct klib_list;
 
+/// @brief Contains the details of a single item within a klib_list and the item's position within the list.
+///
+/// This object actually stores the object the user intends to store within the list. To avoid needing to allocate and
+/// initialise a klib_list_item object for each object the user wishes to store within the tree, this object can be
+/// embedded within the object being actually being stored. (See task_thread for an example of this.)
 template <typename T> struct klib_list_item
 {
+  /// @brief Pointer to the previous item in the list, or nullptr if this item is the head of the list.
+  ///
 	klib_list_item<T>* prev;
+
+  /// @brief The item being stored in the list.
+  ///
 	T item;
+
+  /// @brief The list this item is being stored in. Must not be nullptr, unless this item is not associated with any
+  /// list.
 	klib_list<T> *list_obj;
+
+  /// @brief Pointer to the next item in the list, or nullptr if this item is the tail of the list.
 	klib_list_item<T> *next;
 };
 
+/// @brief The 'root' of a simple list of objects of type T.
+///
+/// This type of list is actually always a list of klib_list_item objects that themselves contain the objects being
+/// stored within the list.
+///
+/// This object contains the pointers to the head and tail of the list.
+///
+/// If one of head or tail is nullptr, then both must be nullptr.
 template <typename T> struct klib_list
 {
+  /// @brief Pointer to the head of the list, or nullptr if there are no items in the list.
+  ///
 	klib_list_item<T> *head;
+
+  /// @brief Pointer to the tail of the list, or nullptr if there are no items in the list.
+  ///
 	klib_list_item<T> *tail;
 };
 
+/// @brief Initialise a new list root object.
+///
+/// List root objects must be initialised before they can be used.
+///
+/// @param new_list The new list item to initialise. Must not be nullptr.
 template <typename T> void klib_list_initialize(klib_list<T> *new_list)
 {
   ASSERT(new_list != nullptr);
@@ -27,6 +63,11 @@ template <typename T> void klib_list_initialize(klib_list<T> *new_list)
   new_list->tail = nullptr;
 }
 
+/// @brief Initialise a new list item object.
+///
+/// List item objects must be initialised before they can be used.
+///
+/// @param new_item The new item object to initialise. Must not be nullptr.
 template <typename T> void klib_list_item_initialize(klib_list_item<T> *new_item)
 {
   ASSERT(new_item != nullptr);
@@ -36,6 +77,13 @@ template <typename T> void klib_list_item_initialize(klib_list_item<T> *new_item
   new_item->prev = nullptr;
 }
 
+/// @brief Add a new item to a list, after the given item.
+///
+/// Neither list_item nor new_item can be nullptr.
+///
+/// @param list_item An item that is already in the list.
+///
+/// @param new_item The item to add to the list immediately after list_item.
 template <typename T> void klib_list_add_after(klib_list_item<T> *list_item, klib_list_item<T> *new_item)
 {
   ASSERT(list_item != nullptr);
@@ -58,6 +106,13 @@ template <typename T> void klib_list_add_after(klib_list_item<T> *list_item, kli
   }
 }
 
+/// @brief Add a new item to a list, before the given item.
+///
+/// Neither list_item nor new_item can be nullptr.
+///
+/// @param list_item An item that is already in the list.
+///
+/// @param new_item The item to add to the list immediately before list_item.
 template <typename T> void klib_list_add_before(klib_list_item<T> *list_item, klib_list_item<T> *new_item)
 {
   ASSERT(list_item != nullptr);
@@ -80,6 +135,11 @@ template <typename T> void klib_list_add_before(klib_list_item<T> *list_item, kl
   }
 }
 
+/// @brief Add a new item to the tail of an existing list.
+///
+/// @param existing_list The list root object of the list to add new_item to.
+///
+/// @param new_item The item to add to existing_list.
 template <typename T> void klib_list_add_tail(klib_list<T> *existing_list, klib_list_item<T> *new_item)
 {
   ASSERT(existing_list != nullptr);
@@ -105,6 +165,11 @@ template <typename T> void klib_list_add_tail(klib_list<T> *existing_list, klib_
   new_item->list_obj = existing_list;
 }
 
+/// @brief Add a new item to the head of an existing list.
+///
+/// @param existing_list The list root object of the list to add new_item to.
+///
+/// @param new_item The item to add to existing_list.
 template <typename T> void klib_list_add_head(klib_list<T> *existing_list, klib_list_item<T> *new_item)
 {
   ASSERT(existing_list != nullptr);
@@ -130,6 +195,10 @@ template <typename T> void klib_list_add_head(klib_list<T> *existing_list, klib_
   new_item->list_obj = existing_list;
 }
 
+/// @brief Remove an item from the list it is in
+///
+/// @param entry_to_remove The list item object that should be removed from the list it is in. Must be in a list
+///                        already and must not be nullptr.
 template <typename T> void klib_list_remove(klib_list_item<T> *entry_to_remove)
 {
   ASSERT(entry_to_remove != nullptr);
@@ -162,6 +231,11 @@ template <typename T> void klib_list_remove(klib_list_item<T> *entry_to_remove)
   entry_to_remove->prev = nullptr;
 }
 
+/// @brief Return the number of items in an existing list.
+///
+/// @param list_obj The list root object of the list in question.
+///
+/// @return The number of items in this list.
 template <typename T> uint64_t klib_list_get_length(klib_list<T> *list_obj)
 {
   uint64_t count = 0;
@@ -179,6 +253,15 @@ template <typename T> uint64_t klib_list_get_length(klib_list<T> *list_obj)
   return count;
 }
 
+/// @brief Determine whether the provided list has a consistent structure.
+///
+/// For the list to be consistent, each item must point to both the previous and next item correctly (or nullptr if at
+/// the ends of the list), and the head and tail pointers of the list object must be consistent. Each item must believe
+/// it is part of the correct list.
+///
+/// @param list_obj The list to examine.
+///
+/// @return True if the list is consistent, false otherwise.
 template <typename T> bool klib_list_is_valid(klib_list<T> *list_obj)
 {
   ASSERT (list_obj != nullptr);
@@ -233,12 +316,22 @@ template <typename T> bool klib_list_is_valid(klib_list<T> *list_obj)
   return true;
 }
 
+/// @brief Determine whether the provided list is an empty one or not.
+///
+/// @param list_obj The list root object to examine. Must not be nullptr.
+///
+/// @return True if the list is empty, false otherwise.
 template <typename T> bool klib_list_is_empty(klib_list<T> *list_obj)
 {
   ASSERT(list_obj != nullptr);
   return ((list_obj->head == nullptr) && (list_obj->tail == nullptr));
 }
 
+/// @brief Determine whether or not the provided list item is actually a part of any list or not.
+///
+/// @param list_item_obj The list item to examine.
+///
+/// @return True if the object is part of a list, false otherwise.
 template <typename T> bool klib_list_item_is_in_any_list(klib_list_item<T> *list_item_obj)
 {
   ASSERT(list_item_obj != nullptr);

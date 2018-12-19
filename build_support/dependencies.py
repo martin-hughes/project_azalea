@@ -5,7 +5,8 @@ kernel = [
     '#kernel/processor/SConscript-x64',
     '#kernel/klib/memory/SConscript',
     '#kernel/klib/panic/SConscript',
-    '#kernel/mem/SConscript',
+    '#kernel/mem/SConscript-main',
+    '#kernel/mem/SConscript-testable',
     '#kernel/klib/c_helpers/SConscript',
     '#kernel/klib/misc/SConscript',
     '#kernel/klib/data_structures/SConscript',
@@ -42,6 +43,18 @@ kernel = [
 
 init_program = [
     '#user/init_program/SConscript',
+  ]
+
+shell_program = [
+    '#user/simple_shell/SConscript',
+  ]
+
+echo_program = [
+    '#user/echo/SConscript',
+  ]
+
+user_mode_api = [
+    '#user/libs/libazalea/SConscript',
     '#kernel/syscall/SConscript-user',
   ]
 
@@ -53,6 +66,7 @@ main_tests = [
     '#kernel/klib/synch/SConscript-messages',
     '#kernel/klib/synch/SConscript-spinlocks',
     '#kernel/klib/tracing/SConscript',
+    '#kernel/mem/SConscript-testable',
     '#kernel/processor/Sconscript-generic',
     '#kernel/object_mgr/SConscript',
     '#kernel/syscall/SConscript-kernel',

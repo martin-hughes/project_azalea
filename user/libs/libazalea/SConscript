@@ -1,0 +1,17 @@
+# Azalea user-mode API library.
+#
+# Contains parts of the Azalea API that run in user mode.
+
+Import('env')
+files = [
+  "os_version.cpp",
+
+  "processes/elf.cpp",
+  "processes/exec_file.cpp",
+        ]
+
+obj = [ ]
+for f in files:
+  obj = obj + [env.Object(f), ]
+
+Return ("obj")

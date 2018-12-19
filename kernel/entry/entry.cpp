@@ -18,6 +18,7 @@
 #include "devices/block/ata/ata.h"
 #include "devices/block/proxy/block_proxy.h"
 #include "devices/legacy/ps2/ps2_controller.h"
+#include "devices/generic/gen_terminal.h"
 #include "system_tree/fs/fat/fat_fs.h"
 #include "system_tree/fs/pipe/pipe_fs.h"
 #include "system_tree/fs/mem/mem_fs.h"
@@ -50,7 +51,6 @@
 
 extern "C" int main(unsigned int magic_number, multiboot_hdr *mb_header);
 void kernel_start() throw ();
-void simple_terminal();
 void setup_task_parameters(task_process *startup_proc);
 
 // Temporary procedures and storage while the kernel is being developed. Eventually, the full kernel start procedure
@@ -137,6 +137,7 @@ void kernel_start() throw ()
   char proc_ptr_buffer[34];
   const char hello_string[] = "Hello, world!";
   uint64_t br;
+  std::shared_ptr<pipe_branch::pipe_read_leaf> pipe_read_leaf;
 
   // Bring the ACPI system up to full readiness.
   status = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
@@ -193,11 +194,18 @@ void kernel_start() throw ()
   }
 
   // Setup the write end of the terminal pipe. This is a bit dubious, it doesn't do any reference counting...
-  ASSERT(system_tree()->get_child("pipes\\terminal\\write", leaf) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->get_child("pipes\\terminal-output\\write", leaf) == ERR_CODE::NO_ERROR);
   klib_snprintf(proc_ptr_buffer, 34, "proc\\%p\\stdout", initial_proc.get());
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "proc: ", (const char *)proc_ptr_buffer, "\n");
   ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
+
+  klib_snprintf(proc_ptr_buffer, 34, "proc\\%p\\stdin", initial_proc.get());
+  ASSERT(system_tree()->get_child("pipes\\terminal-input\\read", leaf) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
+  pipe_read_leaf = std::dynamic_pointer_cast<pipe_branch::pipe_read_leaf>(leaf);
+  ASSERT(pipe_read_leaf != nullptr);
+  pipe_read_leaf->set_block_on_read(true);
 
   // Process should be good to go!
   initial_proc->start_process();
@@ -205,7 +213,7 @@ void kernel_start() throw ()
   if (keyboard != nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Setting up keyboard messages\n");
-    keyboard->recipient = initial_proc.get();
+    keyboard->recipient = term.get();
   }
 
   // If (when!) the initial process exits, we want the system to shut down. But since we don't really do shutting down
@@ -249,74 +257,6 @@ std::shared_ptr<fat_filesystem> setup_initial_fs()
 
   KL_TRC_EXIT;
   return first_fs;
-}
-
-// A simple text based terminal outputting on the main display.
-void simple_terminal()
-{
-  KL_TRC_ENTRY;
-
-  std::shared_ptr<ISystemTreeLeaf> leaf;
-  std::shared_ptr<IReadable> reader;
-  const uint64_t buffer_size = 10;
-  unsigned char buffer[buffer_size];
-  uint64_t bytes_read;
-  unsigned char *display_ptr;
-
-  const uint16_t width = 80;
-  const uint16_t height = 25;
-  const uint16_t bytes_per_char = 2;
-
-  uint16_t cur_offset = 0;
-
-  // Set up the input pipe
-  std::shared_ptr<ISystemTreeBranch> pipes_br = std::make_shared<system_tree_simple_branch>();
-  ASSERT(pipes_br != nullptr);
-  ASSERT(system_tree() != nullptr);
-  ASSERT(system_tree()->add_child("pipes", pipes_br) == ERR_CODE::NO_ERROR);
-  ASSERT(pipes_br->add_child("terminal", pipe_branch::create()) == ERR_CODE::NO_ERROR);
-  ASSERT(system_tree()->get_child("pipes\\terminal\\read", leaf) == ERR_CODE::NO_ERROR);
-  reader = std::dynamic_pointer_cast<IReadable>(leaf);
-  ASSERT(reader != nullptr);
-
-  // Map and then clear the display
-  display_ptr = reinterpret_cast<unsigned char *>(mem_allocate_virtual_range(1));
-  mem_map_range(nullptr, display_ptr, 1);
-  display_ptr += 0xB8000;
-
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Clearing screen\n");
-  for (int i = 0; i < width * height * bytes_per_char; i += 2)
-  {
-    display_ptr[i] = 0;
-    display_ptr[i + 1] = 0x0f;
-  }
-
-  wait_for_term = false;
-
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Beginning terminal\n");
-  while(1)
-  {
-    // Write any pending output data.
-    if (reader->read_bytes(0, buffer_size, buffer, buffer_size, bytes_read) == ERR_CODE::NO_ERROR)
-    {
-      for (int i = 0; i < bytes_read; i++)
-      {
-        display_ptr[cur_offset * 2] = buffer[i];
-
-        cur_offset++;
-        if (cur_offset > (width * height))
-        {
-          cur_offset = 0;
-        }
-      }
-    }
-    else
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to read\n");
-    }
-  }
-
-  KL_TRC_EXIT;
 }
 
 // Setup a plausible argc, argv and environ in startup_proc.
@@ -381,7 +321,7 @@ void setup_task_parameters(task_process *startup_proc)
 
   task_set_start_params(startup_proc, 2, argv_ptr_u, environ_ptr_u);
 
-  mem_unmap_range(kernel_map, 1);
+  mem_unmap_range(kernel_map, 1, nullptr, false);
 
   KL_TRC_EXIT;
 }

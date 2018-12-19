@@ -86,7 +86,7 @@ std::shared_ptr<task_process> proc_load_binary_file(kl_string binary_name)
   KL_TRC_TRACE(TRC_LVL::FLOW, "Program copied\n");
 
   // No need to access it from the kernel any more
-  mem_unmap_range(kernel_virtual_page, 1);
+  mem_unmap_range(kernel_virtual_page, 1, nullptr, false);
   KL_TRC_TRACE(TRC_LVL::FLOW, "Kernel space unmapped\n");
 
   // In the context of the program, set up the virtual page allocation. The process starts at 2MB.

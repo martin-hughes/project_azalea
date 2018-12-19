@@ -33,8 +33,8 @@ protected:
   task_process(ENTRY_PROC entry_point, bool kernel_mode = false, mem_process_info *mem_info = nullptr);
 
 public:
-  static std::shared_ptr<task_process> create(ENTRY_PROC entry_point, 
-                                              bool kernel_mode = false, 
+  static std::shared_ptr<task_process> create(ENTRY_PROC entry_point,
+                                              bool kernel_mode = false,
                                               mem_process_info *mem_info = nullptr);
   virtual ~task_process();
 
@@ -48,9 +48,6 @@ protected:
   void thread_ending(task_thread *thread);
 
 public:
-
-  /// Refer ourself back to the process list.
-  klib_list_item<task_process *> process_list_item;
 
   /// A list of all child threads.
   klib_list<std::shared_ptr<task_thread>> child_threads;
@@ -82,6 +79,9 @@ public:
 
   /// Is this process currently being destroyed?
   bool being_destroyed;
+
+  /// Has this process ever been started?
+  bool has_ever_started;
 };
 
 /// @brief Class to hold information about a thread.
@@ -135,7 +135,6 @@ public:
   /// Store handles and the objects they correlate to.
   object_manager thread_handles;
 
-protected:
   /// Has the thread been destroyed? Various operations are not permitted on a destroyed thread. This object will
   /// continue to exist until all references to it have been released.
   bool thread_destroyed;
@@ -222,9 +221,6 @@ void proc_mp_receive_signal(PROC_IPI_MSGS msg);
 // to avoid being preempted in a state that might leave it in a deadlock. Naturally, it must be used with extreme care!
 void task_continue_this_thread();
 void task_resume_scheduling();
-
-// Simply abandon this thread when it is next scheduled. This is used when a thread is being destroyed.
-void task_abandon_this_thread();
 
 uint64_t proc_read_port(const uint64_t port_id, const uint8_t width);
 void proc_write_port(const uint64_t port_id, const uint64_t value, const uint8_t width);

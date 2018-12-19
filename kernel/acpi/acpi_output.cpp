@@ -7,8 +7,10 @@
 
 extern "C"
 {
+#ifndef DOXYGEN_BUILD
 #include "acpi.h"
 #include "accommon.h"
+#endif
 }
 
 #include <stdint.h>

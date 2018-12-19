@@ -101,7 +101,16 @@ void mem_x64_pml4_allocate(process_x64_data &new_proc_data)
 /// @param proc_data The x64-specific part of the process data for the terminating process.
 void mem_x64_pml4_deallocate(process_x64_data &proc_data)
 {
-  panic("mem_x64_pml4_deallocate not implemented");
+  KL_TRC_ENTRY;
+
+  ASSERT(pml4_system_initialized);
+
+  klib_synch_spinlock_lock(pml4_copylock);
+  klib_list_remove(&proc_data.pml4_list_item);
+  delete[] reinterpret_cast<uint8_t *>(proc_data.pml4_virt_addr);
+  klib_synch_spinlock_unlock(pml4_copylock);
+
+  KL_TRC_EXIT;
 }
 
 /// @brief Synchronise the kernel part of all the PML4 tables

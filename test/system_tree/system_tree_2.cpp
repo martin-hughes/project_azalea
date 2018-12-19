@@ -15,7 +15,7 @@ TEST(SystemTreeTest, SimpleTree)
   system_tree_init();
   root = system_tree();
 
-  ASSERT_NE(root, nullptr);
+  ASSERT_TRUE(root);
 
   shared_ptr<system_tree_simple_branch> a = make_shared<system_tree_simple_branch>();
   shared_ptr<system_tree_simple_branch> b = make_shared<system_tree_simple_branch>();

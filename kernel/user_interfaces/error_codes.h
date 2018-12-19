@@ -88,6 +88,11 @@ enum AZALEA_ENUM_CLASS ERR_CODE_T
    *  We've run out of the relevant resource, be it RAM or whatever.
    */
   OUT_OF_RESOURCE = 15,
+
+  /**
+   *  The provided data wasn't in a recognised format
+   */
+  UNRECOGNISED = 16,
 };
 
 AZALEA_RENAME_ENUM(ERR_CODE);

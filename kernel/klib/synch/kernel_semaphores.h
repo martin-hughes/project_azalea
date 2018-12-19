@@ -1,3 +1,6 @@
+/// @file
+/// @brief Defines a simple semaphore type.
+
 #ifndef KLIB_SEMAPHORE
 #define KLIB_SEMAPHORE
 
@@ -9,21 +12,27 @@
 
 const uint64_t SEMAPHORE_MAX_WAIT = 0xFFFFFFFFFFFFFFFF;
 
-// Defines a semaphore structure. There's no inherent reason this couldn't be the basis of a semaphore for user space
-// too, but it'd need wrapping in some kind of handle. Users of semaphores shouldn't modify this structure, or they
-// could cause problems with synchronization.
+/// @brief Defines a semaphore structure.
+///
+/// There's no inherent reason this couldn't be the basis of a semaphore for user space too, but it'd need wrapping in
+/// some kind of handle. Users of semaphores shouldn't modify this structure, or they could cause problems with
+/// synchronization.
 struct klib_semaphore
 {
-  // How many threads is the semaphore being held by?
+  /// @brief How many threads is the semaphore being held by?
+  ///
   uint64_t cur_user_count;
 
-  // How many threads can hold the semaphore at once?
+  /// @brief How many threads can hold the semaphore at once?
+  ///
   uint64_t max_users;
 
-  // Which processes are waiting to grab this mutex?
+  /// @brief Which processes are waiting to grab this semaphore?
+  ///
   klib_list<std::shared_ptr<task_thread>> waiting_threads_list;
 
-  // This lock is used to synchronize access to the fields in this structure.
+  /// @brief This lock is used to synchronize access to the fields in this structure.
+  ///
   kernel_spinlock access_lock;
 };
 

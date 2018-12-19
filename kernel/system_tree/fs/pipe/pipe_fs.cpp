@@ -92,8 +92,8 @@ ERR_CODE pipe_branch::delete_child(const kl_string &name)
   return ERR_CODE::INVALID_OP;
 }
 
-pipe_branch::pipe_read_leaf::pipe_read_leaf(std::shared_ptr<pipe_branch> parent) : 
-  _parent(std::weak_ptr<pipe_branch>(parent))
+pipe_branch::pipe_read_leaf::pipe_read_leaf(std::shared_ptr<pipe_branch> parent) :
+  _parent(std::weak_ptr<pipe_branch>(parent)), block_on_read(false)
 {
   ASSERT(parent != nullptr);
 }
@@ -131,29 +131,47 @@ ERR_CODE pipe_branch::pipe_read_leaf::read_bytes(uint64_t start,
   }
   else
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Try to read from the pipe\n");
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Try to read ", length, " bytes from the pipe\n");
+
+    if (length > buffer_length)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Truncate to buffer_length\n");
+      length = buffer_length;
+    }
+
     klib_synch_spinlock_lock(parent_branch->_pipe_lock);
 
-    rp = reinterpret_cast<uint64_t>(parent_branch->_read_ptr);
-    wp = reinterpret_cast<uint64_t>(parent_branch->_write_ptr);
-    buf_start = reinterpret_cast<uint64_t>(parent_branch->_buffer.get());
+    while (1)
+    {
+      rp = reinterpret_cast<uint64_t>(parent_branch->_read_ptr);
+      wp = reinterpret_cast<uint64_t>(parent_branch->_write_ptr);
+      buf_start = reinterpret_cast<uint64_t>(parent_branch->_buffer.get());
 
-    if (wp >= rp)
-    {
-      avail_length = wp - rp;
+      if (wp >= rp)
+      {
+        avail_length = wp - rp;
+      }
+      else
+      {
+        avail_length = (NORMAL_BUFFER_SIZE + wp) - rp;
+      }
+      KL_TRC_TRACE(TRC_LVL::EXTRA, "Available bytes to read: ", avail_length, "\n");
+
+      if (this->block_on_read && (avail_length < length))
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Waiting for more bytes\n");
+        klib_synch_spinlock_unlock(parent_branch->_pipe_lock);
+        task_yield();
+        klib_synch_spinlock_lock(parent_branch->_pipe_lock);
+      }
+      else
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Got sufficient bytes now\n");
+        break;
+      }
     }
-    else
-    {
-      avail_length = (NORMAL_BUFFER_SIZE + wp) - rp;
-    }
-    KL_TRC_TRACE(TRC_LVL::EXTRA, "Available bytes to read: ", avail_length, "\n");
 
     read_length = avail_length;
-    if (buffer_length < read_length)
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Truncate read to buffer length\n");
-      read_length = buffer_length;
-    }
     if (length < read_length)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Truncate read to requested length\n");
@@ -186,6 +204,14 @@ ERR_CODE pipe_branch::pipe_read_leaf::read_bytes(uint64_t start,
   KL_TRC_EXIT;
 
   return ret;
+}
+
+void pipe_branch::pipe_read_leaf::set_block_on_read(bool block)
+{
+  KL_TRC_ENTRY;
+  KL_TRC_TRACE(TRC_LVL::FLOW, "New blocking state: ", block, "\n");
+  this->block_on_read = block;
+  KL_TRC_EXIT;
 }
 
 pipe_branch::pipe_write_leaf::pipe_write_leaf(std::shared_ptr<pipe_branch> parent) :

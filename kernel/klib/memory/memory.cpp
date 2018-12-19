@@ -40,6 +40,7 @@
 #include "klib/tracing/tracing.h"
 #include "klib/synch/kernel_locks.h"
 #include "klib/synch/kernel_mutexes.h"
+#include "klib/data_structures/red_black_tree.h"
 
 typedef klib_list<void *> PTR_LIST;
 typedef klib_list_item<void *> PTR_LIST_ITEM;
@@ -48,6 +49,10 @@ struct slab_header
   PTR_LIST_ITEM list_entry;
   uint64_t allocation_count;
 };
+
+// Stores details of large allocations so they can be freed later - the key is the address of the beginning of the
+// allocation, the value the number of pages in it.
+kl_rb_tree<uint64_t, uint64_t> *large_allocations;
 
 // The assertion below ensures that the size of slab_header hasn't changed. If it does, the number of available chunks
 // and their offsets within the NUM_CHUNKS_PER_SLAB and FIRST_OFFSET_IN_SLAB will need updating.
@@ -124,6 +129,7 @@ void *kmalloc(uint64_t mem_size)
   uint64_t proportion_used;
   SYNC_ACQ_RESULT res;
   bool release_mutex_at_end = true;
+  uint64_t large_alloc_addr;
 
   // Make sure the one-time-only initialisation of the system is complete. This set of ifs and asserts isn't meant to
   // provide full thread safety, instead it is meant to prevent any accidental circular recursion starting.
@@ -163,8 +169,12 @@ void *kmalloc(uint64_t mem_size)
       klib_synch_mutex_release(allocator_gen_lock, false);
     }
     KL_TRC_TRACE(TRC_LVL::FLOW, "Big allocation. Pages needed", required_pages, "\n");
+
+    large_alloc_addr = reinterpret_cast<uint64_t>(mem_allocate_pages(required_pages));
+    large_allocations->insert(large_alloc_addr, required_pages);
     KL_TRC_EXIT;
-    return mem_allocate_pages(required_pages);
+
+    return reinterpret_cast<void *>(large_alloc_addr);
   }
 
   // Find or allocate a suitable slab to use. Use partially full slabs first - this prevents there being lots of only
@@ -271,6 +281,7 @@ void kfree(void *mem_block)
   uint32_t bitmap_bit;
   uint64_t bitmap_mask;
   uint64_t free_slabs;
+  uint64_t dealloc_addr;
   bool release_mutex_at_end = true;
   SYNC_ACQ_RESULT res;
 
@@ -289,7 +300,13 @@ void kfree(void *mem_block)
   if (mem_ptr_num % MEM_PAGE_SIZE == 0)
   {
     // This is a large allocation, which still needs to be properly implemented.
-    panic ("Large allocation support not complete.");
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Deallocate large allocation\n");
+
+    dealloc_addr = reinterpret_cast<uint64_t>(mem_block);
+    ASSERT(large_allocations->contains(dealloc_addr));
+
+    mem_deallocate_pages(mem_block, large_allocations->search(dealloc_addr));
+    large_allocations->remove(dealloc_addr);
   }
   else
   {
@@ -429,6 +446,8 @@ void init_allocator_system()
 
   allocator_initialized = true;
   allocator_initializing = false;
+
+  large_allocations = new kl_rb_tree<uint64_t, uint64_t>();
 
   KL_TRC_EXIT;
 }
@@ -660,6 +679,9 @@ void test_only_reset_allocator()
         mem_deallocate_pages(slab_ptr, 1);
       }
     }
+
+    delete large_allocations;
+    large_allocations = nullptr;
 
     allocator_initialized = false;
     test_only_free_mutex(allocator_gen_lock);

@@ -177,6 +177,18 @@ void *proc_x64_allocate_stack()
   return new_stack;
 }
 
+void proc_x64_deallocate_stack(void *stack_ptr)
+{
+  KL_TRC_ENTRY;
+
+  uint64_t stack_page_addr = reinterpret_cast<uint64_t>(stack_ptr);
+  stack_page_addr -= (stack_page_addr % MEM_PAGE_SIZE);
+
+  kfree(reinterpret_cast<void *>(stack_page_addr));
+
+  KL_TRC_EXIT;
+}
+
 /// @brief Generate the contents of the MSI address register for PCI MSIs
 ///
 /// This value can then be used in the PCI MSI capabilities register. At present, no attempt is made to support any of

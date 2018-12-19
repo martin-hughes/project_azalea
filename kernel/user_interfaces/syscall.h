@@ -43,6 +43,7 @@ ERR_CODE syscall_message_complete();
 
 /* Process & thread control */
 ERR_CODE syscall_create_process(void *entry_point_addr, GEN_HANDLE *proc_handle);
+ERR_CODE syscall_set_startup_params(GEN_HANDLE proc_handle, uint64_t argc, uint64_t argv_ptr, uint64_t environ_ptr);
 ERR_CODE syscall_start_process(GEN_HANDLE proc_handle);
 ERR_CODE syscall_stop_process(GEN_HANDLE proc_handle);
 ERR_CODE syscall_destroy_process(GEN_HANDLE proc_handle);

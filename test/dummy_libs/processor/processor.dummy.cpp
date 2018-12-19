@@ -42,17 +42,9 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
 
 void task_int_delete_exec_context(task_thread *t)
 {
+  ASSERT(!t->permit_running);
+  ASSERT(t->thread_destroyed);
   delete[] ((char *)t->execution_context);
-}
-
-mem_process_info *mem_task_create_task_entry()
-{
-  return (mem_process_info *)&fake_ptr_target;
-}
-
-mem_process_info *mem_task_get_task0_entry()
-{
-  return (mem_process_info *)&fake_ptr_target;
 }
 
 void task_install_task_switcher()
@@ -86,4 +78,9 @@ void dummy_thread_fn()
 void proc_write_msr(PROC_X64_MSRS msr, uint64_t value)
 {
   panic("Can't write MSRs in test code");
+}
+
+void task_set_start_params(task_process * process, uint64_t argc, char **argv, char **env)
+{
+  // Doesn't mean anything in the test scripts.
 }

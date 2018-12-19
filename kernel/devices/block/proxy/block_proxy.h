@@ -5,6 +5,9 @@
 #include "user_interfaces/error_codes.h"
 #include "klib/data_structures/string.h"
 
+/// @brief Proxies block device requests onto a parent block device, but with an offset.
+///
+/// This can be used to, for example, represents a single partition on a hard disk.
 class block_proxy_device: public IBlockDevice
 {
 public:

@@ -205,7 +205,7 @@ std::shared_ptr<task_process> proc_load_elf_file(kl_string binary_name)
 
         // Having done the writing, unmap it again.
         KL_TRC_TRACE(TRC_LVL::EXTRA, "Unmapping kernel side\n");
-        mem_unmap_range(kernel_write_window, 1);
+        mem_unmap_range(kernel_write_window, 1, nullptr, false);
 
         offset = 0;
       }

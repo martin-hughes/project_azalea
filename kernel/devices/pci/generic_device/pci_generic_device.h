@@ -10,6 +10,10 @@
 #include "devices/device_interface.h"
 #include "system_tree/system_tree_leaf.h"
 
+/// @brief A generic PCI device
+///
+/// Contains functions that may be useful to any PCI device. If a PCI device is detected in the system that doesn't
+/// have a more appropriate driver for it, this class will manage it.
 class pci_generic_device : public IDevice, public ISystemTreeLeaf, public IInterruptReceiver
 {
 public:

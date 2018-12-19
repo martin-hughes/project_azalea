@@ -62,11 +62,6 @@ namespace
   kernel_spinlock thread_cycle_lock;
 }
 
-// Should the task manager simply abandon this thread when it comes up for rescheduling? This isn't in the file's
-// private namespace because the lower-level code may want to examine it.
-bool *abandon_thread = nullptr;
-
-
 /// @brief Initialise and start the task management subsystem
 ///
 /// This function initialises the task manager and creates a system process consisting of idle threads and the IRQ
@@ -116,15 +111,14 @@ void task_gen_init()
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Number of processors", number_of_procs);
   current_threads = new task_thread *[number_of_procs];
   continue_this_thread = new bool[number_of_procs];
-  abandon_thread = new bool[number_of_procs];
   idle_threads = new task_thread *[number_of_procs];
+  klib_list_initialize(&dead_thread_list);
 
   for (uint32_t i = 0; i < number_of_procs; i++)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Initialising processor ", i, "\n");
     current_threads[i] = nullptr;
     continue_this_thread[i] = false;
-    abandon_thread[i] = false;
     idle_threads[i] = nullptr;
   }
 
@@ -151,6 +145,7 @@ std::shared_ptr<task_process> task_create_system_process()
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Creating system process\n");
   system_process = task_process::create(proc_interrupt_slowpath_thread, true, task0_mem_info);
+  task_thread::create(proc_tidyup_thread, system_process);
   ASSERT(system_process != nullptr);
   system_process->start_process();
 
@@ -197,7 +192,7 @@ void task_start_tasking()
 /// the processor to sleep via a HLT-loop.
 ///
 /// @return The thread that the caller **MUST** begin executing.
-task_thread *task_get_next_thread(bool abandon_this_thread)
+task_thread *task_get_next_thread()
 {
   task_thread *next_thread = nullptr;
   task_thread *start_thread = nullptr;
@@ -209,15 +204,6 @@ task_thread *task_get_next_thread(bool abandon_this_thread)
 
   ASSERT(continue_this_thread != nullptr);
   ASSERT(current_threads != nullptr);
-
-  if ((current_threads[proc_id] != nullptr) &&
-      (abandon_this_thread == true))
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Thread has requested its own destruction\n");
-
-    current_threads[proc_id] = nullptr;
-    continue_this_thread[proc_id] = false;
-  }
 
   if (continue_this_thread[proc_id])
   {
@@ -340,19 +326,6 @@ void task_resume_scheduling()
   KL_TRC_EXIT;
 }
 
-/// @brief Abandon this thread so it is never scheduled again.
-///
-/// When this thread is pre-empted by the scheduler no attempt is made to store any information from it into its thread
-/// structure - indeed, the thread structure may have already been destroyed.
-void task_abandon_this_thread()
-{
-  KL_TRC_ENTRY;
-
-  abandon_thread[proc_mp_this_proc_id()] = true;
-
-  KL_TRC_EXIT;
-}
-
 #ifdef AZALEA_TEST_CODE
 void test_only_reset_task_mgr()
 {
@@ -372,9 +345,6 @@ void test_only_reset_task_mgr()
     {
       idle_thread_to_del = idle_threads[i];
       task_thread_cycle_add(idle_thread_to_del);
-      //idle_thread_to_del->destroy_thread();
-      //delete idle_thread_to_del;
-      //idle_threads[i] = nullptr;
     }
   }
 
@@ -389,7 +359,6 @@ void test_only_reset_task_mgr()
   delete[] current_threads;
   delete[] continue_this_thread;
   delete[] idle_threads;
-  delete[] abandon_thread;
 
   current_threads = nullptr;
   continue_this_thread = nullptr;

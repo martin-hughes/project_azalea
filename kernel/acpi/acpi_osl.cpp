@@ -5,9 +5,12 @@
 #include <stdint.h>
 
 #include "klib/klib.h"
+
 extern "C"
 {
+#ifndef DOXYGEN_BUILD
 #include "external/acpica/source/include/acpi.h"
+#endif
 }
 #include "processor/processor.h"
 #include "processor/timing/timing.h"
@@ -348,7 +351,7 @@ void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Size)
   total_length = Size + offset;
   num_pages = (total_length / MEM_PAGE_SIZE) + 1;
 
-  mem_unmap_range((void *)start_of_page, num_pages);
+  mem_unmap_range((void *)start_of_page, num_pages, nullptr, false);
   mem_deallocate_virtual_range((void *)start_of_page, num_pages);
   KL_TRC_EXIT;
 }

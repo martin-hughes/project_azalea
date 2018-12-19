@@ -161,6 +161,8 @@ enum AZALEA_ENUM_CLASS KEYS_T : uint8_t
 
 AZALEA_RENAME_ENUM(KEYS);
 
+/// @brief Contains flags representing the special keys pressed alongside a 'normal' key.
+///
 struct special_keys
 {
   bool left_shift : 1;

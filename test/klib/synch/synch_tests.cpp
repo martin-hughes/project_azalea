@@ -14,13 +14,15 @@ protected:
   void SetUp() override
   {
     system_tree_init();
-    task_gen_init(); 
+    task_gen_init();
   };
 
   void TearDown() override
-  {    
+  {
     test_only_reset_task_mgr();
     test_only_reset_system_tree();
+    test_only_reset_message_system();
+    test_only_reset_allocator();
   };
 };
 

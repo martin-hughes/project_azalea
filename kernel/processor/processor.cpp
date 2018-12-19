@@ -1,4 +1,5 @@
-/// @file Processor-generic functionality.
+/// @file
+/// @brief Processor-generic functionality.
 ///
 /// Some processor management functionality is common to all usual processor types, and that is handled in this file.
 
@@ -8,6 +9,7 @@
 // - It's possible that removing an IRQ handler could cause crashes because we're not careful about just deleting the
 //   item!
 // - proc_irq_slowpath_thread has a pretty weak algorithm, and doesn't even attempt to sleep!
+// - The list for removing dead threads isn't locked or protected in any way at all...
 
 // It's a really bad idea to enable tracing in the live system!
 //#define ENABLE_TRACING
@@ -16,11 +18,14 @@
 #include "processor/processor.h"
 #include "processor/processor-int.h"
 #include "devices/device_interface.h"
+#include "processor/timing/timing.h"
 
 namespace
 {
   bool interrupt_table_cfgd = false;
 }
+
+klib_list<std::shared_ptr<task_thread>> dead_thread_list;
 
 /// @brief Configure the kernel's interrupt data table.
 ///
@@ -316,5 +321,31 @@ void proc_interrupt_slowpath_thread()
         cur_item = cur_item->next;
       }
     }
+  }
+}
+
+/// @brief Runs tidy-up tasks that can't be run in the context of other threads.
+///
+/// At the moment, this is only destroying the thread objects of threads that terminate themselves - since trying to
+/// delete thread objects from within the actual thread could lead to deadlock.
+void proc_tidyup_thread()
+{
+  std::shared_ptr<task_thread> dead_thread;
+
+  while(1)
+  {
+    while(!klib_list_is_empty(&dead_thread_list))
+    {
+      dead_thread = dead_thread_list.head->item;
+      klib_list_remove(dead_thread->synch_list_item);
+      dead_thread->synch_list_item->item = nullptr;
+      if (dead_thread.unique())
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Delete thread\n");
+        dead_thread = nullptr;
+      }
+    }
+
+    time_stall_process(1000000000);
   }
 }

@@ -20,9 +20,9 @@ TEST(SchedulerTest, ProcessStartOneThreadAndExitThread)
   shared_ptr<task_process> new_proc = task_process::create(dummy_thread_fn);
   task_thread *child_thread;
 
-  ASSERT_NE(new_proc, nullptr);
-  ASSERT_NE(new_proc->child_threads.head, nullptr);
-  ASSERT_NE(new_proc->child_threads.head->item, nullptr);
+  ASSERT_TRUE(new_proc != nullptr);
+  ASSERT_TRUE(new_proc->child_threads.head != nullptr);
+  ASSERT_TRUE(new_proc->child_threads.head->item != nullptr);
 
   child_thread = new_proc->child_threads.head->item.get();
 
@@ -30,8 +30,12 @@ TEST(SchedulerTest, ProcessStartOneThreadAndExitThread)
 
   child_thread->destroy_thread();
 
+  child_thread = nullptr;
+  new_proc = nullptr;
+
   test_only_reset_task_mgr();
   test_only_reset_system_tree();
+  test_only_reset_allocator();
 }
 
 TEST(SchedulerTest, ProcessStartOneThreadAndExitProcess)
@@ -43,9 +47,9 @@ TEST(SchedulerTest, ProcessStartOneThreadAndExitProcess)
   shared_ptr<task_process> new_proc = task_process::create(dummy_thread_fn);
   task_thread *child_thread;
 
-  ASSERT_NE(new_proc, nullptr);
-  ASSERT_NE(new_proc->child_threads.head, nullptr);
-  ASSERT_NE(new_proc->child_threads.head->item, nullptr);
+  ASSERT_TRUE(new_proc != nullptr);
+  ASSERT_TRUE(new_proc->child_threads.head != nullptr);
+  ASSERT_TRUE(new_proc->child_threads.head->item != nullptr);
 
   child_thread = new_proc->child_threads.head->item.get();
 
@@ -53,6 +57,10 @@ TEST(SchedulerTest, ProcessStartOneThreadAndExitProcess)
 
   new_proc->destroy_process();
 
+  new_proc = nullptr;
+  child_thread = nullptr;
+
   test_only_reset_task_mgr();
   test_only_reset_system_tree();
+  test_only_reset_allocator();
 }

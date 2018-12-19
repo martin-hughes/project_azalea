@@ -14,6 +14,9 @@ using namespace std;
 
 const uint64_t page_size = 2 * 1024 * 1024;
 
+uint32_t fake_arch_specific_info;
+mem_process_info task0_entry = { &fake_arch_specific_info };
+
 // In the dummy library, this doesn't need to do anything. All set up is done
 // automatically when this test code gets this far, which means the tests don't
 // need to worry about starting up this libary.
@@ -26,21 +29,6 @@ void *mem_allocate_physical_pages(uint32_t num_pages)
 {
   panic("mem_allocate_physical_pages not implemented");
   return nullptr;
-}
-
-void *mem_allocate_virtual_range(uint32_t num_pages, task_process *process_to_use)
-{
-  panic("mem_allocate_virtual_range Not implemented");
-  return nullptr;
-}
-
-void mem_map_range(void *physical_start,
-                   void* virtual_start,
-                   uint32_t len,
-                   task_process *context,
-                   MEM_CACHE_MODES cache_mode)
-{
-  panic("mem_map_range Not implemented");
 }
 
 // Allocate pages of RAM. Some of the kernel code relies on the assumption that
@@ -61,11 +49,6 @@ void mem_deallocate_physical_pages(void *start, uint32_t num_pages)
   panic("mem_deallocate_physical_pages Not implemented");
 }
 
-void mem_deallocate_virtual_range(void *start, uint32_t num_pages)
-{
-  panic("mem_deallocate_virtual_range Not implemented");
-}
-
 void mem_unmap_range(void *virtual_start, uint32_t num_pages)
 {
   panic("mem_unmap_range Not implemented");
@@ -80,14 +63,8 @@ void mem_deallocate_pages(void *virtual_start, uint32_t num_pages)
 #endif
 }
 
-void mem_vmm_allocate_specific_range(uint64_t start_addr, uint32_t num_pages, task_process *process_to_use)
-{
-  // Do nothing.
-}
-
 void *mem_get_phys_addr(void *virtual_addr, task_process *context)
 {
-  panic("mem_get_phys_addr not implemented");
   return nullptr;
 }
 
@@ -95,4 +72,29 @@ bool mem_is_valid_virt_addr(uint64_t virtual_addr)
 {
   // It's reasonable to assume 'yes' in the test code, because all allocations ultimately come from the OS.
   return true;
+}
+
+void mem_x64_map_virtual_page(uint64_t virt_addr,
+                              uint64_t phys_addr,
+                              task_process *context,
+                              MEM_CACHE_MODES cache_mode)
+{
+  // In the test scripts this doesn't do anything, but scripts that rely on mapping will fail.
+}
+
+void mem_x64_unmap_virtual_page(uint64_t virt_addr, task_process *context)
+{
+  // as above.
+}
+
+struct process_x64_data;
+
+void mem_x64_pml4_allocate(process_x64_data &new_proc_data)
+{
+  // This is always transparent to processes, so it can be ignored in the tests.
+}
+
+void mem_x64_pml4_deallocate(process_x64_data &new_proc_data)
+{
+  // as above.
 }

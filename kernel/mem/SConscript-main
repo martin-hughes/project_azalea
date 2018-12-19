@@ -1,0 +1,14 @@
+# Kernel Memory library.
+
+files = [
+         "misc.cpp",
+         "physical.cpp",
+         "x64/mem-x64.cpp",
+         "x64/mem_pml4-x64.cpp",
+         "x64/mem_support-x64.asm",
+         "x64/mem_pat-x64.cpp",
+        ]
+
+Import('env')
+obj = env.Library("mem-main", files)
+Return ("obj")

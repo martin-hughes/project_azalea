@@ -1,3 +1,7 @@
+/// @file
+/// @brief Task management code specific to process objects.
+
+//#define ENABLE_TRACING
 
 #include "klib/klib.h"
 #include "processor.h"
@@ -16,16 +20,15 @@
 ///
 /// @param mem_info If known, this field provides pre-populated memory manager information about this process. For all
 ///                 processes except the initial kernel start procedure, this should be NULL.
-task_process::task_process(ENTRY_PROC entry_point, bool kernel_mode,  mem_process_info *mem_info) :
+task_process::task_process(ENTRY_PROC entry_point, bool kernel_mode, mem_process_info *mem_info) :
   kernel_mode(kernel_mode),
   accepts_msgs(false),
-  being_destroyed(false)
+  being_destroyed(false),
+  has_ever_started(false)
 {
   KL_TRC_ENTRY;
 
-  klib_list_item_initialize(&this->process_list_item);
   klib_list_initialize(&this->child_threads);
-  this->process_list_item.item = this;
 
   if (mem_info != nullptr)
   {
@@ -47,6 +50,8 @@ std::shared_ptr<task_process> task_process::create(ENTRY_PROC entry_point,
                                                    mem_process_info *mem_info)
 {
   std::shared_ptr<task_thread> first_thread;
+  std::shared_ptr<ISystemTreeLeaf> leaf_ptr;
+  char proc_path_ptr_buffer[34];
 
   KL_TRC_ENTRY;
 
@@ -63,8 +68,36 @@ std::shared_ptr<task_process> task_process::create(ENTRY_PROC entry_point,
   proc_fs_root_ptr->add_process(new_proc);
 
   // Create a thread associated with it.
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Create new thread\n");
   first_thread = task_thread::create(entry_point, new_proc);
   ASSERT(first_thread != nullptr);
+
+  if (task_get_cur_thread() != nullptr)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Not in initial startup, look for stdio pipes\n");
+
+    // If the current process has stdout, stdin or stderr pipes, use those for the newly created process too.
+    if (system_tree()->get_child("proc\\0\\stdout", leaf_ptr) == ERR_CODE::NO_ERROR)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Copy stdout from parent to child\n");
+      klib_snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "proc\\%p\\stdout", new_proc.get());
+      system_tree()->add_child(proc_path_ptr_buffer, leaf_ptr);
+    }
+
+    if (system_tree()->get_child("proc\\0\\stdin", leaf_ptr) == ERR_CODE::NO_ERROR)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Copy stdin from parent to child\n");
+      klib_snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "proc\\%p\\stdin", new_proc.get());
+      system_tree()->add_child(proc_path_ptr_buffer, leaf_ptr);
+    }
+
+    if (system_tree()->get_child("proc\\0\\stderr", leaf_ptr) == ERR_CODE::NO_ERROR)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Copy stderr from parent to child\n");
+      klib_snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "proc\\%p\\stderr", new_proc.get());
+      system_tree()->add_child(proc_path_ptr_buffer, leaf_ptr);
+    }
+  }
 
   KL_TRC_EXIT;
   return new_proc;
@@ -74,6 +107,11 @@ task_process::~task_process()
 {
   // Make sure the proces was destroyed via destroy_process.
   ASSERT(this->being_destroyed);
+
+  // Free all memory associated with this process. This is safe because this destructor is never run in the context of
+  // the process being destroyed - it either runs as part of proc_tidyup_thread or that of the thread that started the
+  // destruction of the process.
+  mem_task_free_task(this);
 }
 
 /// @brief Final destruction of a process.
@@ -121,12 +159,13 @@ void task_process::destroy_process()
 
       list_item = next_item;
     }
-  }
 
-  if (skipped_this_thread)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Destroying this thread now\n");
-    task_get_cur_thread()->destroy_thread();
+    if (skipped_this_thread)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Destroying this thread now\n");
+      task_get_cur_thread()->destroy_thread();
+    }
+
   }
 
   KL_TRC_EXIT;
@@ -139,6 +178,8 @@ void task_process::start_process()
 {
   KL_TRC_ENTRY;
 
+  has_ever_started = true;
+
   std::shared_ptr<task_thread> next_thread = nullptr;
   klib_list_item<std::shared_ptr<task_thread>> *next_item = nullptr;
 
@@ -148,7 +189,7 @@ void task_process::start_process()
   {
     next_thread = next_item->item;
     ASSERT(next_thread != nullptr);
-    KL_TRC_TRACE(TRC_LVL::EXTRA, "Next thread", next_thread, "\n");
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Next thread", next_thread.get(), "\n");
     next_thread->start_thread();
 
     next_item = next_item->next;
@@ -172,7 +213,7 @@ void task_process::stop_process()
   {
     next_thread = next_item->item;
     ASSERT(next_thread != nullptr);
-    KL_TRC_TRACE(TRC_LVL::EXTRA, "Next thread", (uint64_t)next_thread, "\n");
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Next thread", (uint64_t)next_thread.get(), "\n");
     next_thread->stop_thread();
 
     next_item = next_item->next;

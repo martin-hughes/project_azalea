@@ -1,3 +1,6 @@
+/// @file
+/// @brief Generic memory handling interface.
+
 #ifndef MEM_H_
 #define MEM_H_
 
@@ -72,6 +75,8 @@ enum MEM_CACHE_MODES
 };
 
 #pragma pack(push,1)
+/// @brief A single record within an E820 memory map.
+///
 struct e820_record
 {
   uint32_t size;
@@ -83,6 +88,9 @@ struct e820_record
 
 static_assert(sizeof(e820_record) == 24, "e820 record size wrong");
 
+/// @brief Pointer to an 'E820' memory map.
+///
+/// This is usually provided by a multiboot compliant bootloader.
 struct e820_pointer
 {
   e820_record *table_ptr;
@@ -93,6 +101,7 @@ void mem_gen_init(e820_pointer *e820_ptr);
 
 void *mem_allocate_physical_pages(uint32_t num_pages);
 void *mem_allocate_virtual_range(uint32_t num_pages, task_process *process_to_use = nullptr);
+uint64_t mem_get_virtual_allocation_size(uint64_t start_addr, task_process *context);
 void mem_vmm_allocate_specific_range(uint64_t start_addr, uint32_t num_pages, task_process *process_to_use);
 void mem_map_range(void *physical_start,
                    void* virtual_start,
@@ -103,7 +112,7 @@ void *mem_allocate_pages(uint32_t num_pages);
 
 void mem_deallocate_physical_pages(void *start, uint32_t num_pages);
 void mem_deallocate_virtual_range(void *start, uint32_t num_pages, task_process *process_to_use = nullptr);
-void mem_unmap_range(void *virtual_start, uint32_t num_pages);
+void mem_unmap_range(void *virtual_start, uint32_t num_pages, task_process *context, bool allow_phys_page_free);
 void mem_deallocate_pages(void *virtual_start, uint32_t num_pages);
 void *mem_get_phys_addr(void *virtual_addr, task_process *context = nullptr);
 
@@ -117,7 +126,7 @@ mem_process_info *mem_task_get_task0_entry();
 // Destroying a task entry will also cause any PTEs and mappings to be destroyed.
 // These functions are part of the architecture-specific code, they fill in the generic information as needed.
 mem_process_info *mem_task_create_task_entry();
-void mem_task_destroy_task_entry();
+void mem_task_free_task(task_process *proc);
 
 
 #endif /* MEM_H_ */

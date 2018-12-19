@@ -109,7 +109,7 @@ TEST_F(MemFsSyscallTests, FileDoesntExist)
 
   ec = syscall_open_handle(filename, strlen(filename), &fh);
   ASSERT_EQ(ec, ERR_CODE::NOT_FOUND);
-  ASSERT_EQ(fh, 123); 
+  ASSERT_EQ(fh, 123);
 }
 
 /* There isn't the ability to delete files yet.

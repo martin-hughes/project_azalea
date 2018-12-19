@@ -1,0 +1,11 @@
+# Kernel Memory library.
+
+files = [
+         "mapping.cpp",
+         "process.cpp",
+         "virtual.cpp",
+        ]
+
+Import('env')
+obj = env.Library("mem-testable", files)
+Return ("obj")

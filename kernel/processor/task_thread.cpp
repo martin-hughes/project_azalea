@@ -1,3 +1,8 @@
+/// @file
+/// @brief Task management code specific to threads.
+
+//#define ENABLE_TRACING
+
 #include "klib/klib.h"
 #include "processor.h"
 #include "processor-int.h"
@@ -20,13 +25,14 @@ task_thread::task_thread(ENTRY_PROC entry_point, std::shared_ptr<task_process> p
   ASSERT(parent_process != nullptr);
 
   this->execution_context = task_int_create_exec_context(entry_point, this);
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Context created @ ", this->execution_context, "\n");
   this->process_list_item = new klib_list_item<std::shared_ptr<task_thread>>();
   this->synch_list_item = new klib_list_item<std::shared_ptr<task_thread>>();
 
   if (!parent_process->being_destroyed)
   {
-    KL_TRC_TRACE(TRC_LVL::EXTRA, "Entry point", reinterpret_cast<uint64_t>(entry_point), "\n");
-    KL_TRC_TRACE(TRC_LVL::EXTRA, "Parent Process", reinterpret_cast<uint64_t>(parent_process), "\n");
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Entry point: ", reinterpret_cast<uint64_t>(entry_point), "\n");
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Parent Process: ", reinterpret_cast<uint64_t>(parent_process.get()), "\n");
 
     klib_list_item_initialize(this->process_list_item);
     klib_list_item_initialize(this->synch_list_item);
@@ -44,6 +50,8 @@ task_thread::task_thread(ENTRY_PROC entry_point, std::shared_ptr<task_process> p
 
 std::shared_ptr<task_thread> task_thread::create(ENTRY_PROC entry_point, std::shared_ptr<task_process> parent)
 {
+  KL_TRC_ENTRY;
+
   std::shared_ptr<task_thread> new_thread = std::shared_ptr<task_thread>(new task_thread(entry_point, parent));
 
   new_thread->synch_list_item->item = new_thread;
@@ -51,15 +59,21 @@ std::shared_ptr<task_thread> task_thread::create(ENTRY_PROC entry_point, std::sh
 
   parent->add_new_thread(new_thread);
 
+  KL_TRC_EXIT;
+
   return new_thread;
 }
 
 task_thread::~task_thread()
 {
+  KL_TRC_ENTRY;
   ASSERT(thread_destroyed);
   task_int_delete_exec_context(this);
   delete this->process_list_item;
   delete this->synch_list_item;
+  this->parent_process = nullptr;
+
+  KL_TRC_EXIT;
 }
 
 /// @brief Parts of the thread destruction handled by the thread class.
@@ -73,7 +87,7 @@ void task_thread::destroy_thread()
 
   if (!this->thread_destroyed)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Destroying thread\n");
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Destroying thread.\n");
     this->thread_destroyed = true;
     this->trigger_all_threads();
 
@@ -82,25 +96,38 @@ void task_thread::destroy_thread()
     if (!destroying_this_thread)
     {
       // Stop the thread from running, then wait for it to be unscheduled.
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Destroy another thread...\n");
       this->stop_thread();
       klib_synch_spinlock_lock(this->cycle_lock);
+      task_thread_cycle_remove(this);
     }
 
-    task_thread_cycle_remove(this);
     this->parent_process->thread_ending(this);
-    this->parent_process = nullptr;
-
+    ASSERT(this->synch_list_item->item != nullptr);
     this->process_list_item->item = nullptr;
-    this->synch_list_item->item = nullptr;
+
+    if (klib_list_item_is_in_any_list(this->synch_list_item))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Remove from synch list");
+      klib_list_remove(this->synch_list_item);
+    }
 
     if (destroying_this_thread)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Abandoning this thread.");
 
-      task_abandon_this_thread();
+      task_continue_this_thread();
+      task_thread_cycle_remove(this);
+      this->stop_thread();
+      klib_list_add_tail(&dead_thread_list, this->synch_list_item);
+      task_resume_scheduling();
       task_yield();
 
       panic("Came back from abandoning a thread!");
+    }
+    else
+    {
+      this->synch_list_item->item = nullptr;
     }
   }
 

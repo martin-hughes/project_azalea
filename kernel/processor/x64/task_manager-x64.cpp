@@ -95,6 +95,7 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
 
   new_context->owner_thread = new_thread;
   new_context->syscall_stack = proc_x64_allocate_stack();
+  new_context->orig_syscall_stack = new_context->syscall_stack;
 
   if (parent_process->kernel_mode)
   {
@@ -157,8 +158,12 @@ void task_int_delete_exec_context(task_thread *old_thread)
   KL_TRC_ENTRY;
 
   ASSERT(old_thread->permit_running == false);
+  ASSERT(old_thread->thread_destroyed);
 
   task_x64_exec_context *old_context = reinterpret_cast<task_x64_exec_context *>(old_thread->execution_context);
+
+  proc_x64_deallocate_stack(old_context->orig_syscall_stack);
+
   delete old_context;
   old_thread->execution_context = nullptr;
 
@@ -193,6 +198,11 @@ void task_set_start_params(task_process *process, uint64_t argc, char **argv, ch
 
   task_thread *first_thread;
   task_x64_exec_context *context;
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Set up process: ", process, " with:\n");
+  KL_TRC_TRACE(TRC_LVL::FLOW, "argc: ", argc, "\n");
+  KL_TRC_TRACE(TRC_LVL::FLOW, "argv: ", reinterpret_cast<uint64_t>(argv), "\n");
+  KL_TRC_TRACE(TRC_LVL::FLOW, "env: ", reinterpret_cast<uint64_t>(env), "\n");
 
   ASSERT(process != nullptr);
   ASSERT(process->child_threads.head != nullptr);
@@ -230,13 +240,12 @@ task_x64_exec_context *task_int_swap_task(uint64_t stack_addr, uint64_t cr3_valu
   task_x64_exec_context *next_context;
   task_thread *next_thread;
   void *stack_ptr = reinterpret_cast<void *>(stack_addr);
-  bool abandon_this_thread = abandon_thread[proc_mp_this_proc_id()];
 
   KL_TRC_ENTRY;
 
   current_thread = task_get_cur_thread();
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Current: ", current_thread, " (", stack_ptr, ")\n");
-  if ((current_thread != nullptr) && (abandon_this_thread == false))
+  if (current_thread != nullptr)
   {
     current_context = reinterpret_cast<task_x64_exec_context *>(current_thread->execution_context);
     current_context->cr3_value = (void *)cr3_value;
@@ -253,7 +262,7 @@ task_x64_exec_context *task_int_swap_task(uint64_t stack_addr, uint64_t cr3_valu
     KL_TRC_TRACE(TRC_LVL::FLOW, "Not storing old thread\n");
   }
 
-  next_thread = task_get_next_thread(abandon_this_thread);
+  next_thread = task_get_next_thread();
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Next: ", next_thread, "\n");
   next_context = reinterpret_cast<task_x64_exec_context *>(next_thread->execution_context);
 

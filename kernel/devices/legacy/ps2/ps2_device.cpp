@@ -1,4 +1,5 @@
-/// @file Generic implementation of the two main PS/2 device types - mouse and keyboard.
+/// @file
+/// @brief Generic implementation of the two main PS/2 device types - mouse and keyboard.
 ///
 /// Many functions in this file have no particular documentation, since the documentation would be the same as the
 /// interface class they derive from.
@@ -147,10 +148,15 @@ ps2_keyboard_device::ps2_keyboard_device(gen_ps2_controller_device *parent, bool
   _next_key_is_special(false),
   _pause_seq_chars(0)
 {
+  uint8_t response;
+
   KL_TRC_ENTRY;
 
   _device_name = "Generic PS/2 keyboard";
   _status = DEV_STATUS::OK;
+
+  _parent->send_byte(PS2_CONST::DEV_ENABLE_SCANNING, second_channel);
+  _parent->read_byte(response);
 
   this->enable_irq();
 
@@ -160,6 +166,7 @@ ps2_keyboard_device::ps2_keyboard_device(gen_ps2_controller_device *parent, bool
 bool ps2_keyboard_device::handle_interrupt_fast(uint8_t irq_num)
 {
   // Simply do all of our handling in the slow path part of the handler.
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Fast interrupt\n");
   return true;
 }
 

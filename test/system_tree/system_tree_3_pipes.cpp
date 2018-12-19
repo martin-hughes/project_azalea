@@ -34,15 +34,15 @@ TEST(SystemTreeTest, GeneralPipes)
 
   r = pipe_obj->get_child("read", leaf);
   ASSERT_EQ(r, ERR_CODE::NO_ERROR);
-  ASSERT_NE(leaf, nullptr);
+  ASSERT_TRUE(leaf);
   reader = dynamic_pointer_cast<pipe_branch::pipe_read_leaf>(leaf);
-  ASSERT_NE(reader, nullptr);
+  ASSERT_TRUE(reader);
 
   r = pipe_obj->get_child("write", leaf);
   ASSERT_EQ(r, ERR_CODE::NO_ERROR);
-  ASSERT_NE(leaf, nullptr);
+  ASSERT_TRUE(leaf);
   writer = dynamic_pointer_cast<pipe_branch::pipe_write_leaf>(leaf);
-  ASSERT_NE(reader, nullptr);
+  ASSERT_TRUE(reader);
 
   for (int i = 0; i < pipe_size; i += buffer_size)
   {

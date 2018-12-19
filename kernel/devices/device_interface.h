@@ -1,4 +1,5 @@
-/// @file Generic device driver interfaces.
+/// @file
+/// @brief Generic device driver interfaces.
 ///
 /// All device drivers must inherit from IDevice, other generic but widely used behaviours have their own interfaces.
 

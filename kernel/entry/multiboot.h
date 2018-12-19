@@ -3,6 +3,9 @@
 
 const unsigned int MULTIBOOT_CONSTANT = 0x2BADB002;
 
+/// @brief The multiboot header, as defined in the multiboot specification.
+///
+/// The x64 version of Azalea is compiled into a multiboot-compatible binary to be loaded by, e.g. GRUB.
 struct multiboot_hdr
 {
   unsigned int flags;

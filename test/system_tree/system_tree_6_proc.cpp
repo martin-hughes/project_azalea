@@ -35,20 +35,20 @@ TEST(SystemTreeTest, ProcFsOneProcessIdFile)
   task_gen_init();
 
   shared_ptr<task_process> proc = task_process::create(dummy_thread_fn);
-  ASSERT_NE(proc, nullptr);
+  ASSERT_TRUE(proc);
 
   test_only_set_cur_thread(proc->child_threads.head->item.get());
 
   ec = system_tree()->get_child("proc\\0", branch_leaf);
   zero_branch = dynamic_pointer_cast<ISystemTreeBranch>(branch_leaf);
   ASSERT_EQ(ec, ERR_CODE::NO_ERROR);
-  ASSERT_NE(zero_branch, nullptr);
+  ASSERT_TRUE(zero_branch);
 
   ec = zero_branch->get_child("id", id_leaf);
   ASSERT_EQ(ec, ERR_CODE::NO_ERROR);
 
   id_file = dynamic_pointer_cast<IBasicFile>(id_leaf);
-  ASSERT_NE(id_file, nullptr);
+  ASSERT_TRUE(id_file);
 
   memset(read_buffer, 0, 22);
   id_file->read_bytes(0, 22, reinterpret_cast<uint8_t *>(read_buffer), 22, br);
@@ -59,7 +59,9 @@ TEST(SystemTreeTest, ProcFsOneProcessIdFile)
 
   test_only_set_cur_thread(nullptr);
   proc->destroy_process();
+  proc = nullptr;
 
   test_only_reset_task_mgr();
   test_only_reset_system_tree();
+  test_only_reset_allocator();
 }

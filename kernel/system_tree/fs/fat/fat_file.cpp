@@ -5,10 +5,43 @@
 #include "klib/klib.h"
 #include "system_tree/fs/fat/fat_fs.h"
 
-fat_filesystem::fat_file::fat_file(fat_dir_entry file_data_record, std::shared_ptr<fat_filesystem> parent) :
-    _file_record(file_data_record), _parent(std::weak_ptr<fat_filesystem>(parent))
+/// @brief Constructs a new object representing a file on a FAT filesystem.
+///
+/// This object is equally suited to reading directories - most directories are simply special files in the data part
+/// of the partition. The exception is the root directory on FAT12 & FAT16 partitions - but these are close enough that
+/// this object can still handle them, provided root_directory_file is set to true.
+///
+/// @param file_data_record The directory entry corresponding to the short name of the requested file. If
+///                         root_directory_file is set to true, this need not be a valid structure.
+///
+/// @param parent The parent file system object (this is stored internally as a weak pointer)
+///
+/// @param root_directory_file Whether or not this object represents the root directory. The root directory requires
+///                            special handling on FAT12 and FAT16 filesystems, which this object can handle. Default
+///                            false.
+fat_filesystem::fat_file::fat_file(fat_dir_entry file_data_record,
+                                   std::shared_ptr<fat_filesystem> parent,
+                                   bool root_directory_file) :
+    _file_record{file_data_record},
+    _parent{std::weak_ptr<fat_filesystem>(parent)},
+    is_root_directory{root_directory_file},
+    is_small_fat_root_dir{root_directory_file && !(parent->type == FAT_TYPE::FAT32)}
 {
+  KL_TRC_ENTRY;
+
   ASSERT(parent != nullptr);
+
+  // If this is a FAT12/FAT16 root directory then file_data_record need not be valid. In which case, we can populate it
+  // with some values that we compute that might be useful elsewhere.
+  if (is_small_fat_root_dir)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Small FAT root dir, re-jig file params\n");
+    _file_record.first_cluster_high = 0;
+    _file_record.first_cluster_low = 0;
+    _file_record.file_size = (parent->root_dir_sector_count * parent->shared_bpb->bytes_per_sec);
+  }
+
+  KL_TRC_EXIT;
 }
 
 fat_filesystem::fat_file::~fat_file()
@@ -25,14 +58,10 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
   KL_TRC_ENTRY;
 
   uint64_t bytes_read_so_far = 0;
-  uint64_t clusters_to_skip;
   uint64_t read_offset;
-  uint64_t bytes_per_cluster;
-  uint64_t bytes_per_sector;
-  uint64_t next_cluster;
-  uint64_t sector_offset = 0;
-  uint64_t sectors_per_cluster = 0;
   uint64_t bytes_from_this_sector = 0;
+  uint64_t read_sector_num;
+  uint64_t next_sector_num;
 
   ERR_CODE ec = ERR_CODE::NO_ERROR;
 
@@ -46,20 +75,26 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
     KL_TRC_TRACE(TRC_LVL::ERROR, "buffer must not be NULL\n");
     ec = ERR_CODE::INVALID_PARAM;
   }
-  if (start > this->_file_record.file_size)
+
+  // The file size record for directories is always zero, for some reason, so skip these checks and just rely on not
+  // being able to find the correct cluster to stop us reading random bits of disk.
+  if (!this->_file_record.attributes.directory)
   {
-    KL_TRC_TRACE(TRC_LVL::ERROR, "Start point must be within the file\n");
-    ec = ERR_CODE::INVALID_PARAM;
-  }
-  if (length > this->_file_record.file_size)
-  {
-    KL_TRC_TRACE(TRC_LVL::ERROR, "length must be less than the file size\n");
-    ec = ERR_CODE::INVALID_PARAM;
-  }
-  if ((start + length) > this->_file_record.file_size)
-  {
-    KL_TRC_TRACE(TRC_LVL::ERROR, "Read area must be contained completely within file\n");
-    ec = ERR_CODE::INVALID_PARAM;
+    if (start > this->_file_record.file_size)
+    {
+      KL_TRC_TRACE(TRC_LVL::ERROR, "Start point must be within the file\n");
+      ec = ERR_CODE::INVALID_PARAM;
+    }
+    if (length > this->_file_record.file_size)
+    {
+      KL_TRC_TRACE(TRC_LVL::ERROR, "length must be less than the file size\n");
+      ec = ERR_CODE::INVALID_PARAM;
+    }
+    if ((start + length) > this->_file_record.file_size)
+    {
+      KL_TRC_TRACE(TRC_LVL::ERROR, "Read area must be contained completely within file\n");
+      ec = ERR_CODE::INVALID_PARAM;
+    }
   }
   if (length > buffer_length)
   {
@@ -73,58 +108,32 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
     std::shared_ptr<fat_filesystem> parent_ptr = _parent.lock();
     if (parent_ptr)
     {
-      bytes_per_sector = parent_ptr->shared_bpb->bytes_per_sec;
-      sectors_per_cluster = parent_ptr->shared_bpb->secs_per_cluster;
-      bytes_per_cluster = sectors_per_cluster * bytes_per_sector;
-      clusters_to_skip = start / bytes_per_cluster;
-      read_offset = start % bytes_per_cluster;
-      std::unique_ptr<uint8_t[]> sector_buffer = std::make_unique<uint8_t[]>(bytes_per_sector);
-
-      next_cluster = (_file_record.first_cluster_high << 16) + _file_record.first_cluster_low;
-
-      KL_TRC_TRACE(TRC_LVL::EXTRA, "Skipping ", clusters_to_skip, " clusters\n");
-      for (int i = 0; i < clusters_to_skip; i++)
+      if(!get_initial_read_sector(start / parent_ptr->shared_bpb->bytes_per_sec, read_sector_num, parent_ptr))
       {
-        next_cluster = parent_ptr->get_next_cluster_num(next_cluster);
-
-        // If next_cluster now equals one of the special markers, then something bad has happened. Perhaps:
-        // - The file is shorter than actually advertised in its directory entry (corrupt FS),
-        // - The FS is corrupt in some other manner, or
-        // - Our maths is bad.
-        // In any case, it's not possible to continue.
-        if (!parent_ptr->is_normal_cluster_number(next_cluster))
-        {
-          KL_TRC_TRACE(TRC_LVL::ERROR, "Invalid next_cluster: ", next_cluster, "\n");
-          ec = ERR_CODE::STORAGE_ERROR;
-          break;
-        }
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Unable to retrieve initial sector number\n");
+        ec = ERR_CODE::STORAGE_ERROR;
       }
-
-      // Do the read.
-      while ((bytes_read_so_far < length) && (ec == ERR_CODE::NO_ERROR))
+      else
       {
-        // If the start offset is zero, then we start reading from the first sector in a cluster. Otherwise we might be
-        // able to skip some of them.
-        if (read_offset != 0)
-        {
-          sector_offset = read_offset / bytes_per_sector;
-          read_offset = read_offset % bytes_per_sector;
-        }
+        read_offset = start % (parent_ptr->shared_bpb->bytes_per_sec * parent_ptr->shared_bpb->secs_per_cluster);
+        std::unique_ptr<uint8_t[]> sector_buffer = std::make_unique<uint8_t[]>(parent_ptr->shared_bpb->bytes_per_sec);
 
-        ASSERT(parent_ptr->is_normal_cluster_number(next_cluster));
-
-        for (int i = sector_offset; i < sectors_per_cluster; i++)
+        // Do the read.
+        while ((bytes_read_so_far < length) && (ec == ERR_CODE::NO_ERROR))
         {
+          // If the start offset is zero, then we start reading from the first sector in a cluster. Otherwise we might be
+          // able to skip some of them.
+          if (read_offset != 0)
+          {
+            read_offset = read_offset % parent_ptr->shared_bpb->bytes_per_sec;
+          }
+
           // Read a complete sector into the sector buffer.
-          // The (next_cluster - 2) might seem a bit odd, but in FAT the clusters start being numbered from 2 - indicies
-          // 0 and 1 have a special meaning. next_cluster is guaranteed to be 2 or greater by the call to
-          // is_normal_cluster_number, above.
-          uint64_t start_sector = ((next_cluster - 2) * sectors_per_cluster) + i + parent_ptr->first_data_sector;
-          KL_TRC_TRACE(TRC_LVL::FLOW, "Reading sector: ", start_sector, "\n");
-          ec = parent_ptr->_storage->read_blocks(start_sector,
-                                              1,
-                                              sector_buffer.get(),
-                                              bytes_per_sector);
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Reading sector: ", read_sector_num, "\n");
+          ec = parent_ptr->_storage->read_blocks(read_sector_num,
+                                                 1,
+                                                 sector_buffer.get(),
+                                                 parent_ptr->shared_bpb->bytes_per_sec);
           if (ec != ERR_CODE::NO_ERROR)
           {
             break;
@@ -132,17 +141,17 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
 
           // Copy the relevant number of bytes, and update the bytes read counter.
           bytes_from_this_sector = length - bytes_read_so_far;
-          if (bytes_from_this_sector > bytes_per_sector)
+          if (bytes_from_this_sector > parent_ptr->shared_bpb->bytes_per_sec)
           {
             KL_TRC_TRACE(TRC_LVL::FLOW, "Truncating read to whole sector\n");
-            bytes_from_this_sector = bytes_per_sector;
+            bytes_from_this_sector = parent_ptr->shared_bpb->bytes_per_sec;
           }
-          if (bytes_from_this_sector + read_offset > bytes_per_sector)
+          if (bytes_from_this_sector + read_offset > parent_ptr->shared_bpb->bytes_per_sec)
           {
             KL_TRC_TRACE(TRC_LVL::FLOW, "Truncating read to partial sector\n");
-            bytes_from_this_sector = bytes_per_sector - read_offset;
+            bytes_from_this_sector = parent_ptr->shared_bpb->bytes_per_sec - read_offset;
           }
-          ASSERT(bytes_from_this_sector <= bytes_per_sector);
+          ASSERT(bytes_from_this_sector <= parent_ptr->shared_bpb->bytes_per_sec);
 
           KL_TRC_TRACE(TRC_LVL::EXTRA, "Offset", read_offset, "\n");
           KL_TRC_TRACE(TRC_LVL::EXTRA, "Bytes now", bytes_from_this_sector, "\n");
@@ -152,25 +161,35 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
                     bytes_from_this_sector);
 
           bytes_read_so_far += bytes_from_this_sector;
-          if (bytes_read_so_far == length)
+          read_offset = 0;
+
+          if (bytes_read_so_far < length)
           {
-            break;
+            KL_TRC_TRACE(TRC_LVL::FLOW, "Still bytes to read, get next sector\n");
+            if (!is_small_fat_root_dir)
+            {
+              KL_TRC_TRACE(TRC_LVL::FLOW, "Normal file\n");
+              if(!parent_ptr->get_next_read_sector(read_sector_num, next_sector_num))
+              {
+                KL_TRC_TRACE(TRC_LVL::FLOW, "Unable to get next sector...\n");
+                ec = ERR_CODE::STORAGE_ERROR;
+              }
+              else
+              {
+                read_sector_num = next_sector_num;
+              }
+            }
+            else
+            {
+              KL_TRC_TRACE(TRC_LVL::FLOW, "Small FAT root directory\n");
+              read_sector_num++;
+              if (read_sector_num > (parent_ptr->root_dir_sector_count + parent_ptr->root_dir_start_sector))
+              {
+                KL_TRC_TRACE(TRC_LVL::FLOW, "Reached end of root directory\n");
+                ec = ERR_CODE::INVALID_PARAM;
+              }
+            }
           }
-        }
-
-        sector_offset = 0;
-        read_offset = 0;
-
-        if (bytes_read_so_far == length)
-        {
-          break;
-        }
-
-        next_cluster = parent_ptr->get_next_cluster_num(next_cluster);
-        if (!parent_ptr->is_normal_cluster_number(next_cluster))
-        {
-          KL_TRC_TRACE(TRC_LVL::ERROR, "Invalid next_cluster: ", next_cluster, "\n");
-          ec = ERR_CODE::STORAGE_ERROR;
         }
       }
     }
@@ -213,4 +232,76 @@ ERR_CODE fat_filesystem::fat_file::set_file_size(uint64_t file_size)
   KL_TRC_EXIT;
 
   return ERR_CODE::INVALID_OP;
+}
+
+/// @brief Given we want to start reading at sector_offset sectors into a file, which sector on disk should be read?
+///
+/// Converts a file read offset (in terms of complete sectors) into the number of the sector on the disk as the sector
+/// number since the start of the disk.
+///
+/// @param sector_offset The number of sectors from the beginning of a file
+///
+/// @param disk_sector[out] The sector on disk that should be read in order to read the desired sector of the file.
+///
+/// @param parent_ptr Shared pointer to the parent filesystem.
+///
+/// @return True if disk_sector is valid, false otherwise.
+bool fat_filesystem::fat_file::get_initial_read_sector(uint64_t sector_offset,
+                                                       uint64_t &disk_sector,
+                                                       std::shared_ptr<fat_filesystem> parent_ptr)
+{
+  bool result = true;
+
+  uint64_t cluster_offset;
+  uint64_t sector_remainder;
+  uint64_t current_cluster;
+  uint64_t next_cluster;
+
+  KL_TRC_ENTRY;
+
+  if (!is_small_fat_root_dir)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Normal file\n");
+    cluster_offset = sector_offset / parent_ptr->shared_bpb->secs_per_cluster;
+    sector_remainder = sector_offset % parent_ptr->shared_bpb->secs_per_cluster;
+    current_cluster = (_file_record.first_cluster_high << 16) + _file_record.first_cluster_low;
+
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Current cluster: ", current_cluster, ". Requested offset: ", cluster_offset, "\n");
+    for (uint64_t i = 0; i < cluster_offset; i++)
+    {
+      next_cluster = parent_ptr->get_next_cluster_num(current_cluster);
+
+      // If next_cluster now equals one of the special markers, then something bad has happened. Perhaps:
+      // - The file is shorter than actually advertised in its directory entry (corrupt FS),
+      // - The FS is corrupt in some other manner, or
+      // - Our maths is bad.
+      // In any case, it's not possible to continue.
+      if (!parent_ptr->is_normal_cluster_number(next_cluster))
+      {
+        KL_TRC_TRACE(TRC_LVL::ERROR, "Invalid next_cluster: ", next_cluster, "\n");
+        result = false;
+        break;
+      }
+
+      current_cluster = next_cluster;
+    }
+
+    disk_sector = parent_ptr->convert_cluster_to_sector_num(current_cluster);
+    if (disk_sector == ~0)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid disk sector\n");
+      result = false;
+    }
+
+    disk_sector += sector_remainder;
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "FAT12/FAT16 root directory\n");
+    disk_sector = parent_ptr->root_dir_start_sector + sector_offset;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+  return result;
 }

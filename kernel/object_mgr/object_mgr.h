@@ -6,6 +6,11 @@
 #include "object_type.h"
 #include "klib/data_structures/red_black_tree.h"
 
+/// @brief Managers the relationship between handles an objects.
+///
+/// Each thread has it's own object manager, since handles are private to threads.
+///
+/// For more information, see [docs/components/object_mgr/Object Manager.md]
 class object_manager
 {
 public:

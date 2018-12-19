@@ -26,7 +26,9 @@ TEST(ObjectManagerTest, StoreAndRetrieve)
   for (int i = 0; i < NUM_OBJECTS; i++)
   {
     objects[i] = make_shared<simple_object>();
+    ASSERT_EQ(objects[i].use_count(), 1);
     handles[i] = om->store_object(dynamic_pointer_cast<IHandledObject>(objects[i]));
+    ASSERT_EQ(objects[i].use_count(), 2);
   }
 
   for (int i = 0; i < NUM_OBJECTS; i++)
@@ -37,5 +39,6 @@ TEST(ObjectManagerTest, StoreAndRetrieve)
   for (int i = 0; i < NUM_OBJECTS; i++)
   {
     om->remove_object(handles[i]);
+    ASSERT_EQ(objects[i].use_count(), 1);
   }
 }
