@@ -134,6 +134,8 @@ void WaitObject::trigger_next_thread()
   KL_TRC_EXIT;
 }
 
+/// @brief Trigger all threads waiting for this object to continue.
+///
 void WaitObject::trigger_all_threads()
 {
   KL_TRC_ENTRY;
@@ -142,6 +144,78 @@ void WaitObject::trigger_all_threads()
   {
     this->trigger_next_thread();
   }
+
+  KL_TRC_EXIT;
+}
+
+WaitForFirstTriggerObject::WaitForFirstTriggerObject() :
+  WaitObject{ },
+  already_triggered{false}
+{
+
+}
+
+WaitForFirstTriggerObject::~WaitForFirstTriggerObject()
+{
+  KL_TRC_ENTRY;
+  trigger_all_threads();
+  KL_TRC_EXIT;
+}
+
+void WaitForFirstTriggerObject::wait_for_signal()
+{
+  KL_TRC_ENTRY;
+
+  task_thread *cur_thread = task_get_cur_thread();
+  klib_list_item<task_thread *> *list_item = new klib_list_item<task_thread *>;
+  klib_list_item_initialize(list_item);
+  list_item->item = cur_thread;
+
+  klib_synch_spinlock_lock(this->_list_lock);
+
+  if (!this->already_triggered)
+  {
+    task_continue_this_thread();
+
+    cur_thread->stop_thread();
+    klib_list_add_tail(&this->_waiting_threads, list_item);
+    klib_synch_spinlock_unlock(this->_list_lock);
+
+    task_resume_scheduling();
+
+    // Having added ourselves to the list we should not pass through task_yield() until the thread is re-awakened below.
+    // It is possible that the thread was signalled between the list being unlocked above and here, in which case it is
+    // reasonable to just carry on.
+    task_yield();
+  }
+  else
+  {
+    klib_synch_spinlock_unlock(this->_list_lock);
+  }
+
+  KL_TRC_EXIT;
+
+}
+
+void WaitForFirstTriggerObject::trigger_next_thread()
+{
+  KL_TRC_ENTRY;
+
+  klib_synch_spinlock_lock(this->_list_lock);
+
+  already_triggered = true;
+
+  klib_list_item<task_thread *> *list_item = this->_waiting_threads.head;
+  if (list_item != nullptr)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Starting thread ", list_item->item, "\n");
+    klib_list_remove (list_item);
+    list_item->item->start_thread();
+    delete list_item;
+    list_item = nullptr;
+  }
+
+  klib_synch_spinlock_unlock(this->_list_lock);
 
   KL_TRC_EXIT;
 }

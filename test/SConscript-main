@@ -35,6 +35,9 @@ files = [ "dummy_libs/processor/processor.dummy.cpp",
           "processor/scheduler/scheduler_proc_start_exit.cpp",
           "processor/irq_handler.cpp",
           "processor/synch_objects.cpp",
+          # The following file commented out because the underlying synch object isn't easily tested - we could
+          # do a similar test to synch_objects.cpp in future.
+          # "processor/work_queue.cpp",
 
           "system_tree/system_tree_1.cpp",
           "system_tree/system_tree_2.cpp",
