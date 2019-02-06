@@ -152,6 +152,8 @@ void mem_gen_phys_pages_bitmap(e820_pointer *e820_ptr, uint64_t *bitmap_loc, uin
                  ", type: ", cur_record->memory_type, "\n");
     // Only type 1 memory is usable. If we've found some, round the start and end addresses to 2MB boundaries. Always
     // ignore the first 2MB of RAM - we've already loaded the kernel in to there and it has some crazy stuff in anyway.
+    //
+    // We assume that the VGA buffers, etc. always mean there's a block within the first 2MB that's allocated.
     if (cur_record->memory_type == 1)
     {
       start_addr = cur_record->start_addr;

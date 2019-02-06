@@ -14,7 +14,6 @@
 #include "mem/mem.h"
 #include "mem/mem-int.h"
 
-
 namespace
 {
   // In the page allocation bitmap, a 1 indicates that the page is FREE.
@@ -47,6 +46,12 @@ void mem_init_gen_phys_sys(e820_pointer *e820_ptr)
 
   // Fill in the free pages bitmap appropriately.
   mem_gen_phys_pages_bitmap(e820_ptr, phys_pages_alloc_bitmap, MEM_MAX_SUPPORTED_PAGES);
+
+  // The kernel will be loaded in to consecutive pages in the base of RAM, so mark as many as are needed as allocated.
+  for (uint16_t i = 0; i < MEM_NUM_KERNEL_PAGES; i++)
+  {
+    mem_clear_bitmap_page_bit(i * MEM_PAGE_SIZE, true);
+  }
 
   kl_memcpy(phys_pages_alloc_bitmap, phys_pages_exist_bitmap, sizeof(phys_pages_alloc_bitmap));
 
@@ -190,7 +195,10 @@ void mem_set_bitmap_page_bit(uint64_t page_addr, const bool ignore_checks)
 /// Note that no checking is done to ensure the page is within the physical pages available to the system.
 ///
 /// @param page_addr The address of the physical page to mark as in use.
-void mem_clear_bitmap_page_bit(uint64_t page_addr)
+///
+/// @param ignore_checks If set to true, the system will not check that the bit being cleared is set to 1 before
+///                      clearing it. If false, and the bit is not set then the system assumes a failure and panics.
+void mem_clear_bitmap_page_bit(uint64_t page_addr, bool ignore_checks)
 {
   KL_TRC_ENTRY;
 
@@ -209,7 +217,7 @@ void mem_clear_bitmap_page_bit(uint64_t page_addr)
   ASSERT(mask != 0);
   ASSERT(bitmap_qword < BITMAP_SIZE);
 
-  ASSERT((phys_pages_exist_bitmap[bitmap_qword] & mask) != 0);
+  ASSERT(ignore_checks || ((phys_pages_exist_bitmap[bitmap_qword] & mask) != 0));
   phys_pages_alloc_bitmap[bitmap_qword] = phys_pages_alloc_bitmap[bitmap_qword] & (~mask);
 
   KL_TRC_EXIT;
