@@ -494,12 +494,11 @@ namespace
     root_data->number_of_pages = 2048;
 
     // Allocate the ranges we already know are in use. These are:
-    // - The kernel's image. 0xFFFFFFFF00000000 - (+2MB)
-    //     N.B. The kernel actually starts at 1MB higher than this, and is
-    //     currently limited to 1MB in size.
+    // - The kernel's image. 0xFFFFFFFF00000000 upwards.
+    //     N.B. The kernel actually starts at 1MB higher than this.
     // - Page table modification area: 0xFFFFFFFFFFFE0000 - end.
     KL_TRC_TRACE(TRC_LVL::FLOW, "Allocating first range.\n");
-    mem_vmm_allocate_specific_range(0xFFFFFFFF00000000, 1, nullptr);
+    mem_vmm_allocate_specific_range(0xFFFFFFFF00000000, MEM_NUM_KERNEL_PAGES, nullptr);
     KL_TRC_TRACE(TRC_LVL::FLOW, "Allocating second range.\n");
     mem_vmm_allocate_specific_range(0xFFFFFFFFFFE00000, 1, nullptr);
 

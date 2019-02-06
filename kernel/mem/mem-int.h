@@ -6,14 +6,22 @@
 
 const uint64_t MEM_MAX_SUPPORTED_PAGES = 2048;
 
+/// @brief The number of pages the kernel image requires in RAM.
+///
+/// This should be equivalent to the size of the kernel64.sys file + 1024kb to account for the fact that the kernel is
+/// loaded at 1MB physical.
+///
+/// This number MUST match 'num_kernel_pages' in entry-x86.asm.
+const uint16_t MEM_NUM_KERNEL_PAGES = 2;
+
 void mem_init_gen_phys_sys(e820_pointer *e820_ptr);
 void mem_gen_phys_pages_bitmap(e820_pointer *e820_ptr,
                                uint64_t *bitmap_loc,
                                uint64_t max_num_pages);
 
 
-void mem_set_bitmap_page_bit(uint64_t page_addr, const bool ignore_checks);
-void mem_clear_bitmap_page_bit(uint64_t page_addr);
+void mem_set_bitmap_page_bit(uint64_t page_addr, const bool ignore_checks = false);
+void mem_clear_bitmap_page_bit(uint64_t page_addr, const bool ignore_checks = false);
 bool mem_is_bitmap_page_bit_set(uint64_t page_addr);
 
 void mem_map_init_counters();
