@@ -7,6 +7,8 @@
 
 #include <memory>
 
+/// @brief Branch of a simple in-memory filesystem.
+///
 class mem_fs_branch: public system_tree_simple_branch, public std::enable_shared_from_this<mem_fs_branch>
 {
 protected:
@@ -22,6 +24,8 @@ protected:
   virtual ERR_CODE create_child_here(std::shared_ptr<ISystemTreeLeaf> &child) override;
 };
 
+/// @brief A simple in-memory file.
+///
 class mem_fs_leaf: public IBasicFile, public ISystemTreeLeaf
 {
 public:

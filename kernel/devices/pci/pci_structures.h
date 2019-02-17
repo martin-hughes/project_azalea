@@ -5,6 +5,8 @@
 
 #include <stdint.h>
 
+/// @brief Stucture storing address of a single PCI device
+///
 struct pci_address
 {
   union
@@ -24,6 +26,8 @@ struct pci_address
 };
 static_assert(sizeof(pci_address) == sizeof(uint32_t), "Bad packing of pci_address");
 
+/// @brief Standard format of PCI device register 0.
+///
 struct pci_reg_0
 {
   union
@@ -38,6 +42,8 @@ struct pci_reg_0
 };
 static_assert(sizeof(pci_reg_0) == sizeof(uint32_t), "Bad packing of pci_reg_0");
 
+/// @brief Standard format of PCI device register 1.
+///
 struct pci_reg_1
 {
   union
@@ -89,6 +95,8 @@ struct pci_reg_1
 };
 static_assert(sizeof(pci_reg_1) == sizeof(uint32_t), "Bad packing of pci_reg_1");
 
+/// @brief Standard format of PCI device register 2.
+///
 struct pci_reg_2
 {
   union
@@ -105,6 +113,8 @@ struct pci_reg_2
 };
 static_assert(sizeof(pci_reg_2) == sizeof(uint32_t), "Bad packing of pci_reg_2");
 
+/// @brief Standard format of PCI device register 3.
+///
 struct pci_reg_3
 {
   union
@@ -121,6 +131,8 @@ struct pci_reg_3
 };
 static_assert(sizeof(pci_reg_3) == sizeof(uint32_t), "Bad packing of pci_reg_3");
 
+/// @brief Standard format of PCI device register 13.
+///
 struct pci_reg_13
 {
   union
@@ -135,6 +147,8 @@ struct pci_reg_13
 };
 static_assert(sizeof(pci_reg_13) == sizeof(uint32_t), "Bad packing of pci_reg_13");
 
+/// @brief Standard header of PCI device capabilities structures.
+///
 struct pci_cap_header
 {
   union
@@ -150,6 +164,8 @@ struct pci_cap_header
 };
 static_assert(sizeof(pci_cap_header) == sizeof(uint32_t), "Bad packing of pci_cap_header");
 
+/// @brief Header of PCI device MSI capabilities.
+///
 struct pci_msi_cap_header
 {
   union
@@ -172,6 +188,8 @@ static_assert(sizeof(pci_msi_cap_header) == sizeof(pci_cap_header), "Bad packing
 
 namespace pci
 {
+  /// @brief Structure to contain any PCI device capability.
+  ///
   template <typename T> struct capability
   {
     bool supported;

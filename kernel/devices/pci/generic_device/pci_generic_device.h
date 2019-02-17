@@ -17,13 +17,11 @@
 class pci_generic_device : public IDevice, public ISystemTreeLeaf, public IInterruptReceiver
 {
 public:
+  pci_generic_device(pci_address address, const kl_string name);
   pci_generic_device(pci_address address);
   virtual ~pci_generic_device() override;
 
 protected:
-  // Generic device commands.
-  virtual const kl_string device_name() override;
-  virtual DEV_STATUS get_device_status() override;
 
   // Interrupt receiver functions
   virtual bool handle_interrupt_fast(unsigned char interrupt_number) override;

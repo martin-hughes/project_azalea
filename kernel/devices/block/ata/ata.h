@@ -13,9 +13,6 @@ public:
   generic_ata_device(unsigned short base_port, bool master);
   virtual ~generic_ata_device();
 
-  virtual const kl_string device_name();
-  virtual DEV_STATUS get_device_status();
-
   virtual uint64_t num_blocks();
   virtual uint64_t block_size();
 
@@ -48,11 +45,8 @@ protected:
     ATA_READ = 0x20,
   };
 
-  const kl_string _name;
   const uint16_t _base_port;
   const bool _master;
-
-  DEV_STATUS _status;
 
   bool supports_lba48;
   uint64_t number_of_sectors;

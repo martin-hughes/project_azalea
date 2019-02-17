@@ -61,9 +61,6 @@ public:
   gen_ps2_controller_device();
   virtual ~gen_ps2_controller_device();
 
-  virtual const kl_string device_name();
-  virtual DEV_STATUS get_device_status();
-
   // Types used throughout.
   union ps2_status_register
   {
@@ -117,8 +114,6 @@ public:
 
 
 protected:
-  const kl_string _name;
-  DEV_STATUS _status;
   bool _dual_channel;
 
   PS2_DEV_TYPE _chan_1_dev_type;

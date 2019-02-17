@@ -33,10 +33,9 @@ struct status_byte
 static_assert(sizeof(status_byte) == 1, "Incorrect packing of status_byte");
 
 generic_ata_device::generic_ata_device(uint16_t base_port, bool master) :
-    _name("Generic ATA device"),
+    IBlockDevice("Generic ATA device"),
     _base_port(base_port),
     _master(master),
-    _status(DEV_STATUS::FAILED),
     supports_lba48(false),
     number_of_sectors(0)
 {
@@ -66,14 +65,14 @@ generic_ata_device::generic_ata_device(uint16_t base_port, bool master) :
   if (result == 0)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "No device found\n");
-    this->_status = DEV_STATUS::NOT_PRESENT;
+    this->current_dev_status = DEV_STATUS::NOT_PRESENT;
   }
   else
   {
     if (!wait_and_poll())
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Device is failed\n");
-      this->_status = DEV_STATUS::FAILED;
+      this->current_dev_status = DEV_STATUS::FAILED;
     }
     else
     {
@@ -93,7 +92,7 @@ generic_ata_device::generic_ata_device(uint16_t base_port, bool master) :
         KL_TRC_TRACE(TRC_LVL::FLOW, "Supports LBA24 with ", number_of_sectors, " sectors\n");
       }
 
-      _status = DEV_STATUS::OK;
+      current_dev_status = DEV_STATUS::OK;
     }
   }
 
@@ -107,18 +106,6 @@ generic_ata_device::generic_ata_device(uint16_t base_port, bool master) :
 generic_ata_device::~generic_ata_device()
 {
 
-}
-
-const kl_string generic_ata_device::device_name()
-{
-  KL_TRC_ENTRY;KL_TRC_EXIT;
-  return this->_name;
-}
-
-DEV_STATUS generic_ata_device::get_device_status()
-{
-  KL_TRC_ENTRY;KL_TRC_EXIT;
-  return this->_status;
 }
 
 uint64_t generic_ata_device::num_blocks()
@@ -169,7 +156,7 @@ ERR_CODE generic_ata_device::read_blocks(uint64_t start_block,
     KL_TRC_TRACE(TRC_LVL::FLOW, "Output buffer too short\n");
     result = ERR_CODE::INVALID_PARAM;
   }
-  else if (this->_status != DEV_STATUS::OK)
+  else if (this->current_dev_status != DEV_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Device has failed\n");
     result = ERR_CODE::DEVICE_FAILED;
@@ -205,7 +192,7 @@ ERR_CODE generic_ata_device::read_blocks(uint64_t start_block,
       if (!wait_and_poll())
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Something failed\n");
-        this->_status = DEV_STATUS::FAILED;
+        this->current_dev_status = DEV_STATUS::FAILED;
       }
     }
     else
@@ -234,7 +221,7 @@ ERR_CODE generic_ata_device::read_blocks(uint64_t start_block,
       if (!wait_and_poll())
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Something failed\n");
-        this->_status = DEV_STATUS::FAILED;
+        this->current_dev_status = DEV_STATUS::FAILED;
       }
 
       read_sector_to_buffer(reinterpret_cast<unsigned char *>(buffer) + (i * SECTOR_LENGTH),
@@ -243,7 +230,7 @@ ERR_CODE generic_ata_device::read_blocks(uint64_t start_block,
 
     klib_synch_spinlock_unlock(ata_spinlock);
 
-    if (this->_status == DEV_STATUS::OK)
+    if (this->current_dev_status == DEV_STATUS::OK)
     {
       result = ERR_CODE::NO_ERROR;
     }

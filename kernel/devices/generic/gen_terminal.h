@@ -22,10 +22,6 @@ public:
   generic_terminal(std::shared_ptr<IWritable> keyboard_pipe);
   virtual ~generic_terminal() = default;
 
-  // Implementing IDevice
-  virtual const kl_string device_name() override { return kl_string("Generic Terminal"); };
-  virtual DEV_STATUS get_device_status() override { return DEV_STATUS::OK; };
-
   // Terminal functions
   void handle_keypress(char key);
   void write_string(char *out_string, uint16_t num_chars);

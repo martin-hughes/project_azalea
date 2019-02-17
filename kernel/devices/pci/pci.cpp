@@ -15,6 +15,8 @@
 #include "devices/pci/pci_drivers.h"
 #include "processor/processor.h"
 
+#include "devices/usb/usb.h"
+
 /// @brief Read a 32-bit register from the PCI configuration space.
 ///
 /// This function returns the complete 32-bit register. The caller is then responsible for accessing the desired field
@@ -310,6 +312,9 @@ std::shared_ptr<pci_generic_device> pci_instantiate_device(uint8_t bus, uint8_t 
       {
         case PCI_SUBCLASS::USB_CONTR:
           KL_TRC_TRACE(TRC_LVL::FLOW, "USB controller\n");
+
+          // It is safe to attempt to initialise the USB system more than once.
+          usb::initialise_usb_system();
 
           switch (dev_reg2.prog_intface)
           {

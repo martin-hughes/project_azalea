@@ -14,6 +14,9 @@
 /// object that is receiving the work. If it were a part of the worker_object interface, it would probably require each
 /// worker_object subclass to derive from std::shared_from_this(), which seems undesirable.
 
+// Known defects:
+// - No attempt is made to manage the number of worker threads running - they could, theoretically, propagate for ever.
+
 //#define ENABLE_TRACING
 
 #include "processor/work_queue.h"
@@ -32,6 +35,7 @@ struct queued_item
 };
 
 kernel_spinlock work_queue_lock = 0; ///< A simple lock on the main work queue.
+uint64_t running_work_threads = 0;
 
 /// The main work queue itself.
 ///
@@ -42,6 +46,11 @@ std::queue<queued_item> *main_work_queue = nullptr;
 bool stop_work_queue_thread = false;
 volatile bool work_queue_thread_complete = true;
 #endif
+
+namespace
+{
+  void start_next_worker_thread();
+}
 
 /// @brief Create the work queue storage if it isn't already created.
 ///
@@ -56,7 +65,7 @@ void maybe_create_work_queue()
   {
     main_work_queue = new std::queue<queued_item>();
   }
-  klib_synch_spinlock_unlock(work_queue_lock)
+  klib_synch_spinlock_unlock(work_queue_lock);
 
   KL_TRC_EXIT;
 }
@@ -69,6 +78,8 @@ void work::work_queue_thread()
 {
   KL_TRC_ENTRY;
 
+  task_get_cur_thread()->is_worker_thread = true;
+
 #ifdef AZALEA_TEST_CODE
   work_queue_thread_complete = false;
 #endif
@@ -78,11 +89,15 @@ void work::work_queue_thread()
     maybe_create_work_queue();
   }
 
+  klib_synch_spinlock_lock(work_queue_lock);
+  running_work_threads++;
+  klib_synch_spinlock_unlock(work_queue_lock);
+
   while(1)
   {
     if (main_work_queue->empty())
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Yielding\n");
+      //KL_TRC_TRACE(TRC_LVL::FLOW, "Yielding\n");
 
       task_yield();
     }
@@ -90,7 +105,7 @@ void work::work_queue_thread()
     {
       // Dequeue an item and then make sure to release the queue lock before handling it, in case the act of handling
       // the work item causes more work items to be queued.
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Grab an item\n")
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Grab an item\n");
       klib_synch_spinlock_lock(work_queue_lock);
       queued_item this_item = main_work_queue->front();
       main_work_queue->pop();
@@ -102,6 +117,22 @@ void work::work_queue_thread()
       {
         this_item.item->response_item->set_response_complete();
       }
+    }
+
+    // Don't keep huge numbers of work threads running.
+    klib_synch_spinlock_lock(work_queue_lock);
+    if (running_work_threads > 2)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Abandon this work thread\n");
+      running_work_threads--;
+      klib_synch_spinlock_unlock(work_queue_lock);
+
+      task_get_cur_thread()->destroy_thread();
+    }
+    else
+    {
+      //KL_TRC_TRACE(TRC_LVL::FLOW, "Continue with this thread\n");
+      klib_synch_spinlock_unlock(work_queue_lock);
     }
 
 #ifdef AZALEA_TEST_CODE
@@ -130,8 +161,12 @@ work_response::work_response() : WaitForFirstTriggerObject{}, response_marked_co
 /// immediately.
 void work_response::set_response_complete()
 {
+  KL_TRC_ENTRY;
+
   response_marked_complete = true;
   this->trigger_all_threads();
+
+  KL_TRC_EXIT;
 }
 
 /// @brief Has this response been marked complete by set_response_complete()?
@@ -147,7 +182,31 @@ bool work_response::is_response_complete()
 /// If set_response_complete() has been called then this function will return immediately.
 void work_response::wait_for_response()
 {
+  bool is_work_thread = task_get_cur_thread()->is_worker_thread;
+  KL_TRC_ENTRY;
+
+  if (is_work_thread)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Start new worker thread\n");
+    klib_synch_spinlock_lock(work_queue_lock);
+    running_work_threads--;
+    klib_synch_spinlock_unlock(work_queue_lock);
+
+    start_next_worker_thread();
+  }
+
   this->wait_for_signal();
+
+  if (is_work_thread)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Mark this thread as running again\n");
+    klib_synch_spinlock_lock(work_queue_lock);
+    running_work_threads++;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Now ", running_work_threads, " work threads\n");
+    klib_synch_spinlock_unlock(work_queue_lock);
+  }
+
+  KL_TRC_EXIT;
 };
 
 
@@ -206,3 +265,22 @@ void test_only_reset_work_queue()
   main_work_queue = nullptr;
 }
 #endif
+
+namespace
+{
+  void start_next_worker_thread()
+  {
+    task_thread *cur_thread;
+    std::shared_ptr<task_thread> new_thread;
+    KL_TRC_ENTRY;
+
+    cur_thread = task_get_cur_thread();
+    ASSERT(cur_thread != nullptr);
+    ASSERT(cur_thread->is_worker_thread);
+
+    new_thread = task_thread::create(work::work_queue_thread, cur_thread->parent_process);
+    new_thread->start_thread();
+
+    KL_TRC_EXIT;
+  }
+}

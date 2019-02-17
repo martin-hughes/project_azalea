@@ -17,6 +17,7 @@ enum class DEV_STATUS
   STOPPED,
   NOT_PRESENT,
   NOT_READY,
+  UNKNOWN,
 };
 
 /// @brief The interface that all device drivers must inherit from.
@@ -26,10 +27,25 @@ enum class DEV_STATUS
 class IDevice
 {
 public:
+  /// @brief Standard constructor
+  ///
+  /// @param name The human friendly name for this device.
+  IDevice(kl_string name) : device_human_name{name}, current_dev_status{DEV_STATUS::UNKNOWN} { };
   virtual ~IDevice() = default;
 
-  virtual const kl_string device_name() = 0;
-  virtual DEV_STATUS get_device_status() = 0;
+  /// @brief Return a human readable name for this device.
+  ///
+  /// @return The human readable name.
+  virtual const kl_string device_name() { return device_human_name; };
+
+  /// @brief Return the current status of this device.
+  ///
+  /// @return One of DEV_STATUS, as appropriate.
+  virtual DEV_STATUS get_device_status() { return current_dev_status; };
+
+protected:
+  const kl_string device_human_name; ///< The human-friendly name for this device.
+  DEV_STATUS current_dev_status;
 };
 
 /// @brief An interface that must be inherited by all drivers that handle interrupts.

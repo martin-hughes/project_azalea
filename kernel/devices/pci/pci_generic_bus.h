@@ -18,8 +18,6 @@ public:
   virtual ~pci_generic_bus() override;
 
 protected:
-  virtual const kl_string device_name() override;
-  virtual DEV_STATUS get_device_status() override;
 
   virtual void scan_bus();
   virtual void add_new_device(uint8_t slot, uint8_t func);

@@ -113,11 +113,18 @@ uint64_t WaitObject::threads_waiting()
 ///
 /// In the default WaitObject implementation threads are triggered one-by-one, in the same order as which they waited
 /// on this WaitObject, but derived classes can choose any implementation. If no threads are waiting, nothing happens.
-void WaitObject::trigger_next_thread()
+///
+/// @param should_lock Set this to false if this function is being called from a function that already holds
+///                    _list_lock. Otherwise, leave as true.
+void WaitObject::trigger_next_thread(const bool should_lock)
 {
   KL_TRC_ENTRY;
 
-  klib_synch_spinlock_lock(this->_list_lock);
+  if (should_lock)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "locking\n");
+    klib_synch_spinlock_lock(this->_list_lock);
+  }
 
   klib_list_item<task_thread *> *list_item = this->_waiting_threads.head;
   if (list_item != nullptr)
@@ -129,7 +136,11 @@ void WaitObject::trigger_next_thread()
     list_item = nullptr;
   }
 
-  klib_synch_spinlock_unlock(this->_list_lock);
+  if (should_lock)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Unlocking\n");
+    klib_synch_spinlock_unlock(this->_list_lock);
+  }
 
   KL_TRC_EXIT;
 }
@@ -139,11 +150,14 @@ void WaitObject::trigger_next_thread()
 void WaitObject::trigger_all_threads()
 {
   KL_TRC_ENTRY;
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Triggering from object: ", this, "\n");
 
+  klib_synch_spinlock_lock(this->_list_lock);
   while(klib_list_get_length(&this->_waiting_threads) != 0)
   {
-    this->trigger_next_thread();
+    trigger_next_thread(false);
   }
+  klib_synch_spinlock_unlock(this->_list_lock);
 
   KL_TRC_EXIT;
 }
@@ -175,6 +189,7 @@ void WaitForFirstTriggerObject::wait_for_signal()
 
   if (!this->already_triggered)
   {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Not yet triggered, wait. (", this, ")\n");
     task_continue_this_thread();
 
     cur_thread->stop_thread();
@@ -190,19 +205,24 @@ void WaitForFirstTriggerObject::wait_for_signal()
   }
   else
   {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Triggered, continue. (", this, ")\n");
     klib_synch_spinlock_unlock(this->_list_lock);
   }
 
   KL_TRC_EXIT;
-
 }
 
-void WaitForFirstTriggerObject::trigger_next_thread()
+void WaitForFirstTriggerObject::trigger_next_thread(const bool should_lock)
 {
   KL_TRC_ENTRY;
 
-  klib_synch_spinlock_lock(this->_list_lock);
+  if (should_lock)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "locking\n");
+    klib_synch_spinlock_lock(this->_list_lock);
+  }
 
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Setting triggered to true.\n");
   already_triggered = true;
 
   klib_list_item<task_thread *> *list_item = this->_waiting_threads.head;
@@ -213,6 +233,28 @@ void WaitForFirstTriggerObject::trigger_next_thread()
     list_item->item->start_thread();
     delete list_item;
     list_item = nullptr;
+  }
+
+  if (should_lock)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Unlocking\n");
+    klib_synch_spinlock_unlock(this->_list_lock);
+  }
+
+  KL_TRC_EXIT;
+}
+
+void WaitForFirstTriggerObject::trigger_all_threads()
+{
+  KL_TRC_ENTRY;
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Triggering from object: ", this, "\n");
+
+  klib_synch_spinlock_lock(this->_list_lock);
+
+  this->already_triggered = true;
+  while(klib_list_get_length(&this->_waiting_threads) != 0)
+  {
+    trigger_next_thread(false);
   }
 
   klib_synch_spinlock_unlock(this->_list_lock);

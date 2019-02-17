@@ -12,9 +12,6 @@ public:
   pci_root_device();
   virtual ~pci_root_device() override;
 
-  virtual const kl_string device_name() override;
-  virtual DEV_STATUS get_device_status() override;
-
 protected:
   void scan_for_devices();
 };

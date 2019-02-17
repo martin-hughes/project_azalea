@@ -6,7 +6,7 @@
 #include "ramdisk.h"
 
 ramdisk_device::ramdisk_device(uint64_t num_blocks, uint64_t block_size) :
-    _name("generic RAM disk"), _num_blocks(num_blocks), _block_size(block_size), _storage_size(num_blocks * block_size)
+    IBlockDevice("generic RAM disk"), _num_blocks(num_blocks), _block_size(block_size), _storage_size(num_blocks * block_size)
 {
   KL_TRC_ENTRY;
 
@@ -33,13 +33,6 @@ ramdisk_device::~ramdisk_device()
   }
 
   KL_TRC_EXIT;
-}
-
-const kl_string ramdisk_device::device_name()
-{
-  KL_TRC_ENTRY;KL_TRC_EXIT;
-
-  return this->_name;
 }
 
 DEV_STATUS ramdisk_device::get_device_status()

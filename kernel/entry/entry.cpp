@@ -63,6 +63,9 @@ gen_ps2_controller_device *ps2_controller;
 std::shared_ptr<task_process> *system_process;
 std::shared_ptr<task_process> *kernel_start_process;
 
+extern task_process *term_proc;
+task_process *term_proc = nullptr;
+
 volatile bool wait_for_term;
 
 // Assumptions used throughout the kernel
@@ -209,12 +212,7 @@ void kernel_start() throw ()
 
   // Process should be good to go!
   initial_proc->start_process();
-
-  if (keyboard != nullptr)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Setting up keyboard messages\n");
-    keyboard->recipient = term.get();
-  }
+  term_proc = term.get();
 
   // If (when!) the initial process exits, we want the system to shut down. But since we don't really do shutting down
   // at the moment, just crash instead.

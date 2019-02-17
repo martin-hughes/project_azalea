@@ -23,7 +23,7 @@ public:
   virtual uint64_t threads_waiting();
 
 protected:
-  virtual void trigger_next_thread();
+  virtual void trigger_next_thread(const bool should_lock = true);
   virtual void trigger_all_threads();
 
   klib_list<task_thread *> _waiting_threads; ///< List of threads waiting for this WaitObject to be signalled.
@@ -43,7 +43,8 @@ public:
   virtual void wait_for_signal() override;
 
 protected:
-  virtual void trigger_next_thread() override;
+  virtual void trigger_next_thread(const bool should_lock = true) override;
+  virtual void trigger_all_threads() override;
 
-  bool already_triggered; ///< Has this wait object already had at least one thread be triggered?
+  volatile bool already_triggered; ///< Has this wait object already had at least one thread be triggered?
 };

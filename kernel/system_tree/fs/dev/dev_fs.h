@@ -8,6 +8,8 @@
 
 #include <memory>
 
+/// @brief A file that ignores all writes and where reads return all zeros.
+///
 class null_file : public ISystemTreeLeaf, public IReadable, public IWritable
 {
 public:
@@ -26,6 +28,8 @@ public:
                                uint64_t &bytes_written) override;
 };
 
+/// @brief The root of a devices tree in System Tree.
+///
 class dev_root_branch : public system_tree_simple_branch
 {
 public:

@@ -47,7 +47,6 @@ asm_proc_page_fault_handler:
     pop rax
     popf
     add rsp, 8
-    sti
     iretq
 
 ; Define the IRQ handlers

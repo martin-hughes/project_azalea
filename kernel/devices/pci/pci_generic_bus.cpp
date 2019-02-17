@@ -10,6 +10,7 @@
 #include "devices/pci/generic_device/pci_generic_device.h"
 
 pci_generic_bus::pci_generic_bus(uint8_t bus, pci_root_device *parent) :
+  IDevice{"Generic PCI bus"},
   _bus_number(bus), _parent(parent)
 {
   KL_TRC_ENTRY;
@@ -25,16 +26,6 @@ pci_generic_bus::~pci_generic_bus()
   KL_TRC_ENTRY;
 
   KL_TRC_EXIT;
-}
-
-const kl_string pci_generic_bus::device_name()
-{
-  return kl_string("Generic PCI bus");
-}
-
-DEV_STATUS pci_generic_bus::get_device_status()
-{
-  return DEV_STATUS::FAILED;
 }
 
 /// @brief Scan this bus for devices

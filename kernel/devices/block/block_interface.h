@@ -7,6 +7,7 @@
 class IBlockDevice : public IDevice
 {
 public:
+  IBlockDevice(const kl_string name) : IDevice{name} { };
   virtual ~IBlockDevice() = default;
 
   virtual uint64_t num_blocks() = 0;

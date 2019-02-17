@@ -11,7 +11,6 @@ public:
   ramdisk_device(uint64_t num_blocks, uint64_t block_size);
   virtual ~ramdisk_device();
 
-  virtual const kl_string device_name();
   virtual DEV_STATUS get_device_status();
 
   virtual uint64_t num_blocks();
@@ -28,7 +27,6 @@ public:
 
 protected:
   char *_ramdisk_storage;
-  const kl_string _name;
 
   const uint64_t _num_blocks;
   const uint64_t _block_size;

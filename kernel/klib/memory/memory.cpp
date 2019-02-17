@@ -168,7 +168,7 @@ void *kmalloc(uint64_t mem_size)
       KL_TRC_TRACE(TRC_LVL::FLOW, "Releasing mutex from kmalloc 1\n");
       klib_synch_mutex_release(allocator_gen_lock, false);
     }
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Big allocation. Pages needed", required_pages, "\n");
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Big allocation - ", mem_size, ". Pages needed: ", required_pages, "\n");
 
     large_alloc_addr = reinterpret_cast<uint64_t>(mem_allocate_pages(required_pages));
     large_allocations->insert(large_alloc_addr, required_pages);

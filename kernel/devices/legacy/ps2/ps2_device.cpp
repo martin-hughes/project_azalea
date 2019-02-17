@@ -18,12 +18,9 @@
 
 extern const KEYS ps2_set_2_norm_scancode_map[256];
 extern const KEYS ps2_set_2_spec_scancode_map[256];
-extern const uint32_t ps2_set_2_props_tab_len;
-extern key_props ps2_set_2_key_props[];
 
-gen_ps2_device::gen_ps2_device(gen_ps2_controller_device *parent, bool second_channel) :
-  _device_name("Generic PS/2 device"),
-  _status(DEV_STATUS::FAILED),
+gen_ps2_device::gen_ps2_device(gen_ps2_controller_device *parent, bool second_channel, const kl_string name) :
+  IDevice{name},
   _parent(parent),
   _second_channel(second_channel),
   _irq_enabled(false)
@@ -33,19 +30,13 @@ gen_ps2_device::gen_ps2_device(gen_ps2_controller_device *parent, bool second_ch
   KL_TRC_EXIT;
 }
 
+gen_ps2_device::gen_ps2_device(gen_ps2_controller_device *parent, bool second_channel) :
+  gen_ps2_device{parent, second_channel, "Generic PS/2 device"}
+{ }
+
 gen_ps2_device::~gen_ps2_device()
 {
 
-}
-
-const kl_string gen_ps2_device::device_name()
-{
-  return _device_name;
-}
-
-DEV_STATUS gen_ps2_device::get_device_status()
-{
-  return _status;
 }
 
 bool gen_ps2_device::handle_interrupt_fast(uint8_t irq_number)
@@ -130,20 +121,17 @@ void gen_ps2_device::disable_irq()
 }
 
 ps2_mouse_device::ps2_mouse_device(gen_ps2_controller_device *parent, bool second_channel) :
-  gen_ps2_device(parent, second_channel)
+  gen_ps2_device(parent, second_channel, "Generic PS/2 mouse")
 {
   KL_TRC_ENTRY;
 
-  _device_name = "Generic PS/2 mouse";
-  _status = DEV_STATUS::OK;
+  current_dev_status = DEV_STATUS::OK;
 
   KL_TRC_EXIT;
 }
 
 ps2_keyboard_device::ps2_keyboard_device(gen_ps2_controller_device *parent, bool second_channel) :
-  gen_ps2_device(parent, second_channel),
-  recipient(nullptr),
-  _spec_keys_down({ false, false, false, false, false, false, false }),
+  gen_ps2_device(parent, second_channel, "Generic PS/2 keyboard"),
   _next_key_is_release(false),
   _next_key_is_special(false),
   _pause_seq_chars(0)
@@ -152,8 +140,7 @@ ps2_keyboard_device::ps2_keyboard_device(gen_ps2_controller_device *parent, bool
 
   KL_TRC_ENTRY;
 
-  _device_name = "Generic PS/2 keyboard";
-  _status = DEV_STATUS::OK;
+  current_dev_status = DEV_STATUS::OK;
 
   _parent->send_byte(PS2_CONST::DEV_ENABLE_SCANNING, second_channel);
   _parent->read_byte(response);
@@ -175,15 +162,6 @@ void ps2_keyboard_device::handle_interrupt_slow(uint8_t irq_num)
   KL_TRC_ENTRY;
   uint8_t scancode;
   KEYS translated_code;
-  task_process *proc = this->recipient;
-  klib_message_hdr hdr;
-  char printable_char;
-  keypress_msg *updown_msg;
-  key_char_msg *char_msg;
-
-
-  hdr.msg_length = sizeof(keypress_msg);
-  hdr.originating_process = task_get_cur_thread()->parent_process.get();
 
   while ((proc_read_port(0x64, 8) & 0x1) == 1)
   {
@@ -293,39 +271,18 @@ void ps2_keyboard_device::handle_interrupt_slow(uint8_t irq_num)
             translated_code = ps2_set_2_norm_scancode_map[scancode];
           }
 
-          printable_char = keyb_translate_key(translated_code,
-                                              this->_spec_keys_down,
-                                              ps2_set_2_key_props,
-                                              ps2_set_2_props_tab_len);
+          if (this->_next_key_is_release)
+          {
+            KL_TRC_TRACE(TRC_LVL::FLOW, "Post release message\n");
+            this->handle_key_up(translated_code, this->_spec_keys_down);
+          }
+          else
+          {
+            KL_TRC_TRACE(TRC_LVL::FLOW, "Post press message\n");
+            this->handle_key_down(translated_code, this->_spec_keys_down);
+          }
 
           this->_next_key_is_special = false;
-
-
-          if (proc != nullptr)
-          {
-            KL_TRC_TRACE(TRC_LVL::FLOW, "Send keypress to recipient... \n");
-            updown_msg = new keypress_msg;
-            updown_msg->key_pressed = translated_code;
-            updown_msg->modifiers = this->_spec_keys_down;
-            hdr.msg_contents = reinterpret_cast<char *>(updown_msg);
-            hdr.msg_id = (this->_next_key_is_release ? SM_KEYUP : SM_KEYDOWN);
-            hdr.msg_length = sizeof(keypress_msg);
-
-            msg_send_to_process(proc, hdr);
-
-            if ((!this->_next_key_is_release) && (printable_char != 0))
-            {
-              KL_TRC_TRACE(TRC_LVL::FLOW, "Send character message\n");
-              char_msg = new key_char_msg;
-              char_msg->pressed_character = printable_char;
-
-              hdr.msg_contents = reinterpret_cast<char *>(char_msg);
-              hdr.msg_id = SM_PCHAR;
-              hdr.msg_length = sizeof(key_char_msg);
-
-              msg_send_to_process(proc, hdr);
-            }
-          }
         }
         this->_next_key_is_release = false;
       }

@@ -181,6 +181,12 @@ def demo_machine_cmd(target, source, env):
                  "-serial stdio", # Could change this to -debugcon stdio to put the monitor on stdio.
                  "-device nec-usb-xhci",
                  "-kernel output/system_root/kernel64.sys",
+
+                 # The following arguments are simply a reminder of useful options for temporary use while debugging.
+                 #"-D /tmp/qemu.log",
+                 #"-d int,pcall",
+                 #"--trace events=/tmp/trcevents",
+                 #"-device usb-kbd",
                 ]
   qemu_cmd = " ".join(qemu_params) + " " + config.demo_machine_extra_params
   os.system(qemu_cmd)

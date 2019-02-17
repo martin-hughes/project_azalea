@@ -11,26 +11,26 @@
 #include "klib/klib.h"
 
 block_proxy_device::block_proxy_device(IBlockDevice *parent, uint64_t start_block, uint64_t num_blocks) :
-    _name("Generic block device"), _parent(parent), _start_block(start_block), _num_blocks(num_blocks)
+    IBlockDevice("Generic block device"), _parent(parent), _start_block(start_block), _num_blocks(num_blocks)
 {
   KL_TRC_ENTRY;
 
-  status = DEV_STATUS::OK;
+  current_dev_status = DEV_STATUS::OK;
 
   if (parent == nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid parent device\n");
-    status = DEV_STATUS::FAILED;
+    current_dev_status = DEV_STATUS::FAILED;
   }
   else if (num_blocks == 0)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Insufficient blocks to proxy\n");
-    status = DEV_STATUS::FAILED;
+    current_dev_status = DEV_STATUS::FAILED;
   }
   else if ((start_block > parent->num_blocks()) || ((start_block + num_blocks) > parent->num_blocks()))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Proxy range incorrect\n");
-    status = DEV_STATUS::FAILED;
+    current_dev_status = DEV_STATUS::FAILED;
   }
 
   KL_TRC_EXIT;
@@ -43,18 +43,11 @@ block_proxy_device::~block_proxy_device()
   KL_TRC_EXIT;
 }
 
-const kl_string block_proxy_device::device_name()
-{
-  KL_TRC_ENTRY;KL_TRC_EXIT;
-
-  return this->_name;
-}
-
 DEV_STATUS block_proxy_device::get_device_status()
 {
   KL_TRC_ENTRY;
 
-  DEV_STATUS ret = this->status;
+  DEV_STATUS ret = this->current_dev_status;
 
   if (ret == DEV_STATUS::OK)
   {
@@ -99,7 +92,7 @@ ERR_CODE block_proxy_device::read_blocks(uint64_t start_block,
 
   ERR_CODE ret = ERR_CODE::NO_ERROR;
 
-  if (this->status != DEV_STATUS::OK)
+  if (this->current_dev_status != DEV_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Device failed\n");
     ret = ERR_CODE::DEVICE_FAILED;
@@ -132,7 +125,7 @@ ERR_CODE block_proxy_device::write_blocks(uint64_t start_block,
 
   ERR_CODE ret = ERR_CODE::NO_ERROR;
 
-  if (this->status != DEV_STATUS::OK)
+  if (this->current_dev_status != DEV_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Device failed\n");
     ret = ERR_CODE::DEVICE_FAILED;

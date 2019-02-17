@@ -1,6 +1,9 @@
 /// @file
 /// @brief Task management code specific to threads.
 
+// Known defects:
+// - Does destroying a kernel-mode thread delete the stack associated with it?
+
 //#define ENABLE_TRACING
 
 #include "klib/klib.h"
@@ -17,15 +20,17 @@
 ///
 /// @param parent The process this thread is part of.
 task_thread::task_thread(ENTRY_PROC entry_point, std::shared_ptr<task_process> parent) :
-  permit_running(false),
-  parent_process(parent),
-  thread_destroyed(false)
+  permit_running{false},
+  parent_process{parent},
+  thread_destroyed{false},
+  is_worker_thread{false}
 {
   KL_TRC_ENTRY;
   ASSERT(parent_process != nullptr);
 
   this->execution_context = task_int_create_exec_context(entry_point, this);
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Context created @ ", this->execution_context, "\n");
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Context created @ ", this->execution_context,
+                              ", for entry point: ", reinterpret_cast<void *>(entry_point), "\n");
   this->process_list_item = new klib_list_item<std::shared_ptr<task_thread>>();
   this->synch_list_item = new klib_list_item<std::shared_ptr<task_thread>>();
 
