@@ -2,6 +2,7 @@
 
 Import('env')
 obj = env.Library("acpi", [ "acpi.cpp",
+                            "acpi_devices.cpp",
                             "acpi_osl.cpp",
                             "acpi_output.cpp",
                           ])

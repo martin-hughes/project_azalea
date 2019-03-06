@@ -16,6 +16,7 @@
 #include "processor/processor.h"
 
 #include "devices/usb/usb.h"
+#include "devices/block/ata/controller/ata_pci_controller.h"
 
 /// @brief Read a 32-bit register from the PCI configuration space.
 ///
@@ -306,6 +307,17 @@ std::shared_ptr<pci_generic_device> pci_instantiate_device(uint8_t bus, uint8_t 
 
   switch (dev_reg2.class_code)
   {
+    case PCI_CLASS::MASS_STORE_CONTR:
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Mass storage controller\n");
+      switch(dev_reg2.subclass)
+      {
+        case PCI_SUBCLASS::IDE_CONTR:
+          KL_TRC_TRACE(TRC_LVL::FLOW, "IDE Controller\n");
+          new_device = std::make_shared<ata::pci_controller>(new_dev_addr);
+          break;
+      }
+      break;
+
     case PCI_CLASS::SERIAL_BUS_CONTR:
       KL_TRC_TRACE(TRC_LVL::FLOW, "Serial bus controller\n");
       switch (dev_reg2.subclass)
@@ -325,6 +337,7 @@ std::shared_ptr<pci_generic_device> pci_instantiate_device(uint8_t bus, uint8_t 
 
         break;
       }
+      break;
 
     default:
       break;

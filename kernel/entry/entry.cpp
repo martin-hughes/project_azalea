@@ -15,7 +15,7 @@
 #include "system_tree/system_tree.h"
 #include "system_tree/process/process.h"
 
-#include "devices/block/ata/ata.h"
+#include "devices/block/ata/ata_device.h"
 #include "devices/block/proxy/block_proxy.h"
 #include "devices/legacy/ps2/ps2_controller.h"
 #include "devices/generic/gen_terminal.h"
@@ -57,7 +57,8 @@ void setup_task_parameters(task_process *startup_proc);
 // will cause these to become unused.
 std::shared_ptr<fat_filesystem> setup_initial_fs();
 // Some variables to support loading a filesystem.
-generic_ata_device *first_hdd;
+extern ata::generic_device *first_hdd;
+ata::generic_device *first_hdd{nullptr};
 gen_ps2_controller_device *ps2_controller;
 
 std::shared_ptr<task_process> *system_process;
@@ -134,7 +135,6 @@ void kernel_start() throw ()
                reinterpret_cast<uint64_t>(task_get_cur_thread()),
                "\n");
 
-  ACPI_STATUS status;
   std::shared_ptr<task_process> initial_proc;
   std::shared_ptr<ISystemTreeLeaf> leaf;
   char proc_ptr_buffer[34];
@@ -142,9 +142,7 @@ void kernel_start() throw ()
   uint64_t br;
   std::shared_ptr<pipe_branch::pipe_read_leaf> pipe_read_leaf;
 
-  // Bring the ACPI system up to full readiness.
-  status = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
-  ASSERT(status == AE_OK);
+  acpi_finish_init();
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Code below here is not intended to be part of the permanent kernel start procedure, but will sit here until the //
@@ -222,12 +220,11 @@ void kernel_start() throw ()
 }
 
 // Configure the filesystem of the (presumed) boot device as part of System Tree.
-const unsigned int base_reg_a = 0x1F0;
 std::shared_ptr<fat_filesystem> setup_initial_fs()
 {
   KL_TRC_ENTRY;
 
-  first_hdd = new generic_ata_device(base_reg_a, true);
+  ASSERT(first_hdd != nullptr); // new ata::generic_device(nullptr, 0);
   std::unique_ptr<unsigned char[]> sector_buffer(new unsigned char[512]);
 
   kl_memset(sector_buffer.get(), 0, 512);

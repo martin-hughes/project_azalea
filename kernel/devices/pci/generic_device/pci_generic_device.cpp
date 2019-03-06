@@ -122,7 +122,7 @@ void pci_generic_device::scan_caps()
     SET_CAP_SUPPORTED(PCI_BRIDGE_VENDOR_ID, caps.pci_bridge_vendor_id, "PCI Bridge Vendor ID capability");
     SET_CAP_SUPPORTED(AGP_8X, caps.agp_8x, "AGP 8x capability");
     SET_CAP_SUPPORTED(SECURE_DEVICE, caps.secure_device, "Secure Device capability");
-    SET_CAP_SUPPORTED(PCI_EXPRESS, caps.pci_express, "PCI Express capablity");
+    SET_CAP_SUPPORTED(PCI_EXPRESS, caps.pci_express, "PCI Express capability");
     SET_CAP_SUPPORTED(MSI_X, caps.msi_x, "MSI-X capability");
 
     default:

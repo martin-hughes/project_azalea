@@ -24,10 +24,13 @@ public:
 protected:
 
   // Interrupt receiver functions
+  virtual uint16_t compute_irq_for_pin(uint8_t pin); // Note that this is implemented in pci_legacy_interrupts.cpp.
   virtual bool handle_interrupt_fast(unsigned char interrupt_number) override;
   virtual void handle_interrupt_slow(unsigned char interrupt_number) override;
-  virtual bool handle_translated_interrupt_fast(unsigned char interrupt_offset, unsigned char raw_interrupt_num) { return false; };
-  virtual void handle_translated_interrupt_slow(unsigned char interrupt_offset, unsigned char raw_interrupt_num) { };
+  virtual bool handle_translated_interrupt_fast(unsigned char interrupt_offset,
+                                                unsigned char raw_interrupt_num) { return false; };
+  virtual void handle_translated_interrupt_slow(unsigned char interrupt_offset,
+                                                unsigned char raw_interrupt_num) { };
 
   // Generic capabilities commands.
   void zero_caps_list();

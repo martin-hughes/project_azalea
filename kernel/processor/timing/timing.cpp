@@ -56,13 +56,20 @@ void time_stall_process(uint64_t wait_in_ns)
 /// Returns the value of the HPET counter, for applications that may be interested - for example, for waiting a short
 /// period whilst polling, or for performance measurements
 ///
+/// @param output_in_ns - If set to true, output the system timer count in terms of nanoseconds. If false, just output
+///                       the raw value.
+///
 /// @return The value of the system timer - the HPET in Azalea. May not be directly meaningful!
-uint64_t time_get_system_timer_count()
+uint64_t time_get_system_timer_count(bool output_in_ns)
 {
+  uint64_t val;
   KL_TRC_ENTRY;
+
+  val =  time_hpet_cur_value(output_in_ns);
+
   KL_TRC_EXIT;
 
-  return time_hpet_cur_value();
+  return val;
 }
 
 /// @brief Translate a desired wait into a number of system timer units.

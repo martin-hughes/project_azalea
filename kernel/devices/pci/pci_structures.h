@@ -147,6 +147,32 @@ struct pci_reg_13
 };
 static_assert(sizeof(pci_reg_13) == sizeof(uint32_t), "Bad packing of pci_reg_13");
 
+/// @brief Standard format of PCI register 15:
+struct pci_reg_15
+{
+  /// @cond
+  union
+  {
+    uint32_t raw;
+    struct
+    {
+      uint8_t interrupt_line;
+      uint8_t interrupt_pin;
+      union
+      {
+        uint16_t bridge_control;
+        struct
+        {
+          uint8_t min_grant;
+          uint8_t max_latency;
+        };
+      };
+    };
+  };
+  /// @endcond
+};
+static_assert(sizeof(pci_reg_15) == sizeof(uint32_t), "Bad packing of pci_reg_15");
+
 /// @brief Standard header of PCI device capabilities structures.
 ///
 struct pci_cap_header

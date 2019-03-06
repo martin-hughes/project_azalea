@@ -26,7 +26,7 @@ typedef unsigned long size_t;
 #define HAVE_VA_COPY 0
 #define HAVE___VA_COPY 0
 
-const int INT_MAX = ~((int)0);
+#define INT_MAX (0x7FFFFFF)
 
 #define E2BIG 7
 

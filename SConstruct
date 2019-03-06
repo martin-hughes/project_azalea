@@ -187,6 +187,7 @@ def demo_machine_cmd(target, source, env):
                  #"-d int,pcall",
                  #"--trace events=/tmp/trcevents",
                  #"-device usb-kbd",
+                 #"-hda kernel_disc_image_nonlive.vdi",
                 ]
   qemu_cmd = " ".join(qemu_params) + " " + config.demo_machine_extra_params
   os.system(qemu_cmd)

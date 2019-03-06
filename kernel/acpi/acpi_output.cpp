@@ -18,6 +18,8 @@ extern "C"
 #include "klib/c_helpers/printf_fns.h"
 #include "klib/tracing/tracing.h"
 
+/// @cond
+
 /*******************************************************************************
  *
  * FUNCTION:    AcpiError
@@ -78,12 +80,12 @@ void ACPI_INTERNAL_VAR_XFACE AcpiException(const char *ModuleName, UINT32 LineNu
 
   if (ACPI_SUCCESS(Status))
   {
-    AcpiOsPrintf(ACPI_MSG_EXCEPTION);
+    AcpiOsPrintf(ACPI_MSG_ERROR);
 
   }
   else
   {
-    AcpiOsPrintf(ACPI_MSG_EXCEPTION "%s, ", AcpiFormatException(Status));
+    AcpiOsPrintf(ACPI_MSG_ERROR "%s, ", AcpiFormatException(Status));
   }
 
   va_start(ArgList, Format);
@@ -236,3 +238,5 @@ void ACPI_INTERNAL_VAR_XFACE AcpiBiosWarning(const char *ModuleName, UINT32 Line
 }
 
 ACPI_EXPORT_SYMBOL (AcpiBiosWarning)
+
+/// @endcond

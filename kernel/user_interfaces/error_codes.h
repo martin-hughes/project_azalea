@@ -90,9 +90,14 @@ enum AZALEA_ENUM_CLASS ERR_CODE_T
   OUT_OF_RESOURCE = 15,
 
   /**
-   *  The provided data wasn't in a recognised format
+   *  The provided data wasn't in a recognised format.
    */
   UNRECOGNISED = 16,
+
+  /**
+   * The requested data transfer was too large.
+   */
+  TRANSFER_TOO_LARGE = 17,
 };
 
 AZALEA_RENAME_ENUM(ERR_CODE);

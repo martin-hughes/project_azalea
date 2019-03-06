@@ -78,9 +78,9 @@ void time_hpet_init()
   ASSERT(time_hpet_get_flag(cap_flags, hpet_hw_leg_rte_cap));
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "HPET general information:\n");
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Revision", HPET_REVISION(cap_flags), "\n");
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Number of timers", HPET_NUM_TIMERS(cap_flags), "\n");
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Period in fs", HPET_PERIOD(cap_flags), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Revision: ", HPET_REVISION(cap_flags), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Number of timers: ", HPET_NUM_TIMERS(cap_flags), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Period in fs: ", HPET_PERIOD(cap_flags), "\n");
 
   // Stop the HPET while we configure it.
   time_hpet_clear_flag(hpet_config->gen_config, hpet_cfg_glbl_enable);
@@ -253,11 +253,23 @@ void time_hpet_stall(uint64_t wait_in_ns)
 
 /// @brief Return the current value of the HPET counter.
 ///
+/// @param output_in_ns Return the value in nanoseconds instead of HPET timer units?
+///
 /// @return The current value of the main HPET counter.
-uint64_t time_hpet_cur_value()
+uint64_t time_hpet_cur_value(bool output_in_ns)
 {
+  uint64_t val;
   KL_TRC_ENTRY;
+
+  val = hpet_config->main_counter_val;
+  if (output_in_ns)
+  {
+    // Do two divisions by 1000 in case the Period is close to 1,000,000
+    val = val * (HPET_PERIOD(hpet_config->gen_cap_and_id) / 1000);
+    val = val / 1000;
+  }
+
   KL_TRC_EXIT;
 
-  return hpet_config->main_counter_val;
+  return val;
 }

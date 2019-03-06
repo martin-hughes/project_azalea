@@ -175,6 +175,10 @@ void kl_trc_output_err_code_argument(ERR_CODE ec)
       msg = "Out of resource";
       break;
 
+    case ERR_CODE::TRANSFER_TOO_LARGE:
+      msg = "Requested transfer too large";
+      break;
+
     default:
       break;
   }

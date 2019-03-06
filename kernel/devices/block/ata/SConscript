@@ -1,5 +1,13 @@
 # Generic ATA device driver.
 
 Import('env')
-obj = env.Library("dev-ata", [ "ata.cpp" ])
-Return ("obj") 
+obj = env.Library("dev-ata",
+                  [
+                    # ATA Controller files.
+                    "controller/ata_controller.cpp",
+                    "controller/ata_pci_controller.cpp",
+
+                    # Generic ATA Device files.
+                    "ata_device.cpp",
+                  ])
+Return ("obj")
