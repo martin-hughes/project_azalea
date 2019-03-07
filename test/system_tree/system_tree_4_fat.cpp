@@ -83,10 +83,10 @@ protected:
   };
 };
 
-INSTANTIATE_TEST_CASE_P(FileList,
-                        FatFsTest,
-                        ::testing::Combine(::testing::ValuesIn(test_list),
-                                           ::testing::ValuesIn(test_images)));
+INSTANTIATE_TEST_SUITE_P(FileList,
+                         FatFsTest,
+                         ::testing::Combine(::testing::ValuesIn(test_list),
+                                            ::testing::ValuesIn(test_images)));
 
 // Attempt to read data from a file on the test disk image. This file has a plain 8.3 filename and should simply
 // contain the text "This is a test." (15 characters.)
