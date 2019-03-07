@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <stdio.h>
+#include <time.h>
 
 #define SC_DEBUG_MSG(string) \
   syscall_debug_output((string), strlen((string)) )
@@ -45,6 +46,13 @@ int main (int argc, char **argv, char **env_p)
   // Main command loop
   while (1)
   {
+    //time_t rawtime;
+    //struct tm * timeinfo;
+
+    //time (&rawtime);
+    //timeinfo = localtime (&rawtime);
+    //printf("%02u:%02u:%02u ", (unsigned int)timeinfo->tm_hour, (unsigned int)timeinfo->tm_min, (unsigned int)timeinfo->tm_sec);
+
     result = syscall_get_system_clock(&t);
     if (result == ERR_CODE::NO_ERROR)
     {

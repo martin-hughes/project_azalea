@@ -173,6 +173,7 @@ def disassemble_cmd(target, source, env):
   return None
 
 def demo_machine_cmd(target, source, env):
+  print("Ensure that timezone info is in system/data/timezones!")
   qemu_params = ["qemu-system-x86_64",
                  "-drive file=fat:rw:fat-type=16:output/system_root,format=raw",
                  "-no-reboot",
