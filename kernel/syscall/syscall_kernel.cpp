@@ -61,6 +61,7 @@ const void *syscall_pointers[] =
       (void *)syscall_create_obj_and_handle,
       (void *)syscall_set_handle_data_len,
       (void *)syscall_set_startup_params,
+      (void *)syscall_get_system_clock,
     };
 
 const uint64_t syscall_max_idx = (sizeof(syscall_pointers) / sizeof(void *)) - 1;

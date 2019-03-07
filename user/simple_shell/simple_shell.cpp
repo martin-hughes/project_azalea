@@ -35,6 +35,8 @@ int main (int argc, char **argv, char **env_p)
   size_t command_len;
   const uint8_t MAX_CMD_LEN = 80;
   size_t result_len;
+  time_expanded t;
+  ERR_CODE result;
 
   printf("Azalea simple shell. OS Version: %d\n", version);
 
@@ -43,6 +45,15 @@ int main (int argc, char **argv, char **env_p)
   // Main command loop
   while (1)
   {
+    result = syscall_get_system_clock(&t);
+    if (result == ERR_CODE::NO_ERROR)
+    {
+      printf("%02u:%02u:%02u ", (unsigned int)t.hours, (unsigned int)t.minutes, (unsigned int)t.seconds);
+    }
+    else
+    {
+      printf("--:--:-- ");
+    }
     printf("> ");
     fflush(stdout);
 

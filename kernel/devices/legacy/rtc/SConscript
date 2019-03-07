@@ -1,0 +1,8 @@
+# Generic Real Time Clock device driver.
+
+Import('env')
+obj = env.Library("rtc",
+                  [
+                    "rtc.cpp",
+                  ])
+Return ("obj")

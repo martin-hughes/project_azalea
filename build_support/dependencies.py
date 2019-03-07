@@ -25,11 +25,12 @@ kernel = [
     '#kernel/system_tree/process/SConscript',
 
     # Devices
-    '#kernel/devices/block/ramdisk/SConscript',
     '#kernel/devices/block/ata/SConscript',
     '#kernel/devices/block/proxy/SConscript',
-    '#kernel/devices/legacy/ps2/SConscript',
+    '#kernel/devices/block/ramdisk/SConscript',
     '#kernel/devices/generic/SConscript',
+    '#kernel/devices/legacy/ps2/SConscript',
+    '#kernel/devices/legacy/rtc/SConscript',
     '#kernel/devices/pci/SConscript',
     '#kernel/devices/usb/SConscript',
 

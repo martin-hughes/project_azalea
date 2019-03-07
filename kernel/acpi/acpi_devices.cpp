@@ -8,6 +8,7 @@
 #include "acpi_if.h"
 
 #include "devices/pci/pci_int_link_device.h"
+#include "devices/legacy/rtc/rtc.h"
 
 namespace
 {
@@ -109,6 +110,17 @@ void acpi_create_one_device(const char *dev_path, ACPI_HANDLE obj_handle, ACPI_D
       // Drop the results of this, the driver is owned by the PCI system.
       pci_irq_link_device::create(pathname, obj_handle);
     }
+    else if (IS_DEV_HID("PNP0B00"))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "RTC\n");
+      std::shared_ptr<timing::rtc> clock = timing::rtc::create(obj_handle);
+      time_register_clock_source(clock);
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Unknown device HID: ", (const char *)dev_info.HardwareId.String, "\n");
+    }
+
   }
 
   KL_TRC_EXIT;

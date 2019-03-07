@@ -1,0 +1,40 @@
+#pragma once
+
+#include <stdint.h>
+
+/**
+ * @brief Defines a time in Linux format
+ */
+struct time_linux_long_time
+{
+  uint32_t nanoseconds; /** < Nanoseconds since the beginning of the second */
+  uint32_t seconds; /** < Seconds since the start of the Epoch */
+};
+
+#define AZ_TIME 1
+#define LINUX_TIME 2
+
+/**
+ * @brief Structure for passing time around.
+ */
+struct azalea_time
+{
+  /**
+   * Union of all recognised time formats. Only one format will be valid at a time, as specified in 'valid_time'
+   */
+  union t
+  {
+    time_expanded azalea_format; /** < Time in Azalea format */
+    time_linux_long_time linux_format; /** < Time in Linux format */
+  };
+
+  /**
+   * Which of the time structures contained in 't' is valid?
+   *
+   * Valid values are:
+   *
+   * - AZ_TIME (1) to show that azalea_format is valid.
+   * - LINUX_TIME (2) to show that linux_format is valid.
+   */
+  uint8_t valid_time;
+};
