@@ -62,6 +62,8 @@ const void *syscall_pointers[] =
       (void *)syscall_set_handle_data_len,
       (void *)syscall_set_startup_params,
       (void *)syscall_get_system_clock,
+      (void *)syscall_rename_object,
+      (void *)syscall_delete_object,
     };
 
 const uint64_t syscall_max_idx = (sizeof(syscall_pointers) / sizeof(void *)) - 1;
@@ -630,6 +632,76 @@ ERR_CODE syscall_set_handle_data_len(GEN_HANDLE handle, uint64_t data_length)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "No current thread defined - so no handles\n");
     result = ERR_CODE::INVALID_OP;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+/// @brief Rename an object within the System Tree
+///
+/// Currently, support for this is quite limited, and usually only permits objects to be renamed within their current
+/// position in the tree. It might be better described as "syscall_move_object" in future.
+///
+/// @param old_name The current name of the object to rename.
+///
+/// @param new_name The name to rename the object to.
+///
+/// @return A suitable error code.
+ERR_CODE syscall_rename_object(const char *old_name, const char *new_name)
+{
+  ERR_CODE result{ERR_CODE::UNKNOWN};
+
+  KL_TRC_ENTRY;
+
+  if (!SYSCALL_IS_UM_ADDRESS(old_name) ||
+      !SYSCALL_IS_UM_ADDRESS(new_name) ||
+      (old_name == nullptr) ||
+      (new_name == nullptr))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Bad parameters\n");
+    result = ERR_CODE::INVALID_PARAM;
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Attempt to rename\n");
+    kl_string str_old(old_name);
+    kl_string str_new(new_name);
+    result = system_tree()->rename_child(old_name, new_name);
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+/// @brief Remove an object from System Tree.
+///
+/// If there are any handles still open to the object, depending on the object and its parents, those handles may
+/// remain valid until closed, or object deletion may fail until the handles are closed.
+///
+/// @param path The path to delete.
+///
+/// @return A suitable error code.
+ERR_CODE syscall_delete_object(const char *path)
+{
+  ERR_CODE result{ERR_CODE::UNKNOWN};
+
+  KL_TRC_ENTRY;
+
+  if (!SYSCALL_IS_UM_ADDRESS(path) || (path == nullptr))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Bad path parameter\n");
+    result = ERR_CODE::INVALID_PARAM;
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Parameter OK, try to delete\n");
+    kl_string str_path(path);
+    result = system_tree()->delete_child(path);
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");

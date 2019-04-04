@@ -1,0 +1,4 @@
+This file contains ideas for tests to add to the suite in future:
+
+- Checks on the maximum size of a directory and file.
+- Case insensitivity but case-preserving, especially around short names.

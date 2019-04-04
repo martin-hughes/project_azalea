@@ -89,6 +89,14 @@ public:
   ///         returned.
   const uint64_t find(const kl_string &substr) const;
 
+  /// @brief Find the last instance of the provided string within this one.
+  ///
+  /// @param substr The string to find within this one.
+  ///
+  /// @return The position of the last instance of substr within this string, indexed from the beginning = 0. If substr
+  ///         is not found, kl_string::npos is returned.
+  const uint64_t find_last(const kl_string &substr) const;
+
   /// @brief Return the character length of this string
   ///
   /// @return The number of characters in this string, not including the trailing 0.

@@ -98,8 +98,20 @@ enum AZALEA_ENUM_CLASS ERR_CODE_T
    * The requested data transfer was too large.
    */
   TRANSFER_TOO_LARGE = 17,
+
+  /**
+   *  Part of the operation was outside of the acceptable ranges.
+   */
+  OUT_OF_RANGE = 18,
 };
 
 AZALEA_RENAME_ENUM(ERR_CODE);
+
+const char *azalea_lookup_err_code(const ERR_CODE ec);
+
+#ifdef AZALEA_TEST_CODE
+#include <iostream>
+std::ostream& operator<<(std::ostream& os, const ERR_CODE_T &ec);
+#endif
 
 #endif

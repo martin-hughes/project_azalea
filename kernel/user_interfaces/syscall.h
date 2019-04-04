@@ -28,6 +28,8 @@ ERR_CODE syscall_write_handle(GEN_HANDLE handle,
                               uint64_t *bytes_written);
 ERR_CODE syscall_create_obj_and_handle(const char *path, uint64_t path_len, GEN_HANDLE *handle);
 ERR_CODE syscall_set_handle_data_len(GEN_HANDLE handle, uint64_t data_length);
+ERR_CODE syscall_rename_object(const char *old_name, const char *new_name);
+ERR_CODE syscall_delete_object(const char *path);
 
 /* Message passing. */
 ERR_CODE syscall_register_for_mp();

@@ -24,7 +24,7 @@ public:
                                uint64_t buffer_length);
   virtual ERR_CODE write_blocks(uint64_t start_block,
                                 uint64_t num_blocks,
-                                void *buffer,
+                                const void *buffer,
                                 uint64_t buffer_length);
 
 protected:

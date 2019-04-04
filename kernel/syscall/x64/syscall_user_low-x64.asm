@@ -58,3 +58,5 @@ GENERIC_SYSCALL 29, syscall_create_obj_and_handle
 GENERIC_SYSCALL 30, syscall_set_handle_data_len
 GENERIC_SYSCALL 31, syscall_set_startup_params
 GENERIC_SYSCALL 32, syscall_get_system_clock
+GENERIC_SYSCALL 33, syscall_rename_object
+GENERIC_SYSCALL 34, syscall_delete_object

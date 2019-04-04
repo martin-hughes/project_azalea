@@ -118,7 +118,7 @@ ERR_CODE block_proxy_device::read_blocks(uint64_t start_block,
 
 ERR_CODE block_proxy_device::write_blocks(uint64_t start_block,
                                           uint64_t num_blocks,
-                                          void *buffer,
+                                          const void *buffer,
                                           uint64_t buffer_length)
 {
   KL_TRC_ENTRY;

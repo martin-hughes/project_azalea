@@ -32,7 +32,7 @@ public:
                                uint64_t buffer_length) override;
   virtual ERR_CODE write_blocks(uint64_t start_block,
                                 uint64_t num_blocks,
-                                void *buffer,
+                                const void *buffer,
                                 uint64_t buffer_length) override;
 
 protected:
@@ -54,7 +54,7 @@ protected:
                                    uint64_t buffer_length);
   virtual ERR_CODE write_blocks_pio(uint64_t start_block,
                                     uint64_t num_blocks,
-                                    void *buffer,
+                                    const void *buffer,
                                     uint64_t buffer_length);
   virtual ERR_CODE read_blocks_dma(uint64_t start_block,
                                    uint64_t num_blocks,
@@ -62,7 +62,7 @@ protected:
                                    uint64_t buffer_length);
   virtual ERR_CODE write_blocks_dma(uint64_t start_block,
                                     uint64_t num_blocks,
-                                    void *buffer,
+                                    const void *buffer,
                                     uint64_t buffer_length);
 };
 

@@ -49,8 +49,6 @@ uint64_t virtual_disk_dummy_device::block_size()
   return this->_block_size;
 }
 
-// This function is a bit confusing because the parameters "start_block" and "num_blocks" refer to sectors on the
-// virtual disk, rather than the blocks used within the VDI.
 ERR_CODE virtual_disk_dummy_device::read_blocks(uint64_t start_block,
                                                 uint64_t num_blocks,
                                                 void *buffer,
@@ -88,7 +86,7 @@ ERR_CODE virtual_disk_dummy_device::read_blocks(uint64_t start_block,
 // virtual disk, rather than the blocks used within the VDI.
 ERR_CODE virtual_disk_dummy_device::write_blocks(uint64_t start_block,
                                                  uint64_t num_blocks,
-                                                 void *buffer,
+                                                 const void *buffer,
                                                  uint64_t buffer_length)
 {
   ERR_CODE return_val = ERR_CODE::UNKNOWN;
@@ -106,7 +104,15 @@ ERR_CODE virtual_disk_dummy_device::write_blocks(uint64_t start_block,
   }
   else
   {
-    INCOMPLETE_CODE("VIRTUAL DISK WRITE BLOCK");
+    try
+    {
+      backing_device->write(buffer, start_block * this->_block_size, num_blocks * this->_block_size, buffer_length);
+      return_val = ERR_CODE::NO_ERROR;
+    }
+    catch(std::fstream::failure &f)
+    {
+      return_val = ERR_CODE::DEVICE_FAILED;
+    }
   }
 
   return return_val;

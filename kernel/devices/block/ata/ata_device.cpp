@@ -132,7 +132,7 @@ ERR_CODE generic_device::read_blocks(uint64_t start_block,
 
 ERR_CODE generic_device::write_blocks(uint64_t start_block,
                                       uint64_t num_blocks,
-                                      void *buffer,
+                                      const void *buffer,
                                       uint64_t buffer_length)
 {
   KL_TRC_ENTRY;
@@ -286,7 +286,7 @@ ERR_CODE generic_device::read_blocks_pio(uint64_t start_block,
 /// @return A suitable error code.
 ERR_CODE generic_device::write_blocks_pio(uint64_t start_block,
                                           uint64_t num_blocks,
-                                          void *buffer,
+                                          const void *buffer,
                                           uint64_t buffer_length)
 {
   ERR_CODE result;
@@ -304,7 +304,7 @@ ERR_CODE generic_device::write_blocks_pio(uint64_t start_block,
                                             0,
                                             num_blocks,
                                             start_block,
-                                            buffer,
+                                            const_cast<void *>(buffer),
                                             buffer_length))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Good write\n");
@@ -421,14 +421,14 @@ ERR_CODE generic_device::read_blocks_dma(uint64_t start_block,
 /// @return A suitable error code.
 ERR_CODE generic_device::write_blocks_dma(uint64_t start_block,
                                           uint64_t num_blocks,
-                                          void *buffer,
+                                          const void *buffer,
                                           uint64_t buffer_length)
 {
   ERR_CODE result{ERR_CODE::UNKNOWN};
   COMMANDS write_cmd{COMMANDS::WRITE_DMA};
   uint16_t blocks_this_part;
   uint64_t blocks_left{num_blocks};
-  uint8_t *buffer_char_ptr{reinterpret_cast<uint8_t *>(buffer)};
+  uint8_t *buffer_char_ptr{reinterpret_cast<uint8_t *>(const_cast<void *>(buffer))};
 
   KL_TRC_ENTRY;
 
@@ -473,7 +473,7 @@ ERR_CODE generic_device::write_blocks_dma(uint64_t start_block,
                                                                        0,
                                                                        num_blocks,
                                                                        start_block,
-                                                                       buffer,
+                                                                       buffer_char_ptr,
                                                                        buffer_length)))
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Good write\n");

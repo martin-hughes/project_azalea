@@ -14,12 +14,15 @@
 #include "fat_fs.h"
 #include "fat_internal.h"
 
-FAT_TYPE determine_fat_type(fat32_bpb &bpb);
+namespace
+{
+  FAT_TYPE determine_fat_type(fat32_bpb &bpb, uint64_t &number_of_clusters);
+}
 
 const uint64_t ASSUMED_SECTOR_SIZE = 512;
 
 fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
-    _storage(parent_device), _status(DEV_STATUS::OK), _buffer(new uint8_t[ASSUMED_SECTOR_SIZE])
+    _storage{parent_device}, _status{DEV_STATUS::OK}, _buffer{new uint8_t[ASSUMED_SECTOR_SIZE]}, fat_dirty{false}
 {
   fat32_bpb* temp_bpb;
   ERR_CODE r;
@@ -45,7 +48,7 @@ fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
   }
 
   temp_bpb = reinterpret_cast<fat32_bpb *>(_buffer.get());
-  type = determine_fat_type(*temp_bpb);
+  type = determine_fat_type(*temp_bpb, this->number_of_clusters);
 
   max_sectors = temp_bpb->shared.total_secs_16 == 0 ? temp_bpb->shared.total_secs_32 : temp_bpb->shared.total_secs_16;
 
@@ -119,6 +122,8 @@ fat_filesystem::~fat_filesystem()
 {
   KL_TRC_ENTRY;
 
+  ASSERT(!fat_dirty);
+
   KL_TRC_EXIT;
 }
 
@@ -127,27 +132,14 @@ ERR_CODE fat_filesystem::get_child(const kl_string &name, std::shared_ptr<ISyste
   KL_TRC_ENTRY;
 
   ERR_CODE ec = ERR_CODE::UNKNOWN;
-  fat_dir_entry fde;
   std::shared_ptr<fat_file> file_obj;
   kl_string first_part;
   kl_string second_part;
 
   // We create an object corresponding to the root directory here, because it relies on a shared
   // pointer to this object, so it can't be created in this class's constructor.
-  if (!root_directory)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Create root directory.\n");
-    kl_memset(&fde, 0, sizeof(fat_dir_entry));
-    if (this->type == FAT_TYPE::FAT32)
-    {
-      fde.first_cluster_high = bpb_32.root_cluster >> 16;
-      fde.first_cluster_low = bpb_32.root_cluster & 0xFFFF;
-      fde.attributes.directory = 1;
-    }
-    root_directory = std::make_shared<fat_folder>(fde, shared_from_this(), true);
-  }
 
-  ec = root_directory->get_child(name, child);
+  ec = get_root_directory()->get_child(name, child);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", ec, "\n");
   KL_TRC_EXIT;
@@ -161,18 +153,180 @@ ERR_CODE fat_filesystem::add_child(const kl_string &name, std::shared_ptr<ISyste
 
 ERR_CODE fat_filesystem::rename_child(const kl_string &old_name, const kl_string &new_name)
 {
-  return ERR_CODE::INVALID_OP;
+  ERR_CODE result;
+  kl_string old_first_part;
+  kl_string old_last_part;
+  kl_string new_first_part;
+  kl_string new_last_part;
+  std::shared_ptr<fat_folder> parent_folder;
+  std::shared_ptr<ISystemTreeLeaf> leaf;
+
+  KL_TRC_ENTRY;
+
+  split_name(old_name, old_first_part, old_last_part, true);
+  split_name(new_name, new_first_part, new_last_part, true);
+
+  if (old_last_part == "")
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Old part in root directory\n");
+    old_last_part = old_first_part;
+    old_first_part = "";
+  }
+
+  if (new_last_part == "")
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "New last part in root directory\n");
+    new_last_part = new_first_part;
+    new_first_part = "";
+  }
+
+  // Now, the 'first parts' are a directory name, or point at root.
+
+  if (old_first_part != new_first_part)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Renames must be in the same folder.\n");
+    result = ERR_CODE::INVALID_OP;
+  }
+  else
+  {
+    if (new_first_part == "")
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Rename direct child\n");
+      parent_folder = this->get_root_directory();
+      result = ERR_CODE::NO_ERROR;
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Attempt rename of indirect child\n");
+      result = this->get_child(new_first_part, leaf);
+      parent_folder = std::dynamic_pointer_cast<fat_folder>(leaf);
+
+      if (!parent_folder)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Child directory not found\n");
+        result = ERR_CODE::NOT_FOUND;
+      }
+    }
+
+    if (result == ERR_CODE::NO_ERROR)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Attempt rename\n");
+      ASSERT(parent_folder != nullptr);
+      result = parent_folder->rename_child(old_last_part, new_last_part);
+    }
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
 }
 
 ERR_CODE fat_filesystem::delete_child(const kl_string &name)
 {
-  return ERR_CODE::INVALID_OP;
+  ERR_CODE result = ERR_CODE::NO_ERROR;
+  kl_string first_part;
+  kl_string last_part;
+  std::shared_ptr<fat_folder> parent_folder;
+  std::shared_ptr<ISystemTreeLeaf> leaf;
+
+  KL_TRC_ENTRY;
+
+  split_name(name, first_part, last_part, true);
+
+  if (last_part == "")
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Old part in root directory\n");
+    last_part = first_part;
+    first_part = "";
+  }
+
+  // Now, the 'first parts' are a directory name, or point at root.
+
+  if (first_part == "")
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Delete direct child\n");
+    parent_folder = this->get_root_directory();
+    result = ERR_CODE::NO_ERROR;
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Attempt delete of indirect child\n");
+    result = this->get_child(first_part, leaf);
+    parent_folder = std::dynamic_pointer_cast<fat_folder>(leaf);
+
+    if (!parent_folder)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Child directory not found\n");
+      result = ERR_CODE::NOT_FOUND;
+    }
+  }
+
+  if (result == ERR_CODE::NO_ERROR)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Attempt delete\n");
+    ASSERT(parent_folder != nullptr);
+    result = parent_folder->delete_child(last_part);
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
 }
 
 ERR_CODE fat_filesystem::create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child)
 {
-  return ERR_CODE::UNKNOWN;
+  ERR_CODE result;
+  kl_string first_part;
+  kl_string last_part;
+  std::shared_ptr<fat_folder> create_spot;
+  std::shared_ptr<ISystemTreeLeaf> leaf;
+
+  KL_TRC_ENTRY;
+
+  split_name(name, first_part, last_part, true);
+
+  if (last_part == "")
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Create direct child\n");
+    last_part = first_part;
+    create_spot = this->get_root_directory();
+    result = ERR_CODE::NO_ERROR;
+  }
+  else
+  {
+    result = get_child(first_part, leaf);
+    if (result == ERR_CODE::NO_ERROR)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Found child... ");
+      create_spot = std::dynamic_pointer_cast<fat_folder>(leaf);
+      if (create_spot)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "is folder\n");
+      }
+      else
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "is not folder\n");
+        result = ERR_CODE::INVALID_OP;
+      }
+    }
+  }
+
+  if ((create_spot) && (result == ERR_CODE::NO_ERROR))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "is folder.\n");
+    result = create_spot->create_child(last_part, child);
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
 }
+
+namespace
+{
 
 /// @brief Determine the FAT type from the provided parameters block
 ///
@@ -181,8 +335,10 @@ ERR_CODE fat_filesystem::create_child(const kl_string &name, std::shared_ptr<ISy
 /// @param bpb The BPB to examine to determine the FAT type. Assume a FAT32 BPB to start with, it has all the necessary
 ///            fields for the computation
 ///
+/// @param[out] number_of_clusters The total number of clusters on this volume.
+///
 /// @return One of the possible FAT types.
-FAT_TYPE determine_fat_type(fat32_bpb &bpb)
+FAT_TYPE determine_fat_type(fat32_bpb &bpb, uint64_t &number_of_clusters)
 {
   KL_TRC_ENTRY;
 
@@ -206,6 +362,7 @@ FAT_TYPE determine_fat_type(fat32_bpb &bpb)
   uint64_t cluster_count = data_sectors / bpb.shared.secs_per_cluster;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Final count of clusters: ", cluster_count, "\n");
+  number_of_clusters = cluster_count;
 
   if (cluster_count < 4085)
   {
@@ -228,18 +385,20 @@ FAT_TYPE determine_fat_type(fat32_bpb &bpb)
   return ret;
 }
 
-/// @brief What is the next sector to be read from this file?
+} // Local namespace
+
+/// @brief What is the next sector to be read or written for this file?
 ///
 /// This function only returns valid results for 'normal' files - it does not work for sectors outside of the data area
 /// (for example, when reading the root director on FAT12/FAT16 partitions).
 ///
-/// @param current_sector_num The sector of the file currently being read.
+/// @param current_sector_num The sector of the file currently being used.
 ///
-/// @param next_sector_num[out] The next sector that should be read to continue this file. If there is no valid next
-///                             sector this value will be unchanged and the function will return false.
+/// @param[out] next_sector_num The next sector in this file. If there is no valid next sector this value will be
+///                             unchanged and the function will return false.
 ///
-/// @return true if there is a valid next sector to read. False otherwise.
-bool fat_filesystem::get_next_read_sector(uint64_t current_sector_num, uint64_t &next_sector_num)
+/// @return true if there is a valid next sector in the file. False otherwise.
+bool fat_filesystem::get_next_file_sector(uint64_t current_sector_num, uint64_t &next_sector_num)
 {
   bool result = true;
   uint64_t cur_cluster;
@@ -257,7 +416,7 @@ bool fat_filesystem::get_next_read_sector(uint64_t current_sector_num, uint64_t 
     if (cur_offset == (this->shared_bpb->secs_per_cluster - 1))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Move to next cluster\n");
-      cur_cluster = get_next_cluster_num(cur_cluster);
+      cur_cluster = read_fat_entry(cur_cluster);
       if (this->is_normal_cluster_number(cur_cluster))
       {
         next_sector_num = convert_cluster_to_sector_num(cur_cluster);
@@ -280,66 +439,69 @@ bool fat_filesystem::get_next_read_sector(uint64_t current_sector_num, uint64_t 
   return result;
 }
 
-/// @brief For a given cluster number, return the next cluster in the chain, as indicated by the FAT.
+/// @brief Read the FAT entry for a given cluster number.
 ///
-/// @param this_cluster_num The cluster number to find the next cluster in the chain for.
+/// This normally indicates the next cluster in a file.
 ///
-/// @return The next cluster in the chain. If the next cluster is one of the special values, the first bit of the
-///         return value is set to 1 (which is OK, since the return type is 64-bits long, but FAT clusters have 32-bit
-///         indicies.
-uint64_t fat_filesystem::get_next_cluster_num(uint64_t this_cluster_num)
+/// @param cluster_num The cluster number to read the FAT for.
+///
+/// @return The entry in the FAT for this cluster - normally the next cluster in the chain.
+uint64_t fat_filesystem::read_fat_entry(uint64_t cluster_num)
 {
   KL_TRC_ENTRY;
 
   uint64_t offset = 0;
   uint64_t next_cluster = 0;
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Start cluster number", this_cluster_num, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Start cluster number", cluster_num, "\n");
 
-  switch (this->type)
+  // This if-statement looks a bit odd, but remember that the first valid cluster number is actually 2.
+  if ((cluster_num > (number_of_clusters + 1)) || (cluster_num < 2))
   {
-    case FAT_TYPE::FAT12:
-      offset = this_cluster_num + (this_cluster_num / 2);
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Cluster number out of range\n");
+    next_cluster = 0;
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Valid cluster number\n");
+    switch (this->type)
+    {
+      case FAT_TYPE::FAT12:
+        offset = cluster_num + (cluster_num / 2);
 
-      // FAT12 entries are 1.5 bytes long, so every odd entry begins one nybble in to the byte - that is, even clusters
-      // are bytes n and the first nybble of n+1, odd clusters are the second nybble of n+1 and the whole of n+2.
+        // FAT12 entries are 1.5 bytes long, so every odd entry begins one nybble in to the byte - that is, even clusters
+        // are bytes n and the first nybble of n+1, odd clusters are the second nybble of n+1 and the whole of n+2.
 
-      kl_memcpy(&this->_raw_fat[offset], &next_cluster, 2);
-      if (this_cluster_num % 2 == 1)
-      {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "FAT 12, half-offset\n");
-        next_cluster >>= 4;
-      }
-      else
-      {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "FAT 12, no-offset\n");
-        next_cluster &= 0x0FFF;
-      }
+        kl_memcpy(&this->_raw_fat[offset], &next_cluster, 2);
+        if (cluster_num % 2 == 1)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "FAT 12, half-offset\n");
+          next_cluster >>= 4;
+        }
+        else
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "FAT 12, no-offset\n");
+          next_cluster &= 0x0FFF;
+        }
+        break;
 
-      // Set the bit for magic values
-      if (next_cluster > 0x0FEF)
-      {
-        next_cluster |= 0x1000000000000000;
-      }
+      case FAT_TYPE::FAT16:
+        offset = cluster_num * 2;
+        kl_memcpy(&this->_raw_fat[offset], &next_cluster, 2);
 
-      break;
+        break;
 
-    case FAT_TYPE::FAT16:
-      offset = this_cluster_num * 2;
-      kl_memcpy(&this->_raw_fat[offset], &next_cluster, 2);
+      case FAT_TYPE::FAT32:
+        offset = cluster_num * 4;
+        kl_memcpy(&this->_raw_fat[offset], &next_cluster, 4);
+        next_cluster &= 0x0FFFFFFF;
 
-      break;
+        break;
 
-    case FAT_TYPE::FAT32:
-      offset = this_cluster_num * 4;
-      kl_memcpy(&this->_raw_fat[offset], &next_cluster, 4);
-      next_cluster &= 0x0FFFFFFF;
-
-      break;
-
-    default:
-      panic("Unknown FAT type executed");
-      break;
+      default:
+        panic("Unknown FAT type executed");
+        break;
+    }
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Computed offset in FAT", offset, "\n");
@@ -347,6 +509,85 @@ uint64_t fat_filesystem::get_next_cluster_num(uint64_t this_cluster_num)
 
   KL_TRC_EXIT;
   return next_cluster;
+}
+
+/// @brief Update an entry in the FAT.
+///
+/// @param cluster_num The FAT entry to update.
+///
+/// @param new entry The value to write into the FAT - this will be truncated to be a suitable number of bits!
+///
+/// @return A suitable error code.
+ERR_CODE fat_filesystem::write_fat_entry(uint64_t cluster_num, uint64_t new_entry)
+{
+  ERR_CODE result = ERR_CODE::UNKNOWN;
+  uint64_t offset;
+  uint16_t old_entry;
+
+  KL_TRC_ENTRY;
+
+  if ((cluster_num < 2) || (cluster_num > (number_of_clusters + 1)))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Not in range of the FAT.");
+    result = ERR_CODE::OUT_OF_RANGE;
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Valid cluster number\n");
+    switch (this->type)
+    {
+      case FAT_TYPE::FAT12:
+        offset = cluster_num + (cluster_num / 2);
+        new_entry &= 0x0FFF;
+
+        // FAT12 entries are 1.5 bytes long, so every odd entry begins one nybble in to the byte - that is, even clusters
+        // are bytes n and the first nybble of n+1, odd clusters are the second nybble of n+1 and the whole of n+2.
+
+        kl_memcpy(&this->_raw_fat[offset], &old_entry, 2);
+
+        if (cluster_num % 2 == 1)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "FAT 12, half-offset\n");
+          old_entry &= 0x000F;
+          new_entry <<= 4;
+          old_entry |= new_entry;
+        }
+        else
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "FAT 12, no-offset\n");
+          old_entry &= 0xF000;
+          old_entry |= new_entry;
+        }
+
+        kl_memcpy(&old_entry, &this->_raw_fat[offset], 2);
+
+        break;
+
+      case FAT_TYPE::FAT16:
+        offset = cluster_num * 2;
+        kl_memcpy(&new_entry, &this->_raw_fat[offset], 2);
+
+        break;
+
+      case FAT_TYPE::FAT32:
+        offset = cluster_num * 4;
+        new_entry &= 0x0FFFFFFF;
+        kl_memcpy(&new_entry, &this->_raw_fat[offset], 4);
+
+        break;
+
+      default:
+        panic("Unknown FAT type executed");
+        break;
+    }
+
+    fat_dirty = true;
+  }
+
+  KL_TRC_TRACE(TRC_LVL:EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
 }
 
 /// @brief Is this a normal, read/write-able cluster?
@@ -453,5 +694,183 @@ bool fat_filesystem::convert_sector_to_cluster_num(uint64_t sector_num, uint64_t
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
+
   return result;
+}
+
+/// @brief Update the number of clusters
+ERR_CODE fat_filesystem::change_file_chain_length(uint64_t &start_cluster, uint64_t old_chain_length, uint64_t new_chain_length)
+{
+  ERR_CODE result = ERR_CODE::UNKNOWN;
+  uint64_t cur_cluster_num;
+  uint64_t next_cluster_num;
+  uint64_t cur_chain_length;
+  uint64_t max_chain_length;
+
+  KL_TRC_ENTRY;
+
+  max_chain_length = (old_chain_length > new_chain_length) ? old_chain_length : new_chain_length;
+
+  if (((old_chain_length != 0) && !is_normal_cluster_number(start_cluster)) ||
+      ((start_cluster == 0) && (old_chain_length != 0)))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid start cluster number\n");
+    result = ERR_CODE::INVALID_PARAM;
+  }
+  else if (old_chain_length != new_chain_length)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Attempt to change chain length\n");
+
+    cur_chain_length = 1;
+    cur_cluster_num = start_cluster;
+
+    result = ERR_CODE::NO_ERROR;
+
+    if (cur_cluster_num == 0)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Create new chain\n");
+      result = select_free_cluster(cur_cluster_num);
+      if (result == ERR_CODE::NO_ERROR)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Selected new cluster\n");
+        start_cluster = cur_cluster_num;
+      }
+    }
+
+    while ((cur_chain_length <= max_chain_length) && (result == ERR_CODE::NO_ERROR))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, cur_chain_length, ": ");
+      if (cur_chain_length == new_chain_length)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "End of chain - write marker");
+        next_cluster_num = read_fat_entry(cur_cluster_num);
+        write_fat_entry(cur_cluster_num, 0xFFFFFFFF);
+      }
+      else if (cur_chain_length > new_chain_length)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Clearing element from old chain.");
+        next_cluster_num = read_fat_entry(cur_cluster_num);
+        write_fat_entry(cur_cluster_num, 0);
+      }
+      else if ((cur_chain_length < new_chain_length) && (cur_chain_length >= old_chain_length))
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Adding element to chain\n");
+        result = select_free_cluster(next_cluster_num);
+        if (result == ERR_CODE::NO_ERROR)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Selected new cluster: ", next_cluster_num, "\n");
+          write_fat_entry(cur_cluster_num, next_cluster_num);
+        }
+      }
+      else
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Continuing existing chain\n");
+        next_cluster_num = read_fat_entry(cur_cluster_num);
+      }
+
+      cur_cluster_num = next_cluster_num;
+      cur_chain_length++;
+    }
+
+    write_fat_to_disk();
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Nothing to do.\n");
+    result = ERR_CODE::NO_ERROR;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+/// @brief After modifying it, write the FAT back to the disk.
+///
+ERR_CODE fat_filesystem::write_fat_to_disk()
+{
+  ERR_CODE result = ERR_CODE::NO_ERROR;
+
+  KL_TRC_ENTRY;
+
+  switch(this->type)
+  {
+  case FAT_TYPE::FAT12:
+  case FAT_TYPE::FAT16:
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Copying FAT12/16 block\n");
+    result = this->_storage->write_blocks(bpb_16.shared.rsvd_sec_cnt,
+                                          bpb_16.shared.fat_size_16,
+                                          _raw_fat.get(),
+                                          fat_length_bytes);
+    break;
+
+  case FAT_TYPE::FAT32:
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Copying FAT32 block\n");
+    result = this->_storage->write_blocks(bpb_32.shared.rsvd_sec_cnt,
+                                          bpb_32.fat_size_32,
+                                          _raw_fat.get(),
+                                          fat_length_bytes);
+  }
+
+  fat_dirty = false;
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+/// @brief Find a free entry in the FAT.
+///
+/// @param[out] free_cluster The first free cluster found. If no free cluster is found, this parameter is unchanged.
+///
+/// @return ERR_CODE::NO_ERROR if a free cluster was found, ERR_CODE::OUT_OF_RESOURCE if there are no free clusters.
+ERR_CODE fat_filesystem::select_free_cluster(uint64_t &free_cluster)
+{
+  ERR_CODE result = ERR_CODE::OUT_OF_RESOURCE;
+  uint64_t fat_entry;
+
+  KL_TRC_ENTRY;
+
+  for (int i = 2; i < (number_of_clusters + 1); i++)
+  {
+    fat_entry = read_fat_entry(i);
+    if (fat_entry == 0)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Found entry: ", i, "\n");
+      free_cluster = i;
+      result = ERR_CODE::NO_ERROR;
+      break;
+    }
+  }
+
+  KL_TRC_TRACE(TRC_LVL:EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+  return result;
+}
+
+/// @brief
+std::shared_ptr<fat_filesystem::fat_folder> &fat_filesystem::get_root_directory()
+{
+  fat_dir_entry fde;
+
+  KL_TRC_ENTRY;
+
+  if (!root_directory)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Create root directory.\n");
+    kl_memset(&fde, 0, sizeof(fat_dir_entry));
+    if (this->type == FAT_TYPE::FAT32)
+    {
+      fde.first_cluster_high = bpb_32.root_cluster >> 16;
+      fde.first_cluster_low = bpb_32.root_cluster & 0xFFFF;
+      fde.attributes.directory = 1;
+    }
+    root_directory = fat_filesystem::fat_folder::create(fde, 0, shared_from_this(), nullptr, true);
+  }
+
+  KL_TRC_EXIT;
+
+  return root_directory;
 }
