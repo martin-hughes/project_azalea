@@ -11,12 +11,6 @@ extern "C" void klib_synch_spinlock_lock(kernel_spinlock &lock);
 bool klib_synch_spinlock_try_lock(kernel_spinlock &lock);
 extern "C" void klib_synch_spinlock_unlock(kernel_spinlock &lock);
 
-#define KLOCK_NUM_LOCKS 2
-
-#define KLOCK_TASK_MANAGER 0
-#define KLOCK_MEM_MANAGER 1
-
-
 enum SYNC_ACQ_RESULT
 {
   SYNC_ACQ_ACQUIRED,

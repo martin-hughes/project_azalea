@@ -78,12 +78,12 @@ namespace usb
   class normal_transfer : public work::work_response
   {
   public:
-    normal_transfer(generic_device *owner, std::shared_ptr<uint8_t[]> buffer, uint32_t length);
+    normal_transfer(generic_device *owner, std::unique_ptr<uint8_t[]> buffer, uint32_t length);
     virtual ~normal_transfer();
     virtual void owner_dying();
     virtual void set_response_complete() override;
 
-    std::shared_ptr<uint8_t[]> transfer_buffer; ///< The buffer containing the transfer to either send or receive.
+    std::unique_ptr<uint8_t[]> transfer_buffer; ///< The buffer containing the transfer to either send or receive.
     uint32_t buffer_size; ///< The number of bytes in the buffer.
 
   protected:

@@ -23,12 +23,13 @@ using namespace usb;
 /// @param buffer The buffer to send or receive to/from.
 ///
 /// @param length The number of bytes to transfer. It is assumed that buffer is greater in size that this.
-normal_transfer::normal_transfer(generic_device *owner, std::shared_ptr<uint8_t[]> buffer, uint32_t length) :
-  transfer_buffer{buffer},
+normal_transfer::normal_transfer(generic_device *owner, std::unique_ptr<uint8_t[]> buffer, uint32_t length) :
   buffer_size{length},
   owner_device{owner}
 {
   KL_TRC_ENTRY;
+
+  buffer.swap(transfer_buffer);
 
   KL_TRC_EXIT;
 }

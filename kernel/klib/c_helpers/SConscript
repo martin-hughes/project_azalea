@@ -6,5 +6,6 @@ obj = env.Library("klib-c-helpers", [
                                       "buffers.cpp",
                                       "printf_fns.cpp",
                                       "string_fns.cpp",
+                                      "strerror.cpp",
                                     ])
 Return ("obj")

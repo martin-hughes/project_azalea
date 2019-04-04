@@ -132,7 +132,7 @@ hid_device::hid_device(std::shared_ptr<generic_core> core, uint16_t interface_nu
 
     decode_buffer = std::unique_ptr<int64_t[]>(new int64_t[report_descriptor.input_fields.size()]);
     current_transfer = std::make_shared<normal_transfer>(this,
-                                                         std::shared_ptr<uint8_t[]>(new uint8_t[report_packet_size]),
+                                                         std::unique_ptr<uint8_t[]>(new uint8_t[report_packet_size]),
                                                          report_packet_size);
     success = device_core->queue_transfer(interrupt_in_endpoint_num,
                                           true,
@@ -232,7 +232,7 @@ void hid_device::transfer_completed(normal_transfer *complete_transfer)
 
     // Queue up a new transfer.
     current_transfer = std::make_shared<normal_transfer>(this,
-                                                         std::shared_ptr<uint8_t[]>(new uint8_t[report_packet_size]),
+                                                         std::unique_ptr<uint8_t[]>(new uint8_t[report_packet_size]),
                                                          report_packet_size);
     success = device_core->queue_transfer(interrupt_in_endpoint_num,
                                           true,

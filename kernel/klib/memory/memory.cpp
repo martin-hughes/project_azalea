@@ -638,6 +638,17 @@ bool slab_is_empty(void* slab, uint32_t chunk_size_idx)
   return (slab_header_ptr->allocation_count == 0);
 }
 
+/// @brief Given a pointer, what size of chunk was it allocated from?
+///
+/// @param ptr The pointer to look at
+///
+/// @return The number of bytes in the whole block that ptr was allocated from, or zero if ptr doesn't seem to be a
+///         valid allocation.
+uint64_t kl_mem_block_size(void *ptr)
+{
+  INCOMPLETE_CODE(kl_mem_block_size);
+}
+
 /// @brief Reset the memory allocator during testing.
 ///
 /// **This function must only be used in test code.** It is used to reset the allocation system in order to allow a

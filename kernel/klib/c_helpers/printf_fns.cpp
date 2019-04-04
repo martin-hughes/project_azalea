@@ -3,19 +3,22 @@
 
 #include "klib/klib.h"
 
-#ifndef AZALEA_TEST_CODE
-#include "external/vsnprintf/vsnprintf.h"
-#else
+//#ifndef AZALEA_TEST_CODE
+//#include "external/vsnprintf/vsnprintf.h"
+//#else
 
 // In the test code, do a bit of name-management to get the system vsnprintf to be used, rather than our imported
 // external version that doesn't really place nicely.
+#include <stdarg.h>
+#include <stdio.h>
 #include <cstdarg>
 #include <cstdio>
+
 using namespace std;
 
-#define rpl_vsnprintf vsnprintf
+//#define rpl_vsnprintf vsnprintf
 
-#endif
+//#endif
 
 
 uint32_t klib_snprintf(char *out_str, uint64_t max_out_len, const char *fmt, ...)
@@ -40,7 +43,7 @@ uint32_t klib_vsnprintf(char *out_str, uint64_t max_out_len, const char *fmt, va
   int retval;
   KL_TRC_ENTRY;
 
-  retval = rpl_vsnprintf(out_str, max_out_len, fmt, args);
+  retval = vsnprintf(out_str, max_out_len, fmt, args);
 
   KL_TRC_EXIT;
   return retval;

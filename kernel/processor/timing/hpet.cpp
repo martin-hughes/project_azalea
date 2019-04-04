@@ -8,7 +8,7 @@
 extern "C"
 {
 #ifndef DOXYGEN_BUILD
-#include "external/acpica/source/include/acpi.h"
+#include "acpi.h"
 #endif
 }
 

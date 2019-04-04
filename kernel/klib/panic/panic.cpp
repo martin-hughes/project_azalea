@@ -1,5 +1,10 @@
+/// @file
+/// @brief Implements a kernel-stopping panic function.
+
 #include "panic.h"
 #include "processor/processor.h"
+
+#include <stdlib.h>
 
 void panic_print(const char *message, uint16_t line);
 void panic_clear_screen();
@@ -8,8 +13,23 @@ char *vidmem = (char *)0xFFFFFFFF000b8000;
 const uint16_t screen_lines = 25;
 const uint16_t screen_cols = 80;
 
+/// @brief Implement an assertion failure function that's referenced in the C and C++ libraries.
+///
+/// @param expr The failed expression
+///
+/// @param file The filename of the file where the failure occurred.
+///
+/// @param line The line where the failure occurred.
+///
+/// @param func Name of the function where the failure occurred.
+_Noreturn void __assert_fail(const char *expr, const char *file, int line, const char *func)
+{
+	// For now, ignore the other parameters.
+	panic(expr);
+}
+
 // As expected, print a kernel panic message on to the screen, and stop running.
-void panic(const char *message)
+[[noreturn]] void panic(const char *message)
 {
 	// Stop interrupts reaching this processor, in order to prevent most race
 	// conditions.
@@ -28,6 +48,8 @@ void panic(const char *message)
 	// Finally, we don't want to continue. This processor should be the last one
 	// running, so this will stop the system completely.
 	proc_stop_this_proc();
+
+	while(1) { };
 }
 
 // Remove all other characters from the screen, for clarity.

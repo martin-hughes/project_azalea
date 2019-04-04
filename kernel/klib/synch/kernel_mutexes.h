@@ -14,16 +14,16 @@ const uint64_t MUTEX_MAX_WAIT = 0xFFFFFFFFFFFFFFFF;
 struct klib_mutex
 {
   // Is the mutex locked by any process?
-  bool mutex_locked;
+  bool mutex_locked{false};
 
   // Which process has locked the thread?
-  task_thread *owner_thread;
+  task_thread *owner_thread{nullptr};
 
   // Which processes are waiting to grab this mutex?
-  klib_list<std::shared_ptr<task_thread>> waiting_threads_list;
+  klib_list<std::shared_ptr<task_thread>> waiting_threads_list{nullptr, nullptr};
 
   // This lock is used to synchronize access to the fields in this structure.
-  kernel_spinlock access_lock;
+  kernel_spinlock access_lock{0};
 };
 
 void klib_synch_mutex_init(klib_mutex &mutex);

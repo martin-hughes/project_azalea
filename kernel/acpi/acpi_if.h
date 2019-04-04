@@ -12,7 +12,7 @@
 #ifndef DOXYGEN_BUILD
 extern "C"
 {
-#include "external/acpica/source/include/acpi.h"
+#include "acpi.h"
 }
 #endif
 

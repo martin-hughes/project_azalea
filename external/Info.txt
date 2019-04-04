@@ -4,14 +4,7 @@ In all cases the licences are compatible with Project Azalea's. Note that if you
 form you will become responsible for displaying the various copyright and licensing notices that are required by these
 subcomponents.
 
-ACPICA:
--------
-
-ACPICA can be downloaded from https://acpica.org/downloads, and licensing information can be found on the same website.
-The BSD licensed version is used here - copyright and licence information can be found in each of the source code
-files.
-
-GoogleTest:
+Google Test:
 -----------
 
 Provided on GitHub at https://github.com/google/googletest. Permissively licensed - see
@@ -40,12 +33,6 @@ Pure64:
 
 Pure64 v0.5.0 was used historically by the project as a bootloader, before being replaced by GRUB. It can still be
 found in earlier revisions of the Git repository and was provided under the licence appended at the end.
-
-vsnprintf:
-----------
-This is a lightly modified version of the original software at http://www.jhweiss.de/software/snprintf.html. It is
-informally licensed in a way that permits free usage - see the top of vsnprintf.cpp for details.
-
 
 ===============================================================================
 Pure64 -- License

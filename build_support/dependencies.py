@@ -17,8 +17,6 @@ kernel = [
     '#kernel/syscall/SConscript-kernel',
     '#kernel/syscall/SConscript-kernel-x64',
     '#kernel/acpi/SConscript',
-    '#external/SConscript-ACPICA',
-    '#external/vsnprintf/Sconscript',
     '#external/SConscript-libcxxrt',
     '#kernel/object_mgr/SConscript',
     '#kernel/system_tree/SConscript',

@@ -6,8 +6,8 @@
 - [Background](#background)
 - [Choosing a Name](#choosing-a-name)
 - [Requirements](#requirements)
-- [Getting Started - Full build](#getting-started---full-build)
-- [Getting Started - Build a disk image](#getting-started---build-a-disk-image)
+- [Getting Started - Building a complete system](#getting-started---building-a-complete-system)
+- [Getting Started - Building only the kernel](#getting-started---building-only-the-kernel)
 - [Getting Started - Windows build](#getting-started---windows-builds)
 - [Contributing](#contributing)
 - [Find out more](#find-out-more)
@@ -58,7 +58,10 @@ Being a hobby project, there are some fairly specific requirements for this proj
 - **Maximum** 1GB of RAM. This is a limitation of the memory manager.
 
 To compile the full system, you will need the following tools and libraries installed:
-- Azalea-libc - this can be built as part of compiling the kernel, as described below.
+- azalea-libc source code
+- azalea-acpica source code
+- libcxx (part of the LLVM suite) source code
+- azalea-libcxx builder source code
 - Python 2.6 or later (*)
 - GCC 5.4 or later (no longer tested)
 - Clang 6.0.0 or later (earlier versions may work, but are not tested)
@@ -80,63 +83,38 @@ NBD kernel module, and WSL doesn't support kernel modules.
 The project is routinely tested in qemu-system-x86_64 and Virtual Box, and very rarely on real hardware. Real hardware
 bugs would be interesting to hear about!
 
-## Getting Started - Full build
+## Getting Started - Building a complete system
 
-A full build requires a Linux toolchain, as described in [Requirements](#requirements) above. To get the system running
-from scratch, do the following:
+A full build requires several external libraries. The simplest way to do this is using the
+["Azalea Builder" project](https://github.com/martin-hughes/azalea_builder)
 
-1. Get a copy of the code on your system, using your favourite method.
-2. Also, get a copy of the Azalea-libc code.
-3. Configure the values in build_support/config.py and the Azalea-libc SConstruct file as appropriate.
-4. From the root directory of the kernel, execute `scons install-headers` and check there are no errors.
-5. In the Azalea-libc root directory, execute `scons` followed by `scons install` - again, check for errors.
-6. Back in the kernel code tree, execute `scons` and check there are no errors.
-7. Finally, if you wish to see a QEMU demonstration of the kernel, execute `scons start_demo`.
+## Getting Started - Building only the kernel
 
-If you have already executed these steps, you will probably only need to execute step 6 (and 7, if desired) again if
-you make changes. Execute step 4 onwards again if you make changes to the user interface headers.
+Provided that you have all the prerequisites for building the kernel, the kernel itself can be built simply by
+executing `scons` from the root of the code tree, and then providing the parameters that cause errors - the build will
+not progress without all the relevant parameters being provided at least once.
 
-The system should now start! Assuming that everything went well, you will see two things:
+Having provided the build parameters, these are remembered for future builds until overridden.
 
-- Various messages printed to the host machine's stdout. You can enable or disable these by defining (or not)
-  ENABLE_TRACING in a file.
-- A message printed to the display of the emulated machine.
+## Getting Started - Windows test builds
 
-If something goes wrong, you will get a blue screen of death - which is a bug so please let me know!
-
-The system will start a program called 'initprog' from the root of its disk image and run it in user mode. At the
-moment, 'initprog' is compiled from the source in `extras/demo_program` as part of the main build script.
-
-## Getting Started - Build a disk image
-
-As described above, the Project Azalea SConstruct script includes a "start_demo" mode that boots the kernel using QEMU.
-However, you may prefer to use a different virtual machine for this, so there is a convenience script for automatically
-building a virtual machine disk image.
-
-To do this, execute `scons build_image` *as root*. A disk image will be produced that uses GRUB to start the kernel.
-
-This requires the QEMU NBD kernel module, `qemu-nbd`, `vboxmanage` and `grub-install` tools be installed.
-
-## Getting Started - Windows Builds
-
-At present, there is no support for building the live kernel, live test programs or C Library using Windows. It is
-possible to compile the unit test program to run on Windows. If possible, further Windows build support will be added
-in future, but there are a few obstacles to this, described below.
+At present, there is no support for building the live kernel or Azalea system using Windows. It isp ossible to compile
+the kernel's unit test program to run on Windows. If possible, further Windows build support will be added in future,
+but there are a few obstacles to this, described below.
 
 In order to get the unit test program running on Windows:
 
 1. Get a copy of the code on your system, using your favourite method.
-2. Configure the values in build_support/config.py as appropriate.
-3. Ensure the INCLUDE and LIB environment variables are configured to include location of the Boost iostreams library.
-4. Ensure the other environment variables are correctly configured - the easiest way is to start a Developer Command
+2. Ensure the INCLUDE and LIB environment variables are configured to include location of the Boost iostreams library.
+3. Ensure the other environment variables are correctly configured - the easiest way is to start a Developer Command
    Prompt - this is one of the links in the Visual Studio start menu folder.
-5. In the Azalea-libc root directory, execute `scons` and check there are no errors.
-6. Execute output\main-tests.
+4. In the Azalea-libc root directory, execute `scons`, setting the other command line parameters as needed and check
+   there are no errors.
+5. Execute output\main-tests.
 
 This allows at least some development work to be done using a Windows machine. As mentioned, there are some obstacles
 to a full Windows build - for example:
 
-- The native Visual Studio tools don't seem to be able to produce ELF outputs (an issue for initprog)
 - I'm not sure if there is a way to use custom linker scripts or not (to produce the kernel binary), but it'll
   definitely be a different format to the LD version.
 - The compiler intrinsics are differently named.
