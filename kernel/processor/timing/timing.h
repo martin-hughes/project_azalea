@@ -41,7 +41,7 @@ void time_stall_process(uint64_t wait_in_ns);
 uint64_t time_get_system_timer_count(bool output_in_ns = false);
 uint64_t time_get_system_timer_offset(uint64_t wait_in_ns);
 
-const unsigned int time_task_mgr_int_period_ns = 100000;
+const unsigned int time_task_mgr_int_period_ns = 1000000;
 
 bool time_register_clock_source(std::shared_ptr<IGenericClock> clock);
 bool time_unregister_clock_source(std::shared_ptr<IGenericClock> clock);

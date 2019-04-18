@@ -40,6 +40,12 @@
 #include <intrin.h>
 #endif
 
+//#define AZALEA_SCHED_DIAGS
+
+#ifdef AZALEA_SCHED_DIAGS
+#include "timing/hpet.h"
+#endif
+
 namespace
 {
 
@@ -61,6 +67,12 @@ namespace
 
   // Protects the thread cycle from two threads making simultaneous changes.
   kernel_spinlock thread_cycle_lock;
+
+#ifdef AZALEA_SCHED_DIAGS
+  uint64_t *timing_buffer = nullptr;
+  uint64_t num_times_written = 0;
+  const uint64_t max_times_written = 10000;
+#endif
 }
 
 /// @brief Initialise and start the task management subsystem
@@ -122,6 +134,11 @@ void task_gen_init()
     continue_this_thread[i] = false;
     idle_threads[i] = nullptr;
   }
+
+#ifdef AZALEA_SCHED_DIAGS
+  timing_buffer = reinterpret_cast<uint64_t *>(kmalloc(MEM_PAGE_SIZE));
+  kl_memset(timing_buffer, 0, MEM_PAGE_SIZE);
+#endif
 
   KL_TRC_EXIT;
 }
@@ -203,6 +220,26 @@ task_thread *task_get_next_thread()
   KL_TRC_ENTRY;
 
   proc_id = proc_mp_this_proc_id();
+
+#ifdef AZALEA_SCHED_DIAGS
+  uint64_t our_count;
+  our_count = num_times_written;
+
+  if (our_count <= max_times_written)
+  {
+    num_times_written++;
+    timing_buffer[num_times_written] = time_hpet_cur_value(true);
+
+    if (our_count == max_times_written)
+    {
+      for (uint64_t i = 0; i < max_times_written; i++)
+      {
+        kl_trc_trace(TRC_LVL::FLOW, i, ": ", timing_buffer[i], "\n");
+      }
+    }
+  }
+
+#endif
 
   ASSERT(continue_this_thread != nullptr);
   ASSERT(current_threads != nullptr);
