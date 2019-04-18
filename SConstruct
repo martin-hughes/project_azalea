@@ -42,14 +42,20 @@ def main_build_script(linux_build, config_env):
     user_mode_env['CFLAGS'] = '-Wall -mno-red-zone -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
     user_mode_env['LIBPATH'] = [paths.libc_lib_folder,
                                ]
-    user_mode_env.AppendENVPath('CPATH', paths.libc_headers_folder)
-    user_mode_env.AppendENVPath('CPATH', paths.kernel_headers_folder)
-    user_mode_env['LINK'] = 'ld -Map output/init_program.map'
+    user_mode_env['LINK'] = 'ld'
 
     # User mode part of the API
-    user_api_obj = default_build_script(dependencies.user_mode_api, "azalea", user_mode_env, "api_library", False)
+    api_lib_env = user_mode_env.Clone()
+    api_lib_env.AppendENVPath('CPATH', '#user/libs/libazalea')
+    api_lib_env.AppendENVPath('CPATH', paths.libc_headers_folder)
+    api_lib_env.AppendENVPath('CPATH', paths.kernel_headers_folder)
+    user_api_obj = default_build_script(dependencies.user_mode_api, "azalea", api_lib_env, "api_library", False)
+    api_install_obj = api_lib_env.Install(paths.kernel_lib_folder, user_api_obj)
 
     user_mode_env['LIBS'] = [ 'azalea_libc', user_api_obj]
+
+    user_mode_env.AppendENVPath('CPATH', paths.libc_headers_folder)
+    user_mode_env.AppendENVPath('CPATH', paths.kernel_headers_folder)
 
     # Init program
     init_deps = dependencies.init_program
@@ -72,6 +78,7 @@ def main_build_script(linux_build, config_env):
     Default(init_install_obj)
     Default(shell_install_obj)
     Default(echo_install_obj)
+    Default(api_install_obj)
 
   # Unit test program
   test_script_env = build_default_env(linux_build)

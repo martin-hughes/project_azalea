@@ -144,6 +144,7 @@ void execute_command(char *command)
         }
         else
         {
+          SC_DEBUG_MSG("Program running\n");
           syscall_wait_for_object(proc_handle);
           syscall_close_handle(proc_handle);
         }

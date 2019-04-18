@@ -68,6 +68,7 @@ public:
     bool get_disk_sector_from_offset(uint64_t sector_offset,
                                      uint64_t &disk_sector,
                                      std::shared_ptr<fat_filesystem> parent_ptr);
+    ERR_CODE advance_sector_num(uint64_t &sector_num, std::shared_ptr<fat_filesystem> &parent_ptr);
 
     virtual ERR_CODE set_file_size_no_write(uint64_t file_size);
   };

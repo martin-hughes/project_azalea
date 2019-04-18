@@ -350,6 +350,8 @@ ERR_CODE generic_device::read_blocks_dma(uint64_t start_block,
     read_cmd = COMMANDS::READ_EXT_DMA;
   }
 
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Read ", start_block, " -> +", num_blocks, " blocks\n");
+
   // This is the maximum number of 512-byte sectors our current host controller driver supports.
   if (num_blocks > 3840)
   {

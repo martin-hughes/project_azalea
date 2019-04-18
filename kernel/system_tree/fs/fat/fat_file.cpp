@@ -1,4 +1,8 @@
 /// @brief Implements handling of files on a FAT filesystem for Project Azalea.
+///
+// Known defects:
+// - When reading, we make an assumption that the maximum amount of data that can be read at once is 65536 bytes, but
+//   this is a poor assumption.
 
 //#define ENABLE_TRACING
 
@@ -94,7 +98,6 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
   uint64_t read_offset;
   uint64_t bytes_from_this_sector = 0;
   uint64_t read_sector_num;
-  uint64_t next_sector_num;
 
   ERR_CODE ec = ERR_CODE::NO_ERROR;
 
@@ -133,6 +136,8 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
   // Compute a starting point for the read.
   if (ec == ERR_CODE::NO_ERROR)
   {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "No errors so far, attempt read\n");
+
     std::shared_ptr<fat_filesystem> parent_ptr = fs_parent.lock();
     if (parent_ptr)
     {
@@ -146,8 +151,98 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
         read_offset = start % parent_ptr->shared_bpb->bytes_per_sec;
         std::unique_ptr<uint8_t[]> sector_buffer = std::make_unique<uint8_t[]>(parent_ptr->shared_bpb->bytes_per_sec);
 
-        // Do the read.
-        while ((bytes_read_so_far < length) && (ec == ERR_CODE::NO_ERROR))
+        // There are up to three sections of a file to read.
+        // 1 - The beginning of the read, up to either the end of the required read or the end of the sector.
+        // 2 - If the read is long enough, complete sectors in the middle.
+        // 3 - The partial sector to complete the read at the end, if required.
+
+        // Section 1: The read up to the end of the request, or a sector boundary.
+        bytes_from_this_sector = length - bytes_read_so_far;
+        if (bytes_from_this_sector > parent_ptr->shared_bpb->bytes_per_sec)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Truncating read to end of sector\n");
+          bytes_from_this_sector = parent_ptr->shared_bpb->bytes_per_sec;
+        }
+        if (bytes_from_this_sector + read_offset > parent_ptr->shared_bpb->bytes_per_sec)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Truncating read to partial sector\n");
+          bytes_from_this_sector = parent_ptr->shared_bpb->bytes_per_sec - read_offset;
+        }
+        ASSERT(bytes_from_this_sector <= parent_ptr->shared_bpb->bytes_per_sec);
+
+        KL_TRC_TRACE(TRC_LVL::EXTRA, "Offset", read_offset, "\n");
+        KL_TRC_TRACE(TRC_LVL::EXTRA, "Bytes now", bytes_from_this_sector, "\n");
+
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Reading sector: ", read_sector_num, "\n");
+        ec = parent_ptr->_storage->read_blocks(read_sector_num,
+                                               1,
+                                               sector_buffer.get(),
+                                               parent_ptr->shared_bpb->bytes_per_sec);
+        if (ec != ERR_CODE::NO_ERROR)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Abandon read\n");
+          bytes_read_so_far = length;
+        }
+        else
+        {
+          kl_memcpy((void *)(((uint8_t *)sector_buffer.get()) + read_offset),
+                    buffer + bytes_read_so_far,
+                    bytes_from_this_sector);
+
+          bytes_read_so_far += bytes_from_this_sector;
+          advance_sector_num(read_sector_num, parent_ptr);
+        }
+
+        // Section 2: If the read is long enough, complete sectors until near the end of the requested read.
+        if ((length - bytes_read_so_far) >= parent_ptr->shared_bpb->bytes_per_sec)
+        {
+          uint64_t num_whole_sectors = (length - bytes_read_so_far) / parent_ptr->shared_bpb->bytes_per_sec;
+          uint64_t start_sector = read_sector_num;
+          uint64_t cur_sector = read_sector_num;
+          uint64_t next_sector = cur_sector;
+          uint32_t sector_count = 0;
+
+          ASSERT(num_whole_sectors != 0);
+
+          // Read as many complete sectors as form a single chain on disk.
+          while ((num_whole_sectors > 0) && (ec == ERR_CODE::NO_ERROR))
+          {
+            num_whole_sectors--;
+            cur_sector = next_sector;
+            ec = advance_sector_num(next_sector, parent_ptr);
+
+            // Either there's a gap in the sequence of consecutive sectors or we're attempting to read more than one
+            // DMA transfer's worth of data from the disk at once.
+            if ((next_sector != cur_sector + 1) ||
+                ((cur_sector - start_sector) >= (65024 / parent_ptr->shared_bpb->bytes_per_sec)))
+            {
+              sector_count = (cur_sector + 1) - start_sector;
+              KL_TRC_TRACE(TRC_LVL::FLOW, "Read ", sector_count,
+                                          " blocks from ", start_sector,
+                                          " to ", cur_sector, "\n");
+              ec = parent_ptr->_storage->read_blocks(start_sector,
+                                                     sector_count,
+                                                     buffer + bytes_read_so_far,
+                                                     parent_ptr->shared_bpb->bytes_per_sec * sector_count);
+              bytes_read_so_far = bytes_read_so_far + (sector_count * parent_ptr->shared_bpb->bytes_per_sec);
+              start_sector = next_sector;
+            }
+          }
+          sector_count = (cur_sector + 1) - start_sector;
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Read ", sector_count, " blocks from ", start_sector, " to ", cur_sector, "\n");
+          ec = parent_ptr->_storage->read_blocks(start_sector,
+                                                 sector_count,
+                                                 buffer + bytes_read_so_far,
+                                                 parent_ptr->shared_bpb->bytes_per_sec * sector_count);
+          bytes_read_so_far = bytes_read_so_far + (sector_count * parent_ptr->shared_bpb->bytes_per_sec);
+
+          read_sector_num = next_sector;
+        }
+
+        // Section 3: The completion of the read, if required.
+        ASSERT((length - bytes_read_so_far) < parent_ptr->shared_bpb->bytes_per_sec);
+
+        if ((length - bytes_read_so_far) != 0)
         {
           // Read a complete sector into the sector buffer.
           KL_TRC_TRACE(TRC_LVL::FLOW, "Reading sector: ", read_sector_num, "\n");
@@ -155,63 +250,24 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
                                                  1,
                                                  sector_buffer.get(),
                                                  parent_ptr->shared_bpb->bytes_per_sec);
-          if (ec != ERR_CODE::NO_ERROR)
+          if (ec == ERR_CODE::NO_ERROR)
           {
-            break;
-          }
 
-          // Copy the relevant number of bytes, and update the bytes read counter.
-          bytes_from_this_sector = length - bytes_read_so_far;
-          if (bytes_from_this_sector > parent_ptr->shared_bpb->bytes_per_sec)
-          {
-            KL_TRC_TRACE(TRC_LVL::FLOW, "Truncating read to whole sector\n");
-            bytes_from_this_sector = parent_ptr->shared_bpb->bytes_per_sec;
-          }
-          if (bytes_from_this_sector + read_offset > parent_ptr->shared_bpb->bytes_per_sec)
-          {
-            KL_TRC_TRACE(TRC_LVL::FLOW, "Truncating read to partial sector\n");
-            bytes_from_this_sector = parent_ptr->shared_bpb->bytes_per_sec - read_offset;
-          }
-          ASSERT(bytes_from_this_sector <= parent_ptr->shared_bpb->bytes_per_sec);
+            // Copy the relevant number of bytes, and update the bytes read counter.
+            bytes_from_this_sector = length - bytes_read_so_far;
+            ASSERT(bytes_from_this_sector <= parent_ptr->shared_bpb->bytes_per_sec);
 
-          KL_TRC_TRACE(TRC_LVL::EXTRA, "Offset", read_offset, "\n");
-          KL_TRC_TRACE(TRC_LVL::EXTRA, "Bytes now", bytes_from_this_sector, "\n");
+            KL_TRC_TRACE(TRC_LVL::EXTRA, "Bytes now", bytes_from_this_sector, "\n");
 
-          kl_memcpy((void *)(((uint8_t *)sector_buffer.get()) + read_offset),
-                    buffer + bytes_read_so_far,
-                    bytes_from_this_sector);
+            kl_memcpy((void *)(((uint8_t *)sector_buffer.get()) + read_offset),
+                      buffer + bytes_read_so_far,
+                      bytes_from_this_sector);
 
-          bytes_read_so_far += bytes_from_this_sector;
-          read_offset = 0;
-
-          if (bytes_read_so_far < length)
-          {
-            KL_TRC_TRACE(TRC_LVL::FLOW, "Still bytes to read, get next sector\n");
-            if (!is_small_fat_root_dir)
-            {
-              KL_TRC_TRACE(TRC_LVL::FLOW, "Normal file\n");
-              if(!parent_ptr->get_next_file_sector(read_sector_num, next_sector_num))
-              {
-                KL_TRC_TRACE(TRC_LVL::FLOW, "Unable to get next sector...\n");
-                ec = ERR_CODE::STORAGE_ERROR;
-              }
-              else
-              {
-                read_sector_num = next_sector_num;
-              }
-            }
-            else
-            {
-              KL_TRC_TRACE(TRC_LVL::FLOW, "Small FAT root directory\n");
-              read_sector_num++;
-              if (read_sector_num > (parent_ptr->root_dir_sector_count + parent_ptr->root_dir_start_sector))
-              {
-                KL_TRC_TRACE(TRC_LVL::FLOW, "Reached end of root directory\n");
-                ec = ERR_CODE::INVALID_PARAM;
-              }
-            }
+            bytes_read_so_far += bytes_from_this_sector;
           }
         }
+
+        ASSERT(bytes_read_so_far == length);
       }
     }
     else
@@ -223,7 +279,9 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
 
   bytes_read = bytes_read_so_far;
 
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", ec, "\n");
   KL_TRC_EXIT;
+
   return ec;
 }
 
@@ -239,7 +297,6 @@ ERR_CODE fat_filesystem::fat_file::write_bytes(uint64_t start,
   uint64_t write_offset;
   uint64_t bytes_from_this_sector = 0;
   uint64_t write_sector_num;
-  uint64_t next_sector_num;
 
   ERR_CODE ec = ERR_CODE::NO_ERROR;
 
@@ -366,29 +423,7 @@ ERR_CODE fat_filesystem::fat_file::write_bytes(uint64_t start,
           if (bytes_written_so_far < length)
           {
             KL_TRC_TRACE(TRC_LVL::FLOW, "Still bytes to write, get next sector\n");
-            if (!is_small_fat_root_dir)
-            {
-              KL_TRC_TRACE(TRC_LVL::FLOW, "Normal file\n");
-              if(!parent_ptr->get_next_file_sector(write_sector_num, next_sector_num))
-              {
-                KL_TRC_TRACE(TRC_LVL::FLOW, "Unable to get next sector...\n");
-                ec = ERR_CODE::STORAGE_ERROR;
-              }
-              else
-              {
-                write_sector_num = next_sector_num;
-              }
-            }
-            else
-            {
-              KL_TRC_TRACE(TRC_LVL::FLOW, "Small FAT root directory\n");
-              write_sector_num++;
-              if (write_sector_num > (parent_ptr->root_dir_sector_count + parent_ptr->root_dir_start_sector))
-              {
-                KL_TRC_TRACE(TRC_LVL::FLOW, "Reached end of root directory\n");
-                ec = ERR_CODE::INVALID_PARAM;
-              }
-            }
+            advance_sector_num(write_sector_num, parent_ptr);
           }
         }
       }
@@ -673,5 +708,50 @@ bool fat_filesystem::fat_file::get_disk_sector_from_offset(uint64_t sector_offse
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
+  return result;
+}
+
+/// @brief Given a sector number in this file, determine the next sector along to read/write.
+///
+/// @param[inout] sector_num The sector number to advance.
+///
+/// @param parent_ptr Provides a locked pointer to the parent filesystem object.
+///
+/// @return ERR_CODE A suitable error code on failure.
+ERR_CODE fat_filesystem::fat_file::advance_sector_num(uint64_t &sector_num,
+                                                      std::shared_ptr<fat_filesystem> &parent_ptr)
+{
+  uint64_t next_sector_num;
+  ERR_CODE result{ERR_CODE::NO_ERROR};
+
+  KL_TRC_ENTRY;
+
+  if (!is_small_fat_root_dir)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Normal file\n");
+    if(!parent_ptr->get_next_file_sector(sector_num, next_sector_num))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Unable to get next sector...\n");
+      result = ERR_CODE::STORAGE_ERROR;
+    }
+    else
+    {
+      sector_num = next_sector_num;
+    }
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Small FAT root directory\n");
+    sector_num++;
+    if (sector_num > (parent_ptr->root_dir_sector_count + parent_ptr->root_dir_start_sector))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Reached end of root directory\n");
+      result = ERR_CODE::INVALID_PARAM;
+    }
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
   return result;
 }

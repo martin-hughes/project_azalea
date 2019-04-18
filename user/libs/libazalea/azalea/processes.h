@@ -57,12 +57,14 @@ ERR_CODE exec_file(const char *filename,
                    GEN_HANDLE *proc_handle,
                    char * const argv[],
                    char * const envp[]);
+ERR_CODE load_elf_file_in_process(GEN_HANDLE proc_file, GEN_HANDLE process);
 ERR_CODE proc_read_elf_file_header(GEN_HANDLE proc_file, elf64_file_header *header);
 ERR_CODE proc_read_elf_prog_header(GEN_HANDLE proc_file,
                                    elf64_file_header *file_header,
                                    elf64_program_header *prog_header,
                                    uint32_t index);
 
+ERR_CODE proc_load_elf_load_segment(GEN_HANDLE proc_file, GEN_HANDLE process, elf64_program_header &hdr);
 
 #ifdef __cplusplus
 };
