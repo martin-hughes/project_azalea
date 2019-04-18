@@ -201,6 +201,10 @@ void kernel_start() throw ()
   KL_TRC_TRACE(TRC_LVL::FLOW, "proc: ", (const char *)proc_ptr_buffer, "\n");
   ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
 
+  klib_snprintf(proc_ptr_buffer, 34, "proc\\%p\\stderr", initial_proc.get());
+  ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
+
+
   klib_snprintf(proc_ptr_buffer, 34, "proc\\%p\\stdin", initial_proc.get());
   ASSERT(system_tree()->get_child("pipes\\terminal-input\\read", leaf) == ERR_CODE::NO_ERROR);
   ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);

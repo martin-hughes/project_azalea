@@ -157,7 +157,7 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
         // 3 - The partial sector to complete the read at the end, if required.
 
         // Section 1: The read up to the end of the request, or a sector boundary.
-        bytes_from_this_sector = length - bytes_read_so_far;
+        bytes_from_this_sector = length;
         if (bytes_from_this_sector > parent_ptr->shared_bpb->bytes_per_sec)
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "Truncating read to end of sector\n");
@@ -259,7 +259,7 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
 
             KL_TRC_TRACE(TRC_LVL::EXTRA, "Bytes now", bytes_from_this_sector, "\n");
 
-            kl_memcpy((void *)(((uint8_t *)sector_buffer.get()) + read_offset),
+            kl_memcpy(reinterpret_cast<void *>(sector_buffer.get()),
                       buffer + bytes_read_so_far,
                       bytes_from_this_sector);
 

@@ -274,11 +274,11 @@ ERR_CODE proc_load_elf_load_segment(GEN_HANDLE proc_file, GEN_HANDLE process, el
 
   memset(write_ptr, 0, hdr.size_in_mem);
   result = syscall_read_handle(proc_file,
-                                hdr.file_offset,
-                                hdr.size_in_file,
-                                reinterpret_cast<unsigned char *>(write_ptr),
-                                (pages_reqd * MEM_PAGE_SIZE) - offset,
-                                &bytes_written);
+                               hdr.file_offset,
+                               hdr.size_in_file,
+                               reinterpret_cast<unsigned char *>(write_ptr),
+                               (pages_reqd * MEM_PAGE_SIZE) - offset,
+                               &bytes_written);
   if (result != ERR_CODE::NO_ERROR)
   {
     return result;

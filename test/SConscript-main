@@ -49,6 +49,7 @@ files = [ "dummy_libs/processor/processor.dummy.cpp",
           "system_tree/fs/fat/fat_fs_3_create.cpp",
           "system_tree/fs/fat/fat_fs_4_rename.cpp",
           "system_tree/fs/fat/fat_fs_5_delete.cpp",
+          "system_tree/fs/fat/fat_fs_6_large_read.cpp",
 
           "system_tree/fs/mem/mem_fs_1_basic.cpp",
           "system_tree/fs/mem/mem_fs_2_syscall.cpp",
