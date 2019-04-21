@@ -27,7 +27,7 @@ class task_thread;
 
 /// Structure to hold information about a process. All information is stored here, to be accessed by the various
 /// components as needed. This removes the need for per-component lookup tables for each process.
-class task_process : public IHandledObject, public WaitObject, public std::enable_shared_from_this<task_process>
+class task_process : public IHandledObject, public WaitForFirstTriggerObject, public std::enable_shared_from_this<task_process>
 {
 protected:
   task_process(ENTRY_PROC entry_point, bool kernel_mode = false, mem_process_info *mem_info = nullptr);
