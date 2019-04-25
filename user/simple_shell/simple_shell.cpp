@@ -138,15 +138,25 @@ void execute_command(char *command)
                            &proc_handle,
                            (char * const *)(&child_argv[1]),
                            nullptr);
-        if (result != ERR_CODE::NO_ERROR)
+        switch(result)
         {
-          printf("Command not found\n");
-        }
-        else
-        {
-          SC_DEBUG_MSG("Program running\n");
+        case ERR_CODE::NO_ERROR:
+          //SC_DEBUG_MSG("Program running\n");
           syscall_wait_for_object(proc_handle);
           syscall_close_handle(proc_handle);
+          break;
+
+        case ERR_CODE::NOT_FOUND:
+          printf("Command not found\n");
+          break;
+
+        case ERR_CODE::UNRECOGNISED:
+          printf("Command file not a recognised format.\n");
+          break;
+
+        default:
+          printf("Unknown error.\n");
+          break;
         }
       }
     }
