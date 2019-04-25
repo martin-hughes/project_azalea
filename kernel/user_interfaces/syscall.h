@@ -11,7 +11,7 @@ extern "C" {
 ERR_CODE syscall_debug_output(const char *msg, uint64_t length);
 
 /* Handle management. */
-ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *handle);
+ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *handle, uint32_t flags);
 ERR_CODE syscall_close_handle(GEN_HANDLE handle);
 ERR_CODE syscall_read_handle(GEN_HANDLE handle,
                              uint64_t start_offset,

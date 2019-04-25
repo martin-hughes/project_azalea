@@ -31,4 +31,6 @@ struct time_expanded
   int16_t year; /** < Year */
 };
 
+#define H_CREATE_IF_NEW 1
+
 #endif

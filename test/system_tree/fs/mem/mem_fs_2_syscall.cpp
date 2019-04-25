@@ -84,7 +84,7 @@ TEST_F(MemFsSyscallTests, CreateWriteAndRead)
   ASSERT_EQ(ec, ERR_CODE::NO_ERROR);
   new_file_handle = 0;
 
-  ec = syscall_open_handle(filename, strlen(filename), &new_file_handle);
+  ec = syscall_open_handle(filename, strlen(filename), &new_file_handle, 0);
   ASSERT_EQ(ec, ERR_CODE::NO_ERROR);
 
   br = 0;
@@ -107,7 +107,7 @@ TEST_F(MemFsSyscallTests, FileDoesntExist)
   ERR_CODE ec;
   GEN_HANDLE fh = 123;
 
-  ec = syscall_open_handle(filename, strlen(filename), &fh);
+  ec = syscall_open_handle(filename, strlen(filename), &fh, 0);
   ASSERT_EQ(ec, ERR_CODE::NOT_FOUND);
   ASSERT_EQ(fh, 123);
 }

@@ -327,8 +327,9 @@ ERR_CODE fat_filesystem::fat_file::write_bytes(uint64_t start,
     }
     if ((start + length) > this->_file_record.file_size)
     {
-      KL_TRC_TRACE(TRC_LVL::ERROR, "Write area must be contained completely within file\n");
-      ec = ERR_CODE::INVALID_PARAM;
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Expanding file size\n");
+      ec = this->set_file_size(start + length);
+      KL_TRC_TRACE(TRC_LVL::EXTRA, "(result: ", ec, ")\n");
     }
   }
   if (length > buffer_length)

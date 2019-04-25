@@ -54,7 +54,7 @@ ERR_CODE exec_file(const char *filename,
     return ERR_CODE::INVALID_PARAM;
   }
 
-  result = syscall_open_handle(filename, name_length, &file_handle);
+  result = syscall_open_handle(filename, name_length, &file_handle, 0);
   if (result != ERR_CODE::NO_ERROR)
   {
     return result;

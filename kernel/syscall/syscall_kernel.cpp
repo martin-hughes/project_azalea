@@ -127,7 +127,7 @@ ERR_CODE syscall_debug_output(const char *msg, uint64_t length)
 /// @param[out] handle The handle for the calling process to use.
 ///
 /// @return A suitable ERR_CODE value.
-ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *handle)
+ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *handle, uint32_t flags)
 {
   ERR_CODE result;
   KL_TRC_ENTRY;
@@ -173,6 +173,11 @@ ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *ha
       *handle = new_handle;
 
       KL_TRC_TRACE(TRC_LVL::EXTRA, "Correlated to handle ", new_handle, "\n");
+    }
+    else if ((result == ERR_CODE::NOT_FOUND) && ((flags & H_CREATE_IF_NEW) != 0))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Not found and asked to create\n");
+      result = syscall_create_obj_and_handle(path, path_len, handle);
     }
     else
     {

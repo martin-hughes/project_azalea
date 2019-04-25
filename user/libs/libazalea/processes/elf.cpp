@@ -151,12 +151,14 @@ ERR_CODE proc_read_elf_file_header(GEN_HANDLE proc_file, elf64_file_header *head
 
   if ((result != ERR_CODE::NO_ERROR) || (bytes_read != sizeof(elf64_file_header)))
   {
+    SC_DEBUG_MSG("Failed to read program header\n");
     return ERR_CODE::UNRECOGNISED;
   }
 
   result = syscall_get_handle_data_len(proc_file, &elf_file_size);
   if (result != ERR_CODE::NO_ERROR)
   {
+    SC_DEBUG_MSG("Failed to get file size\n");
     return result;
   }
 
@@ -175,6 +177,7 @@ ERR_CODE proc_read_elf_file_header(GEN_HANDLE proc_file, elf64_file_header *head
       (header->file_header_size < ELF64_FILE_HDR_SIZE) ||
       (header->prog_hdr_entry_size < ELF64_PROG_HDR_SIZE))
   {
+    SC_DEBUG_MSG("Not an ELF file\n");
     return ERR_CODE::UNRECOGNISED;
   }
 
