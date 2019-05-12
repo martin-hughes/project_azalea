@@ -4,10 +4,10 @@ import platform
 import build_support.dependencies as dependencies
 
 def main_build_script(linux_build, config_env):
-  paths = path_builder(config_env)
-
   # Most components and options are excluded from the Windows build. Only the test program builds on Windows.
   if linux_build:
+    paths = path_builder(config_env)
+
     # API headers
     kernel_env = build_default_env(linux_build)
     headers = kernel_env.File(Glob("kernel/user_interfaces/*"))
@@ -187,13 +187,15 @@ def disassemble_cmd(target, source, env):
 
   return None
 
-def construct_variables():
+def construct_variables(linux_build):
   var = Variables(["build_support/default_config.py", "variables.cache" ], ARGUMENTS)
+  if linux_build:
+    var.AddVariables(
+      PathVariable("sys_image_root",
+                   "Root of Azalea system image. Look for include files, libraries and installation locations here.",
+                   None,
+                   PathVariable.PathIsDir))
   var.AddVariables(
-    PathVariable("sys_image_root",
-                 "Root of Azalea system image. Look for include files, libraries and installation locations here.",
-                 None,
-                 PathVariable.PathIsDir),
     BoolVariable("test_attempt_mem_leak_check",
                  "Should the test scripts attempt memory leak detection?",
                  False))
@@ -229,8 +231,6 @@ disasm_action = Action(disassemble_cmd, "Disassembling $TARGET")
 # Determine whether this is a Linux or Windows-based build.
 sys_name = platform.system()
 
-config_env = construct_variables()
-
 if sys_name == 'Linux':
   linux_build = True
 elif sys_name == 'Windows':
@@ -239,5 +239,7 @@ elif sys_name == 'Windows':
 else:
   print("Unknown build platform")
   exit(0)
+
+config_env = construct_variables(linux_build)
 
 main_build_script(linux_build, config_env)
