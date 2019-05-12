@@ -16,6 +16,8 @@
 #include "klib/klib.h"
 #include "fat_fs.h"
 
+#include <stdio.h>
+
 fat_filesystem::fat_folder::fat_folder(fat_dir_entry file_data_record,
                                        uint32_t fde_index,
                                        std::shared_ptr<fat_filesystem> fs_parent,
@@ -1178,7 +1180,7 @@ void fat_filesystem::fat_folder::add_numeric_tail(fat_dir_entry &fde, uint8_t nu
 
   kl_memset(number_buf, 0, 8);
 
-  klib_snprintf(number_buf, 8, "%d", suffix);
+  snprintf(number_buf, 8, "%d", suffix);
 
   num_suffix_chars = 1 + kl_strlen(number_buf, 8);
   ASSERT(num_suffix_chars <= 7);

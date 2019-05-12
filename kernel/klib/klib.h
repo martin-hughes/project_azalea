@@ -40,5 +40,4 @@
 #include "synch/kernel_locks.h"
 #include "synch/kernel_mutexes.h"
 #include "synch/kernel_semaphores.h"
-#include "c_helpers/printf_fns.h"
 #include "synch/kernel_messages.h"

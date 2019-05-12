@@ -6,6 +6,8 @@
 #include "processor/processor.h"
 #include "system_tree/fs/proc/proc_fs.h"
 
+#include <stdio.h>
+
 proc_fs_root_branch::proc_fs_zero_proxy_branch::proc_fs_zero_proxy_branch(std::shared_ptr<proc_fs_root_branch> parent):
   _parent(std::weak_ptr<proc_fs_root_branch>(parent))
 {
@@ -23,7 +25,7 @@ ERR_CODE proc_fs_root_branch::proc_fs_zero_proxy_branch::get_child(const kl_stri
   return this->get_current_proc_branch()->get_child(name, child);
 }
 
-ERR_CODE proc_fs_root_branch::proc_fs_zero_proxy_branch::add_child(const kl_string &name, 
+ERR_CODE proc_fs_root_branch::proc_fs_zero_proxy_branch::add_child(const kl_string &name,
                                                                    std::shared_ptr<ISystemTreeLeaf> child)
 {
   return this->get_current_proc_branch()->add_child(name, child);
@@ -54,7 +56,7 @@ std::shared_ptr<ISystemTreeBranch> proc_fs_root_branch::proc_fs_zero_proxy_branc
   ASSERT(t != nullptr);
   ASSERT(t->parent_process != nullptr);
 
-  klib_snprintf(name_buffer, 22, "%p", t->parent_process.get());
+  snprintf(name_buffer, 22, "%p", t->parent_process.get());
   branch_name = name_buffer;
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieving branch: ", branch_name, "\n");
@@ -76,7 +78,7 @@ std::shared_ptr<ISystemTreeBranch> proc_fs_root_branch::proc_fs_zero_proxy_branc
   return cur_proc_branch;
 }
 
-ERR_CODE proc_fs_root_branch::proc_fs_zero_proxy_branch::create_child(const kl_string &name, 
+ERR_CODE proc_fs_root_branch::proc_fs_zero_proxy_branch::create_child(const kl_string &name,
                                                                       std::shared_ptr<ISystemTreeLeaf> &child)
 {
   return this->get_current_proc_branch()->create_child(name, child);

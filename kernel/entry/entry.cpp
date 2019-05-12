@@ -27,6 +27,7 @@
 #include "entry/multiboot.h"
 
 #include <memory>
+#include <stdio.h>
 
 // Rough boot steps:
 //
@@ -196,16 +197,16 @@ void kernel_start() throw ()
 
   // Setup the write end of the terminal pipe. This is a bit dubious, it doesn't do any reference counting...
   ASSERT(system_tree()->get_child("pipes\\terminal-output\\write", leaf) == ERR_CODE::NO_ERROR);
-  klib_snprintf(proc_ptr_buffer, 34, "proc\\%p\\stdout", initial_proc.get());
+  snprintf(proc_ptr_buffer, 34, "proc\\%p\\stdout", initial_proc.get());
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "proc: ", (const char *)proc_ptr_buffer, "\n");
   ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
 
-  klib_snprintf(proc_ptr_buffer, 34, "proc\\%p\\stderr", initial_proc.get());
+  snprintf(proc_ptr_buffer, 34, "proc\\%p\\stderr", initial_proc.get());
   ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
 
 
-  klib_snprintf(proc_ptr_buffer, 34, "proc\\%p\\stdin", initial_proc.get());
+  snprintf(proc_ptr_buffer, 34, "proc\\%p\\stdin", initial_proc.get());
   ASSERT(system_tree()->get_child("pipes\\terminal-input\\read", leaf) == ERR_CODE::NO_ERROR);
   ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
   pipe_read_leaf = std::dynamic_pointer_cast<pipe_branch::pipe_read_leaf>(leaf);

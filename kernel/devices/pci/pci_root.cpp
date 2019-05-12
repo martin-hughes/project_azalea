@@ -10,6 +10,8 @@
 #include "devices/pci/pci_functions.h"
 #include "devices/pci/pci_generic_bus.h"
 
+#include <stdio.h>
+
 pci_root_device::pci_root_device() : IDevice{"PCI Root Device"}
 {
   KL_TRC_ENTRY;
@@ -51,7 +53,7 @@ void pci_root_device::scan_for_devices()
         KL_TRC_TRACE(TRC_LVL::FLOW, "Examine bus ", i, "\n");
         new_bus = std::make_shared<pci_generic_bus>(i, this);
 
-        klib_snprintf(name, 7, "bus%03hhi", i);
+        snprintf(name, 7, "bus%03hhi", i);
         KL_TRC_TRACE(TRC_LVL::FLOW, "New branch name: ", name, "\n");
 
         kl_string new_branch_name(name);

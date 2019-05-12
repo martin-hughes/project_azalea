@@ -19,6 +19,8 @@ extern "C"
 #include "devices/device_interface.h"
 #include "devices/pci/pci_functions.h"
 
+#include <stdio.h>
+
 /// @brief Handle an IRQ as requested by ACPI.
 ///
 /// An object of this class can then be registered with the IRQ handling system. It simply passes on the IRQ to
@@ -744,7 +746,7 @@ void AcpiOsVprintf(const char *Format, va_list Args)
   }
 
   kl_memset(exception_message_buf, 0, 1000);
-  klib_vsnprintf(exception_message_buf, em_buf_len, Format, Args);
+  vsnprintf(exception_message_buf, em_buf_len, Format, Args);
 
   kl_trc_trace(TRC_LVL::EXTRA, (const char *)exception_message_buf);
   //KL_TRC_EXIT;
