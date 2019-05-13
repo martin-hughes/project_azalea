@@ -2,9 +2,9 @@
 #define __OBJECT_MGR_H
 
 #include "handles.h"
-#include "ref_counter.h"
 #include "object_type.h"
 #include "klib/data_structures/red_black_tree.h"
+#include "klib/synch/kernel_locks.h"
 
 /// @brief Managers the relationship between handles an objects.
 ///
