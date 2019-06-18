@@ -6,6 +6,8 @@
 
 #ifdef __cplusplus
 extern "C" {
+#else
+#include <stdbool.h>
 #endif
 
 ERR_CODE syscall_debug_output(const char *msg, uint64_t length);
@@ -30,6 +32,10 @@ ERR_CODE syscall_create_obj_and_handle(const char *path, uint64_t path_len, GEN_
 ERR_CODE syscall_set_handle_data_len(GEN_HANDLE handle, uint64_t data_length);
 ERR_CODE syscall_rename_object(const char *old_name, const char *new_name);
 ERR_CODE syscall_delete_object(const char *path);
+ERR_CODE syscall_get_object_properties(GEN_HANDLE handle,
+                                       const char *path,
+                                       uint64_t path_length,
+                                       struct object_properties *props);
 
 /* Message passing. */
 ERR_CODE syscall_register_for_mp();

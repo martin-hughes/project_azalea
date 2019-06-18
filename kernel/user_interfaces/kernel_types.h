@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include "./macros.h"
 
+#ifndef __cplusplus
+#include <stdbool.h>
+#endif
+
 typedef uint64_t GEN_HANDLE;
 
 /**
@@ -29,6 +33,18 @@ struct time_expanded
   uint8_t day; /** < Day */
   uint8_t month; /** < Month */
   int16_t year; /** < Year */
+};
+
+/**
+ * @brief Used to return the properties of an object in System Tree.
+ */
+struct object_properties
+{
+  bool exists; /** < Does the object exist? If false, none of the other members are valid. */
+  bool is_leaf; /** < Is this a leaf object? If not, is a branch object. */
+  bool readable; /** < Does the object expose a readable-type interface? */
+  bool writable; /** < Does the object expose a writable-type interface? */
+  bool is_file; /** < Does the object expose a file-like interface? */
 };
 
 #define H_CREATE_IF_NEW 1

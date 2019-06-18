@@ -12,6 +12,7 @@
 #include "processor/x64/processor-x64.h"
 
 #include <memory>
+#include <cstring>
 
 // The indicies of the pointers in this table MUST match the indicies given in syscall_user_low-x64.asm!
 const void *syscall_pointers[] =
@@ -64,6 +65,7 @@ const void *syscall_pointers[] =
       (void *)syscall_get_system_clock,
       (void *)syscall_rename_object,
       (void *)syscall_delete_object,
+      (void *)syscall_get_object_properties,
     };
 
 const uint64_t syscall_max_idx = (sizeof(syscall_pointers) / sizeof(void *)) - 1;
@@ -707,6 +709,94 @@ ERR_CODE syscall_delete_object(const char *path)
     KL_TRC_TRACE(TRC_LVL::FLOW, "Parameter OK, try to delete\n");
     kl_string str_path(path);
     result = system_tree()->delete_child(path);
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+/// @brief Retrieve basic properties about an object in System Tree.
+///
+/// @param handle The handle of an object to retrieve properties for. One of this or path must be set, but not both. If
+///               a handle is provided and maps to a non-system tree object (which shouldn't happen but might do until
+///               the kernel and arrangement of objects in System Tree is more developed) then the result is
+///               ERR_CODE::NOT_FOUND - this function only deals with objects in System Tree.
+///
+/// @param path The path of an object in System Tree to retrieve properties for. Either this or handle must be set, but
+///             not both.
+///
+/// @return A suitable error code.
+ERR_CODE syscall_get_object_properties(GEN_HANDLE handle,
+                                       const char *path,
+                                       uint64_t path_length,
+                                       object_properties *props)
+{
+  ERR_CODE result{ERR_CODE::NO_ERROR};
+  bool path_is_valid{false};
+  std::shared_ptr<ISystemTreeLeaf> leaf;
+  std::shared_ptr<IHandledObject> obj;
+  task_thread *cur_thread = task_get_cur_thread();
+
+  KL_TRC_ENTRY;
+
+  path_is_valid = SYSCALL_IS_UM_ADDRESS(path) && (path != nullptr) && (path_length > 0);
+
+  if (((handle != 0) && (path_is_valid)) ||
+      ((handle == 0) && (!path_is_valid)))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Only one of handle or path must be set!\n");
+    result = ERR_CODE::INVALID_PARAM;
+  }
+  else if (!SYSCALL_IS_UM_ADDRESS(props))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "props must be a user-mode address\n");
+    result = ERR_CODE::INVALID_PARAM;
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Checks OK\n");
+    if (handle == 0)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Handle not provided, lookup object\n");
+      result = system_tree()->get_child(kl_string(path), leaf);
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieve object\n");
+      obj = cur_thread->thread_handles.retrieve_object(handle);
+      leaf = std::dynamic_pointer_cast<ISystemTreeLeaf>(obj);
+      if (leaf == nullptr)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid handle\n");
+        result = ERR_CODE::INVALID_PARAM;
+      }
+    }
+
+    switch (result)
+    {
+    case ERR_CODE::NO_ERROR:
+      KL_TRC_TRACE(TRC_LVL::FLOW, "No error, determine properties\n");
+      memset(props, 0, sizeof(object_properties));
+      props->exists = true;
+
+#define CONV_TEST(obj, type) ((std::dynamic_pointer_cast<type>((obj))) != nullptr ? true : false)
+      props->is_file = CONV_TEST(leaf, IBasicFile);
+      props->is_leaf = !CONV_TEST(leaf, ISystemTreeBranch);
+      props->readable = CONV_TEST(leaf, IReadable);
+      props->writable = CONV_TEST(leaf, IWritable);
+      break;
+
+    case ERR_CODE::NOT_FOUND:
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Object not found\n");
+      memset(props, 0, sizeof(object_properties));
+      props->exists = false;
+      break;
+
+    default:
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Some other error occurred\n");
+    }
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
