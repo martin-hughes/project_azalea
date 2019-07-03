@@ -47,6 +47,15 @@ struct object_properties
   bool is_file; /** < Does the object expose a file-like interface? */
 };
 
+enum AZALEA_ENUM_CLASS SEEK_OFFSET_T
+{
+  FROM_CUR = 0,
+  FROM_START = 1,
+  FROM_END = 2,
+};
+
+AZALEA_RENAME_ENUM(SEEK_OFFSET);
+
 #define H_CREATE_IF_NEW 1
 
 #endif

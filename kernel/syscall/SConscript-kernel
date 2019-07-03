@@ -1,10 +1,13 @@
 # Kernel system call library.
 
 Import('env')
-files = ["syscall_kernel.cpp",
+files = [
+         "syscall_handles.cpp",
+         "syscall_kernel.cpp",
+         "syscall_mem.cpp",
          "syscall_mpi.cpp",
          "syscall_proc.cpp",
-         "syscall_mem.cpp",
+         "syscall_rw.cpp",
          "syscall_synch.cpp",
          "syscall_timing.cpp",
         ]

@@ -142,6 +142,13 @@ ERR_CODE proc_read_elf_file_header(GEN_HANDLE proc_file, elf64_file_header *head
     return ERR_CODE::INVALID_PARAM;
   }
 
+  result = syscall_seek_handle(proc_file, 0, SEEK_OFFSET::FROM_START, nullptr);
+  if (result != ERR_CODE::NO_ERROR)
+  {
+    SC_DEBUG_MSG("Failed to seek to beginning\n");
+    return result;
+  }
+
   result = syscall_read_handle(proc_file,
                                0,
                                sizeof(elf64_file_header),
@@ -211,6 +218,13 @@ ERR_CODE proc_read_elf_prog_header(GEN_HANDLE proc_file,
 
   uint64_t prog_header_offset = (file_header->prog_hdrs_off + (index * (file_header->prog_hdr_entry_size)));
 
+  result = syscall_seek_handle(proc_file, 0, SEEK_OFFSET::FROM_START, nullptr);
+  if (result != ERR_CODE::NO_ERROR)
+  {
+    SC_DEBUG_MSG("Failed to seek file\n");
+    return result;
+  }
+
   result = syscall_read_handle(proc_file,
                                prog_header_offset,
                                sizeof(elf64_program_header),
@@ -276,6 +290,14 @@ ERR_CODE proc_load_elf_load_segment(GEN_HANDLE proc_file, GEN_HANDLE process, el
   write_ptr = reinterpret_cast<char *>(page_ptr) + offset;
 
   memset(write_ptr, 0, hdr.size_in_mem);
+
+  result = syscall_seek_handle(proc_file, 0, SEEK_OFFSET::FROM_START, nullptr);
+  if (result != ERR_CODE::NO_ERROR)
+  {
+    SC_DEBUG_MSG("Failed to seek file\n");
+    return result;
+  }
+
   result = syscall_read_handle(proc_file,
                                hdr.file_offset,
                                hdr.size_in_file,

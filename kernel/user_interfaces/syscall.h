@@ -15,27 +15,30 @@ ERR_CODE syscall_debug_output(const char *msg, uint64_t length);
 /* Handle management. */
 ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *handle, uint32_t flags);
 ERR_CODE syscall_close_handle(GEN_HANDLE handle);
-ERR_CODE syscall_read_handle(GEN_HANDLE handle,
-                             uint64_t start_offset,
-                             uint64_t bytes_to_read,
-                             unsigned char *buffer,
-                             uint64_t buffer_size,
-                             uint64_t *bytes_read);
-ERR_CODE syscall_get_handle_data_len(GEN_HANDLE handle, uint64_t *data_length);
-ERR_CODE syscall_write_handle(GEN_HANDLE handle,
-                              uint64_t start_offset,
-                              uint64_t bytes_to_write,
-                              unsigned char *buffer,
-                              uint64_t buffer_size,
-                              uint64_t *bytes_written);
 ERR_CODE syscall_create_obj_and_handle(const char *path, uint64_t path_len, GEN_HANDLE *handle);
-ERR_CODE syscall_set_handle_data_len(GEN_HANDLE handle, uint64_t data_length);
 ERR_CODE syscall_rename_object(const char *old_name, const char *new_name);
 ERR_CODE syscall_delete_object(const char *path);
 ERR_CODE syscall_get_object_properties(GEN_HANDLE handle,
                                        const char *path,
                                        uint64_t path_length,
                                        struct object_properties *props);
+
+/* Data read and write */
+ERR_CODE syscall_read_handle(GEN_HANDLE handle,
+                             uint64_t start_offset,
+                             uint64_t bytes_to_read,
+                             unsigned char *buffer,
+                             uint64_t buffer_size,
+                             uint64_t *bytes_read);
+ERR_CODE syscall_write_handle(GEN_HANDLE handle,
+                              uint64_t start_offset,
+                              uint64_t bytes_to_write,
+                              unsigned char *buffer,
+                              uint64_t buffer_size,
+                              uint64_t *bytes_written);
+ERR_CODE syscall_get_handle_data_len(GEN_HANDLE handle, uint64_t *data_length);
+ERR_CODE syscall_set_handle_data_len(GEN_HANDLE handle, uint64_t data_length);
+ERR_CODE syscall_seek_handle(GEN_HANDLE handle, int64_t offset, SEEK_OFFSET dir, uint64_t *new_offset);
 
 /* Message passing. */
 ERR_CODE syscall_register_for_mp();

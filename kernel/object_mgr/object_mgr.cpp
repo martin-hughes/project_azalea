@@ -34,18 +34,16 @@ object_manager::~object_manager()
 ///
 /// Stores an object in Object Manager and returns a new handle to reference it by.
 ///
-/// @param object_ptr A pointer to the object to store in OM
+/// @param object Data structure containing the object to store in OM and any optional fields the caller has specified.
 ///
-/// @return A handle that correlates to object_ptr
-GEN_HANDLE object_manager::store_object(std::shared_ptr<IHandledObject> object_ptr)
+/// @return A handle that correlates to object.
+GEN_HANDLE object_manager::store_object(object_data &object)
 {
   KL_TRC_ENTRY;
 
   GEN_HANDLE new_handle = hm_get_handle();
 
-  ASSERT(object_ptr != nullptr);
-
-  this->correlate_object(object_ptr, new_handle);
+  this->correlate_object(object, new_handle);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "New handle: ", new_handle, "\n");
   KL_TRC_EXIT;
@@ -58,10 +56,10 @@ GEN_HANDLE object_manager::store_object(std::shared_ptr<IHandledObject> object_p
 /// In some cases, it is useful for the caller to have generated a handle for an object it wishes to store in OM. This
 /// function stores the object and correlates it with the provided handle.
 ///
-/// @param object_ptr A pointer to the object to be stored
+/// @param object Data structure containing the object to store in OM and any optional fields the caller has specified.
 ///
-/// @param handle The handle that should refer to object_ptr
-void object_manager::correlate_object(std::shared_ptr<IHandledObject> object_ptr, GEN_HANDLE handle)
+/// @param handle The handle that should refer to object.
+void object_manager::correlate_object(object_data &object, GEN_HANDLE handle)
 {
   KL_TRC_ENTRY;
 
@@ -69,9 +67,8 @@ void object_manager::correlate_object(std::shared_ptr<IHandledObject> object_ptr
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Object pointer: ", object_ptr, "\n");
 
-  ASSERT(object_ptr != nullptr);
-
-  new_object->object_ptr = object_ptr;
+  *new_object = object;
+  ASSERT(new_object->object_ptr);
   new_object->handle = handle;
 
   klib_synch_spinlock_lock(om_main_lock);
@@ -81,17 +78,16 @@ void object_manager::correlate_object(std::shared_ptr<IHandledObject> object_ptr
   KL_TRC_EXIT;
 }
 
-/// @brief Retrieve the object that correlates to handle
+/// @brief Retrieve the object and associated data that correlates to handle
 ///
 /// @param handle The handle to retrieve the corresponding object for
 ///
-/// @return A pointer to the object stored in OM. nullptr if the handle does not correspond to an object in OM.
-std::shared_ptr<IHandledObject> object_manager::retrieve_object(GEN_HANDLE handle)
+/// @return A pointer to the object data stored in OM. nullptr if the handle does not correspond to an object in OM.
+std::shared_ptr<object_data> object_manager::retrieve_object(GEN_HANDLE handle)
 {
   KL_TRC_ENTRY;
 
   std::shared_ptr<object_data> found_object;
-  std::shared_ptr<IHandledObject> object_ptr;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Looking for handle ", handle, "\n");
 
@@ -99,18 +95,36 @@ std::shared_ptr<IHandledObject> object_manager::retrieve_object(GEN_HANDLE handl
   found_object = this->int_retrieve_object(handle);
   klib_synch_spinlock_unlock(om_main_lock);
 
-  if (found_object != nullptr)
-  {
-    KL_TRC_TRACE(TRC_LVL::EXTRA, "Found object", found_object->object_ptr, "\n");
-    object_ptr = found_object->object_ptr;
-  }
-  else
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Didn't find object\n");
-    object_ptr = nullptr;
-  }
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Found object data: ", found_object, "\n");
   KL_TRC_EXIT;
-  return object_ptr;
+
+  return found_object;
+}
+
+/// @brief Retrieve the object that correlates to handle
+///
+/// This does not return the associated handle data, so should be used sparingly.
+///
+/// @param handle The handle to retrieve the corresponding object for
+///
+/// @return A pointer to the object stored in OM. nullptr if the handle does not correspond to an object in OM.
+std::shared_ptr<IHandledObject> object_manager::retrieve_handled_object(GEN_HANDLE handle)
+{
+  std::shared_ptr<IHandledObject> obj;
+  std::shared_ptr<object_data> obj_data;
+
+  KL_TRC_ENTRY;
+
+  obj_data = retrieve_object(handle);
+  if (obj_data)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Found object\n");
+    obj = obj_data->object_ptr;
+  }
+
+  KL_TRC_EXIT;
+
+  return obj;
 }
 
 /// @brief Remove an object from OM and destroy the handle
