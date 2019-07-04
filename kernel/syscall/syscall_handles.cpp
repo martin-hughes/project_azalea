@@ -1,6 +1,8 @@
 /// @file
 /// @brief System call handlers that manipulate handles.
 
+//#define ENABLE_TRACING
+
 #include "user_interfaces/syscall.h"
 #include "syscall/syscall_kernel.h"
 #include "syscall/syscall_kernel-int.h"
@@ -73,7 +75,7 @@ ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *ha
       new_handle = cur_thread->thread_handles.store_object(new_object);
       *handle = new_handle;
 
-      KL_TRC_TRACE(TRC_LVL::EXTRA, "Correlated to handle ", new_handle, "\n");
+      KL_TRC_TRACE(TRC_LVL::EXTRA, "Correlated ", path, " to handle ", new_handle, "\n");
     }
     else if ((result == ERR_CODE::NOT_FOUND) && ((flags & H_CREATE_IF_NEW) != 0))
     {
@@ -307,7 +309,7 @@ ERR_CODE syscall_get_object_properties(GEN_HANDLE handle,
     KL_TRC_TRACE(TRC_LVL::FLOW, "Checks OK\n");
     if (handle == 0)
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Handle not provided, lookup object\n");
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Handle not provided, lookup object: ", path, "\n");
       result = system_tree()->get_child(kl_string(path), leaf);
     }
     else

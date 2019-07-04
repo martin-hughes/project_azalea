@@ -315,16 +315,6 @@ ERR_CODE fat_filesystem::fat_file::write_bytes(uint64_t start,
   // being able to find the correct cluster to stop us reading random bits of disk.
   if (!this->_file_record.attributes.directory)
   {
-    if (start > this->_file_record.file_size)
-    {
-      KL_TRC_TRACE(TRC_LVL::ERROR, "Start point must be within the file\n");
-      ec = ERR_CODE::INVALID_PARAM;
-    }
-    if (length > this->_file_record.file_size)
-    {
-      KL_TRC_TRACE(TRC_LVL::ERROR, "length must be less than the file size\n");
-      ec = ERR_CODE::INVALID_PARAM;
-    }
     if ((start + length) > this->_file_record.file_size)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Expanding file size\n");

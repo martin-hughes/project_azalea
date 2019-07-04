@@ -4,6 +4,8 @@
 // Known defects:
 // - Seek behaviour is not unit tested in any way.
 
+//#define ENABLE_TRACING
+
 #include "user_interfaces/syscall.h"
 #include "syscall/syscall_kernel.h"
 #include "syscall/syscall_kernel-int.h"
@@ -365,6 +367,8 @@ ERR_CODE syscall_seek_handle(GEN_HANDLE handle, int64_t offset, SEEK_OFFSET dir,
   ERR_CODE result;
   task_thread *cur_thread = task_get_cur_thread();
 
+  KL_TRC_ENTRY;
+
   if (cur_thread == nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't identify current thread\n");
@@ -400,7 +404,7 @@ ERR_CODE syscall_seek_handle(GEN_HANDLE handle, int64_t offset, SEEK_OFFSET dir,
 
         if (result == ERR_CODE::NO_ERROR)
         {
-          KL_TRC_TRACE("Successfully got size, continue\n");
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Successfully got size, continue\n");
 
           switch (dir)
           {
@@ -426,19 +430,9 @@ ERR_CODE syscall_seek_handle(GEN_HANDLE handle, int64_t offset, SEEK_OFFSET dir,
 
           if (result == ERR_CODE::NO_ERROR)
           {
-            KL_TRC_TRACE(TRC_LVL::FLOW, "Valid offset direction, check new pointer\n");
-            if ((proposed_offset >= 0) && (proposed_offset <= size))
-            {
-              KL_TRC_TRACE(TRC_LVL::FLOW, "In range, valid seek\n");
-              result = ERR_CODE::NO_ERROR;
-              obj->data.seek_position = proposed_offset;
-              new_offset != nullptr ? *new_offset = proposed_offset : 0;
-            }
-            else
-            {
-              KL_TRC_TRACE(TRC_LVL::FLOW, "Not in range\n");
-              result = ERR_CODE::OUT_OF_RANGE;
-            }
+            KL_TRC_TRACE(TRC_LVL::FLOW, "Valid offset direction, new offset ", proposed_offset, ".\n");
+            obj->data.seek_position = proposed_offset;
+            new_offset != nullptr ? *new_offset = proposed_offset : 0;
           }
         }
       }
