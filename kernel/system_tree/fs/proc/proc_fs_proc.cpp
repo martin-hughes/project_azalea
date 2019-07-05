@@ -7,6 +7,8 @@
 #include "system_tree/fs/proc/proc_fs.h"
 #include "system_tree/fs/mem/mem_fs.h"
 
+#include <stdio.h>
+
 using namespace std;
 
 proc_fs_root_branch::proc_fs_proc_branch::proc_fs_proc_branch(std::shared_ptr<task_process> related_proc) :
@@ -24,7 +26,7 @@ proc_fs_root_branch::proc_fs_proc_branch::proc_fs_proc_branch(std::shared_ptr<ta
   // Create a file containing the process ID number.
   ASSERT(_id_file != nullptr);
 
-  klib_snprintf(id_buffer, 22, "%p", related_proc.get());
+  snprintf(id_buffer, 22, "%p", related_proc.get());
   strl = kl_strlen(id_buffer, 22);
 
   ec = _id_file->write_bytes(0, strl + 1, reinterpret_cast<const uint8_t *>(id_buffer), 22, br);

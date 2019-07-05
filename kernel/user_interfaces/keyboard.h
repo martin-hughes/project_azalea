@@ -11,6 +11,7 @@ enum AZALEA_ENUM_CLASS KEYS_T : uint8_t
   BACKSPACE = 8,
   TAB = 9,
   ENTER = 10,
+  RETURN = 11,
 
   ESCAPE = 27,
   SPACE = 32,
@@ -66,6 +67,7 @@ enum AZALEA_ENUM_CLASS KEYS_T : uint8_t
   BACKSLASH = 92,
   S_BRACK_R = 93,
 
+  HASH_TILDE = 95, /* # and ~ from non-US keyboard */
   BT = 96, /* Backtick */
 
   /* Keypad presses */
@@ -85,6 +87,8 @@ enum AZALEA_ENUM_CLASS KEYS_T : uint8_t
   K_SLASH = 113,
   K_PERIOD = 114,
   K_ENTER = 115,
+  K_EQUALS = 116,
+  K_COMMA = 117,
 
   F1 = 121,
   F2 = 122,
@@ -129,6 +133,11 @@ enum AZALEA_ENUM_CLASS KEYS_T : uint8_t
   PG_DOWN = 164,
   PG_UP = 165,
 
+  F21 = 166,
+  F22 = 167,
+  F23 = 168,
+  F24 = 169,
+
   L_WINDOWS = 170,
   R_WINDOWS = 171,
 
@@ -172,6 +181,22 @@ struct special_keys
   bool left_alt : 1;
   bool right_alt : 1;
   bool print_screen_start : 1;
+  bool left_gui : 1;
+  bool right_gui : 1;
+
+  /// @brief Default constructor - simply zero's all fields.
+  ///
+  special_keys() :
+    left_shift{false},
+    right_shift{false},
+    left_control{false},
+    right_control{false},
+    left_alt{false},
+    right_alt{false},
+    print_screen_start{false},
+    left_gui{false},
+    right_gui{false}
+  { };
 };
 
 #endif

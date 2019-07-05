@@ -2,6 +2,10 @@
 #include <memory.h>
 #include <unistd.h>
 
+//#define SC_DEBUG_MSG(string) \
+//  syscall_debug_output((string), strlen((string)) )
+#define SC_DEBUG_MSG(string)
+
 // Known deficiencies:
 // - Memory is not released from the calling process
 // - Any kind of failure causes memory and / or process leaks.
@@ -32,35 +36,31 @@ ERR_CODE exec_file(const char *filename,
   GEN_HANDLE file_handle = 0;
   ERR_CODE result = ERR_CODE::NO_ERROR;
   elf64_file_header file_header;
-  elf64_program_header prog_header;
-  uint64_t copy_end_addr;
-  uint64_t offset;
-  uint64_t bytes_written = 0;
-  void *page_ptr;
-  uint64_t page_start_addr;
-  uint64_t end_addr;
-  uint32_t pages_reqd;
   uint64_t args_and_env_space;
   uint64_t cur_arg_num;
   uint64_t argc;
   uint64_t envc;
-  char *write_ptr;
   char **args_and_env_idx;
   char *new_prog_argv_this_proc;
   uint64_t new_prog_argv;
   char *new_prog_environ_this_proc;
   uint64_t new_prog_environ;
+  uint32_t pages_reqd;
+  void *page_ptr;
+  char *write_ptr;
 
   if ((filename == nullptr) || (proc_handle == nullptr))
   {
     return ERR_CODE::INVALID_PARAM;
   }
 
-  result = syscall_open_handle(filename, name_length, &file_handle);
+  result = syscall_open_handle(filename, name_length, &file_handle, 0);
   if (result != ERR_CODE::NO_ERROR)
   {
     return result;
   }
+
+  SC_DEBUG_MSG("Handle opened\n");
 
   result = proc_read_elf_file_header(file_handle, &file_header);
   if (result != ERR_CODE::NO_ERROR)
@@ -69,83 +69,24 @@ ERR_CODE exec_file(const char *filename,
     return result;
   }
 
+  SC_DEBUG_MSG("Headers read\n");
+
   result = syscall_create_process(reinterpret_cast<void *>(file_header.entry_addr), proc_handle);
   if (result != ERR_CODE::NO_ERROR)
   {
     syscall_close_handle(file_handle);
     return result;
   }
+  SC_DEBUG_MSG("Process created\n");
 
-  for (uint32_t i = 0; i < file_header.num_prog_hdrs; i++)
+  result = load_elf_file_in_process(file_handle, *proc_handle);
+  if (result != ERR_CODE::NO_ERROR)
   {
-    result = proc_read_elf_prog_header(file_handle, &file_header, &prog_header, i);
-
-    if (result != ERR_CODE::NO_ERROR)
-    {
-      break;
-    }
-
-    // At the moment, this is the only type that we'll load. Copy each section into memory.
-    if (prog_header.type == 1) //LOAD type
-    {
-      if(prog_header.req_phys_addr >= 0x8000000000000000L)
-      {
-        result = ERR_CODE::UNRECOGNISED;
-      }
-
-      end_addr = prog_header.req_virt_addr + prog_header.size_in_mem;
-      copy_end_addr = prog_header.req_virt_addr + prog_header.size_in_file;
-      page_start_addr = prog_header.req_virt_addr - (prog_header.req_virt_addr % MEM_PAGE_SIZE);
-      bytes_written = 0;
-      pages_reqd = ((end_addr - page_start_addr) / MEM_PAGE_SIZE) + 1;
-      offset = prog_header.req_virt_addr % MEM_PAGE_SIZE;
-
-      page_ptr = nullptr;
-      result = syscall_allocate_backing_memory(pages_reqd, &page_ptr);
-      if (result != ERR_CODE::NO_ERROR)
-      {
-        break;
-      }
-
-      write_ptr = reinterpret_cast<char *>(page_ptr) + offset;
-
-      memset(write_ptr, 0, prog_header.size_in_mem);
-      result = syscall_read_handle(file_handle,
-                                   prog_header.file_offset,
-                                   prog_header.size_in_file,
-                                   reinterpret_cast<unsigned char *>(write_ptr),
-                                   (pages_reqd * MEM_PAGE_SIZE) - offset,
-                                   &bytes_written);
-      if (result != ERR_CODE::NO_ERROR)
-      {
-        break;
-      }
-      if (bytes_written != prog_header.size_in_file)
-      {
-        result = ERR_CODE::UNRECOGNISED;
-      }
-
-      result = syscall_map_memory(*proc_handle,
-                                  reinterpret_cast<void *>(page_start_addr),
-                                  pages_reqd * MEM_PAGE_SIZE,
-                                  0,
-                                  page_ptr);
-      if (result != ERR_CODE::NO_ERROR)
-      {
-        break;
-      }
-
-      result = syscall_release_backing_memory(page_ptr);
-      if (result != ERR_CODE::NO_ERROR)
-      {
-        if (result == ERR_CODE::NOT_FOUND)
-        {
-          result = ERR_CODE::INVALID_OP;
-        }
-        break;
-      }
-    }
+    syscall_close_handle(file_handle);
+    return result;
   }
+
+  SC_DEBUG_MSG("Contents copied\n");
 
   // We don't *really* care if this fails, it just means a floating handle until this process exits.
   syscall_close_handle(file_handle);
@@ -202,6 +143,8 @@ ERR_CODE exec_file(const char *filename,
     return ERR_CODE::UNKNOWN;
   }
 
+  SC_DEBUG_MSG("Environment created\n");
+
   result = syscall_allocate_backing_memory(pages_reqd, &page_ptr);
   if (result != ERR_CODE::NO_ERROR)
   {
@@ -256,6 +199,8 @@ ERR_CODE exec_file(const char *filename,
   }
   args_and_env_idx[argc + envc + 1] = nullptr;
 
+  SC_DEBUG_MSG("Environment copied\n");
+
   syscall_release_backing_memory(page_ptr);
 
   result = syscall_set_startup_params(*proc_handle, argc, new_prog_argv, new_prog_environ);
@@ -263,6 +208,7 @@ ERR_CODE exec_file(const char *filename,
   {
     return result;
   }
+  SC_DEBUG_MSG("About to start.\n");
 
   result = syscall_start_process(*proc_handle);
   return result;

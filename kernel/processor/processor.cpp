@@ -301,12 +301,19 @@ void proc_interrupt_slowpath_thread()
   klib_list_item<proc_interrupt_handler *> *cur_item;
   proc_interrupt_handler *item;
   ASSERT(interrupt_table_cfgd);
+  uint32_t interrupt_num;
 
   while(1)
   {
     for (uint32_t i = 0; i < PROC_NUM_INTERRUPTS; i++)
     {
       cur_item = proc_interrupt_data_table[i].interrupt_handlers.head;
+      interrupt_num = i;
+
+      if (proc_interrupt_data_table[i].is_irq)
+      {
+        interrupt_num -= PROC_IRQ_BASE;
+      }
 
       while(cur_item != nullptr)
       {
@@ -315,7 +322,7 @@ void proc_interrupt_slowpath_thread()
         if (item->slow_path_reqd == true)
         {
           item->slow_path_reqd = false;
-          item->receiver->handle_interrupt_slow(i);
+          item->receiver->handle_interrupt_slow(interrupt_num);
         }
 
         cur_item = cur_item->next;

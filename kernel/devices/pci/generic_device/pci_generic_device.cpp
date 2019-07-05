@@ -9,6 +9,11 @@
 using namespace PCI_CAPABILITY_IDS;
 
 pci_generic_device::pci_generic_device(pci_address address) :
+  pci_generic_device{address, "Generic PCI Device"}
+{ }
+
+pci_generic_device::pci_generic_device(pci_address address, const kl_string name) :
+  IDevice{name},
   _address(address),
   _base_interrupt_vector(0),
   _num_allocated_vectors(0)
@@ -37,16 +42,6 @@ pci_generic_device::~pci_generic_device()
   KL_TRC_ENTRY;
 
   KL_TRC_EXIT;
-}
-
-const kl_string pci_generic_device::device_name()
-{
-  return kl_string("Generic PCI device");
-}
-
-DEV_STATUS pci_generic_device::get_device_status()
-{
-  return DEV_STATUS::FAILED;
 }
 
 /// @brief Initialize the list of capabilities to empty.
@@ -127,7 +122,7 @@ void pci_generic_device::scan_caps()
     SET_CAP_SUPPORTED(PCI_BRIDGE_VENDOR_ID, caps.pci_bridge_vendor_id, "PCI Bridge Vendor ID capability");
     SET_CAP_SUPPORTED(AGP_8X, caps.agp_8x, "AGP 8x capability");
     SET_CAP_SUPPORTED(SECURE_DEVICE, caps.secure_device, "Secure Device capability");
-    SET_CAP_SUPPORTED(PCI_EXPRESS, caps.pci_express, "PCI Express capablity");
+    SET_CAP_SUPPORTED(PCI_EXPRESS, caps.pci_express, "PCI Express capability");
     SET_CAP_SUPPORTED(MSI_X, caps.msi_x, "MSI-X capability");
 
     default:

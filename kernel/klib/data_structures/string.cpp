@@ -207,6 +207,25 @@ const uint64_t kl_string::find(const kl_string &substr) const
   return kl_string::npos;
 }
 
+const uint64_t kl_string::find_last(const kl_string &substr) const
+{
+  uint64_t substr_len = substr.length();
+  if (substr_len > this->length())
+  {
+    return kl_string::npos;
+  }
+
+  for (uint64_t p = (this->length() - substr.length()); p > 0; --p)
+  {
+    if (kl_strcmp(&this->string_contents[p-1], substr_len, substr.string_contents, substr_len) == 0)
+    {
+      return p - 1;
+    }
+  }
+
+  return kl_string::npos;
+}
+
 const uint64_t kl_string::length() const
 {
   return kl_strlen(this->string_contents, this->buffer_length);

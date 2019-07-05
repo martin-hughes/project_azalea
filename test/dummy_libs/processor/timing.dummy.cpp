@@ -7,3 +7,8 @@ void time_stall_process(uint64_t wait_in_ns)
 {
   test_spin_sleep(wait_in_ns);
 }
+
+bool time_get_current_time(time_expanded &time)
+{
+  return false;
+}

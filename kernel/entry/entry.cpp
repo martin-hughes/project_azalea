@@ -15,7 +15,7 @@
 #include "system_tree/system_tree.h"
 #include "system_tree/process/process.h"
 
-#include "devices/block/ata/ata.h"
+#include "devices/block/ata/ata_device.h"
 #include "devices/block/proxy/block_proxy.h"
 #include "devices/legacy/ps2/ps2_controller.h"
 #include "devices/generic/gen_terminal.h"
@@ -27,6 +27,7 @@
 #include "entry/multiboot.h"
 
 #include <memory>
+#include <stdio.h>
 
 // Rough boot steps:
 //
@@ -57,13 +58,17 @@ void setup_task_parameters(task_process *startup_proc);
 // will cause these to become unused.
 std::shared_ptr<fat_filesystem> setup_initial_fs();
 // Some variables to support loading a filesystem.
-generic_ata_device *first_hdd;
+extern ata::generic_device *first_hdd;
+ata::generic_device *first_hdd{nullptr};
 gen_ps2_controller_device *ps2_controller;
 
 std::shared_ptr<task_process> *system_process;
 std::shared_ptr<task_process> *kernel_start_process;
 
-volatile bool wait_for_term;
+extern task_process *term_proc;
+task_process *term_proc = nullptr;
+
+volatile bool wait_for_term; ///< Should the process looking at this variable wait for the terminal to initialise?
 
 // Assumptions used throughout the kernel
 static_assert(sizeof(uint64_t) == sizeof(uintptr_t), "Code throughout assumes pointers are 64-bits long.");
@@ -131,7 +136,6 @@ void kernel_start() throw ()
                reinterpret_cast<uint64_t>(task_get_cur_thread()),
                "\n");
 
-  ACPI_STATUS status;
   std::shared_ptr<task_process> initial_proc;
   std::shared_ptr<ISystemTreeLeaf> leaf;
   char proc_ptr_buffer[34];
@@ -139,9 +143,7 @@ void kernel_start() throw ()
   uint64_t br;
   std::shared_ptr<pipe_branch::pipe_read_leaf> pipe_read_leaf;
 
-  // Bring the ACPI system up to full readiness.
-  status = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
-  ASSERT(status == AE_OK);
+  acpi_finish_init();
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Code below here is not intended to be part of the permanent kernel start procedure, but will sit here until the //
@@ -195,12 +197,16 @@ void kernel_start() throw ()
 
   // Setup the write end of the terminal pipe. This is a bit dubious, it doesn't do any reference counting...
   ASSERT(system_tree()->get_child("pipes\\terminal-output\\write", leaf) == ERR_CODE::NO_ERROR);
-  klib_snprintf(proc_ptr_buffer, 34, "proc\\%p\\stdout", initial_proc.get());
+  snprintf(proc_ptr_buffer, 34, "proc\\%p\\stdout", initial_proc.get());
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "proc: ", (const char *)proc_ptr_buffer, "\n");
   ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
 
-  klib_snprintf(proc_ptr_buffer, 34, "proc\\%p\\stdin", initial_proc.get());
+  snprintf(proc_ptr_buffer, 34, "proc\\%p\\stderr", initial_proc.get());
+  ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
+
+
+  snprintf(proc_ptr_buffer, 34, "proc\\%p\\stdin", initial_proc.get());
   ASSERT(system_tree()->get_child("pipes\\terminal-input\\read", leaf) == ERR_CODE::NO_ERROR);
   ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
   pipe_read_leaf = std::dynamic_pointer_cast<pipe_branch::pipe_read_leaf>(leaf);
@@ -209,12 +215,7 @@ void kernel_start() throw ()
 
   // Process should be good to go!
   initial_proc->start_process();
-
-  if (keyboard != nullptr)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Setting up keyboard messages\n");
-    keyboard->recipient = term.get();
-  }
+  term_proc = term.get();
 
   // If (when!) the initial process exits, we want the system to shut down. But since we don't really do shutting down
   // at the moment, just crash instead.
@@ -224,12 +225,11 @@ void kernel_start() throw ()
 }
 
 // Configure the filesystem of the (presumed) boot device as part of System Tree.
-const unsigned int base_reg_a = 0x1F0;
 std::shared_ptr<fat_filesystem> setup_initial_fs()
 {
   KL_TRC_ENTRY;
 
-  first_hdd = new generic_ata_device(base_reg_a, true);
+  ASSERT(first_hdd != nullptr); // new ata::generic_device(nullptr, 0);
   std::unique_ptr<unsigned char[]> sector_buffer(new unsigned char[512]);
 
   kl_memset(sector_buffer.get(), 0, 512);

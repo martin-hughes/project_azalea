@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <stdio.h>
+#include <time.h>
 
 #define SC_DEBUG_MSG(string) \
   syscall_debug_output((string), strlen((string)) )
@@ -35,6 +36,8 @@ int main (int argc, char **argv, char **env_p)
   size_t command_len;
   const uint8_t MAX_CMD_LEN = 80;
   size_t result_len;
+  time_expanded t;
+  ERR_CODE result;
 
   printf("Azalea simple shell. OS Version: %d\n", version);
 
@@ -43,6 +46,22 @@ int main (int argc, char **argv, char **env_p)
   // Main command loop
   while (1)
   {
+    //time_t rawtime;
+    //struct tm * timeinfo;
+
+    //time (&rawtime);
+    //timeinfo = localtime (&rawtime);
+    //printf("%02u:%02u:%02u ", (unsigned int)timeinfo->tm_hour, (unsigned int)timeinfo->tm_min, (unsigned int)timeinfo->tm_sec);
+
+    result = syscall_get_system_clock(&t);
+    if (result == ERR_CODE::NO_ERROR)
+    {
+      printf("%02u:%02u:%02u ", (unsigned int)t.hours, (unsigned int)t.minutes, (unsigned int)t.seconds);
+    }
+    else
+    {
+      printf("--:--:-- ");
+    }
     printf("> ");
     fflush(stdout);
 
@@ -119,14 +138,25 @@ void execute_command(char *command)
                            &proc_handle,
                            (char * const *)(&child_argv[1]),
                            nullptr);
-        if (result != ERR_CODE::NO_ERROR)
+        switch(result)
         {
-          printf("Command not found\n");
-        }
-        else
-        {
+        case ERR_CODE::NO_ERROR:
+          //SC_DEBUG_MSG("Program running\n");
           syscall_wait_for_object(proc_handle);
           syscall_close_handle(proc_handle);
+          break;
+
+        case ERR_CODE::NOT_FOUND:
+          printf("Command not found\n");
+          break;
+
+        case ERR_CODE::UNRECOGNISED:
+          printf("Command file not a recognised format.\n");
+          break;
+
+        default:
+          printf("Unknown error.\n");
+          break;
         }
       }
     }

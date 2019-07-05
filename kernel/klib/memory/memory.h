@@ -21,6 +21,8 @@
 void *kmalloc(uint64_t mem_size);
 void kfree(void *mem_block);
 
+uint64_t kl_mem_block_size(void *ptr);
+
 // Only for use by test code. See the associated comment in memory.cpp for
 // details.
 #ifdef AZALEA_TEST_CODE

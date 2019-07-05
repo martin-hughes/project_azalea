@@ -5,6 +5,8 @@ obj = env.Library("dev-generic",
                   [
                     "gen_keyboard.cpp",
                     "gen_terminal.cpp",
+                    "gen_mouse.cpp",
+                    "keyboard_maps.cpp",
                   ]
                  )
 Return ("obj")

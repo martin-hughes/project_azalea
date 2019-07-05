@@ -9,9 +9,9 @@
 #include "user_interfaces/error_codes.h"
 #include "klib/data_structures/string.h"
 #include "devices/generic/gen_keyboard.h"
+#include "devices/generic/gen_mouse.h"
 
 class gen_ps2_controller_device;
-class task_process;
 
 /// @brief A generic PS/2 device.
 ///
@@ -20,11 +20,8 @@ class gen_ps2_device : public IDevice, IInterruptReceiver
 {
 public:
   gen_ps2_device(gen_ps2_controller_device *parent, bool second_channel);
+  gen_ps2_device(gen_ps2_controller_device *parent, bool second_channel, const kl_string name);
   virtual ~gen_ps2_device();
-
-  // Core IDevice interface
-  virtual const kl_string device_name() override;
-  virtual DEV_STATUS get_device_status() override;
 
   // IIrqReceiver interface
   virtual bool handle_interrupt_fast(uint8_t irq_number) override;
@@ -34,8 +31,6 @@ protected:
   void enable_irq();
   void disable_irq();
 
-  kl_string _device_name;
-  DEV_STATUS _status;
   gen_ps2_controller_device *_parent;
   bool _second_channel;
   bool _irq_enabled;
@@ -43,7 +38,7 @@ protected:
 
 /// @brief Driver for a generic PS/2 mouse.
 ///
-class ps2_mouse_device : public gen_ps2_device
+class ps2_mouse_device : public gen_ps2_device, public generic_mouse
 {
 public:
   ps2_mouse_device(gen_ps2_controller_device *parent, bool second_channel);
@@ -51,7 +46,7 @@ public:
 
 /// @brief Driver for a generic PS/2 keyboard.
 ///
-class ps2_keyboard_device : public gen_ps2_device
+class ps2_keyboard_device : public gen_ps2_device, public generic_keyboard
 {
 public:
   ps2_keyboard_device(gen_ps2_controller_device *parent, bool second_channel);
@@ -59,10 +54,6 @@ public:
   // IIrqReceiver interface.
   virtual bool handle_interrupt_fast(uint8_t irq_number) override;
   virtual void handle_interrupt_slow(uint8_t irq_number) override;
-
-  // Process that should receive key press messages. This is only intended to be temporary, until the driver structure
-  // gets a bit more flesh in it.
-  task_process *recipient;
 
 protected:
   special_keys _spec_keys_down;

@@ -8,5 +8,6 @@ obj = env.Library("dev-pci",
                     "generic_device/pci_generic_device.cpp",
                     "generic_device/pci_generic_device_msi.cpp",
                     "pci_generic_bus.cpp",
+                    "pci_legacy_interrupts.cpp",
                   ])
 Return ("obj")

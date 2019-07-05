@@ -42,7 +42,7 @@ public:
   ///
   /// @return An appropriate choice from `ERR_CODE`
   virtual ERR_CODE add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child) = 0;
-  
+
   /// @brief Create a new child and add to System Tree.
   ///
   /// The child that is created will be of a type determined by the implementer of this virtual function. The idea is
@@ -88,9 +88,27 @@ public:
   ///                        above.
   ///
   /// @param[out] second_part The remainder of the path, as described above.
-  void split_name(const kl_string name_to_split, kl_string &first_part, kl_string &second_part) const
+  ///
+  /// @param[in] split_from_end If false, this will split the name at the first \ character. If True, it will split at
+  ///                           the last \ character, which may be useful if trying to derive the name of the deepest
+  ///                           child in the path name.
+  void split_name(const kl_string name_to_split,
+                  kl_string &first_part,
+                  kl_string &second_part,
+                  bool split_from_end = false) const
   {
-    uint64_t split_pos = name_to_split.find("\\");
+    uint64_t split_pos;
+
+    if (split_from_end)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Split from end\n");
+      split_pos = name_to_split.find_last("\\");
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Split from beginning\n");
+      split_pos = name_to_split.find("\\");
+    }
 
     if (split_pos == kl_string::npos)
     {

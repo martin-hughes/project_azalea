@@ -53,6 +53,8 @@ end_of_irq_ack_fn_wrapper:
     mov rdi, %2
     call %1
 
+    call end_of_irq_ack_fn_wrapper
+
     RESTORE_ORIG_STACK
 
     pop r15
@@ -71,7 +73,6 @@ end_of_irq_ack_fn_wrapper:
     pop rbx
     pop rax
     popf
-    sti
     iretq
 %endmacro
 
@@ -118,7 +119,6 @@ end_of_irq_ack_fn_wrapper:
     pop rbx
     pop rax
     popf
-    sti
     iretq
 %endmacro
 
@@ -166,7 +166,6 @@ end_of_irq_ack_fn_wrapper:
     pop rbx
     pop rax
     popf
-    sti
     iretq
 %endmacro
 

@@ -111,9 +111,12 @@ void simple_terminal()
 /// @brief Construct a terminal.
 ///
 /// @param keyboard_pipe Pipe that the terminal will read keypresses from.
-generic_terminal::generic_terminal(std::shared_ptr<IWritable> keyboard_pipe)
+generic_terminal::generic_terminal(std::shared_ptr<IWritable> keyboard_pipe) :
+  IDevice{"Generic Terminal"}
 {
   KL_TRC_ENTRY;
+
+  current_dev_status = DEV_STATUS::OK;
 
   stdin_writer = keyboard_pipe;
   // Map and then clear the display

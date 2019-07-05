@@ -11,12 +11,16 @@
 #include "processor/x64/pic/pic.h"
 #include "mem/x64/mem-x64-int.h"
 
-uint8_t *system_gdt = nullptr;
+uint8_t *system_gdt = nullptr; ///< Pointer to the system-wide GDT (which is invariant per processor)
+
+// Pointers to the space where the GDT is defined in one of the ASM files.
+/// @cond
 extern "C" uint8_t main_gdt_pointer[10];
 extern "C" uint8_t initial_gdt_table;
 extern "C" uint8_t initial_end_of_gdt_table;
+/// @endcond
 
-const uint8_t TSS_SEG_LENGTH = 104;
+const uint8_t TSS_SEG_LENGTH = 104; ///< The length of a TSS on Azalea.
 
 uint16_t proc_gdt_calc_req_len(uint32_t num_procs);
 void proc_gdt_populate_pointer(uint8_t *ptr, uint64_t loc, uint16_t len);
@@ -235,6 +239,12 @@ void proc_generate_tss(uint8_t *tss_descriptor,
   KL_TRC_EXIT;
 }
 
+/// @brief Load the TSS register for a given processor.
+///
+/// Load the TSS register of the given processor with the TSS for that processor. TSSs are per-processor, but do not
+/// change over time.
+///
+/// @param proc_num The processor number to load the TSS on.
 void proc_load_tss(uint32_t proc_num)
 {
   KL_TRC_ENTRY;
@@ -252,6 +262,8 @@ void proc_load_tss(uint32_t proc_num)
 /// @brief Given a processor, calculate the offset within the GDT of its TSS descriptor
 ///
 /// @param proc_num The ID number of the desired processor
+///
+/// @return The offset, within the storage of all TSSs, of the TSS for processor proc_num.
 uint16_t proc_calc_tss_desc_offset(uint32_t proc_num)
 {
   KL_TRC_ENTRY;

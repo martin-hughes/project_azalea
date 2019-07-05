@@ -1,5 +1,7 @@
-#ifndef DEVICE_PS2_CONTROLLER_HEADER
-#define DEVICE_PS2_CONTROLLER_HEADER
+/// @file
+/// @brief Driver for a generic PS/2 controller
+
+#pragma once
 
 #include "devices/device_interface.h"
 #include "user_interfaces/error_codes.h"
@@ -54,6 +56,8 @@ namespace PS2_CONST
   const uint8_t DEV_SELF_TEST_OK = 0xAA;
 }
 
+/// @brief Driver for a generic PS/2 controller.
+///
 class gen_ps2_controller_device: public IDevice
 {
 public:
@@ -61,12 +65,14 @@ public:
   gen_ps2_controller_device();
   virtual ~gen_ps2_controller_device();
 
-  virtual const kl_string device_name();
-  virtual DEV_STATUS get_device_status();
-
   // Types used throughout.
+
+  /// @brief PS/2 status register.
+  ///
+  /// Has the format given by the spec.
   union ps2_status_register
   {
+    /// @cond
     struct
     {
       uint8_t output_buffer_status :1; // 0 = no data waiting, 1 = data waiting.
@@ -79,10 +85,16 @@ public:
       uint8_t parity_error :1;
     } flags;
     uint8_t raw;
+
+    /// @endcond
   };
 
+  /// @brief PS/2 configuration register.
+  ///
+  /// Has the format expected from the spec.
   union ps2_config_register
   {
+    /// @cond
     struct
     {
       uint8_t first_port_interrupt_enabled :1; // 1 = enabled, 0 = disabled.
@@ -95,6 +107,8 @@ public:
       uint8_t second_zero_flag :1; // Must be zero.
     } flags;
     uint8_t raw;
+
+    /// @endcond
   };
 
   // PS/2 device interactions.
@@ -117,8 +131,6 @@ public:
 
 
 protected:
-  const kl_string _name;
-  DEV_STATUS _status;
   bool _dual_channel;
 
   PS2_DEV_TYPE _chan_1_dev_type;
@@ -130,5 +142,3 @@ protected:
 
 static_assert(sizeof(gen_ps2_controller_device::ps2_status_register) == 1, "Incorrect packing of ps2_status_register");
 static_assert(sizeof(gen_ps2_controller_device::ps2_config_register) == 1, "Incorrect packing of ps2_config_register");
-
-#endif

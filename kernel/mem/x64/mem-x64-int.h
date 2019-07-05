@@ -1,7 +1,7 @@
-// Contains x64-specific declarations.
+/// @file
+/// @brief Contains x64-specific declarations.
 
-#ifndef MEM_X64_INT_H_
-#define MEM_X64_INT_H_
+#pragma once
 
 #include <stdint.h>
 
@@ -10,14 +10,17 @@ extern uint64_t pml4_table;
 
 const uint16_t PML4_LENGTH = 4096;
 
+/// @brief An expanded form of x64 page table entries.
+///
+/// A separate function encodes this into the processor-native format.
 struct page_table_entry
 {
-  uint64_t target_addr;
-  bool present;
-  bool writable;
-  bool user_mode;
-  bool end_of_tree;
-  uint8_t cache_type;
+  uint64_t target_addr; ///< The physical address this PTE points at.
+  bool present; ///< Is the mapping valid?
+  bool writable; ///< Is this page writable?
+  bool user_mode; ///< Is this page accessible in user-mode?
+  bool end_of_tree; ///< If true, this is a maps a page. If not, this entry points at the next level of the page table.
+  uint8_t cache_type; ///< One of MEM_X64_CACHE_TYPES.
 };
 
 /// @brief Memory-manager data that is per-process and specific to the x64 architecture.
@@ -67,5 +70,3 @@ namespace MEM_X64_CACHE_TYPES
 
 uint8_t mem_x64_pat_get_val(const uint8_t cache_type, bool first_half);
 uint8_t mem_x64_pat_decode(const uint8_t pat_idx);
-
-#endif

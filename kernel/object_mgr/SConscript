@@ -4,7 +4,6 @@ files = [
          "handled_obj.cpp",
          "handles.cpp",
          "object_mgr.cpp",
-         "ref_counter.cpp",
         ]
 
 Import('env')

@@ -12,9 +12,14 @@
 using namespace std;
 
 virtual_disk_dummy_device::virtual_disk_dummy_device(const char *filename, uint64_t block_size) :
-  _name{"Virtual disk"}, _status{DEV_STATUS::FAILED}, _block_size{block_size}, _num_blocks{0}
+  IBlockDevice{"Virtual disk"},
+  _block_size{block_size},
+  _num_blocks{0}
 {
   std::string fn(filename);
+
+  current_dev_status = DEV_STATUS::FAILED;
+
   try
   {
     backing_device = std::unique_ptr<virt_disk::virt_disk>(virt_disk::virt_disk::create_virtual_disk(fn));
@@ -26,22 +31,12 @@ virtual_disk_dummy_device::virtual_disk_dummy_device(const char *filename, uint6
   }
 
   _num_blocks = backing_device->get_length() / _block_size;
-  _status = DEV_STATUS::OK;
+  current_dev_status = DEV_STATUS::OK;
 }
 
 virtual_disk_dummy_device::~virtual_disk_dummy_device()
 {
 
-}
-
-const kl_string virtual_disk_dummy_device::device_name()
-{
-  return this->_name;
-}
-
-DEV_STATUS virtual_disk_dummy_device::get_device_status()
-{
-  return this->_status;
 }
 
 uint64_t virtual_disk_dummy_device::num_blocks()
@@ -54,8 +49,6 @@ uint64_t virtual_disk_dummy_device::block_size()
   return this->_block_size;
 }
 
-// This function is a bit confusing because the parameters "start_block" and "num_blocks" refer to sectors on the
-// virtual disk, rather than the blocks used within the VDI.
 ERR_CODE virtual_disk_dummy_device::read_blocks(uint64_t start_block,
                                                 uint64_t num_blocks,
                                                 void *buffer,
@@ -70,7 +63,7 @@ ERR_CODE virtual_disk_dummy_device::read_blocks(uint64_t start_block,
   {
     return_val = ERR_CODE::INVALID_PARAM;
   }
-  else if (this->_status != DEV_STATUS::OK)
+  else if (this->current_dev_status != DEV_STATUS::OK)
   {
     return_val = ERR_CODE::DEVICE_FAILED;
   }
@@ -93,7 +86,7 @@ ERR_CODE virtual_disk_dummy_device::read_blocks(uint64_t start_block,
 // virtual disk, rather than the blocks used within the VDI.
 ERR_CODE virtual_disk_dummy_device::write_blocks(uint64_t start_block,
                                                  uint64_t num_blocks,
-                                                 void *buffer,
+                                                 const void *buffer,
                                                  uint64_t buffer_length)
 {
   ERR_CODE return_val = ERR_CODE::UNKNOWN;
@@ -105,13 +98,21 @@ ERR_CODE virtual_disk_dummy_device::write_blocks(uint64_t start_block,
   {
     return_val = ERR_CODE::INVALID_PARAM;
   }
-  else if (this->_status != DEV_STATUS::OK)
+  else if (this->current_dev_status != DEV_STATUS::OK)
   {
     return_val = ERR_CODE::DEVICE_FAILED;
   }
   else
   {
-    INCOMPLETE_CODE("VIRTUAL DISK WRITE BLOCK");
+    try
+    {
+      backing_device->write(buffer, start_block * this->_block_size, num_blocks * this->_block_size, buffer_length);
+      return_val = ERR_CODE::NO_ERROR;
+    }
+    catch(std::fstream::failure &f)
+    {
+      return_val = ERR_CODE::DEVICE_FAILED;
+    }
   }
 
   return return_val;

@@ -3,8 +3,31 @@
 Import('env')
 obj = env.Library("dev-usb",
                   [
+                    # Generic USB structures.
                     "controllers/usb_gen_controller.cpp",
+                    "usb_gen_device.cpp",
+                    "usb_gen_device_core.cpp",
+                    "usb_gen_transfer.cpp",
+
+                    # xHCI USB structures.
                     "controllers/usb_xhci_controller.cpp",
                     "controllers/usb_xhci_trb_ring.cpp",
+                    "controllers/usb_xhci_port.cpp",
+                    "controllers/usb_xhci_capabilities.cpp",
+                    "usb_xhci_device.cpp",
+
+                    # USB device factory
+                    "usb_device_factory.cpp",
+
+                    # USB Devices
+                    #-------------
+
+                    # HID
+                    "hid/usb_hid_device.cpp",
+                    "hid/hid_input_descriptor_parser.cpp",
+                    "hid/hid_input_report_parser.cpp",
+                    "hid/usb_hid_keyboard.cpp",
+                    "hid/usb_hid_keyboard_scancode.cpp",
+                    "hid/usb_hid_mouse.cpp",
                   ])
 Return ("obj")

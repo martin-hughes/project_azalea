@@ -31,6 +31,7 @@ template <class key_type, class value_type> class kl_binary_tree
 protected:
 
   /// @brief Data type for storing data within the tree. Represents a single node.
+  ///
   template <class nkey_type, class nvalue_type> struct kl_binary_tree_node
   {
     /// @brief The key, has the usual meaning

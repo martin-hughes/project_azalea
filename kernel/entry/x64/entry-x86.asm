@@ -3,6 +3,9 @@ SEGMENT .pretext_32
 EXTERN pre_main_64
 GLOBAL pre_main_32
 
+; This number must match MEM_NUM_KERNEL_PAGES in mem.h
+num_kernel_pages equ 2
+
 ; Control is passed to the x64 kernel via GRUB, which gives us 32-bit mode. After GRUB, execution starts at
 ; pre_main_32. We quickly jump to 64-bit mode, then pass to pre_main_64, which does some early setup before jumping to
 ; the C code in main().
@@ -103,10 +106,24 @@ pre_main_32:
   add ebx, DWORD 0x03
   mov [eax], ebx
 
-  ; Fill in PDT
+  ; Fill in PDT - once for each of the kernel pages.
+  mov ecx, 0
+  mov cx, num_kernel_pages
   mov ebx, DWORD 0x83
   mov eax, page_directory
-  mov [eax], ebx
+
+populate_pdt:
+  cmp ecx, 0
+  je populate_mm_pdt
+    mov [eax], ebx
+
+    add ebx, 0x200000
+    add eax, 8
+
+    sub ecx, 1
+  jmp populate_pdt
+
+populate_mm_pdt:
 
   ; Fill in memory manager PDT.
   mov eax, page_directory_ptr_high

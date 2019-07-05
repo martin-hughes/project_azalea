@@ -3,6 +3,17 @@
 #include "processor/timing/timing.h"
 #include "processor/timing/timing-int.h"
 #include "klib/klib.h"
+#include <vector>
+
+namespace
+{
+  /// @brief A set containing all the clocks known to be in the system.
+  ///
+  /// Ideally this would be implemented using std::set, but we don't have a complete kernel-mode C++ library yet.
+  std::vector<std::shared_ptr<IGenericClock>> *clock_array{nullptr};
+
+  kernel_spinlock clock_array_lock; ///< Lock protecting clock_array.
+}
 
 /// @brief Initializes the kernel's timing systems.
 ///
@@ -14,9 +25,16 @@
 ///
 /// There is scope for emulating the high-precision element of the HPET using the PIT, processor cycle counting and so
 /// on, but that's a project for another time (and maybe never, what PC wouldn't have a HPET nowadays?)
+///
+/// This function is assumed to be called while still in single-threaded mode, so no locking is needed around global
+/// variables
 void time_gen_init()
 {
   KL_TRC_ENTRY;
+
+  clock_array = new std::vector<std::shared_ptr<IGenericClock>>();
+
+  klib_synch_spinlock_init(clock_array_lock);
 
   ASSERT(time_hpet_exists());
 
@@ -56,13 +74,20 @@ void time_stall_process(uint64_t wait_in_ns)
 /// Returns the value of the HPET counter, for applications that may be interested - for example, for waiting a short
 /// period whilst polling, or for performance measurements
 ///
+/// @param output_in_ns - If set to true, output the system timer count in terms of nanoseconds. If false, just output
+///                       the raw value.
+///
 /// @return The value of the system timer - the HPET in Azalea. May not be directly meaningful!
-uint64_t time_get_system_timer_count()
+uint64_t time_get_system_timer_count(bool output_in_ns)
 {
+  uint64_t val;
   KL_TRC_ENTRY;
+
+  val =  time_hpet_cur_value(output_in_ns);
+
   KL_TRC_EXIT;
 
-  return time_hpet_cur_value();
+  return val;
 }
 
 /// @brief Translate a desired wait into a number of system timer units.
@@ -79,4 +104,103 @@ uint64_t time_get_system_timer_offset(uint64_t wait_in_ns)
   KL_TRC_EXIT;
 
   return time_hpet_compute_wait(wait_in_ns);
+}
+
+/// @brief Add a clock device to the system's pool of time sources.
+///
+/// In the future, the system will endeavour to merge all sources of time to get the highest precision. For now, it
+/// does not.
+///
+/// @param clock The clock source to add to the system timing pool.
+///
+/// @return True if this was successful, false otherwise.
+bool time_register_clock_source(std::shared_ptr<IGenericClock> clock)
+{
+  bool result{true};
+
+  KL_TRC_ENTRY;
+
+  if (clock_array != nullptr)
+  {
+    klib_synch_spinlock_lock(clock_array_lock);
+
+    for (auto e : *clock_array)
+    {
+      if (e == clock)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Clock already registered!\n");
+        result = false;
+        break;
+      }
+    }
+
+    if (result)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Not already registered, so add now\n");
+      clock_array->push_back(clock);
+    }
+
+    klib_synch_spinlock_unlock(clock_array_lock);
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+/// @brief Remove a clock device from the system's pool of time sources.
+///
+/// @param clock The clock source to remove from the system timing pool.
+///
+/// @return True if this was successful, false otherwise.
+bool time_unregister_clock_source(std::shared_ptr<IGenericClock> clock)
+{
+  bool result{false};
+
+  KL_TRC_ENTRY;
+
+  if (clock_array != nullptr)
+  {
+    klib_synch_spinlock_lock(clock_array_lock);
+    for (auto e = clock_array->begin(); e != clock_array->end(); e++)
+    {
+      if (*e == clock)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Clock found for removal!\n");
+        result = true;
+        clock_array->erase(e); // This invalidates the iterator, of course.
+        break;
+      }
+    }
+    klib_synch_spinlock_unlock(clock_array_lock);
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+/// @brief Get the current time.
+///
+/// @param[out] time If it can be retrieved, stores the current system time.
+///
+/// @return true if the time was calculated OK and stored in time, false otherwise.
+bool time_get_current_time(time_expanded &time)
+{
+  bool result{false};
+
+  KL_TRC_ENTRY;
+
+  if ((clock_array != nullptr) && (clock_array->size() > 0))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Get first clock to handle this...\n");
+    result = (*clock_array->begin())->get_current_time(time);
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
 }

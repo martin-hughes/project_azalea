@@ -42,16 +42,23 @@
 #include "klib/synch/kernel_mutexes.h"
 #include "klib/data_structures/red_black_tree.h"
 
+/// @cond
 typedef klib_list<void *> PTR_LIST;
 typedef klib_list_item<void *> PTR_LIST_ITEM;
+/// @endcond
+
+/// @brief Header for a slab.
+///
+/// As described above, the allocator allocates 'slabs' - essentially pages of memory dedicated to allocations of a
+/// certain size. This header goes at the front of the page and allows the allocator to keep track of pages it uses.
 struct slab_header
 {
-  PTR_LIST_ITEM list_entry;
-  uint64_t allocation_count;
+  PTR_LIST_ITEM list_entry; ///< Item to track this slab in the relevant slab list.
+  uint64_t allocation_count; ///< How many items have been allocated from this slab.
 };
 
-// Stores details of large allocations so they can be freed later - the key is the address of the beginning of the
-// allocation, the value the number of pages in it.
+/// Stores details of large allocations so they can be freed later - the key is the address of the beginning of the
+/// allocation, the value the number of pages in it.
 kl_rb_tree<uint64_t, uint64_t> *large_allocations;
 
 // The assertion below ensures that the size of slab_header hasn't changed. If it does, the number of available chunks
@@ -168,7 +175,7 @@ void *kmalloc(uint64_t mem_size)
       KL_TRC_TRACE(TRC_LVL::FLOW, "Releasing mutex from kmalloc 1\n");
       klib_synch_mutex_release(allocator_gen_lock, false);
     }
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Big allocation. Pages needed", required_pages, "\n");
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Big allocation - ", mem_size, ". Pages needed: ", required_pages, "\n");
 
     large_alloc_addr = reinterpret_cast<uint64_t>(mem_allocate_pages(required_pages));
     large_allocations->insert(large_alloc_addr, required_pages);
@@ -636,6 +643,17 @@ bool slab_is_empty(void* slab, uint32_t chunk_size_idx)
   KL_TRC_EXIT;
 
   return (slab_header_ptr->allocation_count == 0);
+}
+
+/// @brief Given a pointer, what size of chunk was it allocated from?
+///
+/// @param ptr The pointer to look at
+///
+/// @return The number of bytes in the whole block that ptr was allocated from, or zero if ptr doesn't seem to be a
+///         valid allocation.
+uint64_t kl_mem_block_size(void *ptr)
+{
+  INCOMPLETE_CODE(kl_mem_block_size);
 }
 
 /// @brief Reset the memory allocator during testing.

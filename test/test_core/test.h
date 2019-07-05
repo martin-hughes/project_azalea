@@ -27,6 +27,13 @@ private:
   const char *_reason;
 };
 
+struct global_test_opts_struct
+{
+  bool keep_temp_files;
+};
+
+extern global_test_opts_struct global_test_opts;
+
 void test_spin_sleep(uint64_t sleep_time_ns);
 
 // defined in processor.dummy.cpp

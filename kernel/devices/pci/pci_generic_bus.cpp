@@ -9,7 +9,10 @@
 #include "devices/pci/pci_generic_bus.h"
 #include "devices/pci/generic_device/pci_generic_device.h"
 
+#include <stdio.h>
+
 pci_generic_bus::pci_generic_bus(uint8_t bus, pci_root_device *parent) :
+  IDevice{"Generic PCI bus"},
   _bus_number(bus), _parent(parent)
 {
   KL_TRC_ENTRY;
@@ -25,16 +28,6 @@ pci_generic_bus::~pci_generic_bus()
   KL_TRC_ENTRY;
 
   KL_TRC_EXIT;
-}
-
-const kl_string pci_generic_bus::device_name()
-{
-  return kl_string("Generic PCI bus");
-}
-
-DEV_STATUS pci_generic_bus::get_device_status()
-{
-  return DEV_STATUS::FAILED;
 }
 
 /// @brief Scan this bus for devices
@@ -90,7 +83,7 @@ void pci_generic_bus::add_new_device(uint8_t slot, uint8_t func)
   new_device = pci_instantiate_device(_bus_number, slot, func);
   if (new_device != nullptr)
   {
-    klib_snprintf(dev_name, 6, "s%02hhif%1hhi", slot, func);
+    snprintf(dev_name, 6, "s%02hhif%1hhi", slot, func);
 
     KL_TRC_TRACE(TRC_LVL::FLOW, "Adding new device branch: ", (char const *)dev_name, "\n");
     kl_string leaf_name(dev_name);

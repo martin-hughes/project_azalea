@@ -9,6 +9,8 @@
 #include "system_tree/fs/proc/proc_fs.h"
 #include "system_tree/system_tree.h"
 
+#include <stdio.h>
+
 /// @brief Create a new process
 ///
 /// Creates a new process, with an associated thread starting at entry_point. The process remains suspended until
@@ -80,21 +82,21 @@ std::shared_ptr<task_process> task_process::create(ENTRY_PROC entry_point,
     if (system_tree()->get_child("proc\\0\\stdout", leaf_ptr) == ERR_CODE::NO_ERROR)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Copy stdout from parent to child\n");
-      klib_snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "proc\\%p\\stdout", new_proc.get());
+      snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "proc\\%p\\stdout", new_proc.get());
       system_tree()->add_child(proc_path_ptr_buffer, leaf_ptr);
     }
 
     if (system_tree()->get_child("proc\\0\\stdin", leaf_ptr) == ERR_CODE::NO_ERROR)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Copy stdin from parent to child\n");
-      klib_snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "proc\\%p\\stdin", new_proc.get());
+      snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "proc\\%p\\stdin", new_proc.get());
       system_tree()->add_child(proc_path_ptr_buffer, leaf_ptr);
     }
 
     if (system_tree()->get_child("proc\\0\\stderr", leaf_ptr) == ERR_CODE::NO_ERROR)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Copy stderr from parent to child\n");
-      klib_snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "proc\\%p\\stderr", new_proc.get());
+      snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "proc\\%p\\stderr", new_proc.get());
       system_tree()->add_child(proc_path_ptr_buffer, leaf_ptr);
     }
   }

@@ -2,9 +2,9 @@
 #define __OBJECT_MGR_H
 
 #include "handles.h"
-#include "ref_counter.h"
 #include "object_type.h"
 #include "klib/data_structures/red_black_tree.h"
+#include "klib/synch/kernel_locks.h"
 
 /// @brief Managers the relationship between handles an objects.
 ///
@@ -17,10 +17,11 @@ public:
   object_manager();
   ~object_manager();
 
-  GEN_HANDLE store_object(std::shared_ptr<IHandledObject> object_ptr);
-  void correlate_object(std::shared_ptr<IHandledObject>, GEN_HANDLE handle);
+  GEN_HANDLE store_object(object_data &object);
+  void correlate_object(object_data &object, GEN_HANDLE handle);
   void decorrelate_object(GEN_HANDLE handle);
-  std::shared_ptr<IHandledObject> retrieve_object(GEN_HANDLE handle);
+  std::shared_ptr<object_data> retrieve_object(GEN_HANDLE handle);
+  std::shared_ptr<IHandledObject> retrieve_handled_object(GEN_HANDLE handle);
   void remove_object(GEN_HANDLE handle);
 
   void remove_all_objects();

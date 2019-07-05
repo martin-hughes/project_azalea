@@ -81,6 +81,12 @@ void mem_map_virtual_page(uint64_t virt_addr,
 /// @brief Unmap a single virtual page so that the physical page that was backing it is no longer used.
 ///
 /// @param virt_addr The virtual address to unmap.
+///
+/// @param context The process to do the unmapping in.
+///
+/// @param allow_phys_page_free If set to true, release any physical pages that are no longer referred to by a virtual
+///                             page mapping. If false, do not release free pages. False is useful to stop the release
+///                             and attempted re-use of, say, VGA video buffers.
 void mem_unmap_virtual_page(uint64_t virt_addr, task_process *context, bool allow_phys_page_free)
 {
   uint32_t phys_page_num;
@@ -168,6 +174,12 @@ void mem_map_range(void *physical_start,
 /// @param virtual_start The start of the first page in the range to unmap.
 ///
 /// @param num_pages The length of the range to unmap.
+///
+/// @param context The process to do the unmapping in.
+///
+/// @param allow_phys_page_free If set to true, release any physical pages that are no longer referred to by a virtual
+///                             page mapping. If false, do not release free pages. False is useful to stop the release
+///                             and attempted re-use of, say, VGA video buffers.
 void mem_unmap_range(void *virtual_start, uint32_t num_pages, task_process *context, bool allow_phys_page_free)
 {
   KL_TRC_ENTRY;

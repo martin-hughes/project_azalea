@@ -14,9 +14,6 @@ public:
   block_proxy_device(IBlockDevice *parent, uint64_t start_block, uint64_t num_blocks);
   virtual ~block_proxy_device();
 
-  virtual const kl_string device_name();
-  virtual DEV_STATUS get_device_status();
-
   virtual uint64_t num_blocks();
   virtual uint64_t block_size();
 
@@ -26,14 +23,13 @@ public:
                                uint64_t buffer_length);
   virtual ERR_CODE write_blocks(uint64_t start_block,
                                 uint64_t num_blocks,
-                                void *buffer,
+                                const void *buffer,
                                 uint64_t buffer_length);
 
-protected:
-  const kl_string _name;
+  DEV_STATUS get_device_status();
 
+protected:
   IBlockDevice * const _parent;
-  DEV_STATUS status;
 
   const uint64_t _start_block;
   const uint64_t _num_blocks;

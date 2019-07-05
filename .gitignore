@@ -6,4 +6,5 @@ output/
 kernel_disc_image_nonlive.vdi
 kernel_disc_image.vdi
 *.md.html
-local_config.py
+__pycache__
+variables.cache

@@ -1,9 +1,22 @@
-// KLIB Semaphores implementation
+/// @file
+/// @brief KLIB Semaphores implementation
+
+// Known defects:
+// - There is no checking that a thread releasing the semaphore previously held it.
+
+// #define ENABLE_TRACING
 
 #include "klib/klib.h"
 
-// Initialize a semaphore object. The owner of the semaphore object is responsible for managing the memory associated
-// with it.
+/// @brief Initialize a semaphore object.
+///
+/// The owner of the semaphore object is responsible for managing the memory associated with the semaphore object.
+///
+/// @param semaphore The semaphore to initialise.
+///
+/// @param max_users The maximum number of threads that can hold the semaphore at once.
+///
+/// @param start_users How many users should the semaphore consider itself to be held by at the start?
 void klib_synch_semaphore_init(klib_semaphore &semaphore, uint64_t max_users, uint64_t start_users)
 {
   KL_TRC_ENTRY;
@@ -22,12 +35,22 @@ void klib_synch_semaphore_init(klib_semaphore &semaphore, uint64_t max_users, ui
   KL_TRC_EXIT;
 }
 
-// Acquire the semaphore for the currently running thread. It is not permissible for a thread to call this function
-// when it already owns the semaphore - the thread may become permanently unscheduled, and hence blocked. The maximum
-// time to wait is max_wait milliseconds. If max_wait is set to SEMAPHORE_MAX_WAIT then the caller waits indefinitely.
-// Threads acquire the semaphore in order that they call this function.
-//
-// The return values should be self-explanatory.
+/// @brief Acquire the semaphore for the currently running thread.
+///
+/// If the semaphore is not currently being held by max_users threads, acquire the semaphore now, otherwise wait for
+/// space to acquire it.
+///
+/// It is not permissible for a thread to call this function when it already owns the semaphore - the thread may become
+/// permanently unscheduled, and hence blocked. Threads acquire the semaphore in order that they call this function.
+///
+/// @param semaphore The semaphore to acquire.
+///
+/// @param max_wait The maximum time to wait in milliseconds. If max_wait is set to SEMAPHORE_MAX_WAIT then the caller
+///                 waits indefinitely. If set to zero, this function does not block. Timed waits other than zero or
+///                 SEMAPHORE_MAX_WAIT are not currently supported.
+///
+/// @return SYNC_ACQ_ACQUIRED upon success. SYNC_ACQ_ALREADY_OWNED if this thread already owns the semaphore.
+///         SYNC_ACQ_TIMEOUT if the semaphore could not be acquired within max_wait.
 SYNC_ACQ_RESULT klib_synch_semaphore_wait(klib_semaphore &semaphore, uint64_t max_wait)
 {
   KL_TRC_ENTRY;
@@ -94,7 +117,11 @@ SYNC_ACQ_RESULT klib_synch_semaphore_wait(klib_semaphore &semaphore, uint64_t ma
   return res;
 }
 
-// Release the semaphore. If a thread is waiting for it, it will be permitted to run.
+/// @brief Release the semaphore.
+///
+/// If a thread is waiting for it, it will be permitted to run.
+///
+/// @param semaphore The semaphore to release.
 void klib_synch_semaphore_clear(klib_semaphore &semaphore)
 {
   KL_TRC_ENTRY;
@@ -122,7 +149,6 @@ void klib_synch_semaphore_clear(klib_semaphore &semaphore)
   }
 
   klib_synch_spinlock_unlock(semaphore.access_lock);
-
 
   KL_TRC_EXIT;
 }

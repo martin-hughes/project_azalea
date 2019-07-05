@@ -1,8 +1,9 @@
 /// @file
 /// @brief x64-specific part of the task manager
 
-// Known defects: proc_x64_allocate_stack and task_int_allocate_user_mode_stack have different names and act
-// differently. One provides a valid stack pointer, the other merely provides a page to put the stack in.
+// Known defects:
+// - proc_x64_allocate_stack and task_int_allocate_user_mode_stack have different names and act differently. One
+//   provides a valid stack pointer, the other merely provides a page to put the stack in.
 
 //#define ENABLE_TRACING
 
@@ -163,6 +164,12 @@ void task_int_delete_exec_context(task_thread *old_thread)
   task_x64_exec_context *old_context = reinterpret_cast<task_x64_exec_context *>(old_thread->execution_context);
 
   proc_x64_deallocate_stack(old_context->orig_syscall_stack);
+
+  if (old_thread->parent_process->kernel_mode)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Deallocated kernel stack\n");
+    proc_x64_deallocate_stack(reinterpret_cast<void *>(old_context->saved_stack.proc_rsp));
+  }
 
   delete old_context;
   old_thread->execution_context = nullptr;

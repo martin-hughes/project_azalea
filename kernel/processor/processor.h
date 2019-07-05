@@ -27,7 +27,7 @@ class task_thread;
 
 /// Structure to hold information about a process. All information is stored here, to be accessed by the various
 /// components as needed. This removes the need for per-component lookup tables for each process.
-class task_process : public IHandledObject, public WaitObject, public std::enable_shared_from_this<task_process>
+class task_process : public IHandledObject, public WaitForFirstTriggerObject, public std::enable_shared_from_this<task_process>
 {
 protected:
   task_process(ENTRY_PROC entry_point, bool kernel_mode = false, mem_process_info *mem_info = nullptr);
@@ -139,6 +139,11 @@ public:
   /// continue to exist until all references to it have been released.
   bool thread_destroyed;
 
+  /// Is this a work queue worker thread? Knowing this allows us to spin up another thread if a worker thread is about
+  /// to block waiting for another work item to finish. The work queue system will endeavour to maintain the minimum
+  /// possible number of active threads, so if this thread is a work queue thread then it may be stopped after this
+  /// work item completes.
+  bool is_worker_thread;
 
 #ifdef AZALEA_TEST_CODE
   friend void test_only_reset_task_mgr();

@@ -9,7 +9,7 @@
 extern "C"
 {
 #ifndef DOXYGEN_BUILD
-#include "external/acpica/source/include/acpi.h"
+#include "acpi.h"
 #endif
 }
 #include "processor/processor.h"
@@ -17,6 +17,9 @@ extern "C"
 #include "processor/x64/processor-x64-int.h"
 #include "mem/mem.h"
 #include "devices/device_interface.h"
+#include "devices/pci/pci_functions.h"
+
+#include <stdio.h>
 
 /// @brief Handle an IRQ as requested by ACPI.
 ///
@@ -38,12 +41,15 @@ private:
 
 namespace
 {
-  char *exception_message_buf;
-  const uint16_t em_buf_len = 1000;
+  char *exception_message_buf = nullptr; ///< Somewhere to store messages output by ACPICA for printing.
+  const uint16_t em_buf_len = 1000; ///< The number of bytes in the above buffer.
 
   // At present, only support a single IRQ handler for ACPI.
-  AcpiIrqHandler *acpi_int_handler = nullptr;
+  AcpiIrqHandler *acpi_int_handler = nullptr; ///< ACPI's IRQ handler object.
 }
+
+// Don't bother re-documenting ACPICA.
+/// @cond
 
 // There are no actions needed to initialize the OSL, so just return.
 ACPI_STATUS AcpiOsInitialize(void)
@@ -74,6 +80,7 @@ ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer(void)
   ACPI_PHYSICAL_ADDRESS  Ret;
   Ret = 0;
   AcpiFindRootPointer(&Ret);
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Root pointer: ", Ret, "\n");
   KL_TRC_EXIT;
   return Ret;
 }
@@ -270,15 +277,17 @@ ACPI_STATUS AcpiOsAcquireMutex(ACPI_MUTEX Handle, UINT16 Timeout)
   switch (res)
   {
     case SYNC_ACQ_ACQUIRED:
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Acq\n");
       retval = AE_OK;
       break;
 
     case SYNC_ACQ_TIMEOUT:
       retval = AE_TIME;
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Timeout!");
       break;
 
     default:
-      panic("Unknown semaphore result");
+      panic("Unknown mutex result");
 
   }
   KL_TRC_EXIT;
@@ -450,8 +459,9 @@ ACPI_THREAD_ID AcpiOsGetThreadId(void)
   {
     thread_id = 1;
   }
-  return thread_id;
   KL_TRC_EXIT;
+
+  return thread_id;
 }
 
 ACPI_STATUS AcpiOsExecute(ACPI_EXECUTE_TYPE Type, ACPI_OSD_EXEC_CALLBACK Function, void *Context)
@@ -564,18 +574,111 @@ ACPI_STATUS AcpiOsWriteMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 Value, UINT3
  */
 ACPI_STATUS AcpiOsReadPciConfiguration(ACPI_PCI_ID *PciId, UINT32 Reg, UINT64 *Value, UINT32 Width)
 {
+  uint32_t raw_reg;
+  uint32_t raw_reg_upper;
+
   KL_TRC_ENTRY;
-  panic("ACPI attempted to read PCI config");
+
+  // PCI Express isn't currently supported.
+  ASSERT(PciId->Segment == 0);
+
+  pci_address addr;
+  addr.bus = PciId->Bus;
+  addr.device = PciId->Device;
+  addr.function = PciId->Function;
+  addr.register_num = Reg;
+
+  raw_reg = pci_read_raw_reg(addr);
+
+  switch(Width)
+  {
+  case 8:
+    KL_TRC_TRACE(TRC_LVL::FLOW, "8-bit width\n");
+    *Value = raw_reg & 0xFF;
+    break;
+
+  case 16:
+    KL_TRC_TRACE(TRC_LVL::FLOW, "16-bit width\n");
+    *Value = raw_reg & 0xFFFF;
+    break;
+
+  case 32:
+    KL_TRC_TRACE(TRC_LVL::FLOW, "32-bit width\n");
+    *Value = raw_reg;
+    break;
+
+  case 64:
+    KL_TRC_TRACE(TRC_LVL::FLOW, "64-bit width\n");
+    addr.register_num++;
+    raw_reg_upper = pci_read_raw_reg(addr);
+    *Value = raw_reg_upper;
+    *Value = *Value << 32;
+    *Value = *Value | raw_reg;
+    break;
+
+  default:
+    panic("Unknown PCI register width");
+  }
+
   KL_TRC_EXIT;
-  return AE_NOT_IMPLEMENTED;
+  return AE_OK;
 }
 
 ACPI_STATUS AcpiOsWritePciConfiguration(ACPI_PCI_ID *PciId, UINT32 Reg, UINT64 Value, UINT32 Width)
 {
+  uint32_t raw_reg;
+
   KL_TRC_ENTRY;
-  panic("ACPI attempted to write PCI config");
+
+  // PCI Express isn't currently supported.
+  ASSERT(PciId->Segment == 0);
+
+  pci_address addr;
+  addr.bus = PciId->Bus;
+  addr.device = PciId->Device;
+  addr.function = PciId->Function;
+  addr.register_num = Reg;
+
+  raw_reg = pci_read_raw_reg(addr);
+
+  switch(Width)
+  {
+  case 8:
+    KL_TRC_TRACE(TRC_LVL::FLOW, "8-bit width\n");
+    raw_reg = raw_reg & 0xFFFFFF00;
+    raw_reg = raw_reg | (Value & 0xFF);
+    pci_write_raw_reg(addr, raw_reg);
+    break;
+
+  case 16:
+    KL_TRC_TRACE(TRC_LVL::FLOW, "16-bit width\n");
+    raw_reg = raw_reg & 0xFFFF0000;
+    raw_reg = raw_reg | (Value & 0xFFFF);
+    pci_write_raw_reg(addr, raw_reg);
+    break;
+
+  case 32:
+    KL_TRC_TRACE(TRC_LVL::FLOW, "32-bit width\n");
+    raw_reg = Value;
+    pci_write_raw_reg(addr, raw_reg);
+    break;
+
+  case 64:
+    KL_TRC_TRACE(TRC_LVL::FLOW, "64-bit width\n");
+    raw_reg = Value;
+    pci_write_raw_reg(addr, raw_reg);
+    Value = Value >> 32;
+    raw_reg = Value;
+    addr.register_num++;
+    pci_write_raw_reg(addr, raw_reg);
+    break;
+
+  default:
+    panic("Unknown PCI register width");
+  }
+
   KL_TRC_EXIT;
-  return AE_NOT_IMPLEMENTED;
+  return AE_OK;
 }
 
 /*
@@ -602,10 +705,13 @@ BOOLEAN AcpiOsWritable(void *Pointer, ACPI_SIZE Length)
 
 UINT64 AcpiOsGetTimer(void)
 {
+  UINT64 timer_val;
   KL_TRC_ENTRY;
-  panic("AcpiOsGetTimer - don't know what this does!");
+
+  timer_val = time_get_system_timer_count(true) / 100;
   KL_TRC_EXIT;
-  return 0;
+
+  return timer_val;
 }
 
 ACPI_STATUS AcpiOsSignal(UINT32 Function, void *Info)
@@ -621,24 +727,29 @@ ACPI_STATUS AcpiOsSignal(UINT32 Function, void *Info)
  */
 void AcpiOsPrintf(const char *Format, ...)
 {
-  KL_TRC_ENTRY;
+  //KL_TRC_ENTRY;
   va_list args;
 
   va_start(args, Format);
   AcpiOsVprintf(Format, args);
   va_end(args);
 
-  KL_TRC_EXIT;
+  //KL_TRC_EXIT;
 }
 
 void AcpiOsVprintf(const char *Format, va_list Args)
 {
-  KL_TRC_ENTRY;
+  //KL_TRC_ENTRY;
+  if (!exception_message_buf)
+  {
+    return;
+  }
 
-  klib_vsnprintf(exception_message_buf, em_buf_len, Format, Args);
+  kl_memset(exception_message_buf, 0, 1000);
+  vsnprintf(exception_message_buf, em_buf_len, Format, Args);
 
-  panic(exception_message_buf);
-  KL_TRC_EXIT;
+  kl_trc_trace(TRC_LVL::EXTRA, (const char *)exception_message_buf);
+  //KL_TRC_EXIT;
 }
 
 void AcpiOsRedirectOutput(void *Destination)
@@ -768,6 +879,8 @@ void AcpiOsTracePoint(ACPI_TRACE_EVENT_TYPE Type, BOOLEAN Begin, UINT8 *Aml, cha
   panic("ACPI trace point called");
   KL_TRC_EXIT;
 }
+
+/// @endcond
 
 AcpiIrqHandler::AcpiIrqHandler(ACPI_OSD_HANDLER irq_handler, void *irq_context) :
   _irq_handler(irq_handler),

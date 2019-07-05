@@ -6,6 +6,8 @@
 #include "klib/klib.h"
 #include "system_tree/fs/proc/proc_fs.h"
 
+#include <stdio.h>
+
 using namespace std;
 
 proc_fs_root_branch::proc_fs_root_branch() :
@@ -124,7 +126,7 @@ ERR_CODE proc_fs_root_branch::add_process(std::shared_ptr<task_process> new_proc
       this->_zero_proxy = std::make_shared<proc_fs_zero_proxy_branch>(shared_from_this());
       system_tree_simple_branch::add_child("0", std::dynamic_pointer_cast<ISystemTreeBranch>(this->_zero_proxy));
     }
-    klib_snprintf(name_buffer, 22, "%p", new_process.get());
+    snprintf(name_buffer, 22, "%p", new_process.get());
     branch_name = name_buffer;
 
     KL_TRC_TRACE(TRC_LVL::FLOW, "Adding branch: ", branch_name, "\n");
@@ -164,7 +166,7 @@ ERR_CODE proc_fs_root_branch::remove_process(std::shared_ptr<task_process> old_p
   }
   else
   {
-    klib_snprintf(name_buffer, 22, "%p", old_process.get());
+    snprintf(name_buffer, 22, "%p", old_process.get());
     branch_name = name_buffer;
     ec = this->get_child(branch_name, i_branch);
 

@@ -1,5 +1,5 @@
 /// @file
-/// @brief Implementation of dev\null
+/// @brief Implementation of dev\\null
 
 //#define ENABLE_TRACING
 

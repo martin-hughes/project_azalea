@@ -7,6 +7,12 @@ useful for anyone else trying the same thing.
 Project Azalea isn't the name of the finished product - it is merely a codename. Whether or not the project matures
 enough to warrant a proper name remains to be seen.
 
+## Code quality
+
+Even a cursory glance at some parts of the code will show them not to be of excellent quality. Ideally it would all be
+excellent, of course, but the author's enjoys experimenting and hacking to see what things he can find out - the
+project is unlikely ever to be of production quality after all!
+
 ## More information
 
 Further information about the project can be found in [Introduction.md](./docs/Introduction.md)

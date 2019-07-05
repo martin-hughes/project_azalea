@@ -9,6 +9,10 @@
 
 #include "klib/klib.h"
 #include "devices/generic/gen_keyboard.h"
+#include "keyboard_maps.h"
+
+// This is a temporary addition until the device driver system is more developed.
+extern task_process *term_proc;
 
 /// @brief Retrieve the properties of the key that has been pressed.
 ///
@@ -21,7 +25,7 @@
 ///
 /// @return A key_props struct containing details for the key that was pressed. If the key code is outside of the table
 ///         or the table is invalid then a default, blank, entry is returned.
-key_props keyb_get_key_props(KEYS key_pressed, key_props *key_props_table, uint32_t tab_len)
+key_props keyb_get_key_props(KEYS key_pressed, const key_props *key_props_table, uint32_t tab_len)
 {
   KL_TRC_ENTRY;
 
@@ -51,7 +55,7 @@ key_props keyb_get_key_props(KEYS key_pressed, key_props *key_props_table, uint3
 /// @param tab_len The number of entries in key_props_table.
 ///
 /// @return If the key press translates into something printable, return that. Otherwise, return 0.
-char keyb_translate_key(KEYS key_pressed, special_keys modifiers, key_props *key_props_table, uint32_t tab_len)
+char keyb_translate_key(KEYS key_pressed, special_keys modifiers, const key_props *key_props_table, uint32_t tab_len)
 {
   KL_TRC_ENTRY;
 
@@ -79,4 +83,100 @@ char keyb_translate_key(KEYS key_pressed, special_keys modifiers, key_props *key
   KL_TRC_EXIT;
 
   return printable;
+}
+
+/// @brief A key has been pressed, so figure out what it means and send appropriate messages.
+///
+/// @param key The physical key that was pressed.
+///
+/// @param specs The current state of the special keys.
+void generic_keyboard::handle_key_down(KEYS key, special_keys specs)
+{
+  char printable_char;
+  task_process *proc = this->recipient;
+  klib_message_hdr hdr;
+  keypress_msg *updown_msg;
+  key_char_msg *char_msg;
+
+  KL_TRC_ENTRY;
+
+  hdr.msg_length = sizeof(keypress_msg);
+  hdr.originating_process = task_get_cur_thread()->parent_process.get();
+
+  printable_char = keyb_translate_key(key,
+                                      specs,
+                                      keyboard_maps[0].mapping_table,
+                                      keyboard_maps[0].max_index);
+
+  if (proc == nullptr)
+  {
+    this->recipient = term_proc;
+    proc = this->recipient;
+  }
+
+  if (proc != nullptr)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Send keypress to recipient... \n");
+    updown_msg = new keypress_msg;
+    updown_msg->key_pressed = key;
+    updown_msg->modifiers = specs;
+    hdr.msg_contents = reinterpret_cast<char *>(updown_msg);
+    hdr.msg_id = SM_KEYDOWN;
+    hdr.msg_length = sizeof(keypress_msg);
+
+    msg_send_to_process(proc, hdr);
+
+    if (printable_char != 0)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Send character message\n");
+      char_msg = new key_char_msg;
+      char_msg->pressed_character = printable_char;
+
+      hdr.msg_contents = reinterpret_cast<char *>(char_msg);
+      hdr.msg_id = SM_PCHAR;
+      hdr.msg_length = sizeof(key_char_msg);
+
+      msg_send_to_process(proc, hdr);
+    }
+  }
+
+  KL_TRC_EXIT;
+}
+
+/// @brief A key has been released, so figure out what it means and send appropriate messages.
+///
+/// @param key The physical key that was pressed.
+///
+/// @param specs The current state of the special keys.
+void generic_keyboard::handle_key_up(KEYS key, special_keys specs)
+{
+  char printable_char;
+  task_process *proc = this->recipient;
+  klib_message_hdr hdr;
+  keypress_msg *updown_msg;
+
+  KL_TRC_ENTRY;
+
+  hdr.msg_length = sizeof(keypress_msg);
+  hdr.originating_process = task_get_cur_thread()->parent_process.get();
+
+  printable_char = keyb_translate_key(key,
+                                      specs,
+                                      keyboard_maps[0].mapping_table,
+                                      keyboard_maps[0].max_index);
+
+  if (proc != nullptr)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Send keypress to recipient... \n");
+    updown_msg = new keypress_msg;
+    updown_msg->key_pressed = key;
+    updown_msg->modifiers = specs;
+    hdr.msg_contents = reinterpret_cast<char *>(updown_msg);
+    hdr.msg_id = SM_KEYUP;
+    hdr.msg_length = sizeof(keypress_msg);
+
+    msg_send_to_process(proc, hdr);
+  }
+
+  KL_TRC_EXIT;
 }

@@ -10,14 +10,14 @@
 #include "ps2_controller.h"
 
 gen_ps2_controller_device::gen_ps2_controller_device() :
+  IDevice{"Generic PS/2 controller"},
   chan_1_dev(nullptr),
-  chan_2_dev(nullptr),
-  _name("Generic PS/2 controller")
+  chan_2_dev(nullptr)
 {
   KL_TRC_ENTRY;
 
   // Unless anything goes wrong, assume the PS/2 controller is fine.
-  _status = DEV_STATUS::OK;
+  current_dev_status = DEV_STATUS::OK;
 
   // Start by assuming a two-channel PS/2 controller. We check this assumption below.
   _dual_channel = true;
@@ -63,7 +63,7 @@ gen_ps2_controller_device::gen_ps2_controller_device() :
   if (response != PS2_CONST::SELF_TEST_SUCCESS)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "PS/2 self-test failed\n");
-    _status = DEV_STATUS::FAILED;
+    current_dev_status = DEV_STATUS::FAILED;
   }
   else
   {
@@ -110,7 +110,7 @@ gen_ps2_controller_device::gen_ps2_controller_device() :
       if (response != PS2_CONST::DEV_CMD_ACK)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Device one failed to reset\n");
-        _status = DEV_STATUS::FAILED;
+        current_dev_status = DEV_STATUS::FAILED;
       }
 
       send_byte(PS2_CONST::DEV_DISABLE_SCANNING, false);
@@ -131,7 +131,7 @@ gen_ps2_controller_device::gen_ps2_controller_device() :
         if (response != PS2_CONST::DEV_CMD_ACK)
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "Device one failed to reset\n");
-          _status = DEV_STATUS::FAILED;
+          current_dev_status = DEV_STATUS::FAILED;
         }
 
         send_byte(PS2_CONST::DEV_DISABLE_SCANNING, true);
@@ -155,7 +155,7 @@ gen_ps2_controller_device::gen_ps2_controller_device() :
     else
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Test of channel 1 failed, response: ", response, "\n");
-      _status = DEV_STATUS::FAILED;
+      current_dev_status = DEV_STATUS::FAILED;
     }
   }
 
@@ -167,17 +167,6 @@ gen_ps2_controller_device::~gen_ps2_controller_device()
   KL_TRC_ENTRY;
 
   KL_TRC_EXIT;
-}
-
-const kl_string gen_ps2_controller_device::device_name()
-{
-  return this->_name;
-}
-
-// At the minute, it is just assumed that the PS/2 controller is always operable.
-DEV_STATUS gen_ps2_controller_device::get_device_status()
-{
-  return _status;
 }
 
 /// @brief Send a command to the PS/2 controller.

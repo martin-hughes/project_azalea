@@ -33,7 +33,8 @@ extern "C" ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle)
   }
   else
   {
-    wait_obj = std::dynamic_pointer_cast<WaitObject>(cur_thread->thread_handles.retrieve_object(wait_object_handle));
+    wait_obj = std::dynamic_pointer_cast<WaitObject>(
+      cur_thread->thread_handles.retrieve_handled_object(wait_object_handle));
     if (wait_obj == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Not a wait object\n");

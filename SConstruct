@@ -2,67 +2,83 @@ import os
 import platform
 
 import build_support.dependencies as dependencies
-import build_support.config as config
 
-def main_build_script(linux_build):
+def main_build_script(linux_build, config_env):
   # Most components and options are excluded from the Windows build. Only the test program builds on Windows.
   if linux_build:
+    paths = path_builder(config_env)
+
     # API headers
     kernel_env = build_default_env(linux_build)
-    headers = kernel_env.File(Glob("kernel/user_interfaces/*.h"))
+    headers = kernel_env.File(Glob("kernel/user_interfaces/*"))
     user_headers = kernel_env.File(Glob("user/libs/libazalea/azalea/*.h"))
-    headers_folder = os.path.join(config.azalea_dev_folder, "include")
-    ui_folder = os.path.join(headers_folder, "azalea")
+
+    ui_folder = os.path.join(paths.kernel_headers_folder, "azalea")
     kernel_env.Install(ui_folder, headers)
     kernel_env.Install(ui_folder, user_headers)
 
     # Main kernel part
-    kernel_env['CXXFLAGS'] = '-Wall -mno-red-zone -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=c++17 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
-    kernel_env['CFLAGS'] = '-Wall -mno-red-zone -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
-    kernel_env['LINKFLAGS'] = "-T build_support/kernel_stage.ld --start-group"
-    kernel_env['LINK'] = 'ld -Map output/kernel_map.map'
+    kernel_env['CXXFLAGS'] = '-Wall -mno-red-zone -nostdinc++ -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=c++17 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT -D _LIBCPP_NO_EXCEPTIONS'
+    kernel_env['CFLAGS'] = '-Wall -mno-red-zone -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
+    kernel_env['LINKFLAGS'] = "-T build_support/kernel_stage.ld --start-group "
+    kernel_env['LINK'] = 'ld -gc-sections -Map output/kernel_map.map'
+    kernel_env['LIBPATH'] = [paths.libcxx_lib_folder,
+                             paths.acpica_lib_folder,
+                             paths.libc_lib_folder,
+                            ]
+    kernel_env['LIBS'] = [ 'acpica', 'azalea_libc_kernel', 'c++', 'thread_adapter' ]
     kernel_env.AppendENVPath('CPATH', '#/kernel')
+    kernel_env.AppendENVPath('CPATH', os.path.join(paths.libcxx_headers_folder, 'c++/v1'))
+    kernel_env.AppendENVPath('CPATH', paths.acpica_headers_folder)
+    kernel_env.AppendENVPath('CPATH', paths.libc_headers_folder)
+    kernel_env.AppendENVPath('CPATH', paths.kernel_headers_folder)
     kernel_obj = default_build_script(dependencies.kernel, "kernel64.sys", kernel_env, "kernel")
-    kernel_install_obj = kernel_env.Install(config.system_root_folder, kernel_obj)
+    kernel_install_obj = kernel_env.Install(paths.sys_image_root, kernel_obj)
     kernel_env.AddPostAction(kernel_obj, disasm_action)
 
     # User mode API and programs environment
     user_mode_env = build_default_env(linux_build)
     user_mode_env['CXXFLAGS'] = '-Wall -mno-red-zone -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=c++17 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
     user_mode_env['CFLAGS'] = '-Wall -mno-red-zone -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
-    user_mode_env['LIBPATH'] = [config.libc_location, ]
-    user_mode_env.AppendENVPath('CPATH', os.path.join(config.libc_location, "include"))
-    user_mode_env.AppendENVPath('CPATH', headers_folder)
-    user_mode_env['LINK'] = 'ld -Map output/init_program.map'
+    user_mode_env['LIBPATH'] = [paths.libc_lib_folder,
+                               ]
+    user_mode_env['LINK'] = 'ld'
 
     # User mode part of the API
-    user_api_obj = default_build_script(dependencies.user_mode_api, "azalea", user_mode_env, "api_library", False)
+    api_lib_env = user_mode_env.Clone()
+    api_lib_env.AppendENVPath('CPATH', '#user/libs/libazalea')
+    api_lib_env.AppendENVPath('CPATH', paths.libc_headers_folder)
+    api_lib_env.AppendENVPath('CPATH', paths.kernel_headers_folder)
+    user_api_obj = default_build_script(dependencies.user_mode_api, "azalea", api_lib_env, "api_library", False)
+    api_install_obj = api_lib_env.Install(paths.kernel_lib_folder, user_api_obj)
 
     user_mode_env['LIBS'] = [ 'azalea_libc', user_api_obj]
+
+    user_mode_env.AppendENVPath('CPATH', paths.libc_headers_folder)
+    user_mode_env.AppendENVPath('CPATH', paths.kernel_headers_folder)
 
     # Init program
     init_deps = dependencies.init_program
     init_prog_obj = default_build_script(init_deps, "initprog", user_mode_env, "init_program")
-    init_install_obj = user_mode_env.Install(config.system_root_folder, init_prog_obj)
+    init_install_obj = user_mode_env.Install(paths.sys_image_root, init_prog_obj)
     user_mode_env.AddPostAction(init_prog_obj, disasm_action)
 
     # Simple shell program
     shell_deps = dependencies.shell_program
     shell_prog_obj = default_build_script(shell_deps, "shell", user_mode_env, "simple_shell")
-    shell_install_obj = user_mode_env.Install(config.system_root_folder, shell_prog_obj)
+    shell_install_obj = user_mode_env.Install(paths.sys_image_root, shell_prog_obj)
 
     echo_deps = dependencies.echo_program
     echo_prog_obj = default_build_script(echo_deps, "echo", user_mode_env, "echo_prog")
-    echo_install_obj = user_mode_env.Install(config.system_root_folder, echo_prog_obj)
+    echo_install_obj = user_mode_env.Install(paths.sys_image_root, echo_prog_obj)
 
     # Install and other simple targets
     kernel_env.Alias('install-headers', ui_folder)
-    PhonyTargets(kernel_env, start_demo = demo_machine_action)
-    PhonyTargets(kernel_env, build_image = disk_build_action)
     Default(kernel_install_obj)
     Default(init_install_obj)
     Default(shell_install_obj)
     Default(echo_install_obj)
+    Default(api_install_obj)
 
   # Unit test program
   test_script_env = build_default_env(linux_build)
@@ -73,17 +89,20 @@ def main_build_script(linux_build):
     test_script_env['LINKFLAGS'] = '-L/usr/lib/llvm-6.0/lib/clang/6.0.0/lib/linux -Wl,--start-group'
     cxx_flags = '-g -O0 -std=c++17 -Wunknown-pragmas'
     test_script_env['LIBS'] = [ ]
-    if config.test_attempt_mem_leak_check:
+    if config_env['test_attempt_mem_leak_check']:
       test_script_env['LIBS'].append ('clang_rt.asan-x86_64')
       cxx_flags = cxx_flags + ' -fsanitize=address'
 
     cxx_flags = cxx_flags + additional_defines
     exe_name = 'main-tests'
-    test_script_env['LIBS'].append([ 'libvirtualdisk', 'pthread' ])
+    test_script_env['LIBS'].append([ 'libvirtualdisk',
+                                     'pthread',
+                                     'stdc++fs',
+                                   ])
     additional_include_tag = 'CPATH'
   else:
     additional_defines += ' -D _DEBUG /MTd'
-    if config.test_attempt_mem_leak_check:
+    if  config_env['test_attempt_mem_leak_check']:
       additional_defines += ' -D UT_MEM_LEAK_CHECK'
     test_script_env['LINKFLAGS'] = '/DEBUG:FULL /MAP:output\\main-tests.map /INCREMENTAL /NOLOGO'
     cxx_flags = additional_defines + ' /nologo /EHac /Od /ZI /Fdoutput\\main-tests.pdb /std:c++17 /Zc:__cplusplus /permissive-'
@@ -161,10 +180,6 @@ def default_build_script(deps, output_name, env, part_name, is_program = True):
   else:
     return env.StaticLibrary(os.path.join('output', output_name), dependencies_out)
 
-def disk_image_builder(target, source, env):
-  os.system('build_support/create_disk_image.sh')
-  return None
-
 def disassemble_cmd(target, source, env):
   disasm_cmd = 'ndisasm -b64 -a -p intel {obj_file} > {disassembly}'
   output_file = str(target[0]) + '.asm'
@@ -172,29 +187,46 @@ def disassemble_cmd(target, source, env):
 
   return None
 
-def demo_machine_cmd(target, source, env):
-  qemu_params = ["qemu-system-x86_64",
-                 "-drive file=fat:rw:fat-type=16:output/system_root,format=raw",
-                 "-no-reboot",
-                 "-smp cpus=2",
-                 "-cpu Haswell,+x2apic",
-                 "-serial stdio", # Could change this to -debugcon stdio to put the monitor on stdio.
-                 "-device nec-usb-xhci",
-                 "-kernel output/system_root/kernel64.sys",
-                ]
-  qemu_cmd = " ".join(qemu_params) + " " + config.demo_machine_extra_params
-  os.system(qemu_cmd)
+def construct_variables(linux_build):
+  var = Variables(["build_support/default_config.py", "variables.cache" ], ARGUMENTS)
+  if linux_build:
+    var.AddVariables(
+      PathVariable("sys_image_root",
+                   "Root of Azalea system image. Look for include files, libraries and installation locations here.",
+                   None,
+                   PathVariable.PathIsDir))
+  var.AddVariables(
+    BoolVariable("test_attempt_mem_leak_check",
+                 "Should the test scripts attempt memory leak detection?",
+                 False))
 
-  return None
+  e = Environment(variables = var)
 
-def PhonyTargets(env, **kw):
-  for target, action in kw.items():
-      env.AlwaysBuild(env.Alias(target, [], action))
+  var.Save("variables.cache", e)
+
+  return e
+
+class path_builder:
+  def __init__(self, cfg_env):
+    self.sys_image_root = cfg_env["sys_image_root"]
+    self.developer_root = os.path.join(self.sys_image_root, "apps", "developer")
+    self.kernel_headers_folder = os.path.join(self.developer_root, "kernel", "include")
+    self.kernel_lib_folder = os.path.join(self.developer_root, "kernel", "lib")
+
+    # Azalea libc
+    self.libc_headers_folder = os.path.join(self.developer_root, "libc", "include")
+    self.libc_lib_folder = os.path.join(self.developer_root, "libc", "lib")
+
+    # Azalea libc++
+    self.libcxx_headers_folder = os.path.join(self.developer_root, "libcxx-kernel", "include")
+    self.libcxx_lib_folder = os.path.join(self.developer_root, "libcxx-kernel", "lib")
+
+    # Azalea ACPICA
+    self.acpica_headers_folder = os.path.join(self.developer_root, "acpica", "include")
+    self.acpica_lib_folder = os.path.join(self.developer_root, "acpica", "lib")
 
 # Create actions for our custom commands.
 disasm_action = Action(disassemble_cmd, "Disassembling $TARGET")
-disk_build_action = Action(disk_image_builder, "Creating disk image")
-demo_machine_action = Action(demo_machine_cmd, "Starting demo machine")
 
 # Determine whether this is a Linux or Windows-based build.
 sys_name = platform.system()
@@ -208,4 +240,6 @@ else:
   print("Unknown build platform")
   exit(0)
 
-main_build_script(linux_build)
+config_env = construct_variables(linux_build)
+
+main_build_script(linux_build, config_env)

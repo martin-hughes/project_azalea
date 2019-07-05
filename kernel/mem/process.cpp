@@ -56,6 +56,8 @@ mem_process_info *mem_task_create_task_entry()
 }
 
 /// @brief Destroy a task's memory manager information block and releases all physical pages unique to this process.
+///
+/// @param proc The process to free information for.
 void mem_task_free_task(task_process *proc)
 {
   process_x64_data *x64_data;

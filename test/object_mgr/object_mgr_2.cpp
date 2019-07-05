@@ -25,15 +25,18 @@ TEST(ObjectManagerTest, StoreAndRetrieve)
 
   for (int i = 0; i < NUM_OBJECTS; i++)
   {
+    object_data d;
     objects[i] = make_shared<simple_object>();
     ASSERT_EQ(objects[i].use_count(), 1);
-    handles[i] = om->store_object(dynamic_pointer_cast<IHandledObject>(objects[i]));
+    d.object_ptr = dynamic_pointer_cast<IHandledObject>(objects[i]);
+    handles[i] = om->store_object(d);
+    d.object_ptr = nullptr;
     ASSERT_EQ(objects[i].use_count(), 2);
   }
 
   for (int i = 0; i < NUM_OBJECTS; i++)
   {
-    ASSERT_EQ(objects[i], dynamic_pointer_cast<simple_object >(om->retrieve_object(handles[i])));
+    ASSERT_EQ(objects[i], dynamic_pointer_cast<simple_object >(om->retrieve_object(handles[i])->object_ptr));
   }
 
   for (int i = 0; i < NUM_OBJECTS; i++)

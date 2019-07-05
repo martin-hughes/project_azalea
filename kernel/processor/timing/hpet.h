@@ -7,7 +7,7 @@ bool time_hpet_exists();
 void time_hpet_init();
 
 void time_hpet_stall(uint64_t wait_in_ns);
-uint64_t time_hpet_cur_value();
+uint64_t time_hpet_cur_value(bool output_in_ns = false);
 uint64_t time_hpet_compute_wait(uint64_t wait_in_ns);
 
 /*

@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <chrono>
+#include <string>
 
 #include "gtest/gtest.h"
 #ifdef UT_MEM_LEAK_CHECK
@@ -15,8 +16,15 @@
 
 using namespace std;
 
+global_test_opts_struct global_test_opts
+{
+  false
+};
+
 int main(int argc, char **argv)
 {
+  bool all_args_ok = true;
+
   // Initialise a shared data structure that doesn't need to always be reset.
   test_init_proc_interrupt_table();
 
@@ -27,7 +35,30 @@ int main(int argc, char **argv)
   listeners.Append(new MemLeakListener);
 #endif
 
-  return RUN_ALL_TESTS();
+  for (int i = 1; i < argc; i++)
+  {
+    string arg = argv[i];
+
+    if (arg == "--keep-temp-files")
+    {
+      cout << "-- Will keep temporary files." << endl;
+      global_test_opts.keep_temp_files = true;
+    }
+    else
+    {
+      cout << "Unrecognised argument: " << arg << endl;
+      all_args_ok = false;
+    }
+  }
+
+  if (!all_args_ok)
+  {
+    return 1;
+  }
+  else
+  {
+    return RUN_ALL_TESTS();
+  }
 }
 
 assertion_failure::assertion_failure(const char *reason)
@@ -49,4 +80,9 @@ void test_spin_sleep(uint64_t sleep_time_ns)
   {
     //spin
   }
+}
+
+std::ostream& operator<<(std::ostream& os, const ERR_CODE_T &ec)
+{
+  return os << "Error code: " << azalea_lookup_err_code(ec);
 }

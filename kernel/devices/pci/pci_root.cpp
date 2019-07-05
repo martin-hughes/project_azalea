@@ -10,7 +10,9 @@
 #include "devices/pci/pci_functions.h"
 #include "devices/pci/pci_generic_bus.h"
 
-pci_root_device::pci_root_device()
+#include <stdio.h>
+
+pci_root_device::pci_root_device() : IDevice{"PCI Root Device"}
 {
   KL_TRC_ENTRY;
   this->scan_for_devices();
@@ -20,16 +22,6 @@ pci_root_device::pci_root_device()
 pci_root_device::~pci_root_device()
 {
   INCOMPLETE_CODE("Can't shutdown PCI");
-}
-
-const kl_string pci_root_device::device_name()
-{
-  return kl_string("PCI Root Device");
-}
-
-DEV_STATUS pci_root_device::get_device_status()
-{
-  return DEV_STATUS::OK;
 }
 
 /// @brief Scan the PCI subsystem for devices
@@ -61,7 +53,7 @@ void pci_root_device::scan_for_devices()
         KL_TRC_TRACE(TRC_LVL::FLOW, "Examine bus ", i, "\n");
         new_bus = std::make_shared<pci_generic_bus>(i, this);
 
-        klib_snprintf(name, 7, "bus%03hhi", i);
+        snprintf(name, 7, "bus%03hhi", i);
         KL_TRC_TRACE(TRC_LVL::FLOW, "New branch name: ", name, "\n");
 
         kl_string new_branch_name(name);
