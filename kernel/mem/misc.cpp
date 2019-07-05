@@ -51,7 +51,7 @@ void *mem_allocate_pages(uint32_t num_pages)
 ///
 /// @param virtual_start The start of the virtual range allocated by mem_allocate_pages()
 ///
-/// @param The number of pages in the allocation being freed.
+/// @param num_pages The number of pages in the allocation being freed.
 void mem_deallocate_pages(void *virtual_start, uint32_t num_pages)
 {
   KL_TRC_ENTRY;

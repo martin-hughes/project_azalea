@@ -7,6 +7,10 @@
 
 class kl_string;
 
+/// @brief A pseudo-device to help interpret ACPI IRQ mapping tables.
+///
+/// If this device is found in the ACPI device tables then it is used to calculate the mapping between PCI IRQ pins and
+/// processor interrupts.
 class pci_irq_link_device
 {
 protected:

@@ -1,15 +1,21 @@
-#ifndef __ST_PROC_ELF_STRUCTS_H
-#define __ST_PROC_ELF_STRUCTS_H
+/// @file
+/// @brief Structures used to decode ELF files.
 
-// Structures in this file are adapted from "ELF-64 Object File Format"
+// Structures in this file are adapted from the document "ELF-64 Object File Format"
+
+#pragma once
 
 #pragma pack(push, 1)
 
 const uint64_t ELF64_FILE_HDR_SIZE = 64;
 const uint64_t ELF64_PROG_HDR_SIZE = 56;
 
+/// @brief An ELF file header.
+///
+/// This structure is described further in the ELF specification.
 typedef struct
 {
+  /// @cond
   uint8_t ident[16];
   uint16_t type;
   uint16_t machine_type;
@@ -24,12 +30,17 @@ typedef struct
   uint16_t sect_hdr_entry_size;
   uint16_t num_sect_hdrs;
   uint16_t sect_name_str_table_idx;
+  /// @endcond
 } elf64_file_header;
 
 static_assert(sizeof(elf64_file_header) == ELF64_FILE_HDR_SIZE, "elf64_file_header size does not match");
 
+/// @brief An ELF Program Header
+///
+/// This structure is described further in the ELF specification.
 typedef struct
 {
+  /// @cond
   uint32_t type;
   uint32_t flags;
   uint64_t file_offset;
@@ -38,10 +49,9 @@ typedef struct
   uint64_t size_in_file;
   uint64_t size_in_mem;
   uint64_t req_alignment;
+  /// @endcond
 } elf64_program_header;
 
 static_assert(sizeof(elf64_program_header) == ELF64_PROG_HDR_SIZE, "elf64_program_header size does not match");
 
 #pragma pack(pop)
-
-#endif

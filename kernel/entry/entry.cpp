@@ -68,7 +68,7 @@ std::shared_ptr<task_process> *kernel_start_process;
 extern task_process *term_proc;
 task_process *term_proc = nullptr;
 
-volatile bool wait_for_term;
+volatile bool wait_for_term; ///< Should the process looking at this variable wait for the terminal to initialise?
 
 // Assumptions used throughout the kernel
 static_assert(sizeof(uint64_t) == sizeof(uintptr_t), "Code throughout assumes pointers are 64-bits long.");

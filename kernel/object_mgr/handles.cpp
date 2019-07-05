@@ -8,11 +8,14 @@
 /// At the moment, this file doesn't even do a very good job of keeping track of handles. It simply allocates in an
 /// upwards direction until it runs out, then crashes.
 
+// Known defects:
+// - hm_next_handle is obviously pretty crap anyway, but it could be replaced by an atomic...?
+
 #include <stdint.h>
 #include "klib/klib.h"
 
-static GEN_HANDLE hm_next_handle = 1;
-static kernel_spinlock hm_lock;
+static GEN_HANDLE hm_next_handle = 1; ///< The number of the next handle to allocate (see note at top of handles.cpp)
+static kernel_spinlock hm_lock; ///< Lock protecting hm_next_handle.
 
 /// @brief Initialise the Handle Manager component
 void hm_gen_init()

@@ -25,6 +25,8 @@ enum class CMOS_RTC_REGISTERS : uint16_t
   CENTURY = 50,
 };
 
+/// @brief Driver for a common type of CMOS-based RTC
+///
 class rtc : public IDevice, public IGenericClock
 {
 public:

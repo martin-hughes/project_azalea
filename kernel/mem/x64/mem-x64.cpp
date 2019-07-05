@@ -18,33 +18,42 @@
 #include "mem/x64/mem-x64.h"
 #include "mem/x64/mem-x64-int.h"
 
-mem_process_info task0_entry;
-process_x64_data task0_x64_entry;
+mem_process_info task0_entry; ///< Memory information for the kernel 'process'
+process_x64_data task0_x64_entry; ///< x64-specific memory information for the kernel 'process'
 
-// This pointer points to the location in virtual address space corresponding to
-// the physical page being used as the PTE for working_table_virtual_addr. This
-// means that by writing to working_table_va_entry_addr,
-// working_table_virtual_addr can be changed to point at a different physical
-// page. This is calculated by the assembly language entry code.
+/// This pointer points to the location in virtual address space corresponding to the physical page being used as the
+/// PTE for working_table_virtual_addr. This means that by writing to working_table_va_entry_addr,
+/// working_table_virtual_addr can be changed to point at a different physical page. This is calculated by the assembly
+/// language entry code.
 extern "C" uint64_t *working_table_va_entry_addr;
 uint64_t *working_table_va_entry_addr;
 
-// This pointer is the virtual address of the kernel stack. Its physical address will be different in every process,
-// but its virtual address will always be the same (so it can be filled in to the x64 TSS).
+/// This pointer is the virtual address of the kernel stack. Its physical address will be different in every process,
+/// but its virtual address will always be the same (so it can be filled in to the x64 TSS).
 void *mem_x64_kernel_stack_ptr;
 
 namespace
 {
-  // This mask represents the bits that are valid in a physical address - i.e., limited by MAXPHYADDR. See the Intel
-  // System Programming Guide chapter 4.1.4 for details.
+  /// This mask represents the bits that are valid in a physical address - i.e., limited by MAXPHYADDR. See the Intel
+  /// System Programming Guide chapter 4.1.4 for details. It is populated at runtime.
   uint64_t valid_phys_bit_mask = 0;
 
+  /// When editing page tables, they are not necessarily mapped in the kernel's address space, so this provides a
+  /// constant virtual address to use when working on page tables. This is the base address of the 2MB page.
   const uint64_t working_table_virtual_addr_base = 0xFFFFFFFFFFE00000;
+
+  /// This will always be within 2MB of working_table_virtual_addr_base, and points to the specific page table being
+  /// edited, rather than a whole 2MB page of them.
   uint64_t working_table_virtual_addr;
 
+  /// Azalea uses 2MB pages, but page tables are 4kB in size. This points to the next 4kB page to allocate when
+  /// allocating page tables.
   uint8_t *next_4kb_page;
+
+  /// Is the table currently being edited mapped to kernel space?
   bool working_table_va_mapped;
 
+  /// A lock to protect writes to the list of PML4 tables.
   static kernel_spinlock pml4_edit_lock;
 
   void *mem_get_next_4kb_page();
@@ -54,6 +63,8 @@ namespace
 /// @brief Initialise the entire memory management subsystem.
 ///
 /// This function is required across all platforms. However, the bulk of it is x64 specific, so it lives here.
+///
+/// @param e820_ptr Pointer to the E820 memory map provided by the bootloader.
 void mem_gen_init(e820_pointer *e820_ptr)
 {
   KL_TRC_ENTRY;
@@ -333,6 +344,8 @@ void mem_x64_map_virtual_page(uint64_t virt_addr,
 /// @brief Break the connection between a virtual memory address and its physical backing.
 ///
 /// @param virt_addr The virtual memory address that will become unmapped.
+///
+/// @param context The process to do the unmapping in.
 void mem_x64_unmap_virtual_page(uint64_t virt_addr, task_process *context)
 {
   KL_TRC_ENTRY;

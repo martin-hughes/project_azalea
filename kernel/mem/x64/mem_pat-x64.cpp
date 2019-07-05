@@ -10,6 +10,7 @@
 #include "processor/x64/processor-x64.h"
 #include "processor/x64/processor-x64-int.h"
 
+/// The value of the PAT to use, as determined statically.
 const uint64_t PAT_REGISTER_VAL = 0x0005040600010406;
 
 /// @brief Initialise the PAT

@@ -9,9 +9,9 @@
 void panic_print(const char *message, uint16_t line);
 void panic_clear_screen();
 
-char *vidmem = (char *)0xFFFFFFFF000b8000;
-const uint16_t screen_lines = 25;
-const uint16_t screen_cols = 80;
+char *vidmem = (char *)0xFFFFFFFF000b8000; ///< VGA 80x24 text mode buffer in kernel memory space.
+const uint16_t screen_lines = 25; ///< The number of lines on the screen.
+const uint16_t screen_cols = 80; ///< The number of columns on the screen.
 
 /// @brief Implement an assertion failure function that's referenced in the C and C++ libraries.
 ///
@@ -28,7 +28,9 @@ _Noreturn void __assert_fail(const char *expr, const char *file, int line, const
 	panic(expr);
 }
 
-// As expected, print a kernel panic message on to the screen, and stop running.
+/// @brief As expected, print a kernel panic message on to the screen, and stop running.
+///
+/// @param message The message to output.
 [[noreturn]] void panic(const char *message)
 {
 	// Stop interrupts reaching this processor, in order to prevent most race
@@ -52,7 +54,7 @@ _Noreturn void __assert_fail(const char *expr, const char *file, int line, const
 	while(1) { };
 }
 
-// Remove all other characters from the screen, for clarity.
+/// @brief Remove all other characters from the screen, to aid clarity.
 void panic_clear_screen()
 {
 	const uint16_t screen_chars = screen_cols * screen_lines;
@@ -63,9 +65,11 @@ void panic_clear_screen()
 	}
 }
 
-// Print a message, starting on a specific line. message must be less than 80
-// characters, and line must be less than or equal to 23. (The first line is
-// line 0)
+/// @brief Print a message, starting on a specific line.
+///
+/// @param message The message to print. It must be less than 80 characters.
+///
+/// @param line The line to print on, must be less than or equal to 23. (The first line on screen is line 0)
 void panic_print(const char *message, uint16_t line)
 {
 	uint16_t i= 0;

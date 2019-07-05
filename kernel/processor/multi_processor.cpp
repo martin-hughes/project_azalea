@@ -1,6 +1,9 @@
 /// @file
 /// @brief Platform-agnostic processor control functions
 
+// Known defects:
+// - What happens if processors are not IDd sequentially? Will the proc_info_block array still work?
+
 //#define ENABLE_TRACING
 
 #include "klib/klib.h"
@@ -10,9 +13,11 @@
 #include "x64/processor-x64-int.h"
 #include "x64/pic/apic.h"
 
+/// Processor information storage for each processor, as an array indexed by processor ID.
 extern processor_info *proc_info_block;
 processor_info *proc_info_block = nullptr;
 
+/// How many processors are known to the system?
 extern uint32_t processor_count;
 uint32_t processor_count = 0;
 

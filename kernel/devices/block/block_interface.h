@@ -1,9 +1,14 @@
-#ifndef BLOCK_DEVICE_INTFACE_HEADER
-#define BLOCK_DEVICE_INTFACE_HEADER
+/// @file
+/// @brief
+
+#pragma once
 
 #include "devices/device_interface.h"
 #include "user_interfaces/error_codes.h"
 
+/// @brief Interface common to all block devices.
+///
+/// The most likely and common example of this type of device is a disk drive.
 class IBlockDevice : public IDevice
 {
 public:
@@ -49,5 +54,3 @@ public:
                                 const void *buffer,
                                 uint64_t buffer_length) = 0;
 };
-
-#endif

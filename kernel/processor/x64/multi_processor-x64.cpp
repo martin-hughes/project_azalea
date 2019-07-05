@@ -53,12 +53,20 @@ struct proc_mp_ipi_msg_state
   kernel_spinlock signal_lock;
 };
 
+/// @cond
 const uint8_t SUBTABLE_LAPIC_TYPE = 0;
+/// @endcond
 
+/// State of the IPI transfer for each processor.
 static proc_mp_ipi_msg_state *inter_proc_signals = nullptr;
 
+/// Beginning of the AP trampoline code in the kernel's virtual address space.
 extern "C" uint64_t asm_ap_trampoline_start;
+
+/// End of the AP trampoline code in the kernel's virtual address space.
 extern "C" uint64_t asm_ap_trampoline_end;
+
+/// The physical address of the start of the trampoline code given to the AP.
 extern "C" uint64_t asm_ap_trampoline_addr;
 
 /// @brief Prepare the system to start multi-processing

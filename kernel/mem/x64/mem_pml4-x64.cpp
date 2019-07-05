@@ -15,11 +15,13 @@
 #include "mem/x64/mem-x64-int.h"
 #include "processor/processor.h"
 
-static bool pml4_system_initialized = false;
-static klib_list<process_x64_data *> pml4_table_list;
+static bool pml4_system_initialized = false; ///< Is the PML4 tracking system initalised?
+static klib_list<process_x64_data *> pml4_table_list; ///< A list of known PML4 tables.
+/// Space to use when copying PML4 tables. Only half of the full PML4 size is needed, because we only synchronise the
+/// kernel parts.
 static int8_t pml4_copy_buffer[PML4_LENGTH / 2];
-static uint64_t known_pml4s;
-static kernel_spinlock pml4_copylock;
+static uint64_t known_pml4s; ///< How many PML4s are known in the system?
+static kernel_spinlock pml4_copylock; ///< Lock to ensure PML4s are copied in sequence.
 
 static_assert(sizeof(char) == 1, "Only single byte characters supported right now");
 

@@ -133,6 +133,8 @@ int8_t kl_memcmp(const void *a, const void *b, uint64_t len)
 
 // Don't include memmove in the test code, it just causes wobblies.
 #ifndef AZALEA_TEST_CODE
+/// @cond
+// I'm not going to document this - it has the standard meaning and should be removed soon.
 void *memmove(void *dest, const void *src, uint64_t length)
 {
   char *temp = new char[length];
@@ -144,4 +146,5 @@ void *memmove(void *dest, const void *src, uint64_t length)
 
   return dest;
 }
+/// @endcond
 #endif

@@ -5,7 +5,7 @@
 
 #include "devices/device_interface.h"
 
-const uint16_t GEN_MOUSE_MAX_BUTTONS = 8;
+const uint16_t GEN_MOUSE_MAX_BUTTONS = 8; ///< The maximum number of mouse buttons supported by Azalea.
 
 /// @brief Contains functionality common to all mice.
 ///

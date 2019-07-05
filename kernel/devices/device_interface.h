@@ -10,14 +10,16 @@
 
 #include "klib/data_structures/string.h"
 
+/// @brief A list of possible device statuses.
+///
 enum class DEV_STATUS
 {
-  OK,
-  FAILED,
-  STOPPED,
-  NOT_PRESENT,
-  NOT_READY,
-  UNKNOWN,
+  OK, ///< Device is running correctly.
+  FAILED, ///< Device was started but then failed, or cannot be initialised.
+  STOPPED, ///< Device is OK but is deliberately not available.
+  NOT_PRESENT, ///< Device is not actually present in the system.
+  NOT_READY, ///< Device is initialising.
+  UNKNOWN, ///< Device has not reported a valid status.
 };
 
 /// @brief The interface that all device drivers must inherit from.

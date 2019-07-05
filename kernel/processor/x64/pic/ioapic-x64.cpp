@@ -10,16 +10,18 @@ static uint64_t ioapic_count = 0;
 
 const uint8_t SUBTABLE_IOAPIC_TYPE = 1;
 
+/// @brief Stores data about one IO APIC attached to the system.
+///
 struct ioapic_data
 {
   // Translated values
-  uint32_t *reg_select;
-  uint32_t *data_window;
+  uint32_t *reg_select; ///< The virtual address to write register-select values in to.
+  uint32_t *data_window; ///< Having written reg_select, the relevant data is read/written here.
 
   // Raw values
-  uint8_t apic_id;
-  uint32_t apic_addr;
-  uint32_t gs_interrupt_base;
+  uint8_t apic_id; ///< The system's ID number associated with this APIC.
+  uint32_t apic_addr; ///< The physical address of this APIC.
+  uint32_t gs_interrupt_base; ///< The BaseIRQ number for this IO APIC.
 };
 
 static klib_list<ioapic_data *> ioapic_list;

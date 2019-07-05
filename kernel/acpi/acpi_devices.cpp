@@ -82,7 +82,9 @@ ACPI_STATUS acpi_create_device_handler (ACPI_HANDLE ObjHandle,
   return AE_OK;
 }
 
+/// @cond
 #define IS_DEV_HID(y) (kl_strcmp(dev_info.HardwareId.String, dev_info.HardwareId.Length, (y), sizeof(y)) == 0)
+/// @endcond
 
 /// @brief Create a single device driver for a device that has been enumerated.
 ///

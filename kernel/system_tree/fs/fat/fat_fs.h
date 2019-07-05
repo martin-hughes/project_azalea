@@ -10,6 +10,8 @@
 
 #include <memory>
 
+/// @brief Class representing the root directory of a FAT filesystem.
+///
 class fat_filesystem: public ISystemTreeBranch, public std::enable_shared_from_this<fat_filesystem>
 {
 protected:

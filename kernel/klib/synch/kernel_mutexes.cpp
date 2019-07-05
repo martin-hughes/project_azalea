@@ -1,10 +1,15 @@
-// KLIB mutex implementation.
+/// @file
+/// @brief KLIB mutex implementation.
 
 //#define ENABLE_TRACING
 
 #include "klib/klib.h"
 
-// Initialize a mutex object. The owner of the mutex object is responsible for managing the memory associated with it.
+/// @brief Initialize a mutex object.
+///
+/// The owner of the mutex object is responsible for managing the memory associated with the mutex object.
+///
+/// @param mutex The mutex to initialise.
 void klib_synch_mutex_init(klib_mutex &mutex)
 {
   KL_TRC_ENTRY;
@@ -21,11 +26,20 @@ void klib_synch_mutex_init(klib_mutex &mutex)
   KL_TRC_EXIT;
 }
 
-// Acquire the mutex for the currently running thread. It is permissible for a thread to call this function when it
-// already owns the mutex - nothing happens. The maximum time to wait is max_wait milliseconds. If max_wait is set to
-// MUTEX_MAX_WAIT then the caller waits indefinitely. Threads acquire the mutex in order that they call this function.
-//
-// The return values should be self-explanatory.
+/// @brief Acquire the mutex for the currently running thread.
+///
+/// It is permissible for a thread to call this function when it already owns the mutex - nothing happens. Threads
+/// acquire the mutex in order that they call this function.
+///
+/// @param mutex The mutex to acquire.
+///
+/// @param max_wait The maximum time to wait in milliseconds. If this parameter is set to MUTEX_MAX_WAIT then the
+///                 caller waits indefinitely. Note: At present, timed waits other than MUTEX_MAX_WAIT are not
+///                 supported. If max_wait is set to zero, the mutex is acquired if it is currently free, otherwise the
+///                 function returns immediately.
+///
+/// @return SYNC_ACQ_ACQUIRED upon success. SYNC_ACQ_ALREADY_OWNED if this thread already owns the mutex.
+///         SYNC_ACQ_TIMEOUT if the mutex could not be acquired within max_wait.
 SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, uint64_t max_wait)
 {
   SYNC_ACQ_RESULT res = SYNC_ACQ_TIMEOUT;
@@ -107,7 +121,15 @@ SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, uint64_t max_wait)
   return res;
 }
 
-// Release the mutex. If a thread is waiting for it, it will be permitted to run.
+/// @brief Release a mutex.
+///
+/// If a thread is waiting for it, it will be permitted to run.
+///
+/// @param mutex The mutex to release.
+///
+/// @param disregard_owner If set to false (which is preferred) the function checks that the thread releasing the mutex
+///                        is the one that owns it, causing a kernel panic if not. If set to true, the mutex is
+///                        released irrespective of ownership - which may cause synchronisation issues.
 void klib_synch_mutex_release(klib_mutex &mutex, const bool disregard_owner)
 {
   klib_synch_spinlock_lock(mutex.access_lock);

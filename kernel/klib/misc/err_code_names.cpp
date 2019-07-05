@@ -5,7 +5,10 @@
 
 #include <user_interfaces/error_codes.h>
 
+/// @cond
+// Don't bother documenting something in Doxygen that is only used internally.
 #define EC_CASE(e, s) case e : return (s); break;
+/// @endcond
 
 /// @brief Convert an ERR_CODE into a human-readable string
 ///

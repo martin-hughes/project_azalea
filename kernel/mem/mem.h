@@ -51,27 +51,35 @@ struct vmm_process_data
   task_thread *vmm_user_thread_id;
 };
 
-// A structure to contain information specific to a single process.
-// In future, this will be able to track things like allocation counts and so
-// on, but for now it just contains the x64 specific data.
+/// @brief A structure to contain information specific to a single process.
+///
+/// In future, this will be able to track things like allocation counts and so on, but for now it just contains the x64
+/// specific data.
 struct mem_process_info
 {
-  // Pointer to architecture-specific information about a specific process.
-  // Opaque to any non-architecture specific code.
+  /// @brief Pointer to architecture-specific information about a specific process.
+  ///
+  /// Opaque to any non-architecture specific code.
   void *arch_specific_data;
 
+  /// @brief Virtual Memory Manager data corresponding to this process.
+  ///
   vmm_process_data process_vmm_data;
 };
 
-// Selectable caching modes for users of the memory system. Yes, these are very similar to the constants in
-// MEM_X64_CACHE_TYPES - it saves having an extra translation while only the x64 architecture is supported.
+/// Selectable caching modes for users of the memory system. Yes, these are very similar to the constants in
+/// MEM_X64_CACHE_TYPES - it saves having an extra translation while only the x64 architecture is supported.
+///
+/// The values are given in the Intel documentation, so are not covered by the Doxygen docs.
 enum MEM_CACHE_MODES
 {
+  /// @cond
   MEM_UNCACHEABLE = 0,
   MEM_WRITE_COMBINING = 1,
   MEM_WRITE_THROUGH = 4,
   MEM_WRITE_PROTECTED = 5,
   MEM_WRITE_BACK = 6,
+  /// @endcond
 };
 
 #pragma pack(push,1)

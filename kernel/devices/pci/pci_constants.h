@@ -6,15 +6,17 @@
 #include <stdint.h>
 
 // Legacy PCI configuration mechanism ports.
-const uint16_t PCI_ADDRESS_PORT = 0xCF8;
-const uint16_t PCI_DATA_PORT = 0xCFC;
+const uint16_t PCI_ADDRESS_PORT = 0xCF8; ///< Legacy mode address port.
+const uint16_t PCI_DATA_PORT = 0xCFC; ///< Legacy mode data port.
 
-// Invalid PCI vendor ID
-const uint16_t PCI_INVALID_VENDOR = 0xFFFF;
+const uint16_t PCI_INVALID_VENDOR = 0xFFFF; ///< Invalid PCI vendor ID
 
-// PCI Configuration Space register numbers.
+/// PCI Configuration Space register numbers.
+///
+/// The definition of these can be found in various PCI specs, and is not repeated here.
 enum class PCI_REGS : uint8_t
 {
+  /// @cond
   DEV_AND_VENDOR_ID = 0,
   STATUS_AND_COMMAND = 1,
   CC_SC_PROG_IF_AND_REV_ID = 2,
@@ -30,11 +32,13 @@ enum class PCI_REGS : uint8_t
   EXPANSION_ROM_PTR = 12,
   CAP_PTR = 13,
   LATS_AND_INTERRUPTS = 15,
+  /// @endcond
 };
 
-// This table derives from the information at https://wiki.osdev.org/Pci
+/// This table derives from the information at https://wiki.osdev.org/Pci, and is not repeated here.
 namespace PCI_CLASS
 {
+  /// @cond
   const uint8_t UNCLASSIFIED = 0;
   const uint8_t MASS_STORE_CONTR = 1;
   const uint8_t NETWORK_CONTR = 2;
@@ -54,11 +58,14 @@ namespace PCI_CLASS
   const uint8_t ENCRYPTION_CONTR = 16;
   const uint8_t SIGNAL_PROC_CONTR = 17;
   const uint8_t PROC_ACCEL = 18;
+  /// @endcond
 }
 
-// This table also derives from the information at https://wiki.osdev.org/Pci
+/// This table derives from the information at https://wiki.osdev.org/Pci, and is not repeated here.
 namespace PCI_SUBCLASS
 {
+  /// @cond
+
   // Generic
   const uint8_t SUBCLASS_OTHER = 0x80;
 
@@ -191,10 +198,14 @@ namespace PCI_SUBCLASS
   const uint8_t PERF_COUNTERS = 1;
   const uint8_t COMMS_SYNCHER = 0x10;
   const uint8_t SIGNAL_PROC_MGMT = 0x20;
+  /// @endcond
 };
 
+/// IDs of known PCI capabilities. These values are defined in various PCI specs and are not repeated here.
+///
 namespace PCI_CAPABILITY_IDS
 {
+  /// @cond
   const uint8_t PCI_POWER_MGMT = 1;
   const uint8_t AGP = 2;
   const uint8_t VITAL_PROD_DATA = 3;
@@ -212,4 +223,5 @@ namespace PCI_CAPABILITY_IDS
   const uint8_t SECURE_DEVICE = 15;
   const uint8_t PCI_EXPRESS = 16;
   const uint8_t MSI_X = 17;
+  /// @endcond
 };

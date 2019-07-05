@@ -6,11 +6,11 @@
 #include "gen_keyboard.h"
 #include "keyboard_maps.h"
 
-#define UNPRINTABLE { false, 0, 0 }
-
 // This file simply contains keyboard mappings, there's no particular value for having each mapping documented by
 // doxygen.
 /// @cond
+
+#define UNPRINTABLE { false, 0, 0 }
 
 const uint32_t default_keyb_props_tab_len = 115;
 key_props default_keyb_props[default_keyb_props_tab_len] =

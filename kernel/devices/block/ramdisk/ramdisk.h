@@ -1,10 +1,15 @@
-#ifndef DEVICE_RAMDISK_HEADER
-#define DEVICE_RAMDISK_HEADER
+/// @file
+/// @brief Driver for an in-memory disk-like device.
+
+#pragma once
 
 #include "devices/block/block_interface.h"
 #include "user_interfaces/error_codes.h"
 #include "klib/data_structures/string.h"
 
+/// @brief An in-memory disk-like device.
+///
+/// This device acts like a normal block device, except that all of its storage is in RAM.
 class ramdisk_device: public IBlockDevice
 {
 public:
@@ -33,5 +38,3 @@ protected:
 
   const uint64_t _storage_size;
 };
-
-#endif

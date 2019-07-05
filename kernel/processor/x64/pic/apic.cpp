@@ -9,12 +9,14 @@
 #include "processor/x64/processor-x64.h"
 #include "processor/x64/processor-x64-int.h"
 
+/// @cond
 const uint64_t APIC_ENABLED = 0x0000000000000800;
 const uint8_t APIC_SPURIOUS_INT_VECTOR = 127;
 const uint32_t APIC_SIV_FLAGS = 0x100;
 const uint64_t icr_delivery_status = 0x1000;
+/// @endcond
 
-static apic_registers **local_apics = nullptr;
+static apic_registers **local_apics = nullptr; ///< Array containing details of local APICs by processor ID.
 
 /// @brief Prepare the system to use APICs on all its processors
 void proc_x64_configure_sys_apic_mode(uint32_t num_procs)

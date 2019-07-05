@@ -412,7 +412,13 @@ void mem_vmm_free_proc_data(task_process *process)
   KL_TRC_EXIT;
 }
 
-
+/// @brief For a given address, which is assumed to be allocated, how many pages are associated with its allocation?
+///
+/// @param start_addr The address to look up. This is assumed to be the beginning of an allocation of pages.
+///
+/// @param context The process to do the lookup in. If nullptr, the current process is assumed.
+///
+/// @return The number of pages in the allocation that was given to start_addr.
 uint64_t mem_get_virtual_allocation_size(uint64_t start_addr, task_process *context)
 {
   klib_list_item<vmm_range_data *> *cur_item;

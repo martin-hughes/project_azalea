@@ -42,16 +42,23 @@
 #include "klib/synch/kernel_mutexes.h"
 #include "klib/data_structures/red_black_tree.h"
 
+/// @cond
 typedef klib_list<void *> PTR_LIST;
 typedef klib_list_item<void *> PTR_LIST_ITEM;
+/// @endcond
+
+/// @brief Header for a slab.
+///
+/// As described above, the allocator allocates 'slabs' - essentially pages of memory dedicated to allocations of a
+/// certain size. This header goes at the front of the page and allows the allocator to keep track of pages it uses.
 struct slab_header
 {
-  PTR_LIST_ITEM list_entry;
-  uint64_t allocation_count;
+  PTR_LIST_ITEM list_entry; ///< Item to track this slab in the relevant slab list.
+  uint64_t allocation_count; ///< How many items have been allocated from this slab.
 };
 
-// Stores details of large allocations so they can be freed later - the key is the address of the beginning of the
-// allocation, the value the number of pages in it.
+/// Stores details of large allocations so they can be freed later - the key is the address of the beginning of the
+/// allocation, the value the number of pages in it.
 kl_rb_tree<uint64_t, uint64_t> *large_allocations;
 
 // The assertion below ensures that the size of slab_header hasn't changed. If it does, the number of available chunks
