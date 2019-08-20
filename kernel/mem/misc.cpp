@@ -39,7 +39,7 @@ void *mem_allocate_pages(uint32_t num_pages)
     cur_phys_addr = mem_allocate_physical_pages(1);
     KL_TRC_TRACE(TRC_LVL::EXTRA, "Current phys addr", cur_phys_addr, "\n");
     KL_TRC_TRACE(TRC_LVL::EXTRA, "Current virt addr", cur_virtual_addr, "\n");
-    mem_map_range(cur_phys_addr, cur_virtual_addr, MEM_PAGE_SIZE);
+    mem_map_range(cur_phys_addr, cur_virtual_addr, 1);
   }
 
   KL_TRC_EXIT;
