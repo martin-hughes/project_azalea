@@ -16,8 +16,11 @@ ERR_CODE syscall_debug_output(const char *msg, uint64_t length);
 ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *handle, uint32_t flags);
 ERR_CODE syscall_close_handle(GEN_HANDLE handle);
 ERR_CODE syscall_create_obj_and_handle(const char *path, uint64_t path_len, GEN_HANDLE *handle);
-ERR_CODE syscall_rename_object(const char *old_name, const char *new_name);
-ERR_CODE syscall_delete_object(const char *path);
+ERR_CODE syscall_rename_object(const char *old_name,
+                               uint64_t old_name_len,
+                               const char *new_name,
+                               uint64_t new_name_len);
+ERR_CODE syscall_delete_object(const char *path, uint64_t path_len);
 ERR_CODE syscall_get_object_properties(GEN_HANDLE handle,
                                        const char *path,
                                        uint64_t path_length,

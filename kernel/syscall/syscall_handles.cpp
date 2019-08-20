@@ -207,7 +207,10 @@ ERR_CODE syscall_create_obj_and_handle(const char *path, uint64_t path_len, GEN_
 /// @param new_name The name to rename the object to.
 ///
 /// @return A suitable error code.
-ERR_CODE syscall_rename_object(const char *old_name, const char *new_name)
+ERR_CODE syscall_rename_object(const char *old_name,
+                               uint64_t old_name_len,
+                               const char *new_name,
+                               uint64_t new_name_len)
 {
   ERR_CODE result{ERR_CODE::UNKNOWN};
 
@@ -224,8 +227,8 @@ ERR_CODE syscall_rename_object(const char *old_name, const char *new_name)
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Attempt to rename\n");
-    kl_string str_old(old_name);
-    kl_string str_new(new_name);
+    kl_string str_old(old_name, old_name_len);
+    kl_string str_new(new_name, new_name_len);
     result = system_tree()->rename_child(old_name, new_name);
   }
 
@@ -243,7 +246,7 @@ ERR_CODE syscall_rename_object(const char *old_name, const char *new_name)
 /// @param path The path to delete.
 ///
 /// @return A suitable error code.
-ERR_CODE syscall_delete_object(const char *path)
+ERR_CODE syscall_delete_object(const char *path, uint64_t path_len)
 {
   ERR_CODE result{ERR_CODE::UNKNOWN};
 
@@ -257,7 +260,7 @@ ERR_CODE syscall_delete_object(const char *path)
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Parameter OK, try to delete\n");
-    kl_string str_path(path);
+    kl_string str_path{path, path_len};
     result = system_tree()->delete_child(path);
   }
 
@@ -310,7 +313,7 @@ ERR_CODE syscall_get_object_properties(GEN_HANDLE handle,
     if (handle == 0)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Handle not provided, lookup object: ", path, "\n");
-      result = system_tree()->get_child(kl_string(path), leaf);
+      result = system_tree()->get_child(kl_string(path, path_length), leaf);
     }
     else
     {
