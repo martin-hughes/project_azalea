@@ -656,7 +656,10 @@ void pci_controller::set_bus_master_direction(bool is_read, uint16_t channel)
   KL_TRC_ENTRY;
 
   command_byte.raw = read_bus_master_reg(BUS_MASTER_PORTS::COMMAND, channel);
-  command_byte.is_write = !is_read;
+
+  // Yes, this looks a bit odd. It's because the kernel refers to reads as being from disk to RAM, but bus mastering
+  // considers device-to-ram to mean a write.
+  command_byte.is_write = is_read;
   write_bus_master_reg(BUS_MASTER_PORTS::COMMAND, channel, command_byte.raw);
 
   KL_TRC_EXIT;
