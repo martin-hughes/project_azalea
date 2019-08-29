@@ -41,6 +41,11 @@ protected:
   bool msi_enable();
   bool msi_disable();
 
+  // Bus mastering commands.
+  bool bm_enable();
+  bool bm_disable();
+  bool bm_enabled();
+
   // Member variables and structures.
   struct
   {

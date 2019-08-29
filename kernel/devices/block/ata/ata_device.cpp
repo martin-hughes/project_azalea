@@ -220,6 +220,9 @@ bool generic_device::calculate_dma_support()
     }
   }
 
+  // Despite all of that, we can only support DMA transfers if our parent controller also supports them.
+  result = result && parent_controller->dma_transfer_supported();
+
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
 
@@ -371,7 +374,7 @@ ERR_CODE generic_device::read_blocks_dma(uint64_t start_block,
       while(blocks_left > 0)
       {
         // 128 is the number of 512-byte sectors in a 64kB transfer.
-        blocks_this_part = blocks_left > 128 ? 128 : blocks_left;
+        blocks_this_part = (blocks_left > 128) ? 128 : blocks_left;
 
         if (!parent_controller->queue_dma_transfer_block(buffer_char_ptr, blocks_this_part * 512))
         {
@@ -382,6 +385,8 @@ ERR_CODE generic_device::read_blocks_dma(uint64_t start_block,
         blocks_left -= blocks_this_part;
         buffer_char_ptr += (blocks_this_part * 512);
       }
+
+      parent_controller->dma_transfer_blocks_queued();
 
       if((blocks_left == 0) && (this->parent_controller->issue_command(this->controller_index,
                                                                        read_cmd,
@@ -458,7 +463,7 @@ ERR_CODE generic_device::write_blocks_dma(uint64_t start_block,
       while(blocks_left > 0)
       {
         // 128 is the number of 512-byte sectors in a 64kB transfer.
-        blocks_this_part = blocks_left > 128 ? 128 : blocks_left;
+        blocks_this_part = (blocks_left > 128) ? 128 : blocks_left;
 
         if (!parent_controller->queue_dma_transfer_block(buffer_char_ptr, blocks_this_part * 512))
         {
@@ -469,6 +474,8 @@ ERR_CODE generic_device::write_blocks_dma(uint64_t start_block,
         blocks_left -= blocks_this_part;
         buffer_char_ptr += (blocks_this_part * 512);
       }
+
+      parent_controller->dma_transfer_blocks_queued();
 
       if((blocks_left == 0) && (this->parent_controller->issue_command(this->controller_index,
                                                                        write_cmd,

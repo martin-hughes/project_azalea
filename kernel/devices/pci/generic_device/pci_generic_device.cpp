@@ -34,6 +34,9 @@ pci_generic_device::pci_generic_device(pci_address address, const kl_string name
   zero_caps_list();
   scan_caps();
 
+  // There doesn't seem to be a particularly good reason not to always enable bus mastering...
+  bm_enable();
+
   KL_TRC_EXIT;
 }
 

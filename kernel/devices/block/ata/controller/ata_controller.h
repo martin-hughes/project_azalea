@@ -86,6 +86,12 @@ public:
                              void *buffer,
                              uint64_t buffer_len) = 0;
 
+  /// @brief Does this controller support DMA-based transfers?
+  ///
+  /// @return True if the controller supports DMA based transfers, false otherwise. It is assumed that this state never
+  ///         changes.
+  virtual bool dma_transfer_supported() = 0;
+
   /// @brief Begin preparing for a DMA transfer.
   ///
   /// There are two parts to executing a DMA transfer on an ATA device. First, the controller needs to know the details
@@ -114,6 +120,13 @@ public:
   ///
   /// @return True if this part of the transfer was queued successfully, false otherwise.
   virtual bool queue_dma_transfer_block(void *buffer, uint16_t bytes_this_block) = 0;
+
+  /// @brief Finished programming DMA transfers in to the controller.
+  ///
+  /// The controller can now write the PRD table pointer to the controller.
+  ///
+  /// @return True.
+  virtual bool dma_transfer_blocks_queued() = 0;
 
   // ATA Commands Section:
   virtual bool cmd_identify(identify_cmd_output &identity, uint16_t drive_index);
