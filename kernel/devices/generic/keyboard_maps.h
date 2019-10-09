@@ -17,8 +17,8 @@
 /// @brief Simple structure to hold keyboard mapping information.
 struct keyboard_map
 {
-  const key_props *mapping_table;
-  const uint32_t max_index;
+  const key_props *mapping_table; ///< A table of key index to key properties.
+  const uint32_t max_index; ///< The maximum index of 'mapping_table'.
 };
 
 extern keyboard_map keyboard_maps[];

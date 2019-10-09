@@ -96,7 +96,6 @@ void generic_keyboard::handle_key_down(KEYS key, special_keys specs)
   task_process *proc = this->recipient;
   klib_message_hdr hdr;
   keypress_msg *updown_msg;
-  key_char_msg *char_msg;
 
   KL_TRC_ENTRY;
 
@@ -120,24 +119,12 @@ void generic_keyboard::handle_key_down(KEYS key, special_keys specs)
     updown_msg = new keypress_msg;
     updown_msg->key_pressed = key;
     updown_msg->modifiers = specs;
+    updown_msg->printable = printable_char;
     hdr.msg_contents = reinterpret_cast<char *>(updown_msg);
     hdr.msg_id = SM_KEYDOWN;
     hdr.msg_length = sizeof(keypress_msg);
 
     msg_send_to_process(proc, hdr);
-
-    if (printable_char != 0)
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Send character message\n");
-      char_msg = new key_char_msg;
-      char_msg->pressed_character = printable_char;
-
-      hdr.msg_contents = reinterpret_cast<char *>(char_msg);
-      hdr.msg_id = SM_PCHAR;
-      hdr.msg_length = sizeof(key_char_msg);
-
-      msg_send_to_process(proc, hdr);
-    }
   }
 
   KL_TRC_EXIT;

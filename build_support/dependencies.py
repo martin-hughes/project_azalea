@@ -21,6 +21,7 @@ kernel = [
     '#kernel/object_mgr/SConscript',
     '#kernel/system_tree/SConscript',
     '#kernel/system_tree/process/SConscript',
+    '#external/SConscript-libtmt',
 
     # Devices
     '#kernel/devices/block/ata/SConscript',
@@ -30,6 +31,7 @@ kernel = [
     '#kernel/devices/legacy/ps2/SConscript',
     '#kernel/devices/legacy/rtc/SConscript',
     '#kernel/devices/pci/SConscript',
+    '#kernel/devices/terminals/SConscript',
     '#kernel/devices/usb/SConscript',
 
     # Filesystems

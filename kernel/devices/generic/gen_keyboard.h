@@ -16,9 +16,9 @@ class task_process;
 /// can be converted in to actual input.
 struct key_props
 {
-  bool printable;
-  char normal;
-  char shifted;
+  bool printable; ///< Is this a key that produces a 'printable' character?
+  char normal; ///< If printable, the normal representation of this key.
+  char shifted; ///< If printable, the output of this key in combination with Shift.
 };
 
 key_props keyb_get_key_props(KEYS key_pressed, const key_props *key_props_table, uint32_t tab_len);

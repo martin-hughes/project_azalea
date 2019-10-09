@@ -4,6 +4,9 @@
 #include <stdint.h>
 #include "./macros.h"
 
+/**
+ * @cond
+ */
 enum AZALEA_ENUM_CLASS KEYS_T : uint8_t
 {
   UNK = 0,  /* Unknown key. */
@@ -170,19 +173,23 @@ enum AZALEA_ENUM_CLASS KEYS_T : uint8_t
 
 AZALEA_RENAME_ENUM(KEYS);
 
+/**
+ * @endcond
+ */
+
 /// @brief Contains flags representing the special keys pressed alongside a 'normal' key.
 ///
 struct special_keys
 {
-  bool left_shift : 1;
-  bool right_shift : 1;
-  bool left_control : 1;
-  bool right_control : 1;
-  bool left_alt : 1;
-  bool right_alt : 1;
-  bool print_screen_start : 1;
-  bool left_gui : 1;
-  bool right_gui : 1;
+  bool left_shift : 1; /**< Is left shift pressed? */
+  bool right_shift : 1; /**< Is right shift pressed? */
+  bool left_control : 1; /**< Is left control pressed? */
+  bool right_control : 1; /**< Is right control pressed? */
+  bool left_alt : 1; /**< Is left alt pressed? */
+  bool right_alt : 1; /**< Is right alt pressed? */
+  bool print_screen_start : 1; /**< Is this the beginning of a print screen sequence? */
+  bool left_gui : 1; /**< Is the left GUI key pressed? */
+  bool right_gui : 1; /**< Is the right GUI key pressed? */
 
   /// @brief Default constructor - simply zero's all fields.
   ///

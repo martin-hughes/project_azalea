@@ -1,0 +1,10 @@
+# Generic drivers.
+
+Import('env')
+obj = env.Library("dev-terminals",
+                  [
+                    "serial_terminal.cpp",
+                    "vga_terminal.cpp",
+                  ]
+                 )
+Return ("obj")

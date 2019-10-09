@@ -28,6 +28,11 @@ details, or the same is reproduced in each individual source file.
 Only the RTTI portion of the code is currently used, and some excess code is commented out and some excess files
 deleted compared to the original version.
 
+libtmt:
+-------
+Provided on github at https://github.com/deadpixi/libtmt and forked at https://github.com/martin-hughes/libtmt. The
+licence is given in the header of each file, and includes a requirement for a copyright notice in binary distributions.
+
 Pure64:
 -------
 

@@ -50,6 +50,13 @@ void *malloc(size_t size)
   return kmalloc(size);
 }
 
+void *calloc(size_t num, size_t size)
+{
+  void *r = kmalloc(num * size);
+  kl_memset(r, 0, num * size);
+  return r;
+}
+
 void free(void *ptr)
 {
   kfree(ptr);

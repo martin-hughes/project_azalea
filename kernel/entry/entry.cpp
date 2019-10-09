@@ -128,6 +128,8 @@ int main(uint32_t magic_number, multiboot_hdr *mb_header)
   return (0);
 };
 
+void create_terminals();
+
 // Main kernel start procedure.
 void kernel_start() throw ()
 {
@@ -137,6 +139,7 @@ void kernel_start() throw ()
                "\n");
 
   std::shared_ptr<task_process> initial_proc;
+  std::shared_ptr<task_process> com_port_proc;
   std::shared_ptr<ISystemTreeLeaf> leaf;
   char proc_ptr_buffer[34];
   const char hello_string[] = "Hello, world!";
@@ -167,7 +170,10 @@ void kernel_start() throw ()
 
   initial_proc = proc_load_elf_file("root\\initprog");
   setup_task_parameters(initial_proc.get());
+  //com_port_proc = proc_load_elf_file("root\\initprog");
+  //setup_task_parameters(com_port_proc.get());
   ASSERT(initial_proc != nullptr);
+  //ASSERT(com_port_proc != nullptr);
 
   // Create a temporary in-RAM file system.
   std::shared_ptr<mem_fs_branch> ram_branch = mem_fs_branch::create();
@@ -213,8 +219,26 @@ void kernel_start() throw ()
   ASSERT(pipe_read_leaf != nullptr);
   pipe_read_leaf->set_block_on_read(true);
 
+  // Do the same for the process connected to the serial port process.
+  /*ASSERT(system_tree()->get_child("pipes\\serial-output\\write", leaf) == ERR_CODE::NO_ERROR);
+  snprintf(proc_ptr_buffer, 34, "proc\\%p\\stdout", com_port_proc.get());
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "proc: ", (const char *)proc_ptr_buffer, "\n");
+  ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
+
+  snprintf(proc_ptr_buffer, 34, "proc\\%p\\stderr", com_port_proc.get());
+  ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
+
+  snprintf(proc_ptr_buffer, 34, "proc\\%p\\stdin", com_port_proc.get());
+  ASSERT(system_tree()->get_child("pipes\\serial-input\\read", leaf) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
+  pipe_read_leaf = std::dynamic_pointer_cast<pipe_branch::pipe_read_leaf>(leaf);
+  ASSERT(pipe_read_leaf != nullptr);
+  pipe_read_leaf->set_block_on_read(true);*/
+
   // Process should be good to go!
   initial_proc->start_process();
+  //com_port_proc->start_process();
   term_proc = term.get();
 
   // If (when!) the initial process exits, we want the system to shut down. But since we don't really do shutting down
