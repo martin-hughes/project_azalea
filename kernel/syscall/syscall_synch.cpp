@@ -53,6 +53,8 @@ extern "C" ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle)
   return result;
 }
 
+/// @cond
+// Since these system calls are not yet complete, don't document them yet.
 ERR_CODE syscall_futex_wait(volatile int32_t *futex, int32_t req_value)
 {
   INCOMPLETE_CODE("futex_wait");
@@ -66,3 +68,4 @@ ERR_CODE syscall_futex_wake(volatile int32_t *futex)
 
   return ERR_CODE::UNKNOWN;
 }
+/// @endcond

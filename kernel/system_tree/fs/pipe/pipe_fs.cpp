@@ -14,6 +14,9 @@ namespace
   const char write_leaf_name[] = "write";
 }
 
+/// @brief Standard constructor
+///
+/// New pipe branches should be created using the static create() function.
 pipe_branch::pipe_branch() : _buffer(new uint8_t[NORMAL_BUFFER_SIZE])
 {
   KL_TRC_ENTRY;
@@ -26,7 +29,9 @@ pipe_branch::pipe_branch() : _buffer(new uint8_t[NORMAL_BUFFER_SIZE])
   KL_TRC_EXIT;
 }
 
-
+/// @brief Create a new pipe branch.
+///
+/// @return shared_ptr of the new branch.
 std::shared_ptr<pipe_branch> pipe_branch::create()
 {
   return std::shared_ptr<pipe_branch>(new pipe_branch());
@@ -92,6 +97,9 @@ ERR_CODE pipe_branch::delete_child(const kl_string &name)
   return ERR_CODE::INVALID_OP;
 }
 
+/// @brief Standard constructor
+///
+/// @param parent The parent pipe_branch.
 pipe_branch::pipe_read_leaf::pipe_read_leaf(std::shared_ptr<pipe_branch> parent) :
   _parent(std::weak_ptr<pipe_branch>(parent)), block_on_read(false)
 {
@@ -206,6 +214,11 @@ ERR_CODE pipe_branch::pipe_read_leaf::read_bytes(uint64_t start,
   return ret;
 }
 
+/// @brief Set whether or not to block reads to wait for data.
+///
+/// If the pipe is set to blocking, then reads will not return until they can return the number of bytes requested.
+///
+/// @param block Should this pipe block reads?
 void pipe_branch::pipe_read_leaf::set_block_on_read(bool block)
 {
   KL_TRC_ENTRY;
@@ -214,6 +227,9 @@ void pipe_branch::pipe_read_leaf::set_block_on_read(bool block)
   KL_TRC_EXIT;
 }
 
+/// @brief Standard constructor
+///
+/// @param parent The parent pipe_branch.
 pipe_branch::pipe_write_leaf::pipe_write_leaf(std::shared_ptr<pipe_branch> parent) :
   _parent(std::weak_ptr<pipe_branch>(parent))
 {

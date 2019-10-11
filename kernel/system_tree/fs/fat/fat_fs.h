@@ -60,12 +60,12 @@ public:
     virtual ERR_CODE set_file_size(uint64_t file_size) override;
 
   protected:
-    fat_dir_entry _file_record;
-    std::weak_ptr<fat_filesystem> fs_parent;
-    std::shared_ptr<fat_folder> folder_parent;
+    fat_dir_entry _file_record; ///< Copy of the short-filename version of this file's FDE.
+    std::weak_ptr<fat_filesystem> fs_parent; ///< Pointer to the parent filesystem object.
+    std::shared_ptr<fat_folder> folder_parent; ///< Pointer to the parent folder object.
     bool is_root_directory; ///< Is this a file representing a root directory?
     bool is_small_fat_root_dir; ///< Is this a file representing a root directory on a FAT12/FAT16 partition?
-    uint32_t file_record_index;
+    uint32_t file_record_index; ///< The index of the FDE for this file in the containing folder.
 
     bool get_disk_sector_from_offset(uint64_t sector_offset,
                                      uint64_t &disk_sector,
@@ -102,9 +102,9 @@ public:
     ERR_CODE write_fde(uint32_t index, const fat_dir_entry &fde);
 
   protected:
-    std::weak_ptr<fat_filesystem> parent;
-    bool is_root_dir;
-    fat_file underlying_file;
+    std::weak_ptr<fat_filesystem> parent; ///< Pointer to the parent filesystem.
+    bool is_root_dir; ///< Is this the root directory?
+    fat_file underlying_file; ///< A file object allowing the folder's data to be manipulated.
 
     /// Store a cache of FDE indicies to child objects. This is also useful when renaming or deleting children.
     ///
@@ -136,28 +136,28 @@ public:
   };
 
 protected:
-  std::shared_ptr<IBlockDevice> _storage;
-  DEV_STATUS _status;
-  std::unique_ptr<uint8_t[]> _buffer;
-  std::unique_ptr<uint8_t[]> _raw_fat;
+  std::shared_ptr<IBlockDevice> _storage; ///< The block device containing this filesystem.
+  std::unique_ptr<uint8_t[]> _buffer; ///< A buffer to copy sectors in to for manipulation.
+  DEV_STATUS _status; ///< Status of the filesystem.
+  std::unique_ptr<uint8_t[]> _raw_fat; ///< A copy of the FAT of this filesystem.
 
   /// @brief Stores a pointer to the root directory.
   ///
   /// Don't use this directly, since it may not have been initialised yet - call get_root_directory() instead.
   std::shared_ptr<fat_folder> root_directory;
 
-  kernel_spinlock gen_lock;
-  uint64_t max_sectors;
-  FAT_TYPE type;
+  kernel_spinlock gen_lock; ///< A general lock used to synchronise FS accesses.
+  uint64_t max_sectors; ///< The number of sectors in this filesystem.
+  FAT_TYPE type; ///< The type of FAT in this filesystem.
 
-  fat16_bpb bpb_16;
-  fat32_bpb bpb_32;
-  fat_generic_bpb *shared_bpb;
+  fat16_bpb bpb_16; ///< If FAT12/16, the FAT12/16 style BPB. Otherwise invalid.
+  fat32_bpb bpb_32; ///< If FAT32, the FAT32 style BPB. Otherwise invalid.
+  fat_generic_bpb *shared_bpb; ///< Pointer to the BPB in use.
 
-  uint64_t root_dir_start_sector;
-  uint64_t root_dir_sector_count;
-  uint64_t first_data_sector;
-  uint64_t fat_length_bytes;
+  uint64_t root_dir_start_sector; ///< The starting sector of the root directory.
+  uint64_t root_dir_sector_count; ///< The number of sectors in the root directory.
+  uint64_t first_data_sector; ///< The first data sector in the filesystem.
+  uint64_t fat_length_bytes; ///< The number of bytes in the FAT.
 
   uint64_t number_of_clusters; ///< How many clusters are there on the disk?
   bool fat_dirty; ///< Has the FAT itself been updated? At some point it will become necessary to write it back if so.

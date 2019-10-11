@@ -11,6 +11,8 @@
 #include "devices/pci/pci_functions.h"
 #include "devices/pci/pci_root.h"
 
+/// @brief A generic PCI bus device.
+///
 class pci_generic_bus : public IDevice, public system_tree_simple_branch
 {
 public:
@@ -22,6 +24,6 @@ protected:
   virtual void scan_bus();
   virtual void add_new_device(uint8_t slot, uint8_t func);
 
-  uint8_t _bus_number;
-  pci_root_device *_parent;
+  uint8_t _bus_number; ///< What is the bus number of this bus on the parent.
+  pci_root_device *_parent; ///< The parent PCI device.
 };

@@ -8,9 +8,9 @@
 namespace usb { namespace hid {
 
 /// Map from scancodes to Key IDs.
-/// @cond
 const KEYS scancode_map[max_scancode_idx + 1] =
   {
+/// @cond
     KEYS::UNK, // 00 - Reserved.
     KEYS::UNK, // 01 - Error Roll Over.
     KEYS::UNK, // 02 - POST Failed.
@@ -257,7 +257,7 @@ const KEYS scancode_map[max_scancode_idx + 1] =
     KEYS::R_SHIFT, // E5 - Right Shift
     KEYS::R_ALT, // E6 - Right Alt
     KEYS::R_WINDOWS, // E7 - Right GUI
-  };
 /// @endcond
+  };
 
 }; }; // Namespace usb::hid

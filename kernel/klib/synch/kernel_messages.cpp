@@ -2,6 +2,13 @@
 
 #include "klib/klib.h"
 
+/// @brief Equality operator for two messages.
+///
+/// @param a The first message.
+///
+/// @param b The second message.
+///
+/// @return True if the two messages are equal - their IDs and contained messages are the same, or false otherwise.
 bool operator == (const klib_message_hdr &a, const klib_message_hdr &b)
 {
   return ((a.msg_contents == b.msg_contents)
@@ -10,6 +17,13 @@ bool operator == (const klib_message_hdr &a, const klib_message_hdr &b)
           && (a.originating_process == b.originating_process));
 }
 
+/// @brief Equality operator for two messages.
+///
+/// @param a The first message.
+///
+/// @param b The second message.
+///
+/// @return False if the two messages are equal - their IDs and contained messages are the same, or true otherwise.
 bool operator != (const klib_message_hdr &a, const klib_message_hdr &b)
 {
   return !(a == b);

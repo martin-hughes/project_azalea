@@ -18,6 +18,19 @@
 
 #include <stdio.h>
 
+/// @brief Standard constructor.
+///
+/// Call the static create method to instantiate a new folder object.
+///
+/// @param file_data_record The FDE of this folder.
+///
+/// @param fde_index The index of this folder's FDE within the parent folder.
+///
+/// @param fs_parent The FAT filesystem object for the whole filesystem.
+///
+/// @param folder_parent The parent folder of this new folder.
+///
+/// @param root_directory Is this actually the root directory?
 fat_filesystem::fat_folder::fat_folder(fat_dir_entry file_data_record,
                                        uint32_t fde_index,
                                        std::shared_ptr<fat_filesystem> fs_parent,
@@ -32,6 +45,19 @@ fat_filesystem::fat_folder::fat_folder(fat_dir_entry file_data_record,
   KL_TRC_EXIT;
 }
 
+/// @brief Create a new folder object (which corresponds to opening an existing folder).
+///
+/// @param file_data_record The FDE of this folder.
+///
+/// @param fde_index The index of this folder's FDE within the parent folder.
+///
+/// @param fs_parent The FAT filesystem object for the whole filesystem.
+///
+/// @param folder_parent The parent folder of this new folder.
+///
+/// @param root_directory Is this actually the root directory?
+///
+/// @return shared_ptr to the new folder object.
 std::shared_ptr<fat_filesystem::fat_folder>
   fat_filesystem::fat_folder::create(fat_dir_entry file_data_record,
                                      uint32_t fde_index,
@@ -363,6 +389,8 @@ ERR_CODE fat_filesystem::fat_folder::create_child(const kl_string &name, std::sh
 ///                               this case, raw_short_name must point to a buffer of 11 characters containing a
 ///                               filename in the short FAT format.
 ///
+/// @param[in] raw_short_name The short name to use if use_raw_short_name is true.
+///
 /// @return ERR_CODE::NO_ERROR or ERR_CODE::NOT_FOUND, as appropriate.
 ERR_CODE fat_filesystem::fat_folder::get_dir_entry(const kl_string &name,
                                                    fat_dir_entry &storage,
@@ -526,9 +554,9 @@ ERR_CODE fat_filesystem::fat_folder::get_dir_entry(const kl_string &name,
 ///
 /// @param entry_idx The index of the entry to read from the start of the directory
 ///
-/// @param fde[out] Storage for the directory entry once found.
+/// @param[out] fde Storage for the directory entry once found.
 ///
-/// @param A suitable error code. ERR_CODE::INVALID_PARAM or ERR_CODE::STORAGE_ERROR usually mean the requested index
+/// @return A suitable error code. ERR_CODE::INVALID_PARAM or ERR_CODE::STORAGE_ERROR usually mean the requested index
 ///        is out of range.
 ERR_CODE fat_filesystem::fat_folder::read_one_dir_entry(uint32_t entry_idx, fat_dir_entry &fde)
 {
@@ -563,7 +591,7 @@ ERR_CODE fat_filesystem::fat_folder::read_one_dir_entry(uint32_t entry_idx, fat_
 ///
 /// @param filename The filename to convert.
 ///
-/// @param short_name[out] The converted filename. Must be a pointer to a buffer of 12 characters (or more)
+/// @param[out] short_name The converted filename. Must be a pointer to a buffer of 12 characters (or more)
 ///
 /// @return True if the filename could be converted, false otherwise.
 bool fat_filesystem::fat_folder::populate_short_name(kl_string filename, char *short_name)
@@ -664,9 +692,9 @@ bool fat_filesystem::fat_folder::populate_short_name(kl_string filename, char *s
 ///
 /// @param filename The filename to convert
 ///
-/// @param long_name_entries[out] Pointer to an array of 20 fat_dir_entries to write the resulting structures in to.
+/// @param[out] long_name_entries Pointer to an array of 20 fat_dir_entries to write the resulting structures in to.
 ///
-/// @param entry_count[out] The number of long file name entry structures that are populated.
+/// @param[out] num_entries The number of long file name entry structures that are populated.
 ///
 /// @return true if the long filename structures could be generated successfully, false otherwise.
 bool fat_filesystem::fat_folder::populate_long_name(kl_string filename,

@@ -551,13 +551,13 @@ uint64_t controller::generate_scratchpad_array(uint16_t num_scratchpads)
 // Interrupt handlers.
 //----------------------
 
-bool controller::handle_translated_interrupt_fast(unsigned char interrupt_offset, unsigned char raw_interrupt_num)
+bool controller::handle_translated_interrupt_fast(uint8_t interrupt_offset, uint8_t raw_interrupt_num)
 {
   KL_TRC_TRACE(TRC_LVL::FLOW, "xHCI fast interrupt\n");
   return true;
 }
 
-void controller::handle_translated_interrupt_slow(unsigned char interrupt_offset, unsigned char raw_interrupt_num)
+void controller::handle_translated_interrupt_slow(uint8_t interrupt_offset, uint8_t raw_interrupt_num)
 {
   template_trb cur_trb;
   bool received_trb;

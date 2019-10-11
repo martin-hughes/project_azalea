@@ -53,6 +53,16 @@ task_thread::task_thread(ENTRY_PROC entry_point, std::shared_ptr<task_process> p
   KL_TRC_EXIT;
 }
 
+/// @brief Create a new thread.
+///
+/// Creates a new thread as part of `parent`, starting at entry_point. The thread remains suspended until it is
+/// deliberately started.
+///
+/// @param entry_point The point that the thread will begin executing from.
+///
+/// @param parent The process this thread is part of.
+///
+/// @return shared_ptr to the new thread.
 std::shared_ptr<task_thread> task_thread::create(ENTRY_PROC entry_point, std::shared_ptr<task_process> parent)
 {
   KL_TRC_ENTRY;

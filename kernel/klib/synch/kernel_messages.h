@@ -38,7 +38,10 @@ struct klib_msg_broadcast_grp
 };
 */
 
+/// @brief The ID of the message.
 typedef uint64_t message_id_number;
+
+/// @brief A standard message queue.
 typedef std::queue<klib_message_hdr> msg_msg_queue;
 
 ERR_CODE msg_register_msg_id(kl_string msg_name, message_id_number new_id_number);

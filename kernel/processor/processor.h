@@ -19,7 +19,7 @@
 
 // Main kernel interface to processor specific functions. Includes the task management system.
 
-// Definition of a possible entry point:
+/// @brief Definition of a possible entry point:
 typedef void (* ENTRY_PROC)();
 
 // Forward declare task_thread since task_process and task_thread refer to each other in a cycle.
@@ -43,7 +43,7 @@ public:
   void destroy_process();
 
 protected:
-  friend task_thread;
+  friend task_thread; ///< This is just a convenience really.
   void add_new_thread(std::shared_ptr<task_thread> new_thread);
   void thread_ending(task_thread *thread);
 

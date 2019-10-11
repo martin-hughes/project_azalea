@@ -15,7 +15,7 @@
 /// @param[in] interrupts_requested The number of interrupts requested for use by the device. Must be a power of two
 ///                                 less than or equal to 32.
 ///
-/// @param[out] interrupts_granted. The number of interrupts granted to this device.
+/// @param[out] interrupts_granted The number of interrupts granted to this device.
 ///
 /// @return True if MSI was successfully configured. False otherwise. If false, do not attempt to enable MSI.
 bool pci_generic_device::msi_configure(uint8_t interrupts_requested, uint8_t &interrupts_granted)

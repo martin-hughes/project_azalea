@@ -21,6 +21,11 @@ namespace
 
 const uint64_t ASSUMED_SECTOR_SIZE = 512;
 
+/// @brief Standard constructor.
+///
+/// New FAT filesystem objects should be created using the static 'create' method.
+///
+/// @param parent_device The block device containing this filesystem.
 fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
     _storage{parent_device}, _status{DEV_STATUS::OK}, _buffer{new uint8_t[ASSUMED_SECTOR_SIZE]}, fat_dirty{false}
 {
@@ -113,6 +118,11 @@ fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
   klib_synch_spinlock_unlock(this->gen_lock);
 }
 
+/// @brief Create a new FAT filesystem root object.
+///
+/// @param parent_device The block device containing this filesystem.
+///
+/// @return A shared_ptr containing a new fat filesystem object.
 std::shared_ptr<fat_filesystem> fat_filesystem::create(std::shared_ptr<IBlockDevice> parent_device)
 {
   return std::shared_ptr<fat_filesystem>(new fat_filesystem(parent_device));
@@ -515,7 +525,7 @@ uint64_t fat_filesystem::read_fat_entry(uint64_t cluster_num)
 ///
 /// @param cluster_num The FAT entry to update.
 ///
-/// @param new entry The value to write into the FAT - this will be truncated to be a suitable number of bits!
+/// @param new_entry The value to write into the FAT - this will be truncated to be a suitable number of bits!
 ///
 /// @return A suitable error code.
 ERR_CODE fat_filesystem::write_fat_entry(uint64_t cluster_num, uint64_t new_entry)
@@ -667,9 +677,9 @@ uint64_t fat_filesystem::convert_cluster_to_sector_num(uint64_t cluster_num)
 ///
 /// @param sector_num The number of the sector to find the cluster for.
 ///
-/// @param cluster_num[out] The number of the cluster the sector resides in.
+/// @param[out] cluster_num The number of the cluster the sector resides in.
 ///
-/// @param offset[out] How many sectors in to the cluster the sector is.
+/// @param[out] offset How many sectors in to the cluster the sector is.
 ///
 /// @return True if the sector is in a normal cluster, false otherwise. If false, the output parameters are invalid.
 bool fat_filesystem::convert_sector_to_cluster_num(uint64_t sector_num, uint64_t &cluster_num, uint16_t &offset)
@@ -698,8 +708,19 @@ bool fat_filesystem::convert_sector_to_cluster_num(uint64_t sector_num, uint64_t
   return result;
 }
 
-/// @brief Update the number of clusters
-ERR_CODE fat_filesystem::change_file_chain_length(uint64_t &start_cluster, uint64_t old_chain_length, uint64_t new_chain_length)
+/// @brief Update the number of clusters in a file.
+///
+/// @param[inout] start_cluster The starting cluster of the file being updated. start_cluster may change if the chain
+///                             needs to move.
+///
+/// @param old_chain_length The original length of the chain associated with this file.
+///
+/// @param new_chain_length The desired length of the chain associated with this file.
+///
+/// @return A suitable error code.
+ERR_CODE fat_filesystem::change_file_chain_length(uint64_t &start_cluster,
+                                                  uint64_t old_chain_length,
+                                                  uint64_t new_chain_length)
 {
   ERR_CODE result = ERR_CODE::UNKNOWN;
   uint64_t cur_cluster_num;
@@ -788,6 +809,7 @@ ERR_CODE fat_filesystem::change_file_chain_length(uint64_t &start_cluster, uint6
 
 /// @brief After modifying it, write the FAT back to the disk.
 ///
+/// @return A suitable error code.
 ERR_CODE fat_filesystem::write_fat_to_disk()
 {
   ERR_CODE result = ERR_CODE::NO_ERROR;
@@ -850,7 +872,9 @@ ERR_CODE fat_filesystem::select_free_cluster(uint64_t &free_cluster)
   return result;
 }
 
-/// @brief
+/// @brief Return a fat_folder object pointing at the filesystem's root directory.
+///
+/// @return Folder object containing the root directory.
 std::shared_ptr<fat_filesystem::fat_folder> &fat_filesystem::get_root_directory()
 {
   fat_dir_entry fde;

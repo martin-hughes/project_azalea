@@ -13,11 +13,15 @@ extern "C"
 
 #pragma pack(push, 1)
 
-const uint64_t ELF64_FILE_HDR_SIZE = 64;
-const uint64_t ELF64_PROG_HDR_SIZE = 56;
+const uint64_t ELF64_FILE_HDR_SIZE = 64; ///< ELF64 file header size.
+const uint64_t ELF64_PROG_HDR_SIZE = 56; ///< ELF64 program header size.
 
+/// @brief an ELF64 file header.
+///
+/// Details are contained in the ELF spec, so are not repeated.
 struct elf64_file_header
 {
+/// @cond
   uint8_t ident[16];
   uint16_t type;
   uint16_t machine_type;
@@ -32,12 +36,17 @@ struct elf64_file_header
   uint16_t sect_hdr_entry_size;
   uint16_t num_sect_hdrs;
   uint16_t sect_name_str_table_idx;
+/// @endcond
 };
 
 static_assert(sizeof(elf64_file_header) == ELF64_FILE_HDR_SIZE, "elf64_file_header size does not match");
 
+/// An ELF64 program header
+///
+/// Details are contained in the ELF spec, so are not repeated.
 struct elf64_program_header
 {
+/// @cond
   uint32_t type;
   uint32_t flags;
   uint64_t file_offset;
@@ -46,6 +55,7 @@ struct elf64_program_header
   uint64_t size_in_file;
   uint64_t size_in_mem;
   uint64_t req_alignment;
+/// @endcond
 };
 
 static_assert(sizeof(elf64_program_header) == ELF64_PROG_HDR_SIZE, "elf64_program_header size does not match");

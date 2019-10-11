@@ -5,6 +5,11 @@
 #include "klib/klib.h"
 #include "ramdisk.h"
 
+/// @brief Standard constructor.
+///
+/// @param num_blocks The number of blocks this device should have.
+///
+/// @param block_size The size of a block on this device.
 ramdisk_device::ramdisk_device(uint64_t num_blocks, uint64_t block_size) :
     IBlockDevice("generic RAM disk"), _num_blocks(num_blocks), _block_size(block_size), _storage_size(num_blocks * block_size)
 {

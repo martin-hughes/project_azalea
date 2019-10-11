@@ -11,8 +11,12 @@
 namespace timing
 {
 
+/// @brief Common CMOS register values.
+///
+/// The details are undocumented as they are standardised.
 enum class CMOS_RTC_REGISTERS : uint16_t
 {
+/// @cond
   SECONDS = 0,
   MINUTES = 2,
   HOURS = 4,
@@ -23,6 +27,7 @@ enum class CMOS_RTC_REGISTERS : uint16_t
   STATUS_A = 10,
   STATUS_B = 11,
   CENTURY = 50,
+/// @endcond
 };
 
 /// @brief Driver for a common type of CMOS-based RTC

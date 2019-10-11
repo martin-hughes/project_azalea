@@ -47,8 +47,8 @@ public:
     virtual ~proc_fs_proc_branch();
 
   protected:
-    std::shared_ptr<task_process> _related_proc;
-    std::shared_ptr<mem_fs_leaf> _id_file;
+    std::shared_ptr<task_process> _related_proc; ///< The process this branch contains details for.
+    std::shared_ptr<mem_fs_leaf> _id_file; ///< A file containing the process ID of this process.
   };
 
 protected:
@@ -72,10 +72,10 @@ protected:
   protected:
     std::shared_ptr<ISystemTreeBranch> get_current_proc_branch();
 
-    std::weak_ptr<proc_fs_root_branch> _parent;
+    std::weak_ptr<proc_fs_root_branch> _parent; ///< The parent proc_fs_root_branch.
   };
 
-  // This branch is given the name "0", and always refers to the current process.
+  /// This branch is given the name "0", and always refers to the current process.
   std::shared_ptr<proc_fs_zero_proxy_branch> _zero_proxy;
 };
 

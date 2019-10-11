@@ -50,32 +50,103 @@ public:
   // Equality operators //
   ////////////////////////
 
-  const bool operator ==(const kl_string &) const;
-  const bool operator ==(const char *&) const;
+  /// @brief Standard equality operator
+  ///
+  /// @param s String to compare against
+  ///
+  /// @return True if equal.
+  const bool operator ==(const kl_string &s) const;
+
+  /// @brief Standard equality operator
+  ///
+  /// @param s String to compare against
+  ///
+  /// @return True if equal.
+  const bool operator ==(const char *&s) const;
 
   // Inequality operators
-  const bool operator !=(const kl_string &) const;
-  const bool operator !=(const char *&)const ;
+
+  /// @brief Standard inequality operator
+  ///
+  /// @param s String to compare against
+  ///
+  /// @return True if not equal.
+  const bool operator !=(const kl_string &s) const;
+
+  /// @brief Standard inequality operator
+  ///
+  /// @param s String to compare against
+  ///
+  /// @return True if not equal.
+  const bool operator !=(const char *&s) const;
 
   //////////////////////////
   // Assignment operators //
   //////////////////////////
 
   // Copy assignment operators
-  kl_string &operator =(const kl_string &);
-  kl_string &operator =(const char *&);
+
+  /// @brief Standard copy assignment operator
+  ///
+  /// @param s Copy the string s into this one.
+  ///
+  /// @return reference to this string.
+  kl_string &operator =(const kl_string &s);
+
+  /// @brief Standard copy assignment operator
+  ///
+  /// @param s Copy the string s into this one.
+  ///
+  /// @return reference to this string.
+  kl_string &operator =(const char *&s);
 
   // Move assignment operators
-  kl_string &operator =(kl_string &&);
+
+  /// @brief Standard move assignment operator
+  ///
+  /// @param s Move the string s into this one.
+  ///
+  /// @return A reference to this string.
+  kl_string &operator =(kl_string &&s);
 
   /////////////////////
   // Other operators //
   /////////////////////
-  kl_string operator +(const kl_string &) const;
-  kl_string operator +(const char *&) const;
+
+  /// @brief Append string to this one.
+  ///
+  /// @param s String to append.
+  ///
+  /// @return Copy of this string.
+  kl_string operator +(const kl_string &s) const;
+
+  /// @brief Append string to this one.
+  ///
+  /// @param s String to append.
+  ///
+  /// @return Copy of this string.
+  kl_string operator +(const char *&s) const;
+
+  /// @brief Reference a character within this string
+  ///
+  /// @param pos The character to reference.
+  ///
+  /// @return Reference to the selected character.
   char &operator [](const uint64_t pos);
-  const bool operator <(const kl_string &) const;
-  const bool operator >(const kl_string &) const;
+
+  /// @brief Standard less-than operator.
+  ///
+  /// @param s String to compare with
+  ///
+  /// @return true if this string comes before s alphabetically.
+  const bool operator <(const kl_string &s) const;
+
+  /// @brief Standard greater-than operator.
+  ///
+  /// @param s String to compare with
+  ///
+  /// @return true if this string comes after s alphabetically.
+  const bool operator >(const kl_string &s) const;
 
   ///////////////////////
   // String operations //
@@ -122,6 +193,8 @@ protected:
   void reset_string();
 
   /// Resize the buffer in string_contents to a new size.
+  ///
+  /// @param new_size How big, in bytes, the string's buffer will become.
   void resize_buffer(uint64_t new_size);
 
   /// Move the string provided in to this one, and destroy it.

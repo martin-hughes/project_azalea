@@ -31,10 +31,10 @@ public:
                                 uint64_t buffer_length);
 
 protected:
-  char *_ramdisk_storage;
+  char *_ramdisk_storage; ///< Storage for this RAM disk.
 
-  const uint64_t _num_blocks;
-  const uint64_t _block_size;
+  const uint64_t _num_blocks; ///< How many virtual blocks are in this disk?
+  const uint64_t _block_size; ///< The number of bytes in a single block of this disk.
 
-  const uint64_t _storage_size;
+  const uint64_t _storage_size; ///< Effectively, _num_blocks * _block_size.
 };

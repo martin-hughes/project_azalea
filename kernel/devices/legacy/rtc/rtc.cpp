@@ -11,6 +11,8 @@ using namespace timing;
 /// @brief Create a new RTC driver object.
 ///
 /// @param obj_handle ACPI object handle for this device, used to get the CMOS control port to use.
+///
+/// @return A shared_ptr to the new RTC driver object.
 std::shared_ptr<rtc> rtc::create(ACPI_HANDLE obj_handle)
 {
   KL_TRC_ENTRY;
@@ -111,7 +113,10 @@ rtc::rtc(ACPI_HANDLE obj_handle) : IDevice{"Real time clock"}
   KL_TRC_EXIT;
 }
 
+/// @cond
 #define DECODE_BCD_BYTE(x) (((x) & 0x0F) + ((((x) & 0xF0) >> 4) * 10))
+/// @endcond
+
 bool rtc::get_current_time(time_expanded &time)
 {
   bool result{true};
@@ -210,6 +215,8 @@ bool rtc::get_current_time(time_expanded &time)
 /// @brief Read a single byte from the given CMOS register.
 ///
 /// @param reg Which register to read.
+///
+/// @return The byte that was read.
 uint8_t rtc::read_cmos_byte(CMOS_RTC_REGISTERS reg)
 {
   uint8_t result;

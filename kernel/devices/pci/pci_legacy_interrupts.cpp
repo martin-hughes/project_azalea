@@ -162,8 +162,10 @@ pci_irq_link_device::pci_irq_link_device(ACPI_HANDLE dev_handle) : chosen_interr
   KL_TRC_EXIT;
 }
 
+/// @cond
 #define GET_INTERRUPT_CHOICE(idx, size) \
   (bytes_per_int == 1) ? (reinterpret_cast<uint8_t *>(choices))[(idx)] : (reinterpret_cast<uint32_t *>(choices))[(idx)]
+/// @endcond
 
 /// @brief Given a list of possible interrupts, chose our favorite.
 ///

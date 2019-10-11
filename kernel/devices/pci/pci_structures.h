@@ -9,6 +9,7 @@
 ///
 struct pci_address
 {
+/// @cond
   union
   {
     uint32_t raw;
@@ -23,6 +24,7 @@ struct pci_address
       uint32_t enable : 1;
     };
   };
+/// @endcond
 };
 static_assert(sizeof(pci_address) == sizeof(uint32_t), "Bad packing of pci_address");
 
@@ -30,6 +32,7 @@ static_assert(sizeof(pci_address) == sizeof(uint32_t), "Bad packing of pci_addre
 ///
 struct pci_reg_0
 {
+/// @cond
   union
   {
     uint32_t raw;
@@ -39,6 +42,7 @@ struct pci_reg_0
       uint16_t device_id;
     };
   };
+/// @endcond
 };
 static_assert(sizeof(pci_reg_0) == sizeof(uint32_t), "Bad packing of pci_reg_0");
 
@@ -46,6 +50,7 @@ static_assert(sizeof(pci_reg_0) == sizeof(uint32_t), "Bad packing of pci_reg_0")
 ///
 struct pci_reg_1
 {
+/// @cond
   union
   {
     uint32_t raw;
@@ -92,6 +97,7 @@ struct pci_reg_1
       };
     };
   };
+/// @endcond
 };
 static_assert(sizeof(pci_reg_1) == sizeof(uint32_t), "Bad packing of pci_reg_1");
 
@@ -99,6 +105,7 @@ static_assert(sizeof(pci_reg_1) == sizeof(uint32_t), "Bad packing of pci_reg_1")
 ///
 struct pci_reg_2
 {
+/// @cond
   union
   {
     uint32_t raw;
@@ -110,6 +117,7 @@ struct pci_reg_2
       uint8_t class_code;
     };
   };
+/// @endcond
 };
 static_assert(sizeof(pci_reg_2) == sizeof(uint32_t), "Bad packing of pci_reg_2");
 
@@ -117,6 +125,7 @@ static_assert(sizeof(pci_reg_2) == sizeof(uint32_t), "Bad packing of pci_reg_2")
 ///
 struct pci_reg_3
 {
+/// @cond
   union
   {
     uint32_t raw;
@@ -128,6 +137,7 @@ struct pci_reg_3
       uint8_t bist;
     };
   };
+/// @endcond
 };
 static_assert(sizeof(pci_reg_3) == sizeof(uint32_t), "Bad packing of pci_reg_3");
 
@@ -135,6 +145,7 @@ static_assert(sizeof(pci_reg_3) == sizeof(uint32_t), "Bad packing of pci_reg_3")
 ///
 struct pci_reg_13
 {
+/// @cond
   union
   {
     uint32_t raw;
@@ -144,6 +155,7 @@ struct pci_reg_13
       uint8_t reserved[3];
     };
   };
+/// @endcond
 };
 static_assert(sizeof(pci_reg_13) == sizeof(uint32_t), "Bad packing of pci_reg_13");
 
@@ -177,6 +189,7 @@ static_assert(sizeof(pci_reg_15) == sizeof(uint32_t), "Bad packing of pci_reg_15
 ///
 struct pci_cap_header
 {
+/// @cond
   union
   {
     uint32_t raw;
@@ -187,6 +200,7 @@ struct pci_cap_header
       uint16_t cap_data;
     };
   };
+/// @encond
 };
 static_assert(sizeof(pci_cap_header) == sizeof(uint32_t), "Bad packing of pci_cap_header");
 
@@ -194,6 +208,7 @@ static_assert(sizeof(pci_cap_header) == sizeof(uint32_t), "Bad packing of pci_ca
 ///
 struct pci_msi_cap_header
 {
+/// @cond
   union
   {
     uint32_t raw;
@@ -209,6 +224,7 @@ struct pci_msi_cap_header
       uint16_t reserved : 7;
     };
   };
+/// @endcond
 };
 static_assert(sizeof(pci_msi_cap_header) == sizeof(pci_cap_header), "Bad packing of pci_msi_cap_header");
 
@@ -218,8 +234,8 @@ namespace pci
   ///
   template <typename T> struct capability
   {
-    bool supported;
-    uint8_t offset;
-    T *base_mem_address;
+    bool supported; ///< Is this capability supported?
+    uint8_t offset; ///< What is the offset in the list of capabilities?
+    T *base_mem_address; ///< What is the memory address of the capablity structure.
   };
 };

@@ -26,13 +26,13 @@ AZALEA_RENAME_ENUM(TLS_REGISTERS);
  */
 struct time_expanded
 {
-  uint32_t nanoseconds; /** < Nanoseconds */
-  uint8_t seconds; /** < Seconds */
-  uint8_t minutes; /** < Minutes */
-  uint8_t hours; /** < Hours */
-  uint8_t day; /** < Day */
-  uint8_t month; /** < Month */
-  int16_t year; /** < Year */
+  uint32_t nanoseconds; /**< Nanoseconds */
+  uint8_t seconds; /**< Seconds */
+  uint8_t minutes; /**< Minutes */
+  uint8_t hours; /**< Hours */
+  uint8_t day; /**< Day */
+  uint8_t month; /**< Month */
+  int16_t year; /**< Year */
 };
 
 /**
@@ -40,11 +40,11 @@ struct time_expanded
  */
 struct object_properties
 {
-  bool exists; /** < Does the object exist? If false, none of the other members are valid. */
-  bool is_leaf; /** < Is this a leaf object? If not, is a branch object. */
-  bool readable; /** < Does the object expose a readable-type interface? */
-  bool writable; /** < Does the object expose a writable-type interface? */
-  bool is_file; /** < Does the object expose a file-like interface? */
+  bool exists; /**< Does the object exist? If false, none of the other members are valid. */
+  bool is_leaf; /**< Is this a leaf object? If not, is a branch object. */
+  bool readable; /**< Does the object expose a readable-type interface? */
+  bool writable; /**< Does the object expose a writable-type interface? */
+  bool is_file; /**< Does the object expose a file-like interface? */
 };
 
 enum AZALEA_ENUM_CLASS SEEK_OFFSET_T

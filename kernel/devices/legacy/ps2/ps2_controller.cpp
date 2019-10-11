@@ -9,6 +9,7 @@
 #include "klib/klib.h"
 #include "ps2_controller.h"
 
+/// @brief Standard constructor.
 gen_ps2_controller_device::gen_ps2_controller_device() :
   IDevice{"Generic PS/2 controller"},
   chan_1_dev(nullptr),
@@ -310,6 +311,10 @@ ERR_CODE gen_ps2_controller_device::read_byte(uint8_t &data)
 }
 
 /// @brief Identify the type of device connected to the PS/2 controller.
+///
+/// @param second_channel If true, send the command to the second channel of the controller.
+///
+/// @return The type of device connected.
 PS2_DEV_TYPE gen_ps2_controller_device::identify_device(bool second_channel)
 {
   KL_TRC_ENTRY;
@@ -379,6 +384,13 @@ PS2_DEV_TYPE gen_ps2_controller_device::identify_device(bool second_channel)
   return dev_type;
 }
 
+/// @brief Construct a new PS/2 device object.
+///
+/// @param second_channel Is this device attached to the second channel of the controller?
+///
+/// @param dev_type The type of attached device.
+///
+/// @return Pointer to the device object.
 gen_ps2_device *gen_ps2_controller_device::instantiate_device(bool second_channel, PS2_DEV_TYPE dev_type)
 {
   KL_TRC_ENTRY;
@@ -407,6 +419,9 @@ gen_ps2_device *gen_ps2_controller_device::instantiate_device(bool second_channe
   return res;
 }
 
+/// @brief Read the configuration register from the controller.
+///
+/// @return Contents of the configuration register.
 gen_ps2_controller_device::ps2_config_register gen_ps2_controller_device::read_config()
 {
   KL_TRC_ENTRY;
@@ -419,6 +434,9 @@ gen_ps2_controller_device::ps2_config_register gen_ps2_controller_device::read_c
   return config;
 }
 
+/// @brief Write the configuration register of this controller.
+///
+/// @param reg The configuration to write to the controller.
 void gen_ps2_controller_device::write_config(gen_ps2_controller_device::ps2_config_register reg)
 {
   KL_TRC_ENTRY;

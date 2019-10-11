@@ -8,10 +8,18 @@
 
 using namespace PCI_CAPABILITY_IDS;
 
+/// @brief Standard constructor
+///
+/// @param address The PCI address of this device.
 pci_generic_device::pci_generic_device(pci_address address) :
   pci_generic_device{address, "Generic PCI Device"}
 { }
 
+/// @brief Standard constructor
+///
+/// @param address The PCI address of this device.
+///
+/// @param name The name of this device.
 pci_generic_device::pci_generic_device(pci_address address, const kl_string name) :
   IDevice{name},
   _address(address),
@@ -101,12 +109,14 @@ void pci_generic_device::scan_caps()
     cap_hdr.raw = pci_read_raw_reg(_address, next_offset / 4);
     KL_TRC_TRACE(TRC_LVL::FLOW, "Cap found: ", cap_hdr.cap_label, " @ ", next_offset, "\n");
 
+/// @cond
 #define SET_CAP_SUPPORTED(cap_label, cap_obj, name) \
     case (cap_label): \
       KL_TRC_TRACE(TRC_LVL::FLOW, (name), " found.\n"); \
       (cap_obj).supported = true; \
       (cap_obj).offset = next_offset; \
       break;
+/// @endcond
 
     switch (cap_hdr.cap_label)
     {
@@ -138,7 +148,7 @@ void pci_generic_device::scan_caps()
   KL_TRC_EXIT;
 }
 
-bool pci_generic_device::handle_interrupt_fast(unsigned char interrupt_number)
+bool pci_generic_device::handle_interrupt_fast(uint8_t interrupt_number)
 {
   //KL_TRC_ENTRY;
 
@@ -147,7 +157,7 @@ bool pci_generic_device::handle_interrupt_fast(unsigned char interrupt_number)
   //KL_TRC_EXIT;
 }
 
-void pci_generic_device::handle_interrupt_slow(unsigned char interrupt_number)
+void pci_generic_device::handle_interrupt_slow(uint8_t interrupt_number)
 {
   KL_TRC_ENTRY;
 

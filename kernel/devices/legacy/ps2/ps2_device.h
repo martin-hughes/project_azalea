@@ -31,9 +31,9 @@ protected:
   void enable_irq();
   void disable_irq();
 
-  gen_ps2_controller_device *_parent;
-  bool _second_channel;
-  bool _irq_enabled;
+  gen_ps2_controller_device *_parent; ///< The parent controller device
+  bool _second_channel; ///< Is this on the second channel of the controller?
+  bool _irq_enabled; ///< Is the IRQ enabled?
 };
 
 /// @brief Driver for a generic PS/2 mouse.
@@ -56,10 +56,10 @@ public:
   virtual void handle_interrupt_slow(uint8_t irq_number) override;
 
 protected:
-  special_keys _spec_keys_down;
-  bool _next_key_is_release;
-  bool _next_key_is_special;
-  unsigned int _pause_seq_chars;
+  special_keys _spec_keys_down; ///< Which special keys are currently pressed?
+  bool _next_key_is_release; ///< Is the next input telling us about a key that has been released?
+  bool _next_key_is_special; ///< Is the next input for a special key?
+  unsigned int _pause_seq_chars; ///< How many characters of the 'pause' key have been transmitted?
 };
 
 #endif

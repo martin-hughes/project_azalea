@@ -185,6 +185,9 @@ std::shared_ptr<task_process> task_create_system_process()
   return system_process;
 }
 
+/// @brief Begin task switching mode.
+///
+/// This function may or may not actually return, depending on the behaviour of task_install_task_switcher().
 void task_start_tasking()
 {
   KL_TRC_ENTRY;

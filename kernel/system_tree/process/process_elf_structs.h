@@ -7,8 +7,8 @@
 
 #pragma pack(push, 1)
 
-const uint64_t ELF64_FILE_HDR_SIZE = 64;
-const uint64_t ELF64_PROG_HDR_SIZE = 56;
+const uint64_t ELF64_FILE_HDR_SIZE = 64; ///< ELF64 file header size.
+const uint64_t ELF64_PROG_HDR_SIZE = 56; ///< ELF64 program header size.
 
 /// @brief An ELF file header.
 ///

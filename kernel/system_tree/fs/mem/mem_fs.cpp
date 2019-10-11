@@ -15,11 +15,17 @@
 
 using namespace std;
 
+/// @brief Standard constructor
+///
+/// Mem FS branches should be created using the 'create' static member.
 mem_fs_branch::mem_fs_branch()
 {
 
 }
 
+/// @brief Create a new Mem FS branch.
+///
+/// @return Shared pointer to a new branch.
 std::shared_ptr<mem_fs_branch> mem_fs_branch::create()
 {
   return std::shared_ptr<mem_fs_branch>(new mem_fs_branch());
@@ -30,6 +36,13 @@ mem_fs_branch::~mem_fs_branch()
 
 }
 
+/// @brief Create a child of this mem_fs_branch
+///
+/// A new in-memory file is created.
+///
+/// @param[out] leaf Storage for the newly created leaf.
+///
+/// @return A suitable error code.
 ERR_CODE mem_fs_branch::create_child_here(std::shared_ptr<ISystemTreeLeaf> &leaf)
 {
   ERR_CODE result = ERR_CODE::NO_ERROR;
@@ -50,6 +63,9 @@ ERR_CODE mem_fs_branch::create_child_here(std::shared_ptr<ISystemTreeLeaf> &leaf
   return result;
 }
 
+/// @brief Standard constructor
+///
+/// @param parent Pointer to the parent branch.
 mem_fs_leaf::mem_fs_leaf(std::shared_ptr<mem_fs_branch> parent) :
   _parent(std::weak_ptr<mem_fs_branch>(parent)),
   _buffer(nullptr),

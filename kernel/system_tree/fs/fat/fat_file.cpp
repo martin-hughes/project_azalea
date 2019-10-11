@@ -18,7 +18,11 @@
 /// @param file_data_record The directory entry corresponding to the short name of the requested file. If
 ///                         root_directory_file is set to true, this need not be a valid structure.
 ///
-/// @param parent The parent file system object (this is stored internally as a weak pointer)
+/// @param fde_index The index of file_data_record in the table of FDE's in the parent directory.
+///
+/// @param folder_parent The parent folder object.
+///
+/// @param fs_parent The parent file system object (this is stored internally as a weak pointer)
 ///
 /// @param root_directory_file Whether or not this object represents the root directory. The root directory requires
 ///                            special handling on FAT12 and FAT16 filesystems, which this object can handle. Default

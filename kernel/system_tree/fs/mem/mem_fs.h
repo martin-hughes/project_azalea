@@ -48,10 +48,10 @@ public:
   virtual ERR_CODE set_file_size(uint64_t file_size) override;
 
 protected:
-  std::weak_ptr<mem_fs_branch> _parent;
-  std::unique_ptr<char[]> _buffer;
-  uint64_t _buffer_length;
-  kernel_spinlock _lock;
+  std::weak_ptr<mem_fs_branch> _parent; ///< Pointer to the parent branch.
+  std::unique_ptr<char[]> _buffer; ///< In-memory storage for the contents of this file.
+  uint64_t _buffer_length; ///< The number of bytes in this file.
+  kernel_spinlock _lock; ///< Lock to synchronise accesses to this file.
 
   void _no_lock_set_file_size(uint64_t file_size);
 };

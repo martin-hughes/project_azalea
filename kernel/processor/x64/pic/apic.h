@@ -22,8 +22,10 @@ void proc_apic_send_ipi(const uint32_t apic_dest,
 
 /// @brief The memory-mapped registers of a Local APIC device.
 ///
+/// Details are contained in the Intel System Programmer's guide so are not repeated.
 struct apic_registers
 {
+  /// @cond
   uint64_t reserved_1[4] __attribute__ ((aligned (16)));
 
   uint32_t local_apic_id __attribute__ ((aligned (16))); // Offset 0x20: Local APIC ID Register (RO).
@@ -109,6 +111,7 @@ struct apic_registers
   uint32_t divide_config __attribute__ ((aligned (16))); // Offset 0x3E0: Timer's divide configuration register (RW)
 
   uint32_t reserved_5[4] __attribute__ ((aligned (16)));
+  /// @endcond
 };
 
 #endif

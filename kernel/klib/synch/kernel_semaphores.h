@@ -10,6 +10,7 @@
 #include "klib/synch/kernel_locks.h"
 #include "processor/processor.h"
 
+/// @brief Flags that a semaphore should wait indefinitely instead of for a specific time.
 const uint64_t SEMAPHORE_MAX_WAIT = 0xFFFFFFFFFFFFFFFF;
 
 /// @brief Defines a semaphore structure.

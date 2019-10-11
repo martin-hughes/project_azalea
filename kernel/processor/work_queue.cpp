@@ -35,7 +35,7 @@ struct queued_item
 };
 
 kernel_spinlock work_queue_lock = 0; ///< A simple lock on the main work queue.
-uint64_t running_work_threads = 0;
+uint64_t running_work_threads = 0; ///< The number of work threads currently running.
 
 /// The main work queue itself.
 ///

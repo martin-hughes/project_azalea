@@ -199,6 +199,7 @@ std::shared_ptr<object_data> object_manager::int_retrieve_object(GEN_HANDLE hand
   return found_object;
 }
 
+/// @brief Remove all objects from the OM instance.
 void object_manager::remove_all_objects()
 {
   KL_TRC_ENTRY;

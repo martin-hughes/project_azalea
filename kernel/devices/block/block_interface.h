@@ -12,7 +12,11 @@
 class IBlockDevice : public IDevice
 {
 public:
+  /// @brief Simple constructor
+  ///
+  /// @param name The name of this device.
   IBlockDevice(const kl_string name) : IDevice{name} { };
+
   virtual ~IBlockDevice() = default;
 
   /// @brief How many blocks (e.g. sectors) are there on this device?

@@ -12,6 +12,7 @@
 #include "acpi/acpi_if.h"
 #include "devices/pci/pci.h"
 
+/// @brief Simple constructor
 dev_root_branch::dev_root_branch()
 {
   KL_TRC_ENTRY;
@@ -27,6 +28,10 @@ dev_root_branch::~dev_root_branch()
   INCOMPLETE_CODE("~dev_root_branch()");
 }
 
+/// @brief Scan the system for hardware
+///
+/// At the moment this isn't very advanced, but in future it should look for all possible devices in the system. It may
+/// also need splitting out into a constantly running process to deal with plug-n-play.
 void dev_root_branch::scan_for_devices()
 {
   KL_TRC_ENTRY;

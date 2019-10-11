@@ -19,7 +19,7 @@
 ///
 /// @param name_length The number of characters in the filename.
 ///
-/// @param proc_handle[out] Pointer to space to store the process handle that is returned.
+/// @param[out] proc_handle Pointer to space to store the process handle that is returned.
 ///
 /// @param argv Command line arguments, in the traditional C-style.
 ///

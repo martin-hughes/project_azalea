@@ -87,10 +87,10 @@ enum MEM_CACHE_MODES
 ///
 struct e820_record
 {
-  uint32_t size;
-  uint64_t start_addr;
-  uint64_t length;
-  uint32_t memory_type;
+  uint32_t size; ///< The size of this record.
+  uint64_t start_addr; ///< The physical start address of this record.
+  uint64_t length; ///< The length of this record.
+  uint32_t memory_type; ///< The type of memory associated with this record.
 };
 #pragma pack(pop)
 
@@ -101,8 +101,8 @@ static_assert(sizeof(e820_record) == 24, "e820 record size wrong");
 /// This is usually provided by a multiboot compliant bootloader.
 struct e820_pointer
 {
-  e820_record *table_ptr;
-  unsigned int table_length;
+  e820_record *table_ptr; ///< Pointer to the start of the e820 table - a physical address.
+  unsigned int table_length; ///< The number of bytes in the table.
 };
 
 void mem_gen_init(e820_pointer *e820_ptr);

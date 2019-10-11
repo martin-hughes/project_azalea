@@ -1,4 +1,5 @@
-// ACPI OS Services Layer for Project Azalea.
+/// @file
+/// @brief ACPI OS Services Layer for Project Azalea.
 
 //#define ENABLE_TRACING
 
@@ -31,12 +32,12 @@ public:
   AcpiIrqHandler(ACPI_OSD_HANDLER irq_handler, void *irq_context);
   virtual ~AcpiIrqHandler() { };
 
-  virtual bool handle_interrupt_fast(uint8_t irq_number);
-  virtual void handle_interrupt_slow(uint8_t irq_number) { };
+  virtual bool handle_interrupt_fast(uint8_t irq_number) override;
+  virtual void handle_interrupt_slow(uint8_t irq_number) override { };
 
 private:
-  ACPI_OSD_HANDLER _irq_handler;
-  void *_irq_context;
+  ACPI_OSD_HANDLER _irq_handler; ///< Stored handler.
+  void *_irq_context; ///< Stored context.
 };
 
 namespace
@@ -882,6 +883,11 @@ void AcpiOsTracePoint(ACPI_TRACE_EVENT_TYPE Type, BOOLEAN Begin, UINT8 *Aml, cha
 
 /// @endcond
 
+/// @brief Create an object to handle IRQs from ACPI.
+///
+/// @param irq_handler Pointer to the ACPI handler for this interrupt.
+///
+/// @param irq_context The context to provide to the handler.
 AcpiIrqHandler::AcpiIrqHandler(ACPI_OSD_HANDLER irq_handler, void *irq_context) :
   _irq_handler(irq_handler),
   _irq_context(irq_context)

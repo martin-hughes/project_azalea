@@ -49,6 +49,9 @@ protected:
     /// @brief The parent node of this one. Is nullptr if this node is the tree root.
     kl_binary_tree_node<nkey_type, nvalue_type> *parent;
   };
+
+  /// @brief A node for this type of kl_binary_tree.
+  ///
   typedef kl_binary_tree_node<key_type, value_type> tree_node;
 
   /// @brief The root of this node.

@@ -29,10 +29,10 @@ public:
   DEV_STATUS get_device_status();
 
 protected:
-  IBlockDevice * const _parent;
+  IBlockDevice * const _parent; ///< The device this object is proxying.
 
-  const uint64_t _start_block;
-  const uint64_t _num_blocks;
+  const uint64_t _start_block; ///< Which block does this device offset from.
+  const uint64_t _num_blocks; ///< How many blocks are in this proxy?
 };
 
 #endif

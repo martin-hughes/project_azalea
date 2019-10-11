@@ -43,8 +43,8 @@ public:
     virtual void set_block_on_read(bool block);
 
   protected:
-    std::weak_ptr<pipe_branch> _parent;
-    bool block_on_read;
+    std::weak_ptr<pipe_branch> _parent; ///< Parent pipe branch.
+    bool block_on_read; ///< Should the pipe block until the requested number of bytes are available?
   };
 
   /// @brief The write-only input leaf of a pipe branch.
@@ -62,15 +62,15 @@ public:
                                  uint64_t &bytes_written) override;
 
   protected:
-    std::weak_ptr<pipe_branch> _parent;
+    std::weak_ptr<pipe_branch> _parent; ///< The parent pipe branch.
   };
 
 protected:
-  std::unique_ptr<uint8_t[]> _buffer;
-  uint8_t *_read_ptr;
-  uint8_t *_write_ptr;
+  std::unique_ptr<uint8_t[]> _buffer; ///< Buffer storing written-but-not-read content.
+  uint8_t *_read_ptr; ///< Position of the read pointer in the buffer.
+  uint8_t *_write_ptr; ///< Position of the write pointer in the buffer.
 
-  kernel_spinlock _pipe_lock;
+  kernel_spinlock _pipe_lock; ///< Synchronises reads and writes so only one occurs at a time.
 };
 
 #endif

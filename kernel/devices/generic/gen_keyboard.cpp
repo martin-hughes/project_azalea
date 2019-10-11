@@ -12,7 +12,7 @@
 #include "keyboard_maps.h"
 
 // This is a temporary addition until the device driver system is more developed.
-extern task_process *term_proc;
+extern task_process *term_proc; ///< Tempo.
 
 /// @brief Retrieve the properties of the key that has been pressed.
 ///

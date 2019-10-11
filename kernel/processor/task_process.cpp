@@ -14,7 +14,7 @@
 /// @brief Create a new process
 ///
 /// Creates a new process, with an associated thread starting at entry_point. The process remains suspended until
-/// deliberately started.
+/// deliberately started. This should not be called directly - use the static create() function.
 ///
 /// @param entry_point The entry point for the process's main thread.
 ///
@@ -47,6 +47,16 @@ task_process::task_process(ENTRY_PROC entry_point, bool kernel_mode, mem_process
   KL_TRC_EXIT;
 }
 
+/// @brief Create a new process.
+///
+/// @param entry_point Pointer to the first instruction that should be executed in this process.
+///
+/// @param kernel_mode Should this be a kernel-mode process?
+///
+/// @param mem_info If there is a pre-defined mem_process_info for this process then it should be provided here,
+///                 otherwise use nullptr.
+///
+/// @return A shared_ptr to the new process.
 std::shared_ptr<task_process> task_process::create(ENTRY_PROC entry_point,
                                                    bool kernel_mode,
                                                    mem_process_info *mem_info)

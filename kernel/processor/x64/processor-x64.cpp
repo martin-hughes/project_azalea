@@ -177,6 +177,9 @@ void *proc_x64_allocate_stack()
   return new_stack;
 }
 
+/// @brief Deallocate a previously allocated single page stack.
+///
+/// @param stack_ptr Pointer to any place in the stack to deallocate.
 void proc_x64_deallocate_stack(void *stack_ptr)
 {
   KL_TRC_ENTRY;
@@ -194,9 +197,9 @@ void proc_x64_deallocate_stack(void *stack_ptr)
 /// This value can then be used in the PCI MSI capabilities register. At present, no attempt is made to support any of
 /// the redirection features mentioned in the Intel System Programming Guide.
 ///
-/// @param The ID of the processor to send messages to, as identified by the kernel.
+/// @param kernel_proc_id The ID of the processor to send messages to, as identified by the kernel.
 ///
-/// @param A suitable address, if one could be generated, or zero otherwise.
+/// @return A suitable address, if one could be generated, or zero otherwise.
 uint64_t proc_x64_generate_msi_address(uint32_t kernel_proc_id)
 {
   uint32_t lapic_id;

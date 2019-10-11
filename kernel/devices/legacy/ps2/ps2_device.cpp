@@ -16,9 +16,16 @@
 #include "devices/legacy/ps2/ps2_device.h"
 #include "devices/legacy/ps2/ps2_controller.h"
 
-extern const KEYS ps2_set_2_norm_scancode_map[256];
-extern const KEYS ps2_set_2_spec_scancode_map[256];
+extern const KEYS ps2_set_2_norm_scancode_map[256]; ///< Normal PS/2 scancode map.
+extern const KEYS ps2_set_2_spec_scancode_map[256]; ///< Scancode for 'special' keys on a PS/2 keyboard.
 
+/// @brief Standard constructor
+///
+/// @param parent The parent PS/2 controller device.
+///
+/// @param second_channel Is this device connected to the second channel of the controller?
+///
+/// @param name The name to associate with this device.
 gen_ps2_device::gen_ps2_device(gen_ps2_controller_device *parent, bool second_channel, const kl_string name) :
   IDevice{name},
   _parent(parent),
@@ -30,6 +37,11 @@ gen_ps2_device::gen_ps2_device(gen_ps2_controller_device *parent, bool second_ch
   KL_TRC_EXIT;
 }
 
+/// @brief Constructor for devices with no particular name.
+///
+/// @param parent The parent PS/2 controller device.
+///
+/// @param second_channel Is this device connected to the second channel of the controller?
 gen_ps2_device::gen_ps2_device(gen_ps2_controller_device *parent, bool second_channel) :
   gen_ps2_device{parent, second_channel, "Generic PS/2 device"}
 { }
@@ -120,6 +132,11 @@ void gen_ps2_device::disable_irq()
   KL_TRC_EXIT;
 }
 
+/// @brief Standard constructor
+///
+/// @param parent The parent PS/2 controller device.
+///
+/// @param second_channel Is this device connected to the second channel of the controller?
 ps2_mouse_device::ps2_mouse_device(gen_ps2_controller_device *parent, bool second_channel) :
   gen_ps2_device(parent, second_channel, "Generic PS/2 mouse")
 {
@@ -130,6 +147,11 @@ ps2_mouse_device::ps2_mouse_device(gen_ps2_controller_device *parent, bool secon
   KL_TRC_EXIT;
 }
 
+/// @brief Standard constructor
+///
+/// @param parent The parent PS/2 controller device.
+///
+/// @param second_channel Is this device connected to the second channel of the controller?
 ps2_keyboard_device::ps2_keyboard_device(gen_ps2_controller_device *parent, bool second_channel) :
   gen_ps2_device(parent, second_channel, "Generic PS/2 keyboard"),
   _next_key_is_release(false),

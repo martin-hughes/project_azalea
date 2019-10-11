@@ -8,8 +8,11 @@
 
 #include "processor/x64/processor-x64-int.h"
 
-const uint16_t TERM_COM_BASE_PORT = 0x2F8;
+const uint16_t TERM_COM_BASE_PORT = 0x2F8; ///< Base port for COM2 - temporary variable.
 
+/// @brief Create a new terminal that operates over a serial port.
+///
+/// @param keyboard_pipe The pipe to write keypresses in to (which becomes stdin for the attached process).
 terms::serial::serial(std::shared_ptr<IWritable> keyboard_pipe) :
   terms::generic(keyboard_pipe)
 {
@@ -38,6 +41,7 @@ void terms::serial::write_raw_string(const char *out_string, uint16_t num_chars)
   KL_TRC_EXIT;
 }
 
+/// @brief Temporary function until a serial port driver is written.
 void terms::serial::temp_read_port()
 {
   char c;

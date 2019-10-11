@@ -36,6 +36,8 @@ namespace
 /// @brief Initialise the physical memory management subsystem.
 ///
 /// **This function must only be called once**
+///
+/// @param e820_ptr Pointer to the system's e820 table.
 void mem_init_gen_phys_sys(e820_pointer *e820_ptr)
 {
   KL_TRC_ENTRY;

@@ -25,10 +25,10 @@ void generic_mouse::move(int32_t x, int32_t y)
 
 /// @brief Set the state of the desired button.
 ///
-/// @brief button The number of the button to set. If this is greater than the maximum supported button then this
+/// @param button The number of the button to set. If this is greater than the maximum supported button then this
 ///               function call will simply do nothing.
 ///
-/// @brief pushed Whether or not the button is currently pushed. It is acceptable to set the state to the current
+/// @param pushed Whether or not the button is currently pushed. It is acceptable to set the state to the current
 ///               state.
 void generic_mouse::set_button(uint16_t button, bool pushed)
 {

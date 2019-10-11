@@ -39,6 +39,10 @@ public:
   void scan_for_devices();
 
 protected:
+
+  /// @brief A child branch of dev_root_branch.
+  ///
+  /// Currently unused.
   class dev_sub_branch: public system_tree_simple_branch
   {
   public:
@@ -46,5 +50,5 @@ protected:
     virtual ~dev_sub_branch() override;
   };
 
-  std::shared_ptr<null_file> dev_slash_null;
+  std::shared_ptr<null_file> dev_slash_null; ///< Stores a /dev/null type device.
 };

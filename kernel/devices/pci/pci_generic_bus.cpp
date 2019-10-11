@@ -11,6 +11,11 @@
 
 #include <stdio.h>
 
+/// @brief Standard constructor
+///
+/// @param bus The bus number of this device on the parent.
+///
+/// @param parent The parent PCI device.
 pci_generic_bus::pci_generic_bus(uint8_t bus, pci_root_device *parent) :
   IDevice{"Generic PCI bus"},
   _bus_number(bus), _parent(parent)

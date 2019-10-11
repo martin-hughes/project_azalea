@@ -296,7 +296,7 @@ ERR_CODE syscall_get_handle_data_len(GEN_HANDLE handle, uint64_t *data_length)
 ///
 /// @param handle The handle to set the data length of.
 ///
-/// @param length The length of data area that should be associated with the handle.
+/// @param data_length The length of data area that should be associated with the handle.
 ///
 /// @return A suitable error code.
 ERR_CODE syscall_set_handle_data_len(GEN_HANDLE handle, uint64_t data_length)

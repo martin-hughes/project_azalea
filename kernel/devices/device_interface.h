@@ -47,7 +47,7 @@ public:
 
 protected:
   const kl_string device_human_name; ///< The human-friendly name for this device.
-  DEV_STATUS current_dev_status;
+  DEV_STATUS current_dev_status; ///< The current status of this device.
 };
 
 /// @brief An interface that must be inherited by all drivers that handle interrupts.
@@ -90,7 +90,7 @@ public:
   /// @return true if the system should execute the slow path part of this receiver, and false if the driver has
   ///         completely handled whatever caused this interrupt to fire (or if the interrupt was not related to the
   ///         device handled by this driver)
-  virtual bool handle_interrupt_fast(unsigned char interrupt_number) = 0;
+  virtual bool handle_interrupt_fast(uint8_t interrupt_number) = 0;
 
   /// @brief The second pass of handling an interrupt. This is called in a normal kernel thread context, not within the
   ///        interrupt handler itself.
@@ -100,7 +100,7 @@ public:
   /// needs to do. It may request locks as needed.
   ///
   /// @param interrupt_number The IRQ that was fired.
-  virtual void handle_interrupt_slow(unsigned char interrupt_number) { };
+  virtual void handle_interrupt_slow(uint8_t interrupt_number) { };
 };
 
 #endif

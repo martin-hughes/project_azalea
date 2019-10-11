@@ -27,6 +27,8 @@
 ///
 /// @param[out] handle The handle for the calling process to use.
 ///
+/// @param flags Set to H_CREATE_IF_NEW to create a new file if this one doesn't exist.
+///
 /// @return A suitable ERR_CODE value.
 ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *handle, uint32_t flags)
 {
@@ -204,7 +206,11 @@ ERR_CODE syscall_create_obj_and_handle(const char *path, uint64_t path_len, GEN_
 ///
 /// @param old_name The current name of the object to rename.
 ///
+/// @param old_name_len The number of bytes in old_name.
+///
 /// @param new_name The name to rename the object to.
+///
+/// @param new_name_len The number of bytes in new_name.
 ///
 /// @return A suitable error code.
 ERR_CODE syscall_rename_object(const char *old_name,
@@ -245,6 +251,8 @@ ERR_CODE syscall_rename_object(const char *old_name,
 ///
 /// @param path The path to delete.
 ///
+/// @param path_len How many bytes are in the path string?
+///
 /// @return A suitable error code.
 ERR_CODE syscall_delete_object(const char *path, uint64_t path_len)
 {
@@ -279,6 +287,10 @@ ERR_CODE syscall_delete_object(const char *path, uint64_t path_len)
 ///
 /// @param path The path of an object in System Tree to retrieve properties for. Either this or handle must be set, but
 ///             not both.
+///
+/// @param path_length The number of bytes in the path string.
+///
+/// @param[out] props Basic properties about this object.
 ///
 /// @return A suitable error code.
 ERR_CODE syscall_get_object_properties(GEN_HANDLE handle,
@@ -334,7 +346,9 @@ ERR_CODE syscall_get_object_properties(GEN_HANDLE handle,
       memset(props, 0, sizeof(object_properties));
       props->exists = true;
 
+/// @cond
 #define CONV_TEST(obj, type) ((std::dynamic_pointer_cast<type>((obj))) != nullptr ? true : false)
+/// @endcond
       props->is_file = CONV_TEST(leaf, IBasicFile);
       props->is_leaf = !CONV_TEST(leaf, ISystemTreeBranch);
       props->readable = CONV_TEST(leaf, IReadable);

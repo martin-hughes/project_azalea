@@ -444,8 +444,8 @@ void pci_controller::dma_read_sectors_to_buffers()
   KL_TRC_EXIT;
 }
 
-bool pci_controller::handle_translated_interrupt_fast(unsigned char interrupt_offset,
-                                                      unsigned char raw_interrupt_num) // Actually the IRQ number.
+bool pci_controller::handle_translated_interrupt_fast(uint8_t interrupt_offset,
+                                                      uint8_t raw_interrupt_num) // Actually the IRQ number.
 {
   uint16_t port_num = static_cast<uint16_t>(BUS_MASTER_PORTS::STATUS) + bus_master_base_port;
   bm_ide_status status;
@@ -498,8 +498,8 @@ bool pci_controller::handle_translated_interrupt_fast(unsigned char interrupt_of
   return was_for_us; // For now, always allow interrupts to be handled in the slow path.
 }
 
-void pci_controller::handle_translated_interrupt_slow(unsigned char interrupt_offset,
-                                                      unsigned char raw_interrupt_num)
+void pci_controller::handle_translated_interrupt_slow(uint8_t interrupt_offset,
+                                                      uint8_t raw_interrupt_num)
 {
   KL_TRC_ENTRY;
 

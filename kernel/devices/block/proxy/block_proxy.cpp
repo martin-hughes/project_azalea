@@ -10,6 +10,13 @@
 #include "devices/block/proxy/block_proxy.h"
 #include "klib/klib.h"
 
+/// @brief Standard constructor
+///
+/// @param parent The block device this object is proxying.
+///
+/// @param start_block When proxying, assume block 0 of this object refers to start_block on the parent.
+///
+/// @param num_blocks How many blocks long is this proxy?
 block_proxy_device::block_proxy_device(IBlockDevice *parent, uint64_t start_block, uint64_t num_blocks) :
     IBlockDevice("Generic block device"), _parent(parent), _start_block(start_block), _num_blocks(num_blocks)
 {

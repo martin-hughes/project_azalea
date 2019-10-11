@@ -8,6 +8,9 @@
 
 #include <stdio.h>
 
+/// @brief Standard constructor
+///
+/// @param parent The proc_fs_root_branch that contains all the proc branches.
 proc_fs_root_branch::proc_fs_zero_proxy_branch::proc_fs_zero_proxy_branch(std::shared_ptr<proc_fs_root_branch> parent):
   _parent(std::weak_ptr<proc_fs_root_branch>(parent))
 {
@@ -42,6 +45,9 @@ ERR_CODE proc_fs_root_branch::proc_fs_zero_proxy_branch::delete_child(const kl_s
   return this->get_current_proc_branch()->delete_child(name);
 }
 
+/// @brief Return the branch corresponding to the current process.
+///
+/// @return The branch corresponding to the current process.
 std::shared_ptr<ISystemTreeBranch> proc_fs_root_branch::proc_fs_zero_proxy_branch::get_current_proc_branch()
 {
   std::shared_ptr<ISystemTreeLeaf> leaf;

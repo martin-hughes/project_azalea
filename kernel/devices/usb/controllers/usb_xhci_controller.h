@@ -46,10 +46,10 @@ namespace usb { namespace xhci
     controller(pci_address address);
     virtual ~controller();
 
-    virtual bool handle_translated_interrupt_fast(unsigned char interrupt_offset,
-                                                  unsigned char raw_interrupt_num) override;
-    virtual void handle_translated_interrupt_slow(unsigned char interrupt_offset,
-                                                  unsigned char raw_interrupt_num) override;
+    virtual bool handle_translated_interrupt_fast(uint8_t interrupt_offset,
+                                                  uint8_t raw_interrupt_num) override;
+    virtual void handle_translated_interrupt_slow(uint8_t interrupt_offset,
+                                                  uint8_t raw_interrupt_num) override;
 
     bool start();
     bool stop(bool force = false);

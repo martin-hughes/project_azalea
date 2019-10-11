@@ -192,7 +192,7 @@ protected:
   prd_table_entry *prd_table{nullptr}; ///< PRD table for DMA transfers
   uint16_t num_prd_table_entries{0}; ///< Number of entries in PRD table for this transfer.
   bool dma_transfer_is_read{false}; ///< Is the next DMA operation a read (true) or write (false)?
-  uint16_t dma_transfer_drive_idx{0};
+  uint16_t dma_transfer_drive_idx{0}; ///< The index of the drive the DMA transfer will occur on.
   volatile bool interrupt_on_chan[MAX_CHANNEL]{false, false}; ///< An interrupt has occurred on the given channel.
   /// Stores extra information about transfers.
   ///
@@ -233,10 +233,10 @@ protected:
   bool continue_with_dma_setup();
 
   // Overrides of pci_generic_device:
-  virtual bool handle_translated_interrupt_fast(unsigned char interrupt_offset,
-                                                unsigned char raw_interrupt_num) override;
-  virtual void handle_translated_interrupt_slow(unsigned char interrupt_offset,
-                                                unsigned char raw_interrupt_num) override;
+  virtual bool handle_translated_interrupt_fast(uint8_t interrupt_offset,
+                                                uint8_t raw_interrupt_num) override;
+  virtual void handle_translated_interrupt_slow(uint8_t interrupt_offset,
+                                                uint8_t raw_interrupt_num) override;
 
   // Bus master control
   void write_prd_table_addr(uint32_t address, uint16_t channel);

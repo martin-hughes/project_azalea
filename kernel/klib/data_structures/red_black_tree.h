@@ -63,6 +63,8 @@ protected:
     /// @brief Is this a black node? True if black, false if red.
     bool is_black;
   };
+
+  /// @brief Straightforward typedef of the node for this tree.
   typedef kl_rb_tree_node<key_type, value_type> tree_node;
 
   /// @brief The root of this node.
@@ -301,6 +303,11 @@ public:
     return result->value;
   }
 
+  /// @brief Return the key associated with the root node.
+  ///
+  /// @param[out] out If there is a root node, this will contain the key after the function returns.
+  ///
+  /// @return true if the root node exists and out is now valid. False otherwise, in which case out is not valid.
   bool get_root_node_key(key_type &out)
   {
     if (root != nullptr)
