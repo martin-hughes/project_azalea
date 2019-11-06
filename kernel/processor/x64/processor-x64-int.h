@@ -38,8 +38,3 @@ extern uint8_t interrupt_descriptor_table[NUM_INTERRUPTS * IDT_ENTRY_LEN];
 void proc_mp_x64_signal_proc(uint32_t proc_id, PROC_IPI_MSGS msg);
 extern "C" void proc_mp_x64_receive_signal_int();
 extern "C" void proc_mp_ap_startup();
-
-// Helper functions
-void *proc_x64_allocate_stack();
-void proc_x64_deallocate_stack(void *stack_ptr);
-

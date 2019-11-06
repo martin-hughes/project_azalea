@@ -1,10 +1,6 @@
 /// @file
 /// @brief x64-specific part of the task manager
 
-// Known defects:
-// - proc_x64_allocate_stack and task_int_allocate_user_mode_stack have different names and act differently. One
-//   provides a valid stack pointer, the other merely provides a page to put the stack in.
-
 //#define ENABLE_TRACING
 
 #include "klib/klib.h"
@@ -29,10 +25,6 @@ namespace
 
   // Setting one const equal to another of a different size seems to confuse the linker...!
   const uint32_t TM_INTERRUPT_NUM = 32; //(const uint32_t) PROC_IRQ_BASE;
-
-  const uint64_t DEF_USER_MODE_STACK_PAGE = 0x000000000F000000;
-
-  void *task_int_allocate_user_mode_stack(task_process *proc);
 }
 
 /// @brief Create a new x64 execution context
@@ -51,8 +43,7 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
   task_process *parent_process;
   mem_process_info *memmgr_data;
   process_x64_data *memmgr_x64_data;
-  void *physical_backing = nullptr;
-  uint64_t stack_long;
+  uint64_t stack_long{0};
 
   KL_TRC_ENTRY;
 
@@ -95,7 +86,7 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
   new_context->gs_base = 0;
 
   new_context->owner_thread = new_thread;
-  new_context->syscall_stack = proc_x64_allocate_stack();
+  new_context->syscall_stack = proc_allocate_stack(true);
   new_context->orig_syscall_stack = new_context->syscall_stack;
 
   if (parent_process->kernel_mode)
@@ -108,7 +99,7 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
 
     // The stack is allocated and made ready to use by proc_x64_allocate_stack(). The allocated stacks are 16-byte
     /// aligned. We deliberately offset a further 8 bytes. This is to simulate a `call` instruction to `entry_point`.
-    stack_long = reinterpret_cast<uint64_t>(proc_x64_allocate_stack());
+    stack_long = reinterpret_cast<uint64_t>(proc_allocate_stack(true));
     new_context->saved_stack.proc_rsp = stack_long - 8;
 
     KL_TRC_TRACE(TRC_LVL::EXTRA, "Stack pointer:", new_context->saved_stack.proc_rsp, "\n");
@@ -120,11 +111,8 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
     new_context->saved_stack.proc_cs = DEF_CS_USER + 3;
     new_context->saved_stack.proc_ss = DEF_SS_USER + 3;
 
-    // Note the discrepancy in behaviour between proc_x64_allocate_stack() and task_int_allocate_user_mode_stack() -
-    // the former provides a valid stack pointer near the end of the page, the latter simply a pointer to the beginning
-    // of a page where the stack can be put.
     new_context->saved_stack.proc_rsp =
-      reinterpret_cast<uint64_t>(task_int_allocate_user_mode_stack(parent_process));
+      reinterpret_cast<uint64_t>(proc_allocate_stack(false, parent_process));
 
     if (new_context->saved_stack.proc_rsp == 0)
     {
@@ -134,14 +122,8 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
     }
     else
     {
-      // We still need to make a page mapping so the stack can be used.
-      physical_backing = mem_allocate_physical_pages(1);
-      mem_map_range(physical_backing, reinterpret_cast<void *>(new_context->saved_stack.proc_rsp), 1, parent_process);
-      KL_TRC_TRACE(TRC_LVL::EXTRA, "Physical backing page: ", physical_backing, "\n");
-
-      // Finally, don't forget that task_int_allocate_user_mode_stack() hasn't actually provided a useful stack
-      // pointer. Note how this is the same offset by the same 8 bytes as described for the kernel mode stack.
-      new_context->saved_stack.proc_rsp += (MEM_PAGE_SIZE - 24);
+      // Finally, apply the same offset by the same 8 bytes as described for the kernel mode stack.
+      new_context->saved_stack.proc_rsp -= 8;
 
       KL_TRC_TRACE(TRC_LVL::EXTRA, "Stack pointer:", new_context->saved_stack.proc_rsp, "\n");
     }
@@ -163,12 +145,12 @@ void task_int_delete_exec_context(task_thread *old_thread)
 
   task_x64_exec_context *old_context = reinterpret_cast<task_x64_exec_context *>(old_thread->execution_context);
 
-  proc_x64_deallocate_stack(old_context->orig_syscall_stack);
+  proc_deallocate_stack(old_context->orig_syscall_stack);
 
   if (old_thread->parent_process->kernel_mode)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Deallocated kernel stack\n");
-    proc_x64_deallocate_stack(reinterpret_cast<void *>(old_context->saved_stack.proc_rsp));
+    proc_deallocate_stack(reinterpret_cast<void *>(old_context->saved_stack.proc_rsp));
   }
 
   delete old_context;
@@ -370,31 +352,11 @@ task_thread *task_get_cur_thread()
   return ret_thread;
 }
 
-namespace
-{
-  /// @brief Allocate a stack page in the process's address space.
-  ///
-  /// Start with a default stack, and then if that is already taken, move downwards through the address space looking for
-  /// space to put a new stack.
-  ///
-  /// @param proc The process to allocate new stack space in
-  ///
-  /// @return The user space pointer to a new stack page.
-  void *task_int_allocate_user_mode_stack(task_process *proc)
-  {
-    KL_TRC_ENTRY;
 
-    uint64_t stack_addr = DEF_USER_MODE_STACK_PAGE;
-    const uint64_t double_page = MEM_PAGE_SIZE * 2;
-    while (mem_get_phys_addr(reinterpret_cast<void *>(stack_addr), proc) != nullptr)
-    {
-      stack_addr -= double_page;
-    }
-    mem_vmm_allocate_specific_range(stack_addr, 1, proc);
 
-    KL_TRC_TRACE(TRC_LVL::EXTRA, "Stack address: ", stack_addr, "\n");
-    KL_TRC_EXIT;
 
-    return reinterpret_cast<void *>(stack_addr);
-  }
-}
+
+
+
+
+

@@ -1,8 +1,7 @@
 /// @file
 /// @brief Main processor control interface.
 
-#ifndef PROCESSOR_H_
-#define PROCESSOR_H_
+#pragma once
 
 #include <stdint.h>
 
@@ -238,8 +237,10 @@ void proc_unregister_interrupt_handler(uint8_t interrupt_number, IInterruptRecei
 
 bool proc_request_interrupt_block(uint8_t num_interrupts, uint8_t &start_vector);
 
+// Stack control functions
+void *proc_allocate_stack(bool kernel_mode, task_process *proc = nullptr);
+void proc_deallocate_stack(void *stack_ptr);
+
 #ifdef AZALEA_TEST_CODE
 void test_only_reset_task_mgr();
 #endif
-
-#endif /* PROCESSOR_H_ */

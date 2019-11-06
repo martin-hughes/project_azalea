@@ -158,40 +158,6 @@ void proc_write_msr(PROC_X64_MSRS msr, uint64_t value)
   KL_TRC_EXIT;
 }
 
-/// @brief Allocate a single-page stack to the kernel.
-///
-/// @return An address that can be used as a stack pointer, growing downwards as far as the next page boundary. Values
-///         are 16-byte aligned.
-void *proc_x64_allocate_stack()
-{
-  KL_TRC_ENTRY;
-
-  void *new_stack = kmalloc(MEM_PAGE_SIZE);
-  new_stack = reinterpret_cast<void *>(reinterpret_cast<uint64_t>(new_stack) + MEM_PAGE_SIZE - 16);
-  ASSERT((reinterpret_cast<uint64_t>(new_stack) & 0x0F) == 0);
-
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Issuing new stack", reinterpret_cast<uint64_t>(new_stack), "\n");
-
-  KL_TRC_EXIT;
-
-  return new_stack;
-}
-
-/// @brief Deallocate a previously allocated single page stack.
-///
-/// @param stack_ptr Pointer to any place in the stack to deallocate.
-void proc_x64_deallocate_stack(void *stack_ptr)
-{
-  KL_TRC_ENTRY;
-
-  uint64_t stack_page_addr = reinterpret_cast<uint64_t>(stack_ptr);
-  stack_page_addr -= (stack_page_addr % MEM_PAGE_SIZE);
-
-  kfree(reinterpret_cast<void *>(stack_page_addr));
-
-  KL_TRC_EXIT;
-}
-
 /// @brief Generate the contents of the MSI address register for PCI MSIs
 ///
 /// This value can then be used in the PCI MSI capabilities register. At present, no attempt is made to support any of

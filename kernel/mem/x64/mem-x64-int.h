@@ -60,8 +60,6 @@ void mem_x64_pml4_deallocate(process_x64_data &proc_data);
 void mem_x64_pml4_synchronize(void *updated_pml4_table);
 uint64_t *get_pml4_table_addr(task_process *context = nullptr);
 
-extern void *mem_x64_kernel_stack_ptr;
-
 // x64 Cache control declarations
 
 // Note the mapping between these and MEM_CACHE_MODES - the latter is meant to be platform independent, but at the

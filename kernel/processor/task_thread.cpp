@@ -1,9 +1,6 @@
 /// @file
 /// @brief Task management code specific to threads.
 
-// Known defects:
-// - Does destroying a kernel-mode thread delete the stack associated with it?
-
 //#define ENABLE_TRACING
 
 #include "klib/klib.h"

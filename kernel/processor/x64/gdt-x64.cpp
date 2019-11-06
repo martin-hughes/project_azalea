@@ -69,9 +69,9 @@ void proc_recreate_gdt(uint32_t num_procs)
   {
     offset = proc_calc_tss_desc_offset(i);
     proc_generate_tss(&system_gdt[offset],
-                      proc_x64_allocate_stack(),
-                      proc_x64_allocate_stack(),
-                      proc_x64_allocate_stack());
+                      proc_allocate_stack(true),
+                      proc_allocate_stack(true),
+                      proc_allocate_stack(true));
   }
 
   proc_gdt_populate_pointer(main_gdt_pointer, reinterpret_cast<uint64_t>(system_gdt), length_of_gdt);
@@ -132,7 +132,12 @@ void proc_init_tss()
 {
   KL_TRC_ENTRY;
 
-  proc_generate_tss(tss_gdt_entry,  mem_x64_kernel_stack_ptr, nullptr, nullptr);
+  // Generate an empty TSS to load with the GDT. This looks a bit odd, however we need a TSS already but the stack
+  // pointers aren't relevant until interrupts are enabled.
+  //
+  // Interrupts are enabled after we've determined the number of processors in the machine in the MP code, at which
+  // point TSSs are generated for all processors in the machine. Stacks are allocated at that time.
+  proc_generate_tss(tss_gdt_entry,  nullptr, nullptr, nullptr);
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "About to load TSS\n");
   asm_proc_load_gdt();

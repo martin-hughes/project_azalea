@@ -28,10 +28,6 @@ process_x64_data task0_x64_entry; ///< x64-specific memory information for the k
 extern "C" uint64_t *working_table_va_entry_addr;
 uint64_t *working_table_va_entry_addr;
 
-/// This pointer is the virtual address of the kernel stack. Its physical address will be different in every process,
-/// but its virtual address will always be the same (so it can be filled in to the x64 TSS).
-void *mem_x64_kernel_stack_ptr;
-
 namespace
 {
   /// This mask represents the bits that are valid in a physical address - i.e., limited by MAXPHYADDR. See the Intel
@@ -104,13 +100,6 @@ void mem_gen_init(e820_pointer *e820_ptr)
 
   next_4kb_page = nullptr;
   working_table_va_mapped = false;
-
-  // Allocate a virtual address that is used for the kernel stack in all processes.
-  mem_x64_kernel_stack_ptr = mem_allocate_virtual_range(1);
-
-  // At the minute, all process actually just use the same stack, so back that up with a physical page.
-  mem_x64_map_virtual_page(reinterpret_cast<uint64_t>(mem_x64_kernel_stack_ptr),
-                           reinterpret_cast<uint64_t>(mem_allocate_physical_pages(1)));
 
   KL_TRC_EXIT;
 }
