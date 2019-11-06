@@ -1,4 +1,5 @@
-// Kernel's main timing system.
+/// @file
+/// @brief Kernel's main timing system.
 
 #include "processor/timing/timing.h"
 #include "processor/timing/timing-int.h"

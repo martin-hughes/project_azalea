@@ -1,5 +1,7 @@
-#ifndef ST_FS_FAT_HEADER
-#define ST_FS_FAT_HEADER
+/// @file
+/// @brief Declares FAT filesystem handling objects.
+
+#pragma once
 
 #include "klib/klib.h"
 
@@ -179,5 +181,3 @@ protected:
   // Misc
   std::shared_ptr<fat_folder> &get_root_directory();
 };
-
-#endif

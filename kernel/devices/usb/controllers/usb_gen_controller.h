@@ -1,3 +1,6 @@
+/// @file
+/// @brief Define a generic USB host controller.
+
 #pragma once
 
 #include "devices/device_interface.h"

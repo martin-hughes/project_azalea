@@ -1,4 +1,7 @@
-// KLib Kernel tracing library. In the live version of the kernel, these will do nothing.
+/// @file
+/// @brief KLib Kernel tracing library.
+///
+/// In the release version of the kernel, these will probably do nothing.
 
 #include "tracing.h"
 
@@ -8,6 +11,9 @@
 // - KL_TRACE_BY_SERIAL_PORT - traces to COM1
 // - KL_TRACE_BY_STDOUT - traces to stdout. Given that stdout doesn't really exist in the kernel environment it should
 //   be fairly easy to understand that this only works in the test code!
+
+// None of these functions are documented because they're reasonable self-explanatory.
+/// @cond
 
 #include "processor/x64/processor-x64-int.h"
 
@@ -121,3 +127,5 @@ void kl_trc_output_err_code_argument(ERR_CODE ec)
     kl_trc_output_int_argument((uint64_t)(ec));
   }
 }
+
+/// @endcond

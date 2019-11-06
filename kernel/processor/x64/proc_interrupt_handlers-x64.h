@@ -1,6 +1,12 @@
+/// @file
+/// @brief Declare assembly language interrupt handlers.
+///
+/// There isn't much benefit to describing these in detail, so they are not documented further.
 #pragma once
 
 #include <stdint.h>
+
+/// @cond
 
 // Specialised interrupt handlers:
 extern "C" void asm_proc_page_fault_handler();
@@ -321,3 +327,5 @@ extern "C" void asm_proc_interrupt_252_handler();
 extern "C" void asm_proc_interrupt_253_handler();
 extern "C" void asm_proc_interrupt_254_handler();
 extern "C" void asm_proc_interrupt_255_handler();
+
+/// @endcond

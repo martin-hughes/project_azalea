@@ -1,7 +1,7 @@
-#ifndef PROCESSOR_INTERNAL_H
-#define PROCESSOR_INTERNAL_H
+/// @file
+/// @brief Declarations internal to the processor/task-manager library.
 
-// Declarations internal to the processor/task-manager library.
+#pragma once
 
 #include <stdint.h>
 #include "processor.h"
@@ -133,6 +133,8 @@ void task_thread_cycle_lock();
 void task_thread_cycle_unlock();
 void task_idle_thread_cycle();
 
+// These are documented elsewhere
+/// @cond
 extern const uint16_t PROC_NUM_INTERRUPTS;
 extern const uint16_t PROC_IRQ_BASE;
 extern const uint16_t PROC_NUM_IRQS;
@@ -140,5 +142,4 @@ extern const uint16_t PROC_NUM_IRQS;
 extern proc_interrupt_data proc_interrupt_data_table[];
 
 extern klib_list<std::shared_ptr<task_thread>> dead_thread_list;
-
-#endif
+/// @endcond

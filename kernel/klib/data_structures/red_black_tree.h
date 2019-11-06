@@ -14,8 +14,7 @@
 /// 4. If a node is red, then both its children are black.
 /// 5. Every path from a given node to any of its descendant leaf nodes contains the same number of black nodes.
 
-#ifndef __RED_BLACK_TREE_H
-#define __RED_BLACK_TREE_H
+#pragma once
 
 #include <stdint.h>
 
@@ -951,5 +950,3 @@ protected:
     }
   }
 };
-
-#endif

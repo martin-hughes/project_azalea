@@ -1,5 +1,5 @@
+/// @file
 /// @brief Implementation of the per-process parts of a 'proc'-like filesystem.
-///
 
 //#define ENABLE_TRACING
 

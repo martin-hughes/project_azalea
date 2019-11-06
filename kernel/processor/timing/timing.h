@@ -1,6 +1,8 @@
 /// @file
 /// @brief Declare timing related functionality.
 
+#pragma once
+
 #include <stdint.h>
 #include <memory>
 #include "user_interfaces/kernel_types.h"

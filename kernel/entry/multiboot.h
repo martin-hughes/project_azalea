@@ -1,5 +1,7 @@
-#ifndef MULTIBOOT_HDR
-#define MULTIBOOT_HDR
+/// @file
+/// @brief Constants and structures to help with multiboot
+
+#pragma once
 
 const unsigned int MULTIBOOT_CONSTANT = 0x2BADB002; ///< Constant indicating a multiboot kernel.
 
@@ -64,5 +66,3 @@ struct multiboot_hdr
 } __attribute__((packed));
 
 static_assert(sizeof(multiboot_hdr) == 116, "Multiboot header size wrong");
-
-#endif

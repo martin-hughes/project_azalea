@@ -1,3 +1,6 @@
+/// @file
+/// @brief Declare types to handle TRB rings in xHCI controllers.
+
 #pragma once
 
 #include "devices/usb/controllers/usb_xhci_register_types.h"

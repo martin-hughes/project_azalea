@@ -1,3 +1,4 @@
+/// @file
 /// @brief Implements a simple branch proxy.
 ///
 /// This proxy forwards all requests to the branch referring to the current process.

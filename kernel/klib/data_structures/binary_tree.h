@@ -4,8 +4,7 @@
 /// kl_binary_tree provides a simple implementation of a binary search tree. It is not as capable as the standard C++
 /// library ones, but it introduces no external dependencies.
 
-#ifndef __BINARY_TREE_H
-#define __BINARY_TREE_H
+#pragma once
 
 #include "klib/tracing/tracing.h"
 #include "klib/panic/panic.h"
@@ -408,5 +407,3 @@ protected:
     return true;
   }
 };
-
-#endif

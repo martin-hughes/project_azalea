@@ -1,3 +1,7 @@
+/** @file
+ *  @brief Main Azalea kernel system call interface
+ */
+
 #ifndef __AZALEA_SYSCALL_USER_H
 #define __AZALEA_SYSCALL_USER_H
 
@@ -85,8 +89,10 @@ ERR_CODE syscall_unmap_memory();
 
 /* Thread synchronization */
 ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle);
+/** @cond */
 ERR_CODE syscall_futex_wait(volatile int32_t *futex, int32_t req_value);
 ERR_CODE syscall_futex_wake(volatile int32_t *futex);
+/** @endcond */
 
 /* Timing */
 ERR_CODE syscall_get_system_clock(struct time_expanded *buffer);

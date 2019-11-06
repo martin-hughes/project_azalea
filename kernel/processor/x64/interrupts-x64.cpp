@@ -1,4 +1,5 @@
-// x64-specific interrupt handling code.
+/// @file
+/// @brief x64-specific interrupt handling code.
 
 //#define ENABLE_TRACING
 
@@ -10,20 +11,29 @@
 #include "processor/x64/proc_interrupt_handlers-x64.h"
 #include "processor/x64/pic/pic.h"
 
+/// Storage for the system IDT.
+///
 uint8_t interrupt_descriptor_table[NUM_INTERRUPTS * IDT_ENTRY_LEN];
+
+/// @brief Function to be called when an IRQ has been handled.
+///
 void *end_of_irq_ack_fn = (void *)asm_proc_legacy_pic_irq_ack;
 
-// How many interrupts does this system support?
+/// @brief How many interrupts does this system support?
+///
 const uint16_t PROC_NUM_INTERRUPTS = 256;
 
-// How many interrupts are given over to IRQs?
+/// @brief How many interrupts are given over to IRQs?
+///
 const uint16_t PROC_NUM_IRQS = 16;
 
-// The IRQ handlers are in a contiguous batch starting at which interrupt number?
+/// @brief The IRQ handlers are in a contiguous batch starting at which interrupt number?
+///
 const uint16_t PROC_IRQ_BASE = 32;
 
-// Generic information about interrupt handlers. Some handlers are processor-specific, in which case they are marked in
-// this table as reserved.
+/// @brief Generic information about interrupt handlers.
+///
+/// Some handlers are processor-specific, in which case they are marked in this table as reserved.
 proc_interrupt_data proc_interrupt_data_table[PROC_NUM_INTERRUPTS];
 
 namespace

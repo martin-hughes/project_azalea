@@ -1,3 +1,4 @@
+/// @file
 /// @brief A simple block device proxy
 ///
 /// This device is intended to provide a simple way to restrict access by the user to a subset of a parent block

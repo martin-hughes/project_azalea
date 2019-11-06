@@ -1,6 +1,8 @@
-// Main include for Project Azalea Kernel Support Library - 'klib'
-//
-// klib provides processor-agnostic helper functions that will be used throughout the kernel.
+/// @file
+/// @brief Main include for Project Azalea Kernel Support Library - 'klib'
+///
+/// klib provides processor-agnostic helper functions that will be used throughout the kernel.
+
 #pragma once
 
 // For the time being, map _DEBUG to KLIB_DEBUG. There's no actual need for this to be fixed.

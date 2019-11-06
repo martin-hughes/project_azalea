@@ -1,5 +1,7 @@
-#ifndef __OBJECT_MGR_H
-#define __OBJECT_MGR_H
+/// @file
+/// @brief Declare the object_manager class
+
+#pragma once
 
 #include "handles.h"
 #include "object_type.h"
@@ -33,5 +35,3 @@ private:
 
   std::shared_ptr<object_data> int_retrieve_object(GEN_HANDLE handle);
 };
-
-#endif

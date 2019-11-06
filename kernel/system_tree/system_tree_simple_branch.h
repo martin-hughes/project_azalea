@@ -1,5 +1,7 @@
-#ifndef __SYSTEM_TREE_SIMPLE_BRANCH_H
-#define __SYSTEM_TREE_SIMPLE_BRANCH_H
+/// @file
+/// @brief Declare a simple system tree branch that tracks its children in a straightforward way.
+
+#pragma once
 
 #include "klib/klib.h"
 #include "system_tree/system_tree_branch.h"
@@ -51,5 +53,3 @@ protected:
   /// @return The branch object, if name represents a branch. False otherwise.
   virtual std::shared_ptr<ISystemTreeBranch> get_child_branch(const kl_string &name);
 };
-
-#endif

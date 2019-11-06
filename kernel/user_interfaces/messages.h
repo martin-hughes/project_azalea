@@ -1,11 +1,15 @@
+/** @file
+ *  @brief Message passing interface helpers
+ */
+
 #ifndef __USER_INTFACE_MESSAGES_H
 #define __USER_INTFACE_MESSAGES_H
 
 #include "./keyboard.h"
 
 /* System-defined message IDs: */
-const uint64_t SM_KEYDOWN = 1;
-const uint64_t SM_KEYUP = 2;
+const uint64_t SM_KEYDOWN = 1; /**< Signals a key has been pressed */
+const uint64_t SM_KEYUP = 2; /**< Signals a key has been released */
 
 /* System message structures */
 

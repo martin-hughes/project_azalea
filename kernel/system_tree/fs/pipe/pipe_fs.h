@@ -1,5 +1,7 @@
-#ifndef ST_FS_PIPE_HEADER
-#define ST_FS_PIPE_HEADER
+/// @file
+/// @brief Declares pipes for use in the filesystem
+
+#pragma once
 
 #include "klib/klib.h"
 
@@ -72,5 +74,3 @@ protected:
 
   kernel_spinlock _pipe_lock; ///< Synchronises reads and writes so only one occurs at a time.
 };
-
-#endif

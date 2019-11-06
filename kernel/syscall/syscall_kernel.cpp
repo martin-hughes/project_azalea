@@ -1,4 +1,5 @@
-// The kernel's system call interface, on the kernel side.
+/// @file
+/// @brief The kernel's system call table and a couple of generic system calls.
 
 //#define ENABLE_TRACING
 
@@ -15,6 +16,8 @@
 #include <cstring>
 
 // The indicies of the pointers in this table MUST match the indicies given in syscall_user_low-x64.asm!
+/// @brief Main system call table.
+///
 const void *syscall_pointers[] =
     { (void *)syscall_debug_output,
 
@@ -69,8 +72,18 @@ const void *syscall_pointers[] =
       (void *)syscall_seek_handle,
     };
 
+/// @brief The number of known system calls.
+///
 const uint64_t syscall_max_idx = (sizeof(syscall_pointers) / sizeof(void *)) - 1;
 
+/// @brief Is addr a user-mode address or not?
+///
+/// User mode addresses are those in the lower half of the address space. Kernel mode addresses are in the upper half.
+/// Kernel mode addresses are restricted to kernel mode accesses only.
+///
+/// @param addr The address to check.
+///
+/// @return True if addr is user-mode, false otherwise.
 bool syscall_is_um_address(const void *addr)
 {
   uint64_t addr_l = reinterpret_cast<uint64_t>(addr);

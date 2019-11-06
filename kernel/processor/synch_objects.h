@@ -1,5 +1,5 @@
 /// @file
-/// @brief A
+/// @brief An object that can be waited on, which blocks execution until signalled.
 
 #pragma once
 

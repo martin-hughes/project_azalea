@@ -1,5 +1,7 @@
-#ifndef __SYSTEM_TREE_LEAF_INTERFACE_H
-#define __SYSTEM_TREE_LEAF_INTERFACE_H
+/// @file
+/// @brief Declare system tree leaves
+
+#pragma once
 
 #include <stdint.h>
 #include "object_mgr/handled_obj.h"
@@ -14,5 +16,3 @@ public:
   virtual ~ISystemTreeLeaf() {};
 
 };
-
-#endif

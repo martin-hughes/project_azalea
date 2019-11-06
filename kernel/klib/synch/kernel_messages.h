@@ -4,8 +4,7 @@
 // Known defects:
 // - klib_message_hdr::originating_process may be stale when used. Should be shared_ptr?
 
-#ifndef KLIB_MSG_PASSING
-#define KLIB_MSG_PASSING
+#pragma once
 
 #include <stdint.h>
 
@@ -64,6 +63,4 @@ ERR_CODE msg_broadcast_msg();*/
 
 #ifdef AZALEA_TEST_CODE
 void test_only_reset_message_system();
-#endif
-
 #endif

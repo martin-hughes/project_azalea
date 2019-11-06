@@ -1,3 +1,6 @@
+/// @file
+/// @brief Declares an in memory temporary file system.
+
 #pragma once
 
 #include "klib/klib.h"

@@ -1,4 +1,5 @@
-// Interface to the HPET.
+/// @file
+/// @brief Interface to the HPET.
 
 //#define ENABLE_TRACING
 
@@ -12,6 +13,9 @@ extern "C"
 #endif
 }
 
+/// @brief The system's HPET configuration
+///
+/// We assume only one HPET per system.
 hpet_hardware_cfg_block *hpet_config = nullptr;
 
 void time_hpet_set_flag(uint64_t &hpet_reg, const uint64_t flag);

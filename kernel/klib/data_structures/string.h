@@ -1,5 +1,7 @@
-#ifndef KL_STRING_H
-#define KL_STRING_H
+/// @file
+/// @brief A simple string class for use in the kernel.
+
+#pragma once
 
 #include <stdint.h>
 
@@ -202,5 +204,3 @@ protected:
   /// @param s The string to move in to this one.
   void move_kl_string(kl_string &s);
 };
-
-#endif

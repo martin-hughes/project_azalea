@@ -1,4 +1,5 @@
-// KLib Message Passing functions
+/// @file
+/// @brief KLib Message Passing functions
 
 #include "klib/klib.h"
 

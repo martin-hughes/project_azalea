@@ -1,4 +1,5 @@
-///@brief Instantiate two required allocator templates.
+/// @file
+/// @brief Instantiate two required allocator templates.
 
 #include <memory>
 

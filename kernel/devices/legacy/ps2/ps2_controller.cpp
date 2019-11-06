@@ -1,3 +1,4 @@
+/// @file
 /// @brief A simple PS/2 controller driver. PS/2 connected devices are dealt with separately.
 
 // Known issues:

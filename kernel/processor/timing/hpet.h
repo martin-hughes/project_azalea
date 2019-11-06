@@ -1,5 +1,7 @@
-#ifndef __HPET_H
-#define __HPET_H
+/// @file
+/// @brief HPET structures and functions
+
+#pragma once
 
 #include <stdint.h>
 
@@ -106,5 +108,3 @@ const uint64_t hpet_tmr_fsb_int_cap = (1 << 15);
 const uint64_t max_period_fs = 0x05F5E100;
 
 /// @endcond
-
-#endif

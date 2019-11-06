@@ -1,8 +1,6 @@
-#ifndef SYSCALL_KERNEL_H
-#define SYSCALL_KERNEL_H
+/// @file
+/// @brief The kernel's interface to manage its syscall interface.
 
-// The kernel's interface to manage its syscall interface.
+#pragma once
 
 void syscall_gen_init();
-
-#endif

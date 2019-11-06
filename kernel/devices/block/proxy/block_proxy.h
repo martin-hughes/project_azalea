@@ -1,5 +1,7 @@
-#ifndef DEVICE_BLOCK_PROXY_HEADER
-#define DEVICE_BLOCK_PROXY_HEADER
+/// @file
+/// @brief Declare a proxy wrapper for block devices
+
+#pragma once
 
 #include "devices/block/block_interface.h"
 #include "user_interfaces/error_codes.h"
@@ -34,5 +36,3 @@ protected:
   const uint64_t _start_block; ///< Which block does this device offset from.
   const uint64_t _num_blocks; ///< How many blocks are in this proxy?
 };
-
-#endif

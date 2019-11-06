@@ -1,5 +1,5 @@
 /// @file
-/// @brief
+/// @brief Define the common interface for all block devices
 
 #pragma once
 

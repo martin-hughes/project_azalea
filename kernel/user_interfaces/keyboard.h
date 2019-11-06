@@ -1,3 +1,7 @@
+/** @file
+ *  @brief Declare key codes and control structures used by keyboards in Azalea
+ */
+
 #ifndef __USER_INTFACE_KEYBOARD_H
 #define __USER_INTFACE_KEYBOARD_H
 

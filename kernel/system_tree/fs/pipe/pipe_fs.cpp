@@ -1,3 +1,4 @@
+/// @file
 /// @brief Implementation of pipes for use in IPC.
 
 //#define ENABLE_TRACING

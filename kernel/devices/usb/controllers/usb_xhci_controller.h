@@ -1,3 +1,6 @@
+/// @file
+/// @brief Define a generic xHCI controller.
+
 #pragma once
 
 #include "devices/usb/controllers/usb_gen_controller.h"

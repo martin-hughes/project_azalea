@@ -1,5 +1,7 @@
-#ifndef _KLIB_TRACING_H
-#define _KLIB_TRACING_H
+/// @file
+/// @brief Kernel tracing functions
+
+#pragma once
 
 #include <stdint.h>
 #include <type_traits>
@@ -7,6 +9,9 @@
 #include "user_interfaces/error_codes.h"
 
 //#define ENABLE_TRACING
+
+// None of these functions are documented because they're reasonable self-explanatory.
+/// @cond
 
 #ifdef KL_TRACE_INCLUDE_TID
 #include "pthread.h"
@@ -118,4 +123,4 @@ template<typename p> void kl_trc_output_arguments(p param)
   kl_trc_output_single_arg(param);
 }
 
-#endif
+/// @endcond

@@ -1,7 +1,6 @@
 /// @file
 /// @brief Declares a generic keyboard device.
 
-
 #pragma once
 
 #include <stdint.h>

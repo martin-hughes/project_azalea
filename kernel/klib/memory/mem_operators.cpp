@@ -1,3 +1,10 @@
+/// @file
+/// @brief Memory helper functions.
+///
+/// These are part of the normal specs, so are not documented further.
+
+/// @cond
+
 #include "memory.h"
 #include "klib/c_helpers/buffers.h"
 #include "klib/panic/panic.h"
@@ -109,3 +116,4 @@ void *__memalign(size_t align, size_t len)
 }
 
 #endif
+/// @endcond

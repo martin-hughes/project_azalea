@@ -1,5 +1,5 @@
-// Project Azalea Kernel
-// Main entry point.
+/// @file
+/// @brief Project Azalea Kernel - Main entry point.
 
 #define ENABLE_TRACING
 
@@ -50,7 +50,10 @@
 // - The mapping of a pipe leaf to the process stdout is sketchy, at best. It will be improved once a bit more work is
 //   done on loading processes.
 
+/// @cond
 extern "C" int main(unsigned int magic_number, multiboot_hdr *mb_header);
+/// @endcond
+
 void kernel_start() throw ();
 void setup_task_parameters(task_process *startup_proc);
 
@@ -58,15 +61,15 @@ void setup_task_parameters(task_process *startup_proc);
 // will cause these to become unused.
 std::shared_ptr<fat_filesystem> setup_initial_fs();
 // Some variables to support loading a filesystem.
-extern ata::generic_device *first_hdd;
+extern ata::generic_device *first_hdd; ///< First detected HDD (temporary variable)
 ata::generic_device *first_hdd{nullptr};
-gen_ps2_controller_device *ps2_controller;
+gen_ps2_controller_device *ps2_controller; ///< System PS/2 controller (temporary variable)
 
-std::shared_ptr<task_process> *system_process;
-std::shared_ptr<task_process> *kernel_start_process;
+std::shared_ptr<task_process> *system_process; ///< The process containing idle processes, etc.
+std::shared_ptr<task_process> *kernel_start_process; ///< Process running the kernel start procedure.
 
 extern task_process *term_proc;
-task_process *term_proc = nullptr;
+task_process *term_proc = nullptr; ///< Process running the main terminal (temporary variable)
 
 volatile bool wait_for_term; ///< Should the process looking at this variable wait for the terminal to initialise?
 
@@ -76,9 +79,18 @@ static_assert(sizeof(uint64_t) == sizeof(uintptr_t), "Code throughout assumes po
 // There are a few places to check before this assert can be removed - ACPI headers for example.
 static_assert(sizeof(unsigned long) == 8, "Unsigned long must be 8 bytes");
 
-// Main kernel entry point. This is called by an assembly-language loader that should do as little as possible. On x64,
-// this involves setting up a simple page mapping, since the kernel is linked higher-half but loaded at 1MB, then
-// kicking the task manager in to life.
+/// @brief Main kernel entry point.
+///
+/// This is called by an assembly-language loader that should do as little as possible. On x64, this involves setting
+/// up a simple page mapping, since the kernel is linked higher-half but loaded at 1MB, then kicking the task manager
+/// in to life.
+///
+/// @param magic_number This number should be set to MULTIBOOT_CONSTANT to indicate loading by a multiboot compliant
+///                     loader.
+///
+/// @param mb_header Header of the multiboot structure containing data passed by the bootloader.
+///
+/// @return This function should never return.
 int main(uint32_t magic_number, multiboot_hdr *mb_header)
 {
   // The kernel needs the information table provided by the multiboot loader in order to function properly.
@@ -128,9 +140,9 @@ int main(uint32_t magic_number, multiboot_hdr *mb_header)
   return (0);
 };
 
-void create_terminals();
-
-// Main kernel start procedure.
+/// @brief Main kernel start procedure.
+///
+/// Started when multi tasking has been enabled and continues the kernel start up procedure.
 void kernel_start() throw ()
 {
   KL_TRC_TRACE(TRC_LVL::FLOW,
@@ -248,7 +260,9 @@ void kernel_start() throw ()
   panic("System has 'shut down'");
 }
 
-// Configure the filesystem of the (presumed) boot device as part of System Tree.
+/// @brief Configure the filesystem of the (presumed) boot device as part of System Tree.
+///
+/// @return shared_ptr to the root of the initial file system.
 std::shared_ptr<fat_filesystem> setup_initial_fs()
 {
   KL_TRC_ENTRY;
@@ -283,11 +297,14 @@ std::shared_ptr<fat_filesystem> setup_initial_fs()
   return first_fs;
 }
 
-// Setup a plausible argc, argv and environ in startup_proc.
-// Let's go for:
-// argc = 2
-// argv = "initprog", "testparam"
-// environ = "OSTYPE=azalea"
+/// @brief Setup a plausible argc, argv and environ in startup_proc.
+///
+/// Let's go for:
+/// argc = 2
+/// argv = "initprog", "testparam"
+/// environ = "OSTYPE=azalea"
+///
+/// @param startup_proc The process to be treated like 'init' in Linux.
 void setup_task_parameters(task_process *startup_proc)
 {
   // The default user mode stack starts from this position - 16 and grows downwards, we put the task parameters above

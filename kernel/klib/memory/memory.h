@@ -1,5 +1,7 @@
-#ifndef _KLIB_MEMORY_H
-#define _KLIB_MEMORY_H
+/// @file
+/// @brief Kernel-specific memory handling functions
+
+#pragma once
 
 // If we're building the unit test program on Windows then add the Microsoft Debug Heap instrumentation to any source
 // file using KLib. This won't instrument *everything* - but it's close enough.
@@ -31,5 +33,3 @@ void test_only_reset_allocator();
 
 // Useful memory-related helper functions.
 void klib_mem_split_addr(uint64_t base_addr, uint64_t &page_addr, uint64_t &page_offset);
-
-#endif

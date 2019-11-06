@@ -1,5 +1,7 @@
-#ifndef __OBJECT_TYPE_H
-#define __OBJECT_TYPE_H
+/// @file
+/// @brief Declare types useful to the object manager.
+
+#pragma once
 
 #include "handled_obj.h"
 
@@ -29,5 +31,3 @@ struct object_data
     uint64_t seek_position{0}; ///< The current seek position of a file-like object.
   } data;
 };
-
-#endif

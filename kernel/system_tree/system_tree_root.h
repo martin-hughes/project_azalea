@@ -1,5 +1,7 @@
-#ifndef __SYSTEM_TREE_ROOT_H
-#define __SYSTEM_TREE_ROOT_H
+/// @file
+/// @brief Declare the root of the system tree.
+
+#pragma once
 
 #include "system_tree/system_tree_branch.h"
 #include "system_tree/system_tree_simple_branch.h"
@@ -20,5 +22,3 @@ private:
   /// Used to ensure that only one instance of the root of the tree exists at once.
   static uint32_t number_of_instances;
 };
-
-#endif

@@ -1,3 +1,6 @@
+/// @file
+/// @brief Defines scancode maps for PS/2 keyboards.
+
 #include "devices/generic/gen_keyboard.h"
 
 // The normal scan codes are those not prefixed by 0xE0. "Special" scan codes are those prefixed by 0xE0.

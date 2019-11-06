@@ -1,5 +1,7 @@
-#ifndef __SYSTEM_TREE_H
-#define __SYSTEM_TREE_H
+/// @file
+/// @brief Declare the System Tree.
+
+#pragma once
 
 #include "system_tree_branch.h"
 #include "system_tree_leaf.h"
@@ -10,5 +12,3 @@ system_tree_root *system_tree();
 
 // Test-only code
 void test_only_reset_system_tree();
-
-#endif

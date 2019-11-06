@@ -1,5 +1,7 @@
-#ifndef __SYSTEM_TREE_BRANCH_INTERFACE_H
-#define __SYSTEM_TREE_BRANCH_INTERFACE_H
+/// @file
+/// @brief Declare system tree branches
+
+#pragma once
 
 #include <stdint.h>
 #include <memory>
@@ -122,5 +124,3 @@ public:
     }
   }
 };
-
-#endif

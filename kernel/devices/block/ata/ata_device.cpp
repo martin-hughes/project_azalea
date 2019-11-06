@@ -1,3 +1,4 @@
+/// @file
 /// @brief Simple, generic ATA device driver
 //
 // Known defects:

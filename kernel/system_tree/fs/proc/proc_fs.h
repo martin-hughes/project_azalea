@@ -1,5 +1,7 @@
-#ifndef ST_FS_PROC_HEADER
-#define ST_FS_PROC_HEADER
+/// @file
+/// @brief Declare the 'proc' pseudo filesystem.
+
+#pragma once
 
 #include "klib/klib.h"
 
@@ -78,5 +80,3 @@ protected:
   /// This branch is given the name "0", and always refers to the current process.
   std::shared_ptr<proc_fs_zero_proxy_branch> _zero_proxy;
 };
-
-#endif

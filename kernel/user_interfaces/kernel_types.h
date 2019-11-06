@@ -1,3 +1,7 @@
+/** @file
+ *  @brief Declare types used in the Azalea kernel
+ */
+
 #ifndef _KLIB_KERNEL_TYPES
 #define _KLIB_KERNEL_TYPES
 
@@ -8,18 +12,25 @@
 #include <stdbool.h>
 #endif
 
+/**
+ * @brief Type used to represent handles
+ */
 typedef uint64_t GEN_HANDLE;
 
 /**
- *  @brief Identify which register to set when setting up thread-local storage.
+ * @brief Identify which register to set when setting up thread-local storage.
  */
 enum AZALEA_ENUM_CLASS TLS_REGISTERS_T
 {
-  FS = 1,
-  GS = 2,
+  FS = 1, /**< Set FS register */
+  GS = 2, /**< Set GS register */
 };
 
+/**
+ * @cond */
 AZALEA_RENAME_ENUM(TLS_REGISTERS);
+/**
+ * @endcond */
 
 /**
  * @brief Defines a time in Azalea format.
@@ -47,15 +58,22 @@ struct object_properties
   bool is_file; /**< Does the object expose a file-like interface? */
 };
 
+/**
+ * Defines where to start seeking from when seeking within a file
+ */
 enum AZALEA_ENUM_CLASS SEEK_OFFSET_T
 {
-  FROM_CUR = 0,
-  FROM_START = 1,
-  FROM_END = 2,
+  FROM_CUR = 0, /**< Seek as a number of bytes from the current position */
+  FROM_START = 1, /**< Seek as a number of bytes forward from the beginning of the file */
+  FROM_END = 2, /**< Seek as a number of bytes back from the end of the file */
 };
 
+/**
+ * @cond */
 AZALEA_RENAME_ENUM(SEEK_OFFSET);
+/**
+ * @endcond */
 
-#define H_CREATE_IF_NEW 1
+#define H_CREATE_IF_NEW 1 /**< If set, create a new file if it didn't already exist */
 
 #endif

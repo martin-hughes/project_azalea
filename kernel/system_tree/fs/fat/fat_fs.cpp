@@ -12,7 +12,6 @@
 //#define ENABLE_TRACING
 
 #include "fat_fs.h"
-#include "fat_internal.h"
 
 namespace
 {

@@ -1,5 +1,5 @@
+/// @file
 /// @brief Implementation of the root of a file system similar to 'proc' in Linux.
-///
 
 //#define ENABLE_TRACING
 

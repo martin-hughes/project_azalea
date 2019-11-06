@@ -1,3 +1,6 @@
+/// @file
+/// @brief Devices pseudo-filesystem.
+
 #pragma once
 
 #include "klib/klib.h"
