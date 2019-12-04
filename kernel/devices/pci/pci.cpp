@@ -15,6 +15,7 @@
 #include "devices/pci/pci_drivers.h"
 #include "processor/processor.h"
 
+#include "devices/device_monitor.h"
 #include "devices/usb/usb.h"
 #include "devices/block/ata/controller/ata_pci_controller.h"
 
@@ -275,9 +276,14 @@ void pci_write_raw_reg (uint8_t bus, uint8_t slot, uint8_t func, PCI_REGS reg, u
 ///
 /// @param func PCI device function number. Valid values are 0-7, inclusive.
 ///
+/// @param parent The parent device of this PCI device.
+///
 /// @return If a driver can be loaded for the device, a pci_generic_device-derived object that drives the device.
 ///         nullptr if no suitable driver was loaded. Most devices will load pci_generic_device if no driver is found.
-std::shared_ptr<pci_generic_device> pci_instantiate_device(uint8_t bus, uint8_t slot, uint8_t func)
+std::shared_ptr<pci_generic_device> pci_instantiate_device(uint8_t bus,
+                                                           uint8_t slot,
+                                                           uint8_t func,
+                                                           std::shared_ptr<IDevice> parent)
 {
   pci_reg_0 dev_reg0;
   pci_reg_2 dev_reg2;
@@ -313,7 +319,17 @@ std::shared_ptr<pci_generic_device> pci_instantiate_device(uint8_t bus, uint8_t 
       {
         case PCI_SUBCLASS::IDE_CONTR:
           KL_TRC_TRACE(TRC_LVL::FLOW, "IDE Controller\n");
-          new_device = std::make_shared<ata::pci_controller>(new_dev_addr);
+          {
+            std::shared_ptr<ata::pci_controller> contr;
+            if(dev::create_new_device(contr, parent, new_dev_addr))
+            {
+              new_device = contr;
+            }
+            else
+            {
+              KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to construct new device\n");
+            }
+          }
           break;
       }
       break;
@@ -332,7 +348,18 @@ std::shared_ptr<pci_generic_device> pci_instantiate_device(uint8_t bus, uint8_t 
           {
             case 0x30:
               KL_TRC_TRACE(TRC_LVL::FLOW, "XHCI controller");
-              new_device = std::make_shared<usb::xhci::controller>(new_dev_addr);
+              {
+                std::shared_ptr<usb::xhci::controller> contr;
+                if (dev::create_new_device(contr, parent, new_dev_addr))
+                {
+                  new_device = contr;
+                }
+                else
+                {
+                  KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to construct new device\n");
+                }
+              }
+              break;
           }
 
         break;
@@ -346,11 +373,19 @@ std::shared_ptr<pci_generic_device> pci_instantiate_device(uint8_t bus, uint8_t 
   // Finally, fall back on the generic PCI device driver.
   if (!new_device)
   {
+    std::shared_ptr<pci_generic_device> gen_dev;
     KL_TRC_TRACE(TRC_LVL::FLOW, "Fallback generic device\n");
-    new_device = std::make_shared<pci_generic_device>(new_dev_addr);
+    if (dev::create_new_device(gen_dev, parent, new_dev_addr))
+    {
+      new_device = std::make_shared<pci_generic_device>(new_dev_addr);
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to construct new device\n");
+    }
   }
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "New device @ ", new_device, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "New device @ ", new_device.get(), "\n");
   KL_TRC_EXIT;
 
   return new_device;

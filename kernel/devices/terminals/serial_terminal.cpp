@@ -29,13 +29,22 @@ void terms::serial::write_raw_string(const char *out_string, uint16_t num_chars)
 {
   KL_TRC_ENTRY;
 
-  for (uint16_t i = 0; i < num_chars; i++)
+  if (get_device_status() != DEV_STATUS::OK)
   {
-    while (!(bool(asm_proc_read_port(TERM_COM_BASE_PORT + 5, 8) & 0x20)))
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Ignore request while not running\n");
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Handle request while running\n");
+
+    for (uint16_t i = 0; i < num_chars; i++)
     {
-      //spin!
+      while (!(bool(asm_proc_read_port(TERM_COM_BASE_PORT + 5, 8) & 0x20)))
+      {
+        //spin!
+      }
+      asm_proc_write_port(TERM_COM_BASE_PORT, (uint64_t)(out_string[i]), 8);
     }
-    asm_proc_write_port(TERM_COM_BASE_PORT, (uint64_t)(out_string[i]), 8);
   }
 
   KL_TRC_EXIT;

@@ -70,6 +70,13 @@ public:
   generic(std::shared_ptr<IWritable> keyboard_pipe);
   virtual ~generic() = default;
 
+  // Overrides from IDevice.
+  virtual bool start() override;
+  virtual bool stop() override;
+  virtual bool reset() override;
+
+  virtual void handle_private_msg(std::unique_ptr<msg::root_msg> &message) override;
+
   // Terminal functions
   virtual void handle_character(char key);
 
@@ -106,9 +113,9 @@ protected:
   unsigned char command_buffer[command_buffer_size]; ///< Storage for the currently-being-written input line.
   uint16_t command_buffer_pos = 0; ///< How many bytes of command buffer are full?
 
+public:
   std::shared_ptr<IWritable> stdin_writer; ///< The pipe to write stdin inputs to.
+  std::shared_ptr<IReadable> stdout_reader; ///< Optional pipe to get data to pass to write_string.
 };
 
 }; // namespace terms
-
-void simple_terminal();

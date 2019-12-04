@@ -1,6 +1,11 @@
 /// @file
 /// @brief Implementation of pipes for use in IPC.
 
+// Known defects:
+// - block_on_read is untested
+// - message send on write is untested.
+// - Does the parent weak_ptr need lock protection in case it is overwritten and locked at the same time?
+
 //#define ENABLE_TRACING
 
 #include "klib/klib.h"
@@ -96,6 +101,18 @@ ERR_CODE pipe_branch::delete_child(const kl_string &name)
 
   // The leaves of a pipe are both required and cannot be deleted without deleting the whole pipe.
   return ERR_CODE::INVALID_OP;
+}
+
+/// @brief Set the object that should receive a message when new data is added to this pipe.
+///
+/// @param new_handler The object to receive the message
+void pipe_branch::set_msg_receiver(std::shared_ptr<work::message_receiver> &new_handler)
+{
+  KL_TRC_ENTRY;
+
+  new_data_handler = new_handler;
+
+  KL_TRC_EXIT;
 }
 
 /// @brief Standard constructor
@@ -316,6 +333,15 @@ ERR_CODE pipe_branch::pipe_write_leaf::write_bytes(uint64_t start,
     }
 
     ASSERT(write_length == bytes_written);
+
+    std::shared_ptr<work::message_receiver> rcv = parent_branch->new_data_handler.lock();
+    if (rcv)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Send new data message\n");
+      std::unique_ptr<msg::root_msg> msg = std::make_unique<msg::root_msg>();
+      msg->message_id = SM_PIPE_NEW_DATA;
+      work::queue_message(rcv, std::move(msg));
+    }
 
     klib_synch_spinlock_unlock(parent_branch->_pipe_lock);
 

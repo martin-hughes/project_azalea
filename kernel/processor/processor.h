@@ -11,10 +11,12 @@
 #include "object_mgr/object_mgr.h"
 #include "system_tree/system_tree_leaf.h"
 #include "klib/data_structures/string.h"
-#include "klib/synch/kernel_messages.h"
 #include "processor/synch_objects.h"
+#include "processor/work_queue2.h"
 
 #include "devices/device_interface.h"
+
+#include <queue>
 
 // Main kernel interface to processor specific functions. Includes the task management system.
 
@@ -26,7 +28,10 @@ class task_thread;
 
 /// Structure to hold information about a process. All information is stored here, to be accessed by the various
 /// components as needed. This removes the need for per-component lookup tables for each process.
-class task_process : public IHandledObject, public WaitForFirstTriggerObject, public std::enable_shared_from_this<task_process>
+class task_process : public IHandledObject,
+                     public WaitForFirstTriggerObject,
+                     public std::enable_shared_from_this<task_process>,
+                     public work::message_receiver
 {
 protected:
   task_process(ENTRY_PROC entry_point, bool kernel_mode = false, mem_process_info *mem_info = nullptr);
@@ -40,6 +45,8 @@ public:
   void start_process();
   void stop_process();
   void destroy_process();
+
+  virtual void handle_message(std::unique_ptr<msg::root_msg> &message) override;
 
 protected:
   friend task_thread; ///< This is just a convenience really.
@@ -57,24 +64,18 @@ public:
   /// Is the process running in kernel mode?
   bool kernel_mode;
 
-  /// The process's queue of waiting messages.
-  msg_msg_queue message_queue;
+  struct
+  {
+    /// Does this process accept messages? Messages can't be sent to the process unless this flag is true. Accepting
+    /// messages is optional as not all processes will need the capability to receive messages.
+    bool accepts_msgs{false};
 
-  /// Does this process accept messages? Messages can't be sent to the process unless this flag is true. Accepting
-  /// messages is optional as not all processes will need the capability to receive messages.
-  bool accepts_msgs;
+    /// Lock to control the message queue.
+    kernel_spinlock message_lock;
 
-  /// Lock to control the message queue.
-  kernel_spinlock message_lock;
-
-  /// The message currently being handled by the process. Invalid if no message is being handled.
-  klib_message_hdr cur_msg;
-
-  /// Is a message currently being handled by the receiving process?
-  bool msg_outstanding;
-
-  /// The number of messages currently waiting for this process.
-  uint64_t msg_queue_len;
+    /// Stores messages for retrieval by the process.
+    std::queue<std::unique_ptr<msg::basic_msg>> message_queue;
+  } messaging; ///< All variables related to the work queue/messaging system.
 
   /// Is this process currently being destroyed?
   bool being_destroyed;
@@ -230,6 +231,7 @@ uint64_t proc_read_port(const uint64_t port_id, const uint8_t width);
 void proc_write_port(const uint64_t port_id, const uint64_t value, const uint8_t width);
 
 // Allow drivers to handle IRQs and normal interrupts.
+class IInterruptReceiver; // defined in device_interface.h
 void proc_register_irq_handler(uint8_t irq_number, IInterruptReceiver *receiver);
 void proc_unregister_irq_handler(uint8_t irq_number, IInterruptReceiver *receiver);
 void proc_register_interrupt_handler(uint8_t interrupt_number, IInterruptReceiver *receiver);

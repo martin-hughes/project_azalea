@@ -68,6 +68,11 @@ public:
   gen_ps2_controller_device();
   virtual ~gen_ps2_controller_device();
 
+  // Overrides of IDevice
+  bool start() override;
+  bool stop() override;
+  bool reset() override;
+
   // Types used throughout.
 
   /// @brief PS/2 status register.
@@ -129,18 +134,19 @@ public:
   ERR_CODE send_byte(uint8_t data, bool second_channel = false);
   ERR_CODE read_byte(uint8_t &data);
 
-  gen_ps2_device *chan_1_dev; ///< The device on the first (or only) channel.
-  gen_ps2_device *chan_2_dev; ///< The device on the second channel.
-
-
 protected:
   bool _dual_channel; ///< Is this a dual channel controller? (Or a single-channel one)
+
+public: // TEMP - Need to develop device registration a bit further first.
+  std::shared_ptr<gen_ps2_device> chan_1_dev; ///< The device on the first (or only) channel.
+  std::shared_ptr<gen_ps2_device> chan_2_dev; ///< The device on the second channel.
 
   PS2_DEV_TYPE _chan_1_dev_type; ///< The type of device on the first (or only) channel.
   PS2_DEV_TYPE _chan_2_dev_type; ///< If a two-channel controller, the type of device on the second channel.
 
+protected: // TEMP - Need to develop device registration a bit further first.
   PS2_DEV_TYPE identify_device(bool second_channel);
-  gen_ps2_device *instantiate_device(bool second_channel, PS2_DEV_TYPE dev_type);
+  void instantiate_device(std::shared_ptr<gen_ps2_device> &dev, bool second_channel, PS2_DEV_TYPE dev_type);
 };
 
 static_assert(sizeof(gen_ps2_controller_device::ps2_status_register) == 1, "Incorrect packing of ps2_status_register");

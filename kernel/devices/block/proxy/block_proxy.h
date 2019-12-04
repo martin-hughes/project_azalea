@@ -14,21 +14,27 @@ class block_proxy_device: public IBlockDevice
 {
 public:
   block_proxy_device(IBlockDevice *parent, uint64_t start_block, uint64_t num_blocks);
-  virtual ~block_proxy_device();
+  virtual ~block_proxy_device() override;
 
-  virtual uint64_t num_blocks();
-  virtual uint64_t block_size();
+  // Overrides of IBlockDevice
+  virtual uint64_t num_blocks() override;
+  virtual uint64_t block_size() override;
 
   virtual ERR_CODE read_blocks(uint64_t start_block,
                                uint64_t num_blocks,
                                void *buffer,
-                               uint64_t buffer_length);
+                               uint64_t buffer_length) override;
   virtual ERR_CODE write_blocks(uint64_t start_block,
                                 uint64_t num_blocks,
                                 const void *buffer,
-                                uint64_t buffer_length);
+                                uint64_t buffer_length) override;
 
-  DEV_STATUS get_device_status();
+  // Overrides of IDevice
+  virtual DEV_STATUS get_device_status() override;
+
+  virtual bool start() override;
+  virtual bool stop() override;
+  virtual bool reset() override;
 
 protected:
   IBlockDevice * const _parent; ///< The device this object is proxying.

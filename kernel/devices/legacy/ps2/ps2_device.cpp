@@ -7,6 +7,7 @@
 // - Keyboard currently only deals with scancode set 2
 // - If the device fails, we just get stuck.
 // - The switch (scancode) block could probably be folded in to the translated scancode part.
+// - Start/stop/reset (etc) are not properly supported.
 
 //#define ENABLE_TRACING
 
@@ -25,15 +26,20 @@ extern const KEYS ps2_set_2_spec_scancode_map[256]; ///< Scancode for 'special' 
 ///
 /// @param second_channel Is this device connected to the second channel of the controller?
 ///
-/// @param name The name to associate with this device.
-gen_ps2_device::gen_ps2_device(gen_ps2_controller_device *parent, bool second_channel, const kl_string name) :
-  IDevice{name},
-  _parent(parent),
-  _second_channel(second_channel),
-  _irq_enabled(false)
+/// @param human_name The name to associate with this device.
+///
+/// @param dev_name The device name to associate with this device.
+gen_ps2_device::gen_ps2_device(std::shared_ptr<gen_ps2_controller_device> parent,
+                               bool second_channel,
+                               const kl_string human_name,
+                               const kl_string dev_name) :
+  IDevice{human_name, dev_name, true},
+  _parent{parent},
+  _second_channel{second_channel},
+  _irq_enabled{false}
 {
   KL_TRC_ENTRY;
-  ASSERT(_parent != nullptr);
+  ASSERT(parent);
   KL_TRC_EXIT;
 }
 
@@ -42,13 +48,40 @@ gen_ps2_device::gen_ps2_device(gen_ps2_controller_device *parent, bool second_ch
 /// @param parent The parent PS/2 controller device.
 ///
 /// @param second_channel Is this device connected to the second channel of the controller?
-gen_ps2_device::gen_ps2_device(gen_ps2_controller_device *parent, bool second_channel) :
-  gen_ps2_device{parent, second_channel, "Generic PS/2 device"}
+gen_ps2_device::gen_ps2_device(std::shared_ptr<gen_ps2_controller_device> parent, bool second_channel) :
+  gen_ps2_device{parent, second_channel, "Generic PS/2 device", "ps2d"}
 { }
 
 gen_ps2_device::~gen_ps2_device()
 {
 
+}
+
+/// @brief Override of IDevice::start() - enables the device.
+///
+/// @return True if this was a valid call to start. False otherwise.
+bool gen_ps2_device::start()
+{
+  set_device_status(DEV_STATUS::OK);
+  return true;
+}
+
+/// @brief Override of IDevice::start() - enables the device.
+///
+/// @return True if this was a valid call to start. False otherwise.
+bool gen_ps2_device::stop()
+{
+  set_device_status(DEV_STATUS::STOPPED);
+  return true;
+}
+
+/// @brief Override of IDevice::start() - enables the device.
+///
+/// @return True if this was a valid call to start. False otherwise.
+bool gen_ps2_device::reset()
+{
+  set_device_status(DEV_STATUS::STOPPED);
+  return true;
 }
 
 bool gen_ps2_device::handle_interrupt_fast(uint8_t irq_number)
@@ -67,32 +100,43 @@ void gen_ps2_device::handle_interrupt_slow(uint8_t irq_number)
 /// config to enable those IRQs.
 void gen_ps2_device::enable_irq()
 {
+  uint8_t irq_num;
+  std::shared_ptr<gen_ps2_controller_device> parent = _parent.lock();
+
   KL_TRC_ENTRY;
 
-  uint8_t irq_num;
-
-  ASSERT(!this->_irq_enabled);
-
-  irq_num = this->_second_channel ? 12 : 1;
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Registering for IRQ: ", irq_num, "\n");
-
-  proc_register_irq_handler(irq_num, dynamic_cast<IInterruptReceiver *>(this));
-
-  gen_ps2_controller_device::ps2_config_register reg;
-  reg = _parent->read_config();
-
-  if (_second_channel)
+  if (parent)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Enabling second channel IRQ\n");
-    reg.flags.second_port_interrupt_enabled = 1;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Parent still exists\n");
+
+    ASSERT(!this->_irq_enabled);
+
+    irq_num = this->_second_channel ? 12 : 1;
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Registering for IRQ: ", irq_num, "\n");
+
+    proc_register_irq_handler(irq_num, dynamic_cast<IInterruptReceiver *>(this));
+
+    gen_ps2_controller_device::ps2_config_register reg;
+    reg = parent->read_config();
+
+    if (_second_channel)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Enabling second channel IRQ\n");
+      reg.flags.second_port_interrupt_enabled = 1;
+    }
+    else
+    {
+      reg.flags.first_port_interrupt_enabled = 1;
+    }
+
+    parent->write_config(reg);
+    _irq_enabled = true;
   }
   else
   {
-    reg.flags.first_port_interrupt_enabled = 1;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Parent device destroyed\n");
+    set_device_status(DEV_STATUS::FAILED);
   }
-
-  _parent->write_config(reg);
-  _irq_enabled = true;
 
   KL_TRC_EXIT;
 }
@@ -102,33 +146,44 @@ void gen_ps2_device::enable_irq()
 /// The device will unregister itself for IRQ handling and update the parent controller's config.
 void gen_ps2_device::disable_irq()
 {
+  uint8_t irq_num;
+  std::shared_ptr<gen_ps2_controller_device> parent = _parent.lock();
+
   KL_TRC_ENTRY;
 
-  uint8_t irq_num;
-
-  ASSERT(this->_irq_enabled);
-
-  irq_num = this->_second_channel ? 12 : 1;
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Unregistering IRQ: ", irq_num, "\n");
-
-  proc_unregister_irq_handler(irq_num, dynamic_cast<IInterruptReceiver *>(this));
-
-  gen_ps2_controller_device::ps2_config_register reg;
-  reg = _parent->read_config();
-
-  if (_second_channel)
+  if (parent)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Disabling second channel IRQ\n");
-    reg.flags.second_port_interrupt_enabled = 0;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Parent still exists\n");
+
+    ASSERT(this->_irq_enabled);
+
+    irq_num = this->_second_channel ? 12 : 1;
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Unregistering IRQ: ", irq_num, "\n");
+
+    proc_unregister_irq_handler(irq_num, dynamic_cast<IInterruptReceiver *>(this));
+
+    gen_ps2_controller_device::ps2_config_register reg;
+    reg = parent->read_config();
+
+    if (_second_channel)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Disabling second channel IRQ\n");
+      reg.flags.second_port_interrupt_enabled = 0;
+    }
+    else
+    {
+      reg.flags.first_port_interrupt_enabled = 0;
+    }
+
+    parent->write_config(reg);
+    _irq_enabled = false;
   }
   else
   {
-    reg.flags.first_port_interrupt_enabled = 0;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Parent device destroyed\n");
+    set_device_status(DEV_STATUS::FAILED);
   }
 
-  _parent->write_config(reg);
-  _irq_enabled = false;
-
   KL_TRC_EXIT;
 }
 
@@ -137,12 +192,13 @@ void gen_ps2_device::disable_irq()
 /// @param parent The parent PS/2 controller device.
 ///
 /// @param second_channel Is this device connected to the second channel of the controller?
-ps2_mouse_device::ps2_mouse_device(gen_ps2_controller_device *parent, bool second_channel) :
-  gen_ps2_device(parent, second_channel, "Generic PS/2 mouse")
+ps2_mouse_device::ps2_mouse_device(std::shared_ptr<gen_ps2_controller_device> parent, bool second_channel) :
+  gen_ps2_device{parent, second_channel, "Generic PS/2 mouse", "ps2m"}
 {
   KL_TRC_ENTRY;
 
-  current_dev_status = DEV_STATUS::OK;
+#warning violation of IDevice
+  set_device_status(DEV_STATUS::OK);
 
   KL_TRC_EXIT;
 }
@@ -152,24 +208,44 @@ ps2_mouse_device::ps2_mouse_device(gen_ps2_controller_device *parent, bool secon
 /// @param parent The parent PS/2 controller device.
 ///
 /// @param second_channel Is this device connected to the second channel of the controller?
-ps2_keyboard_device::ps2_keyboard_device(gen_ps2_controller_device *parent, bool second_channel) :
-  gen_ps2_device(parent, second_channel, "Generic PS/2 keyboard"),
-  _next_key_is_release(false),
-  _next_key_is_special(false),
-  _pause_seq_chars(0)
+ps2_keyboard_device::ps2_keyboard_device(std::shared_ptr<gen_ps2_controller_device> parent, bool second_channel) :
+  gen_ps2_device{parent, second_channel, "Generic PS/2 keyboard", "ps2k"},
+  _next_key_is_release{false},
+  _next_key_is_special{false},
+  _pause_seq_chars{0}
+{
+  KL_TRC_ENTRY;
+
+  KL_TRC_EXIT;
+}
+
+bool ps2_keyboard_device::start()
 {
   uint8_t response;
+  std::shared_ptr<gen_ps2_controller_device> parent = _parent.lock();
+  bool result{true};
 
   KL_TRC_ENTRY;
 
-  current_dev_status = DEV_STATUS::OK;
+  if (parent)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Parent running\n");
+    parent->send_byte(PS2_CONST::DEV_ENABLE_SCANNING, this->_second_channel);
+    parent->read_byte(response);
 
-  _parent->send_byte(PS2_CONST::DEV_ENABLE_SCANNING, second_channel);
-  _parent->read_byte(response);
+    this->enable_irq();
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Parent not available\n");
+    result = false;
+    set_device_status(DEV_STATUS::FAILED);
+  }
 
-  this->enable_irq();
-
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
+
+  return result;
 }
 
 bool ps2_keyboard_device::handle_interrupt_fast(uint8_t irq_num)

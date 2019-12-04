@@ -72,6 +72,7 @@ protected:
     uint32_t write_blocks;
 
     memset(sector_buffer.get(), 0, 512);
+    ASSERT_TRUE(backing_storage->start());
     ASSERT_EQ(ERR_CODE::NO_ERROR, backing_storage->read_blocks(0, 1, sector_buffer.get(), 512)) << "Virt. disk failed";
 
     // Confirm that we've loaded a valid MBR
@@ -84,6 +85,7 @@ protected:
 
     proxy = make_shared<block_proxy_device>(backing_storage.get(), start_sector, sector_count);
 
+    ASSERT_TRUE(proxy->start());
     ASSERT_EQ(DEV_STATUS::OK, proxy->get_device_status());
 
     // Initialise the filesystem based on that information

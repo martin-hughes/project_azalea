@@ -26,7 +26,7 @@ using namespace ata;
 ///
 /// @param identity_buf Output from an earlier IDENTIFY command used to show that this device existed.
 generic_device::generic_device(generic_controller *parent, uint16_t drive_index, identify_cmd_output &identity_buf) :
-    IBlockDevice{"Generic ATA device"},
+    IBlockDevice{"Generic ATA device", "ata"},
     parent_controller{parent},
     controller_index{drive_index}
 {
@@ -49,7 +49,7 @@ generic_device::generic_device(generic_controller *parent, uint16_t drive_index,
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Sector count: ", number_of_sectors , "\n");
 
-  current_dev_status = DEV_STATUS::OK;
+  set_device_status(DEV_STATUS::OK);
 
   KL_TRC_EXIT;
 }
@@ -57,6 +57,24 @@ generic_device::generic_device(generic_controller *parent, uint16_t drive_index,
 generic_device::~generic_device()
 {
 
+}
+
+bool generic_device::start()
+{
+  set_device_status(DEV_STATUS::OK);
+  return true;
+}
+
+bool generic_device::stop()
+{
+  set_device_status(DEV_STATUS::STOPPED);
+  return true;
+}
+
+bool generic_device::reset()
+{
+  set_device_status(DEV_STATUS::STOPPED);
+  return true;
 }
 
 uint64_t generic_device::num_blocks()
@@ -107,7 +125,7 @@ ERR_CODE generic_device::read_blocks(uint64_t start_block,
     KL_TRC_TRACE(TRC_LVL::FLOW, "Output buffer too short\n");
     result = ERR_CODE::INVALID_PARAM;
   }
-  else if (this->current_dev_status != DEV_STATUS::OK)
+  else if (get_device_status() != DEV_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Device has failed\n");
     result = ERR_CODE::DEVICE_FAILED;
@@ -168,7 +186,7 @@ ERR_CODE generic_device::write_blocks(uint64_t start_block,
     KL_TRC_TRACE(TRC_LVL::FLOW, "Output buffer too short\n");
     result = ERR_CODE::INVALID_PARAM;
   }
-  else if (this->current_dev_status != DEV_STATUS::OK)
+  else if (get_device_status() != DEV_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Device has failed\n");
     result = ERR_CODE::DEVICE_FAILED;

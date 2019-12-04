@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "user_interfaces/keyboard.h"
+#include "processor/work_queue2.h"
 
 class task_process;
 
@@ -36,7 +37,8 @@ public:
   virtual void handle_key_down(KEYS key, special_keys specs);
   virtual void handle_key_up(KEYS key, special_keys specs);
 
-  /// Process that should receive key press messages. This is only intended to be temporary, until the driver structure
-  /// gets a bit more flesh in it.
-  task_process *recipient{nullptr};
+  void set_receiver(std::shared_ptr<work::message_receiver> &new_receiver);
+
+protected:
+  std::weak_ptr<work::message_receiver> receiver; ///< An object key press messages should be sent to.
 };

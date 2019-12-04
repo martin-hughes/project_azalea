@@ -42,4 +42,3 @@
 #include "synch/kernel_locks.h"
 #include "synch/kernel_mutexes.h"
 #include "synch/kernel_semaphores.h"
-#include "synch/kernel_messages.h"

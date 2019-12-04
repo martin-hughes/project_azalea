@@ -12,6 +12,9 @@
 // - We only support one DMA transfer by channel, but some systems do support one per drive apparently.
 // - - actually, the DMA mutex locks us to one per controller, but this could be changed easily enough.
 // - There's no checking that DMA transfers are queued properly before beginning the transfer.
+// - Totally ignores the IDevice start/stop/reset paradigm.
+
+#warning ata::generic_device has pointer to parent.
 
 //#define ENABLE_TRACING
 
@@ -19,21 +22,34 @@
 #include "devices/block/ata/ata_structures.h"
 #include "processor/timing/timing.h"
 #include "klib/klib.h"
+#include "devices/device_monitor.h"
+
+#warning still using first_hdd, unlocked.
+extern ata::generic_device *first_hdd;
 
 using namespace ata;
-
-// This declares a device used in entry.cpp to load the init program from.
-extern ata::generic_device *first_hdd; ///< TEMPORARY global variable.
 
 /// @brief Normal constructor for PCI ATA Host Controllers
 ///
 /// @param address The address of this controller on the PCI bus.
 pci_controller::pci_controller(pci_address address) :
-  pci_generic_device{address, "PCI ATA Host Controller"}
+  pci_generic_device{address, "PCI ATA Host Controller", "ata_controller"}
+{
+  KL_TRC_ENTRY;
+
+  set_device_status(DEV_STATUS::STOPPED);
+
+  KL_TRC_EXIT;
+};
+
+bool pci_controller::start()
 {
   identify_cmd_output ident;
+  std::shared_ptr<IDevice> self_ptr = this->self_weak_ptr.lock();
 
-  KL_TRC_ENTRY;
+  set_device_status(DEV_STATUS::STARTING);
+
+  ASSERT(self_ptr);
 
   klib_synch_spinlock_init(cmd_spinlock);
   klib_synch_mutex_init(dma_mutex);
@@ -48,12 +64,17 @@ pci_controller::pci_controller(pci_address address) :
     if(cmd_identify(ident, i))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Found device\n");
-      drives_by_index_num[i].child_ptr = std::make_shared<ata::generic_device>(this, i, ident);
+      ASSERT(dev::create_new_device(drives_by_index_num[i].child_ptr, self_ptr, this, i, ident));
+
+      // TEMP
+      if (first_hdd == nullptr)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Setting first_hdd\n");
+        first_hdd = drives_by_index_num[i].child_ptr.get();
+        break;
+      }
     }
   }
-
-  // Give the first device special treatment (for now)
-  first_hdd = drives_by_index_num[0].child_ptr.get();
 
   proc_register_irq_handler(channel_irq_nums[0], this);
   if (channel_irq_nums[1] != channel_irq_nums[0])
@@ -62,10 +83,22 @@ pci_controller::pci_controller(pci_address address) :
     proc_register_irq_handler(channel_irq_nums[1], this);
   }
 
-  current_dev_status = DEV_STATUS::OK;
+  set_device_status(DEV_STATUS::STARTING);
 
-  KL_TRC_EXIT;
-};
+  return true;
+}
+
+bool pci_controller::stop()
+{
+  set_device_status(DEV_STATUS::STOPPED);
+  return true;
+}
+
+bool pci_controller::reset()
+{
+  set_device_status(DEV_STATUS::STOPPED);
+  return true;
+}
 
 /// @brief Determine which I/O ports the child devices will respond to.
 ///

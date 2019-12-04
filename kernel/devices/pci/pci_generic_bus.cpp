@@ -2,6 +2,8 @@
 /// @brief Implements a generic and simple PCI bus. This is mostly so it can be used as a container for PCI devices in
 /// System Tree, to keep a logical looking tree.
 
+#warning pci_root_device has raw pointer to parent
+
 //#define ENABLE_TRACING
 
 #include "klib/klib.h"
@@ -17,13 +19,12 @@
 ///
 /// @param parent The parent PCI device.
 pci_generic_bus::pci_generic_bus(uint8_t bus, pci_root_device *parent) :
-  IDevice{"Generic PCI bus"},
+  IDevice{"Generic PCI bus", "pcibus", true},
   _bus_number(bus), _parent(parent)
 {
   KL_TRC_ENTRY;
 
   ASSERT(_parent != nullptr);
-  this->scan_bus();
 
   KL_TRC_EXIT;
 }
@@ -34,6 +35,26 @@ pci_generic_bus::~pci_generic_bus()
 
   KL_TRC_EXIT;
 }
+
+bool pci_generic_bus::start()
+{
+  set_device_status(DEV_STATUS::OK);
+  this->scan_bus();
+  return true;
+}
+
+bool pci_generic_bus::stop()
+{
+  set_device_status(DEV_STATUS::STOPPED);
+  return true;
+}
+
+bool pci_generic_bus::reset()
+{
+  set_device_status(DEV_STATUS::STOPPED);
+  return true;
+}
+
 
 /// @brief Scan this bus for devices
 ///
@@ -81,11 +102,14 @@ void pci_generic_bus::scan_bus()
 void pci_generic_bus::add_new_device(uint8_t slot, uint8_t func)
 {
   std::shared_ptr<pci_generic_device> new_device;
+  std::shared_ptr<IDevice> self_ptr;
   char dev_name[6] = { 0, 0, 0, 0, 0, 0 };
 
   KL_TRC_ENTRY;
 
-  new_device = pci_instantiate_device(_bus_number, slot, func);
+  self_ptr = this->self_weak_ptr.lock();
+  ASSERT(self_ptr);
+  new_device = pci_instantiate_device(_bus_number, slot, func, self_ptr);
   if (new_device != nullptr)
   {
     snprintf(dev_name, 6, "s%02hhif%1hhi", slot, func);

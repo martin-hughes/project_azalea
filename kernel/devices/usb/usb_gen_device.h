@@ -14,7 +14,8 @@
 
 #include "devices/device_interface.h"
 #include "devices/usb/usb_gen_device_requests.h"
-#include "processor/work_queue.h"
+#include "processor/work_queue2.h"
+#include "processor/synch_objects.h"
 
 #include "klib/data_structures/lists.h"
 
@@ -75,13 +76,16 @@ namespace usb
 
   /// @brief Stores details of a normal (non-command) USB transfer.
   ///
-  class normal_transfer : public work::work_response
+  class normal_transfer : public WaitForFirstTriggerObject
   {
   public:
     normal_transfer(generic_device *owner, std::unique_ptr<uint8_t[]> buffer, uint32_t length);
     virtual ~normal_transfer();
     virtual void owner_dying();
-    virtual void set_response_complete() override;
+
+    /// @brief Trigger waiting threads to continue, but also signal the owner object that this transfer is complete.
+    ///
+    virtual void set_response_complete() { this->trigger_all_threads(); };
 
     std::unique_ptr<uint8_t[]> transfer_buffer; ///< The buffer containing the transfer to either send or receive.
     uint32_t buffer_size; ///< The number of bytes in the buffer.
@@ -196,6 +200,11 @@ namespace usb
   public:
     generic_device(std::shared_ptr<generic_core> core, uint16_t interface_num, const kl_string name);
     virtual ~generic_device() = default;
+
+    // Overrides of IDevice
+    virtual bool start() override { set_device_status(DEV_STATUS::OK); return true; };
+    virtual bool stop() override { set_device_status(DEV_STATUS::STOPPED); return true; };
+    virtual bool reset() override { set_device_status(DEV_STATUS::STOPPED); return true; };
 
     virtual void transfer_completed(normal_transfer *complete_transfer);
 

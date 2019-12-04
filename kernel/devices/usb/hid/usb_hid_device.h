@@ -49,6 +49,11 @@ namespace usb
 
     virtual void transfer_completed(normal_transfer *complete_transfer) override;
 
+    // Overrides of IDevice
+    virtual bool start() override;
+    virtual bool stop() override;
+    virtual bool reset() override;
+
   protected:
     hid_descriptor interface_hid_descriptor; ///< Store an easy-to-access copy of the HID descriptor for this interface
     std::unique_ptr<uint8_t[]> raw_class_descriptor; ///< Stores the HID class descriptor.

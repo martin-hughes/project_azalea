@@ -23,6 +23,12 @@ public:
   generic_device(generic_controller *parent, uint16_t drive_index, identify_cmd_output &identity_buf);
   virtual ~generic_device();
 
+  // Overrides of IDevice.
+  bool start() override;
+  bool stop() override;
+  bool reset() override;
+
+  // Overrides of IBlockDevice
   virtual uint64_t num_blocks() override;
   virtual uint64_t block_size() override;
 

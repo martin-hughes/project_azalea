@@ -57,19 +57,3 @@ void normal_transfer::owner_dying()
 
   KL_TRC_EXIT;
 }
-
-/// @brief Trigger waiting threads to continue, but also signal the owner object that this transfer is complete.
-///
-void normal_transfer::set_response_complete()
-{
-  KL_TRC_ENTRY;
-
-  work_response::set_response_complete();
-
-  if (owner_device != nullptr)
-  {
-    owner_device->transfer_completed(this);
-  }
-
-  KL_TRC_EXIT;
-}

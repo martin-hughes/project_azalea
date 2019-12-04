@@ -14,12 +14,17 @@
 ///
 /// Contains functions that may be useful to any PCI device. If a PCI device is detected in the system that doesn't
 /// have a more appropriate driver for it, this class will manage it.
-class pci_generic_device : public IDevice, public ISystemTreeLeaf, public IInterruptReceiver
+class pci_generic_device : public IDevice, public IInterruptReceiver
 {
 public:
-  pci_generic_device(pci_address address, const kl_string name);
+  pci_generic_device(pci_address address, const kl_string human_name, const kl_string dev_name);
   pci_generic_device(pci_address address);
   virtual ~pci_generic_device() override;
+
+  // Overrides of IDevice.
+  bool start() override;
+  bool stop() override;
+  bool reset() override;
 
 protected:
 

@@ -17,8 +17,11 @@ struct processor_info_x64
 
 typedef processor_info_generic<processor_info_x64> processor_info; ///< Processor info block on x64
 
+/// @cond
+// Dunno why doxygen can't find the docs for these externs...
 extern processor_info *proc_info_block;
 extern uint32_t processor_count;
+/// @endcond
 
 /// @brief Indicies of known MSRS.
 ///

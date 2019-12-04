@@ -13,12 +13,12 @@
 #include "x64/processor-x64-int.h"
 #include "x64/pic/apic.h"
 
-/// Processor information storage for each processor, as an array indexed by processor ID.
 extern processor_info *proc_info_block;
+/// Processor information storage for each processor, as an array indexed by processor ID.
 processor_info *proc_info_block = nullptr;
 
-/// How many processors are known to the system?
 extern uint32_t processor_count;
+/// How many processors are known to the system?
 uint32_t processor_count = 0;
 
 /// @brief Return the number of processors in the system.

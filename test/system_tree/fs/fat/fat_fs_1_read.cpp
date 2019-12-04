@@ -61,6 +61,8 @@ protected:
     uint32_t sector_count;
     uint32_t write_blocks;
 
+    ASSERT_TRUE(backing_storage->start());
+
     memset(sector_buffer.get(), 0, 512);
     ASSERT_EQ(ERR_CODE::NO_ERROR, backing_storage->read_blocks(0, 1, sector_buffer.get(), 512)) << "Virt. disk failed";
 
@@ -73,6 +75,8 @@ protected:
     memcpy(&sector_count, sector_buffer.get() + 458, 4);
 
     proxy = make_shared<block_proxy_device>(backing_storage.get(), start_sector, sector_count);
+
+    ASSERT_TRUE(proxy->start());
 
     ASSERT_EQ(DEV_STATUS::OK, proxy->get_device_status());
 

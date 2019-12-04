@@ -16,6 +16,7 @@
 /// @cond
 
 #include "processor/x64/processor-x64-int.h"
+#include "devices/device_interface.h"
 
 #ifdef KL_TRACE_BY_SERIAL_PORT
 const uint16_t TRC_COM1_BASE_PORT = 0x3F8;
@@ -125,6 +126,25 @@ void kl_trc_output_err_code_argument(ERR_CODE ec)
   {
     kl_trc_output_str_argument("Unknown code: ");
     kl_trc_output_int_argument((uint64_t)(ec));
+  }
+}
+
+#define DS_LOOKUP(s, n) \
+  case s : \
+    kl_trc_output_str_argument( n ); \
+    break
+
+void kl_trc_output_dev_status_argument(DEV_STATUS ds)
+{
+  switch (ds)
+  {
+  DS_LOOKUP(DEV_STATUS::UNKNOWN, "Unknown");
+  DS_LOOKUP(DEV_STATUS::STOPPED, "Stopped");
+  DS_LOOKUP(DEV_STATUS::STARTING, "Starting");
+  DS_LOOKUP(DEV_STATUS::STOPPING, "Stopping");
+  DS_LOOKUP(DEV_STATUS::OK, "Running OK");
+  DS_LOOKUP(DEV_STATUS::RESET, "Resetting");
+  DS_LOOKUP(DEV_STATUS::FAILED, "Failed");
   }
 }
 

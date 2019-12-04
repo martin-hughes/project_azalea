@@ -15,10 +15,8 @@
 #include "system_tree/system_tree.h"
 #include "system_tree/process/process.h"
 
-#include "devices/block/ata/ata_device.h"
-#include "devices/block/proxy/block_proxy.h"
-#include "devices/legacy/ps2/ps2_controller.h"
 #include "devices/generic/gen_terminal.h"
+#include "devices/generic/gen_keyboard.h"
 #include "system_tree/fs/fat/fat_fs.h"
 #include "system_tree/fs/pipe/pipe_fs.h"
 #include "system_tree/fs/mem/mem_fs.h"
@@ -59,11 +57,6 @@ void setup_task_parameters(task_process *startup_proc);
 
 // Temporary procedures and storage while the kernel is being developed. Eventually, the full kernel start procedure
 // will cause these to become unused.
-std::shared_ptr<fat_filesystem> setup_initial_fs();
-// Some variables to support loading a filesystem.
-extern ata::generic_device *first_hdd; ///< First detected HDD (temporary variable)
-ata::generic_device *first_hdd{nullptr};
-gen_ps2_controller_device *ps2_controller; ///< System PS/2 controller (temporary variable)
 
 std::shared_ptr<task_process> *system_process; ///< The process containing idle processes, etc.
 std::shared_ptr<task_process> *kernel_start_process; ///< Process running the kernel start procedure.
@@ -71,7 +64,8 @@ std::shared_ptr<task_process> *kernel_start_process; ///< Process running the ke
 extern task_process *term_proc;
 task_process *term_proc = nullptr; ///< Process running the main terminal (temporary variable)
 
-volatile bool wait_for_term; ///< Should the process looking at this variable wait for the terminal to initialise?
+extern generic_keyboard *keyb_ptr;
+extern std::shared_ptr<terms::generic> *term_ptr;
 
 // Assumptions used throughout the kernel
 static_assert(sizeof(uint64_t) == sizeof(uintptr_t), "Code throughout assumes pointers are 64-bits long.");
@@ -170,15 +164,7 @@ void kernel_start() throw ()
   ASSERT(system_tree()->add_child("dev", dev_root) == ERR_CODE::NO_ERROR);
   dev_root->scan_for_devices();
 
-  // Enable the PS/2 controller.
-  ps2_controller = new gen_ps2_controller_device();
-
-  // Setup a basic file system.
-  std::shared_ptr<fat_filesystem> first_fs = setup_initial_fs();
-  ASSERT(first_fs != nullptr);
-  ASSERT(system_tree()->add_child("root", std::dynamic_pointer_cast<ISystemTreeBranch>(first_fs)) == ERR_CODE::NO_ERROR);
-
-  wait_for_term = true;
+  ASSERT(system_tree()->get_child("root", leaf) == ERR_CODE::NO_ERROR);
 
   initial_proc = proc_load_elf_file("root\\initprog");
   setup_task_parameters(initial_proc.get());
@@ -200,18 +186,36 @@ void kernel_start() throw ()
                                sizeof(hello_string), br) == ERR_CODE::NO_ERROR);
   ASSERT(br == sizeof(hello_string) - 1);
 
+  ASSERT(keyb_ptr != nullptr);
+  ASSERT(term_ptr != nullptr);
+
+  kl_trc_trace(TRC_LVL::FLOW, "About to start creating pipes\n");
+
   // Start a simple terminal process.
-  std::shared_ptr<task_process> term = task_process::create(simple_terminal, true);
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Starting terminal\n");
-  term->start_process();
+  std::shared_ptr<IReadable> reader;
+  std::shared_ptr<IWritable> stdin_writer;
 
-  ps2_keyboard_device *keyboard = dynamic_cast<ps2_keyboard_device *>(ps2_controller->chan_1_dev);
-  ASSERT(keyboard != nullptr);
+  std::shared_ptr<ISystemTreeBranch> pipes_br = std::make_shared<system_tree_simple_branch>();
+  ASSERT(pipes_br != nullptr);
+  ASSERT(system_tree() != nullptr);
+  ASSERT(system_tree()->add_child("pipes", pipes_br) == ERR_CODE::NO_ERROR);
+  std::shared_ptr<pipe_branch> stdout_br = pipe_branch::create();
+  ASSERT(pipes_br->add_child("terminal-output", stdout_br) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->get_child("pipes\\terminal-output\\read", leaf) == ERR_CODE::NO_ERROR);
+  reader = std::dynamic_pointer_cast<IReadable>(leaf);
+  ASSERT(reader != nullptr);
 
-  while (wait_for_term)
-  {
 
-  }
+  // Set up an input pipe (which maps to stdin)
+  ASSERT(pipes_br->add_child("terminal-input", pipe_branch::create()) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->get_child("pipes\\terminal-input\\write", leaf) == ERR_CODE::NO_ERROR);
+  stdin_writer = std::dynamic_pointer_cast<IWritable>(leaf);
+  ASSERT(stdin_writer != nullptr);
+
+  (*term_ptr)->stdin_writer = stdin_writer;
+  (*term_ptr)->stdout_reader = reader;
+  std::shared_ptr<work::message_receiver> term_rcv = (*term_ptr);
+  stdout_br->set_msg_receiver(term_rcv);
 
   // Setup the write end of the terminal pipe. This is a bit dubious, it doesn't do any reference counting...
   ASSERT(system_tree()->get_child("pipes\\terminal-output\\write", leaf) == ERR_CODE::NO_ERROR);
@@ -251,50 +255,12 @@ void kernel_start() throw ()
   // Process should be good to go!
   initial_proc->start_process();
   //com_port_proc->start_process();
-  term_proc = term.get();
 
   // If (when!) the initial process exits, we want the system to shut down. But since we don't really do shutting down
   // at the moment, just crash instead.
   initial_proc->wait_for_signal();
 
   panic("System has 'shut down'");
-}
-
-/// @brief Configure the filesystem of the (presumed) boot device as part of System Tree.
-///
-/// @return shared_ptr to the root of the initial file system.
-std::shared_ptr<fat_filesystem> setup_initial_fs()
-{
-  KL_TRC_ENTRY;
-
-  ASSERT(first_hdd != nullptr); // new ata::generic_device(nullptr, 0);
-  std::unique_ptr<unsigned char[]> sector_buffer(new unsigned char[512]);
-
-  kl_memset(sector_buffer.get(), 0, 512);
-  if (first_hdd->read_blocks(0, 1, sector_buffer.get(), 512) != ERR_CODE::NO_ERROR)
-  {
-    panic("Disk read failed :(\n");
-  }
-
-  // Confirm that we've loaded a valid MBR
-  KL_TRC_TRACE(TRC_LVL::EXTRA, (uint64_t)sector_buffer[510], " ", (uint64_t)sector_buffer[511], "\n");
-  ASSERT((sector_buffer[510] == 0x55) && (sector_buffer[511] == 0xAA));
-
-  uint32_t start_sector;
-  uint32_t sector_count;
-
-  // Parse the MBR to find the first partition.
-  kl_memcpy(sector_buffer.get() + 454, &start_sector, 4);
-  kl_memcpy(sector_buffer.get() + 458, &sector_count, 4);
-
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "First partition: ", (uint64_t)start_sector, " -> +", (uint64_t)sector_count, "\n");
-  std::shared_ptr<block_proxy_device> pd = std::make_shared<block_proxy_device>(first_hdd, start_sector, sector_count);
-
-  // Initialise the filesystem based on that information
-  std::shared_ptr<fat_filesystem> first_fs = fat_filesystem::create(pd);
-
-  KL_TRC_EXIT;
-  return first_fs;
 }
 
 /// @brief Setup a plausible argc, argv and environ in startup_proc.

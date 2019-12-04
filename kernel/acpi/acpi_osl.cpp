@@ -622,6 +622,7 @@ ACPI_STATUS AcpiOsReadPciConfiguration(ACPI_PCI_ID *PciId, UINT32 Reg, UINT64 *V
   }
 
   KL_TRC_EXIT;
+
   return AE_OK;
 }
 
@@ -679,6 +680,7 @@ ACPI_STATUS AcpiOsWritePciConfiguration(ACPI_PCI_ID *PciId, UINT32 Reg, UINT64 V
   }
 
   KL_TRC_EXIT;
+
   return AE_OK;
 }
 

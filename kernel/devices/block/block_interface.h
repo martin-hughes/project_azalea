@@ -14,8 +14,10 @@ class IBlockDevice : public IDevice
 public:
   /// @brief Simple constructor
   ///
-  /// @param name The name of this device.
-  IBlockDevice(const kl_string name) : IDevice{name} { };
+  /// @param human_name The name of this device.
+  ///
+  /// @param dev_name The device name for this device.
+  IBlockDevice(const kl_string human_name, const kl_string dev_name) : IDevice{human_name, dev_name, true} { };
 
   virtual ~IBlockDevice() = default;
 

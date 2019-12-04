@@ -12,6 +12,6 @@
 class usb_gen_controller : public pci_generic_device
 {
 public:
-  usb_gen_controller(pci_address address, const kl_string name);
+  usb_gen_controller(pci_address address, const kl_string name, const kl_string dev_name);
   virtual ~usb_gen_controller() = default;
 };

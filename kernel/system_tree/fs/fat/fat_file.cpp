@@ -63,6 +63,8 @@ fat_filesystem::fat_file::fat_file(fat_dir_entry file_data_record,
       KL_TRC_TRACE(TRC_LVL::FLOW, "Small FAT root dir, re-jig file params\n");
       _file_record.first_cluster_high = 0;
       _file_record.first_cluster_low = 0;
+      KL_TRC_TRACE(TRC_LVL::FLOW, "RDSC: ", fs_parent->root_dir_sector_count, "\n");
+      KL_TRC_TRACE(TRC_LVL::FLOW, "BPS: ", fs_parent->shared_bpb->bytes_per_sec, "\n");
       _file_record.file_size = (fs_parent->root_dir_sector_count * fs_parent->shared_bpb->bytes_per_sec);
     }
     else
@@ -80,6 +82,8 @@ fat_filesystem::fat_file::fat_file(fat_dir_entry file_data_record,
                                fs_parent->shared_bpb->secs_per_cluster *
                                fs_parent->shared_bpb->bytes_per_sec;
     }
+
+    KL_TRC_TRACE(TRC_LVL::FLOW, "New size: ", _file_record.file_size, "\n");
   }
 
   KL_TRC_EXIT;
@@ -105,9 +109,9 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
 
   ERR_CODE ec = ERR_CODE::NO_ERROR;
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Start", start, "\n");
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Length", length, "\n");
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "buffer_length", buffer_length, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Start: ", start, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Length: ", length, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "buffer_length: ", buffer_length, "\n");
 
   // Check parameters for correctness.
   if (buffer == nullptr)
@@ -123,7 +127,8 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
   }
   if (length > this->_file_record.file_size)
   {
-    KL_TRC_TRACE(TRC_LVL::ERROR, "length must be less than the file size\n");
+    KL_TRC_TRACE(TRC_LVL::ERROR,
+                 "length (", length, ") must be less than the file size (", this->_file_record.file_size, ")\n");
     ec = ERR_CODE::INVALID_PARAM;
   }
   if ((start + length) > this->_file_record.file_size)

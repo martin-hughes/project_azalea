@@ -10,6 +10,8 @@ system_tree_simple_branch::system_tree_simple_branch()
 {
   KL_TRC_ENTRY;
 
+  klib_synch_spinlock_init(child_tree_lock);
+
   KL_TRC_EXIT;
 }
 
@@ -35,6 +37,7 @@ ERR_CODE system_tree_simple_branch::get_child(const kl_string &name,
 
   this->split_name(name, our_part, child_part);
 
+  klib_synch_spinlock_lock(child_tree_lock);
   if (children.contains(our_part))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieve direct child\n");
@@ -67,6 +70,7 @@ ERR_CODE system_tree_simple_branch::get_child(const kl_string &name,
     KL_TRC_TRACE(TRC_LVL::FLOW, "Not a child of ours...\n");
     ret_code = ERR_CODE::NOT_FOUND;
   }
+  klib_synch_spinlock_unlock(child_tree_lock);
 
   KL_TRC_EXIT;
 
@@ -83,9 +87,9 @@ ERR_CODE system_tree_simple_branch::add_child (const kl_string &name, std::share
   std::shared_ptr<ISystemTreeBranch> child_branch;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Adding leaf with name ", name, " and address ", child.get(), "\n");
-
   split_pos = name.find("\\");
 
+  klib_synch_spinlock_lock(child_tree_lock);
   if (child == nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Can't add null leaf\n");
@@ -132,6 +136,7 @@ ERR_CODE system_tree_simple_branch::add_child (const kl_string &name, std::share
   {
     this->children.insert(name, child);
   }
+  klib_synch_spinlock_unlock(child_tree_lock);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", rt, "\n");
 
@@ -205,6 +210,7 @@ ERR_CODE system_tree_simple_branch::rename_child(const kl_string &old_name, cons
   old_dir_split = old_name.find("\\");
   new_dir_split = new_name.find("\\");
 
+  klib_synch_spinlock_lock(child_tree_lock);
   if ((old_dir_split != kl_string::npos) && (old_dir_split == new_dir_split))
   {
     child_branch = old_name.substr(0, old_dir_split);
@@ -262,6 +268,7 @@ ERR_CODE system_tree_simple_branch::rename_child(const kl_string &old_name, cons
       rt = ERR_CODE::NOT_FOUND;
     }
   }
+  klib_synch_spinlock_unlock(child_tree_lock);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", rt, "\n");
   KL_TRC_EXIT;
@@ -280,6 +287,7 @@ ERR_CODE system_tree_simple_branch::delete_child(const kl_string &name)
 
   split_pos = name.find("\\");
 
+  klib_synch_spinlock_lock(child_tree_lock);
   if (split_pos == kl_string::npos)
   {
     if (children.contains(name))
@@ -310,6 +318,7 @@ ERR_CODE system_tree_simple_branch::delete_child(const kl_string &name)
       rt = ERR_CODE::NOT_FOUND;
     }
   }
+  klib_synch_spinlock_unlock(child_tree_lock);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", rt, "\n");
   KL_TRC_EXIT;
@@ -328,6 +337,7 @@ std::shared_ptr<ISystemTreeBranch> system_tree_simple_branch::get_child_branch(c
   std::shared_ptr<ISystemTreeLeaf> direct_child;
   KL_TRC_ENTRY;
 
+  // Don't lock here. This function should only be called internally, and thus should be lock-aware already.
   if (children.contains(name))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieve child object\n");

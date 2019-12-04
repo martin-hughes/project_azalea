@@ -3,6 +3,9 @@
 
 #include "devices/generic/gen_keyboard.h"
 
+// Don't attempt to document all of these!
+/// @cond
+
 // The normal scan codes are those not prefixed by 0xE0. "Special" scan codes are those prefixed by 0xE0.
 extern const KEYS ps2_set_2_norm_scancode_map[256];
 extern const KEYS ps2_set_2_spec_scancode_map[256];
@@ -554,3 +557,5 @@ const KEYS ps2_set_2_spec_scancode_map[256] = {
   KEYS::UNK, // 0xFE
   KEYS::UNK, // 0xFF
 };
+
+/// @endcond

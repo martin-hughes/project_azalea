@@ -33,6 +33,8 @@ void WaitObject::wait_for_signal()
   KL_TRC_ENTRY;
 
   task_thread *cur_thread = task_get_cur_thread();
+  ASSERT(cur_thread);
+  ASSERT(!cur_thread->is_worker_thread);
   klib_list_item<task_thread *> *list_item = new klib_list_item<task_thread *>;
   klib_list_item_initialize(list_item);
   list_item->item = cur_thread;
@@ -181,6 +183,8 @@ void WaitForFirstTriggerObject::wait_for_signal()
   KL_TRC_ENTRY;
 
   task_thread *cur_thread = task_get_cur_thread();
+  ASSERT(cur_thread);
+  ASSERT(!cur_thread->is_worker_thread);
   klib_list_item<task_thread *> *list_item = new klib_list_item<task_thread *>;
   klib_list_item_initialize(list_item);
   list_item->item = cur_thread;

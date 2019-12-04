@@ -3,6 +3,7 @@
 #include "system_tree/system_tree.h"
 #include "processor/processor.h"
 #include "processor/processor-int.h"
+#include "klib/klib.h"
 #include <iostream>
 
 #include "test/test_core/test.h"

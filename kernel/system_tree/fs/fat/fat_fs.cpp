@@ -593,7 +593,7 @@ ERR_CODE fat_filesystem::write_fat_entry(uint64_t cluster_num, uint64_t new_entr
     fat_dirty = true;
   }
 
-  KL_TRC_TRACE(TRC_LVL:EXTRA, "Result: ", result, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
 
   return result;
@@ -866,7 +866,7 @@ ERR_CODE fat_filesystem::select_free_cluster(uint64_t &free_cluster)
     }
   }
 
-  KL_TRC_TRACE(TRC_LVL:EXTRA, "Result: ", result, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
   return result;
 }

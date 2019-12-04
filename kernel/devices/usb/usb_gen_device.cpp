@@ -15,14 +15,15 @@ using namespace usb;
 ///
 /// @param name A human readable name for this device
 generic_device::generic_device(std::shared_ptr<generic_core> core, uint16_t interface_num, const kl_string name) :
-  IDevice{name},
+  IDevice{name, "usb-dev", true},
   device_core{core},
   device_interface_num{interface_num},
   active_interface{core->configurations[core->active_configuration].interfaces[interface_num]}
 {
   KL_TRC_ENTRY;
 
-  current_dev_status = DEV_STATUS::UNKNOWN;
+  set_device_status(DEV_STATUS::STOPPED);
+
   ASSERT(core);
 
   KL_TRC_EXIT;

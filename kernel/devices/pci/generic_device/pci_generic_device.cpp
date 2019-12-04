@@ -1,5 +1,7 @@
 /// @file
 /// @brief Implements a generic and simple PCI device.
+// Known defects
+// - Doesn't do stop/start properly.
 
 //#define ENABLE_TRACING
 
@@ -12,16 +14,18 @@ using namespace PCI_CAPABILITY_IDS;
 ///
 /// @param address The PCI address of this device.
 pci_generic_device::pci_generic_device(pci_address address) :
-  pci_generic_device{address, "Generic PCI Device"}
+  pci_generic_device{address, "Generic PCI Device", "pcid"}
 { }
 
 /// @brief Standard constructor
 ///
 /// @param address The PCI address of this device.
 ///
-/// @param name The name of this device.
-pci_generic_device::pci_generic_device(pci_address address, const kl_string name) :
-  IDevice{name},
+/// @param human_name The human name of this device.
+///
+/// @param dev_name The device name of this device.
+pci_generic_device::pci_generic_device(pci_address address, const kl_string human_name, const kl_string dev_name) :
+  IDevice{human_name, dev_name, true},
   _address(address),
   _base_interrupt_vector(0),
   _num_allocated_vectors(0)
@@ -53,6 +57,24 @@ pci_generic_device::~pci_generic_device()
   KL_TRC_ENTRY;
 
   KL_TRC_EXIT;
+}
+
+bool pci_generic_device::start()
+{
+  set_device_status(DEV_STATUS::OK);
+  return true;
+}
+
+bool pci_generic_device::stop()
+{
+  set_device_status(DEV_STATUS::STOPPED);
+  return true;
+}
+
+bool pci_generic_device::reset()
+{
+  set_device_status(DEV_STATUS::STOPPED);
+  return true;
 }
 
 /// @brief Initialize the list of capabilities to empty.

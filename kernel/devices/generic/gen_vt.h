@@ -2,7 +2,6 @@
 /// @brief Declare a virtual terminal.
 
 #include "devices/generic/gen_terminal.h"
-#include "klib/synch/kernel_messages.h"
 extern "C"
 {
 #include "external/libtmt/tmt.h"
@@ -18,6 +17,11 @@ class vt : public generic
 public:
   vt(std::shared_ptr<IWritable> keyboard_pipe);
   virtual ~vt();
+
+  // Overrides from generic_terminal
+  virtual bool start() override;
+  virtual bool stop() override;
+  virtual bool reset() override;
 
   virtual void tmt_callback(tmt_msg_t m, TMT *vt, const void *a);
 

@@ -24,7 +24,7 @@ namespace
 ///
 /// @param address The PCI address of this xHCI controller.
 controller::controller(pci_address address) :
-  usb_gen_controller{address, "USB XHCI controller"},
+  usb_gen_controller{address, "USB XHCI controller", "usb3"},
   capability_regs{nullptr},
   operational_regs{nullptr},
   command_ring{128},
@@ -43,8 +43,6 @@ controller::controller(pci_address address) :
   // The steps inside these functions are based on the steps in the Intel xHCI Spec, v1.1, section 4.2.
   KL_TRC_ENTRY;
 
-  current_dev_status = DEV_STATUS::NOT_READY;
-
   // Set up the internal pointers to the various memory-mapped register blocks.
   initialize_registers(address);
 
@@ -54,7 +52,8 @@ controller::controller(pci_address address) :
   if (!hardware_ok)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Hardware failed\n");
-    current_dev_status = DEV_STATUS::FAILED;
+    permanently_failed = true;
+    set_device_status(DEV_STATUS::FAILED);
   }
   else
   {
@@ -62,39 +61,15 @@ controller::controller(pci_address address) :
     if (!prepare_control_structures())
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to create control structures\n");
-      current_dev_status = DEV_STATUS::FAILED;
+      permanently_failed = true;
+      set_device_status(DEV_STATUS::FAILED);
     }
     else
     {
       // Initialise interrupts.
       ASSERT(msi_configure(1, ints_granted));
       ASSERT(ints_granted == 1);
-
-      // Start running!
-      if (!msi_enable())
-      {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to enable MSI - interrupts will not be received\n");
-        current_dev_status = DEV_STATUS::FAILED;
-      }
-      else
-      {
-        // Start the controller. It looks a bit odd to set the device status to stopped, but it's an accurate
-        // reflection of the controller's current state before we call start().
-        operational_regs->usb_status.event_interrupt = 0;
-        current_dev_status = DEV_STATUS::STOPPED;
-
-        this->start();
-
-        // Tell all ports that their status may have changed:
-        for (uint32_t i = 0; i < capability_regs->struct_params_1.max_ports; i++)
-        {
-          if (root_ports[i].is_valid_port())
-          {
-            KL_TRC_TRACE(TRC_LVL::FLOW, "Kick port ", i, "\n");
-            root_ports[i].port_status_change_event();
-          }
-        }
-      }
+      set_device_status(DEV_STATUS::STOPPED);
     }
   }
 
@@ -105,7 +80,7 @@ controller::~controller()
 {
   KL_TRC_ENTRY;
 
-  this->stop(true);
+  this->controller_stop();
 
   // Clean up the pages we mapped for scratchpads. Everything else should clean itself up.
   for (int i = 0; i < num_scratchpad_page_ptrs; i++)
@@ -119,25 +94,44 @@ controller::~controller()
   KL_TRC_EXIT;
 }
 
-/// @brief If the controller isn't already in the run state, start it running.
-///
-/// This function will pause for a short duration, if needed, to wait for the controller to start. If the controller
-/// could not be started, the device status will be set to failed.
-///
-/// @return True if the controller was successfully started, false otherwise.
 bool controller::start()
 {
-  bool result = false;
+  bool result{true};
+
   KL_TRC_ENTRY;
 
-  if ((operational_regs) && (current_dev_status == DEV_STATUS::STOPPED))
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Execute start.\n");
-    operational_regs->usb_command.interrupter_enable = 1;
-    operational_regs->usb_command.run_stop = 1;
-    current_dev_status = DEV_STATUS::OK;
+  set_device_status(DEV_STATUS::STARTING);
 
-    result = true;
+  // Start running!
+  if (permanently_failed || !msi_enable())
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Permanently failed, or failed to enable MSI.\n");
+    set_device_status(DEV_STATUS::FAILED);
+  }
+  else
+  {
+    // Start the controller.
+    if(!controller_start())
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Device failed to enter startup\n");
+      set_device_status(DEV_STATUS::FAILED);
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Started OK, kick ports\n");
+
+      set_device_status(DEV_STATUS::OK);
+
+      // Tell all ports that their status may have changed:
+      for (uint32_t i = 0; i < capability_regs->struct_params_1.max_ports; i++)
+      {
+        if (root_ports[i].is_valid_port())
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Kick port ", i, "\n");
+          root_ports[i].port_status_change_event();
+        }
+      }
+    }
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
@@ -146,25 +140,115 @@ bool controller::start()
   return result;
 }
 
-/// @brief If the controller isn't already in the stopped state, stop it now.
+bool controller::stop()
+{
+  bool result{true};
+
+  KL_TRC_ENTRY;
+
+  set_device_status(DEV_STATUS::STOPPING);
+
+  if (controller_stop())
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Successful stop\n");
+    set_device_status(DEV_STATUS::STOPPED);
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to stop\n");
+    set_device_status(DEV_STATUS::FAILED);
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+bool controller::reset()
+{
+  bool result = true;
+
+  KL_TRC_ENTRY;
+
+  set_device_status(DEV_STATUS::RESET);
+
+  if (operational_regs->usb_status.host_ctrlr_halted != 1)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Controller must stop before being reset\n");
+    controller_stop();
+  }
+
+  if (!controller_reset())
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to enter reset correctly\n");
+    set_device_status(DEV_STATUS::FAILED);
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Device reset OK\n");
+    set_device_status(DEV_STATUS::STOPPED);
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+/// @brief If the controller is halted, allow it to run.
+///
+/// Note that this is a separate action to IDevice::start() as the controller may have been paused for, for example, a
+/// configuration change.
+///
+/// This function will pause for a short duration, if needed, to wait for the controller to start. If the controller
+/// could not be started, the device status will be set to failed.
+///
+/// @return True if the controller was successfully started, false otherwise.
+bool controller::controller_start()
+{
+  bool result{true};
+
+  KL_TRC_ENTRY;
+
+  if (operational_regs)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Execute start.\n");
+    operational_regs->usb_status.event_interrupt = 0;
+    operational_regs->usb_command.interrupter_enable = 1;
+    operational_regs->usb_command.run_stop = 1;
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to start as not configured\n");
+    result = false;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+/// @brief Set the controller to not be running.
+///
+/// This is subtly different to IDevice::stop() - this function may be called anytime we want to suspend operation of
+/// the controller, for example to update its configuration, even when this is part of the normal operation.
+/// IDevice::stop() means we want the device to stop semi-permanently.
 ///
 /// This function will pause for a short duration, if needed, to wait for the controller to stop. If the controller
 /// could not be stopped, the device status will be set to failed.
 ///
-/// @param force Whether or not to forcibly set the controller to stopped. If this is true, the appropriate registers
-///              will be written even if the device is not ready or already running. If false, the controller's
-///              registers will only be written if the device is ready to be stopped.
-///
-/// @return True if the controller was successfully stopped, false otherwise.
-bool controller::stop(bool force)
+/// @return True If the controller was stopped successfully. False otherwise.
+bool controller::controller_stop()
 {
-  bool result = false;
+  bool result{true};
   uint64_t start_time;
   uint64_t end_time;
 
   KL_TRC_ENTRY;
 
-  if ((operational_regs) && ((current_dev_status == DEV_STATUS::OK) || force))
+  if (operational_regs)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Stopping\n");
     operational_regs->usb_command.run_stop = 0;
@@ -187,22 +271,17 @@ bool controller::stop(bool force)
     if (operational_regs->usb_status.host_ctrlr_halted == 1)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Controller stopped OK\n");
-
-      // If the controller was known to be in the running state, set it to stopped. Otherwise, let the existing state
-      // code live on - since it's probably FAILED or similar.
-      if (current_dev_status == DEV_STATUS::OK)
-      {
-        current_dev_status = DEV_STATUS::STOPPED;
-      }
-
-      result = true;
     }
     else
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Controller failed to stop\n");
-      current_dev_status = DEV_STATUS::UNKNOWN;
       result = false;
     }
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Controller not configured, unable to stop\n");
+    result = false;
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
@@ -213,19 +292,22 @@ bool controller::stop(bool force)
 
 /// @brief If the controller is stopped, attempt a reset.
 ///
+/// This is independent of IDevice::reset() as there are legitimate reasons to get the controller chip to reset itself
+/// without updating the state of this object - for example, resetting the chip during initialisation of this driver.
+///
 /// This function will pause for a short duration, if needed, to wait for the controller to reset. If the controller
 /// could not be reset, the device status will be set to failed.
 ///
 /// @return True if the controller was successfully reset, false otherwise.
-bool controller::reset()
+bool controller::controller_reset()
 {
-
+  bool result{true};
   uint64_t start_time;
   uint64_t end_time;
-  bool result = true;
 
   KL_TRC_ENTRY;
 
+  ASSERT(operational_regs);
   if (operational_regs->usb_status.host_ctrlr_halted == 1)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "OK to reset\n");
@@ -248,7 +330,7 @@ bool controller::reset()
     if ((operational_regs->usb_status.controller_not_ready != 0) || (operational_regs->usb_command.hc_reset != 0))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Controller failed to reset\n");
-      current_dev_status = DEV_STATUS::UNKNOWN;
+      set_device_status(DEV_STATUS::FAILED);
       result = false;
     }
   }
@@ -372,8 +454,8 @@ bool controller::initial_hardware_check()
     KL_TRC_TRACE(TRC_LVL::FLOW, "Hardware started, check compatibility\n");
 
     // Make sure the controller is stopped before fiddling with it.
-    this->stop(true);
-    this->reset();
+    this->controller_stop();
+    this->controller_reset();
 
     if (caps.msi.supported == false)
     {
@@ -403,7 +485,7 @@ bool controller::prepare_control_structures()
   KL_TRC_ENTRY;
 
   // Set controller to stopped.
-  this->stop(true);
+  this->controller_stop();
 
   // Initialise the Device Context Base Address Array, which is an array of pointers to device contexts. Since no
   // devices are enabled yet, all pointers are set to nullptr. The xHCI must be given the physical address, of course.
@@ -681,7 +763,7 @@ void controller::handle_command_completion(command_completion_event_trb &trb)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Return response data\n");
         cmd_data->response_item->trb = trb;
-        cmd_data->response_item->set_response_complete();
+        cmd_data->response_item->response_complete();
       }
       break;
 
@@ -867,7 +949,7 @@ bool controller::generic_device_command(template_trb *trb, device_core *req_dev)
   new_cmd = nullptr;
   doorbell_regs[0] = 0;
 
-  response->wait_for_response();
+  response->wait_for_signal();
   if (response->trb.completion_code != C_CODES::SUCCESS)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Command failed with code: ", response->trb.completion_code, "\n");
@@ -957,9 +1039,4 @@ void controller::ring_doorbell(uint8_t doorbell_num, uint8_t endpoint_code, uint
   doorbell_regs[doorbell_num] = doorbell_code;
 
   KL_TRC_EXIT;
-}
-
-void controller::handle_work_item(std::shared_ptr<work::work_item> item)
-{
-  INCOMPLETE_CODE("xhci work item");
 }

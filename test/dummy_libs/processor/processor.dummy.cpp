@@ -17,7 +17,7 @@ void test_init_proc_interrupt_table()
 namespace
 {
   uint64_t fake_ptr_target = 5;
-  task_thread *fake_cur_thread = nullptr;
+  task_thread *fake_cur_thread{nullptr};
 }
 
 uint32_t proc_mp_proc_count()

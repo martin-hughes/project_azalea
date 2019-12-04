@@ -23,10 +23,9 @@
 /// @param mem_info If known, this field provides pre-populated memory manager information about this process. For all
 ///                 processes except the initial kernel start procedure, this should be NULL.
 task_process::task_process(ENTRY_PROC entry_point, bool kernel_mode, mem_process_info *mem_info) :
-  kernel_mode(kernel_mode),
-  accepts_msgs(false),
-  being_destroyed(false),
-  has_ever_started(false)
+  kernel_mode{kernel_mode},
+  being_destroyed{false},
+  has_ever_started{false}
 {
   KL_TRC_ENTRY;
 
@@ -262,6 +261,36 @@ void task_process::thread_ending(task_thread *thread)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "No more threads\n");
     this->destroy_process();
+  }
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Stores messages for retrieval by a user-mode process.
+///
+/// This is unlike other objects where messages are handled directly by this handler - we don't have a facility to call
+/// directly back to user mode code yet. As such, we just take the message from the global queue and add it to our
+/// internal queue.
+///
+/// Only "basic" messages can be sent to processes at the moment.
+///
+/// @param message The message to be handled by the process.
+void task_process::handle_message(std::unique_ptr<msg::root_msg> &message)
+{
+  msg::basic_msg *msg_ptr;
+
+  KL_TRC_ENTRY;
+
+  msg_ptr = dynamic_cast<msg::basic_msg *>(message.get());
+  if (msg_ptr && this->messaging.accepts_msgs)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Found a basic message, queue it for later handling\n");
+    message.release();
+    std::unique_ptr<msg::basic_msg> msg_u_ptr(msg_ptr);
+
+    klib_synch_spinlock_lock(this->messaging.message_lock);
+    this->messaging.message_queue.push(std::move(msg_u_ptr));
+    klib_synch_spinlock_unlock(this->messaging.message_lock);
   }
 
   KL_TRC_EXIT;

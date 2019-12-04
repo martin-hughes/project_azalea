@@ -5,6 +5,8 @@
 
 #include "gen_vt.h"
 
+#include <string.h>
+
 void callback(tmt_msg_t m, TMT *vt, const void *a, void *p);
 
 /// @brief Construct a virtual terminal
@@ -26,6 +28,60 @@ terms::vt::~vt()
   inner_vt = nullptr;
 }
 
+bool terms::vt::start()
+{
+  bool result{true};
+
+  KL_TRC_ENTRY;
+
+  set_device_status(DEV_STATUS::STARTING);
+
+  tmt_reset(inner_vt);
+
+  set_device_status(DEV_STATUS::OK);
+
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+bool terms::vt::stop()
+{
+  bool result{true};
+
+  KL_TRC_ENTRY;
+
+  set_device_status(DEV_STATUS::STOPPED);
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+bool terms::vt::reset()
+{
+  bool result{true};
+
+  KL_TRC_ENTRY;
+
+  set_device_status(DEV_STATUS::RESET);
+
+  tmt_reset(inner_vt);
+
+  // Reset terminal options to defaults.
+  filters = terms::terminal_opts();
+
+  set_device_status(DEV_STATUS::STOPPED);
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
 
 /// @brief Called by libtmt whenever an interesting event occurs.
 ///
@@ -41,18 +97,24 @@ terms::vt::~vt()
 void callback(tmt_msg_t m, TMT *vt, const void *a, void *p)
 {
   terms::vt *term{reinterpret_cast<terms::vt *>(p)};
+  DEV_STATUS s;
 
   KL_TRC_ENTRY;
 
   // There is an assumption here that libtmt will never generate a callback for a terminal that no longer exists, which
   // is reasonable because the VT is wrapped in C++ class and isn't called directly.
   ASSERT(term != nullptr);
-  if (term->get_device_status() == DEV_STATUS::OK)
+  s = term->get_device_status();
+
+  // Don't forward messages if the device is failed, stopped or not fully created - it might still be mid-construction,
+  // in which case tmt_callback may not point at the desired function!
+  if ((s != DEV_STATUS::FAILED) &&
+      (s != DEV_STATUS::UNKNOWN) &&
+      (s != DEV_STATUS::STOPPED))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Forward message\n");
     term->tmt_callback(m, vt, a);
   }
-  // Otherwise the terminal is failed, so sending it a message might not be a good plan.
 
   KL_TRC_EXIT;
 }
@@ -128,7 +190,15 @@ void terms::vt::write_raw_string(const char *out_string, uint16_t num_chars)
 {
   KL_TRC_ENTRY;
 
-  tmt_write(inner_vt, out_string, num_chars);
+  if (get_device_status() == DEV_STATUS::OK)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Handle request while running\n");
+    tmt_write(inner_vt, out_string, num_chars);
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Ignore request while not running\n");
+  }
 
   KL_TRC_EXIT;
 }

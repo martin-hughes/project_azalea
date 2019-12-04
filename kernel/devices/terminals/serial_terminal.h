@@ -2,7 +2,6 @@
 /// @brief Declare a VGA text-mode terminal.
 
 #include "devices/generic/gen_terminal.h"
-#include "klib/synch/kernel_messages.h"
 
 namespace terms
 {

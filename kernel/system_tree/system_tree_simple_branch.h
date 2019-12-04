@@ -3,8 +3,10 @@
 
 #pragma once
 
-#include "klib/klib.h"
+#include "klib/data_structures/red_black_tree.h"
 #include "system_tree/system_tree_branch.h"
+
+#include "klib/synch/kernel_locks.h"
 
 #include <memory>
 
@@ -52,4 +54,7 @@ protected:
   ///
   /// @return The branch object, if name represents a branch. False otherwise.
   virtual std::shared_ptr<ISystemTreeBranch> get_child_branch(const kl_string &name);
+
+  /// @brief Lock protecting operations on this branch.
+  kernel_spinlock child_tree_lock;
 };

@@ -13,11 +13,16 @@
 
 /// @brief A generic PCI bus device.
 ///
-class pci_generic_bus : public IDevice, public system_tree_simple_branch
+class pci_generic_bus : public IDevice
 {
 public:
   pci_generic_bus(uint8_t bus, pci_root_device *parent);
   virtual ~pci_generic_bus() override;
+
+  // Overrides of IDevice.
+  bool start() override;
+  bool stop() override;
+  bool reset() override;
 
 protected:
 

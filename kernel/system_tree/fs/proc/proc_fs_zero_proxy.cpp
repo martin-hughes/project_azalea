@@ -3,6 +3,8 @@
 ///
 /// This proxy forwards all requests to the branch referring to the current process.
 
+//#define ENABLE_TRACING
+
 #include "klib/klib.h"
 #include "processor/processor.h"
 #include "system_tree/fs/proc/proc_fs.h"
@@ -70,16 +72,13 @@ std::shared_ptr<ISystemTreeBranch> proc_fs_root_branch::proc_fs_zero_proxy_branc
 
   // This is an if-statement because it's possible that I've forgotten a window condition somewhere. The panic will do
   // for now.
-  if (parent_branch->get_child(branch_name, leaf) != ERR_CODE::NO_ERROR)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Branch doesn't exist???\n");
-    panic("Current process branch not found");
-  }
+  ASSERT(parent_branch->children.contains(branch_name));
+  leaf = parent_branch->children.search(branch_name);
 
   cur_proc_branch = std::dynamic_pointer_cast<ISystemTreeBranch>(leaf);
   ASSERT(cur_proc_branch);
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Return value: ", cur_proc_branch, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Return value: ", cur_proc_branch.get(), "\n");
   KL_TRC_EXIT;
 
   return cur_proc_branch;

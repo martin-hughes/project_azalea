@@ -1,6 +1,8 @@
 /// @file
 /// @brief ACPI Device enumeration and control
 ///
+// Known defects:
+// - time_register_clock_source should be subsumed by the dev_monitor system.
 
 //#define ENABLE_TRACING
 
@@ -99,6 +101,7 @@ void acpi_create_one_device(const char *dev_path, ACPI_HANDLE obj_handle, ACPI_D
 
   KL_TRC_ENTRY;
 
+
   pathname = dev_path;
 
   if (dev_info.Valid & ACPI_VALID_HID)
@@ -124,6 +127,7 @@ void acpi_create_one_device(const char *dev_path, ACPI_HANDLE obj_handle, ACPI_D
     }
 
   }
+
 
   KL_TRC_EXIT;
 }

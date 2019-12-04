@@ -49,13 +49,11 @@ ERR_CODE syscall_seek_handle(GEN_HANDLE handle, int64_t offset, SEEK_OFFSET dir,
 
 /* Message passing. */
 ERR_CODE syscall_register_for_mp();
-ERR_CODE syscall_send_message(uint64_t target_proc_id,
+ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
                               uint64_t message_id,
                               uint64_t message_len,
                               const char *message_ptr);
-ERR_CODE syscall_receive_message_details(uint64_t *sending_proc_id,
-                                         uint64_t *message_id,
-                                         uint64_t *message_len);
+ERR_CODE syscall_receive_message_details(uint64_t *message_id, uint64_t *message_len);
 ERR_CODE syscall_receive_message_body(char *message_buffer, uint64_t buffer_size);
 ERR_CODE syscall_message_complete();
 

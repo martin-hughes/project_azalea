@@ -1,5 +1,8 @@
 /// @file
 /// @brief Implementation for a simple RAM disk block device
+//
+// Known defects:
+// - Only lip service is paid to the IDevice interface - stop/start/reset don't really work.
 
 //#define ENABLE_TRACING
 
@@ -12,13 +15,16 @@
 ///
 /// @param block_size The size of a block on this device.
 ramdisk_device::ramdisk_device(uint64_t num_blocks, uint64_t block_size) :
-    IBlockDevice("generic RAM disk"), _num_blocks(num_blocks), _block_size(block_size), _storage_size(num_blocks * block_size)
+    IBlockDevice("generic RAM disk", "ramdisk"), _num_blocks(num_blocks), _block_size(block_size), _storage_size(num_blocks * block_size)
 {
   KL_TRC_ENTRY;
+
+  set_device_status(DEV_STATUS::STARTING);
 
   if ((this->_num_blocks == 0) || (this->_block_size == 0))
   {
     _ramdisk_storage = nullptr;
+    set_device_status(DEV_STATUS::FAILED);
   }
   else
   {
@@ -41,21 +47,46 @@ ramdisk_device::~ramdisk_device()
   KL_TRC_EXIT;
 }
 
-DEV_STATUS ramdisk_device::get_device_status()
+bool ramdisk_device::start()
 {
   KL_TRC_ENTRY;
 
-  DEV_STATUS ret = DEV_STATUS::OK;
-
-  if (this->_ramdisk_storage == nullptr)
+  if (get_device_status() != DEV_STATUS::FAILED)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "No storage defined\n");
-    ret = DEV_STATUS::FAILED;
+    set_device_status(DEV_STATUS::OK);
   }
 
   KL_TRC_EXIT;
 
-  return ret;
+  return true;
+}
+
+bool ramdisk_device::stop()
+{
+  KL_TRC_ENTRY;
+
+  if (get_device_status() != DEV_STATUS::FAILED)
+  {
+    set_device_status(DEV_STATUS::STOPPED);
+  }
+
+  KL_TRC_EXIT;
+
+  return true;
+}
+
+bool ramdisk_device::reset()
+{
+  KL_TRC_ENTRY;
+
+  if (get_device_status() != DEV_STATUS::FAILED)
+  {
+    set_device_status(DEV_STATUS::STOPPED);
+  }
+
+  KL_TRC_EXIT;
+
+  return true;
 }
 
 uint64_t ramdisk_device::num_blocks()

@@ -28,6 +28,8 @@ public:
   virtual ERR_CODE delete_child(const kl_string &name) override;
   virtual ERR_CODE create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
 
+  virtual void set_msg_receiver(std::shared_ptr<work::message_receiver> &new_handler);
+
   /// @brief The read-only output leaf of a pipe branch.
   ///
   class pipe_read_leaf: public IReadable, public ISystemTreeLeaf
@@ -73,4 +75,6 @@ protected:
   uint8_t *_write_ptr; ///< Position of the write pointer in the buffer.
 
   kernel_spinlock _pipe_lock; ///< Synchronises reads and writes so only one occurs at a time.
+
+  std::weak_ptr<work::message_receiver> new_data_handler; ///< Object to send messages to when new data arrives.
 };

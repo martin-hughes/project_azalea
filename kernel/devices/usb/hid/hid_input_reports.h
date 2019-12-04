@@ -255,7 +255,9 @@ namespace usb { namespace hid {
     };
   };
 
-  bool parse_descriptor(void *raw_descriptor, uint32_t descriptor_length, decoded_descriptor &descriptor);
+  bool parse_descriptor(std::unique_ptr<uint8_t[]> &raw_descriptor,
+                        uint32_t descriptor_length,
+                        decoded_descriptor &descriptor);
   bool parse_report(decoded_descriptor &descriptor,
                     void *report,
                     uint32_t report_length,

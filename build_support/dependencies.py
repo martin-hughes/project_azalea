@@ -12,7 +12,6 @@ kernel = [
     '#kernel/klib/data_structures/SConscript',
     '#kernel/klib/tracing/SConscript',
     '#kernel/klib/synch/SConscript',
-    '#kernel/klib/synch/SConscript-messages',
     '#kernel/klib/synch/SConscript-spinlocks',
     '#kernel/syscall/SConscript-kernel',
     '#kernel/syscall/SConscript-kernel-x64',
@@ -24,6 +23,7 @@ kernel = [
     '#external/SConscript-libtmt',
 
     # Devices
+    '#kernel/devices/SConscript',
     '#kernel/devices/block/ata/SConscript',
     '#kernel/devices/block/proxy/SConscript',
     '#kernel/devices/block/ramdisk/SConscript',
@@ -64,7 +64,6 @@ main_tests = [
     '#kernel/klib/data_structures/SConscript',
     '#kernel/klib/memory/SConscript',
     '#kernel/klib/misc/SConscript',
-    '#kernel/klib/synch/SConscript-messages',
     '#kernel/klib/synch/SConscript-spinlocks',
     '#kernel/klib/tracing/SConscript',
     '#kernel/mem/SConscript-testable',
@@ -80,8 +79,10 @@ main_tests = [
     '#external/SConscript-GoogleTest',
 
     # Devices for testing
+    '#kernel/devices/SConscript', # Device Monitor and Core device interfaces.
     '#kernel/devices/block/ramdisk/SConscript',
     '#kernel/devices/block/proxy/SConscript',
+    '#kernel/devices/generic/SConscript',
     '#kernel/system_tree/fs/pipe/SConscript',
     '#kernel/system_tree/fs/fat/SConscript',
     '#kernel/system_tree/fs/proc/SConscript',

@@ -8,7 +8,6 @@ obj = env.Library("dev-generic",
                     "gen_terminal.cpp",
                     "gen_vt.cpp",
                     "keyboard_maps.cpp",
-                    "temp_terminal_process.cpp",
                   ]
                  )
 Return ("obj")

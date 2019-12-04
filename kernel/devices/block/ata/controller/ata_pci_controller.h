@@ -165,6 +165,11 @@ public:
   pci_controller(pci_address address);
   virtual ~pci_controller() = default; ///< Normal destructor.
 
+  // Overrides of IDevice.
+  bool start() override;
+  bool stop() override;
+  bool reset() override;
+
 protected:
   static const uint16_t MAX_CHANNEL = 2; ///< How many channels are supported on this controller
   static const uint16_t DRIVES_PER_CHAN = 2; ///< How many drives are supported per channel?

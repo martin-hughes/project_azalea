@@ -8,6 +8,7 @@
 #include "processor/synch_objects.h"
 #include "object_mgr/object_mgr.h"
 #include "system_tree/system_tree.h"
+#include "klib/klib.h"
 
 using namespace std;
 

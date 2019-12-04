@@ -147,7 +147,7 @@ bool device_core::device_request(device_request_type request_type,
     if (result)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Wait for response\n");
-      transfer_item->wait_for_response();
+      transfer_item->wait_for_signal();
       KL_TRC_TRACE(TRC_LVL::FLOW, "Got response\n");
     }
   }
@@ -247,7 +247,7 @@ uint8_t device_core::get_port_num()
 /// @param trb The Transfer Event TRB that triggered this call.
 void device_core::handle_transfer_event(transfer_event_trb &trb)
 {
-  std::shared_ptr<work::work_response> response;
+  std::shared_ptr<normal_transfer> response;
 
   KL_TRC_ENTRY;
 

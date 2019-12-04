@@ -44,6 +44,11 @@ public:
   // Overrides from IGenericClock
   virtual bool get_current_time(time_expanded &time) override;
 
+  // Overrides from IDevice
+  bool start() override;
+  bool stop() override;
+  bool reset() override;
+
 protected:
   uint16_t cmos_base_port{0x70}; ///< The CMOS port to use when reading values for this RTC.
   bool bcd_mode{false}; ///< If true, the clock stores BCD digits.

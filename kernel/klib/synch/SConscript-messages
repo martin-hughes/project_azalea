@@ -1,7 +1,0 @@
-# Klib Synchronisation library - Message passing part.
-
-Import('env')
-obj = env.Library("klib-synch-messages", 
-                  [ "kernel_messages.cpp",
-                  ])
-Return ("obj") 

@@ -10,6 +10,7 @@
 // Core includes
 #include "klib/klib.h"
 #include "devices/usb/usb.h"
+#include "devices/device_monitor.h"
 
 // Known USB devices:
 #include "devices/usb/hid/usb_hid_device.h"
@@ -64,23 +65,25 @@ void main_factory::create_device(std::shared_ptr<generic_core> device_core)
 {
   KL_TRC_ENTRY;
 
-  std::shared_ptr<create_device_work_item> item = std::make_shared<create_device_work_item>(device_core);
-  work::queue_work_item(*factory, item);
+  std::unique_ptr<create_device_work_item> item = std::make_unique<create_device_work_item>(device_core);
+  work::queue_message(*factory, std::move(item));
 
   KL_TRC_EXIT;
 }
 
 /// @brief Called to create a device asynchronously.
 ///
-/// @param item The queued work item - this must be a USB device creation request.
-void main_factory::handle_work_item(std::shared_ptr<work::work_item> item)
+/// @param message The queued work item - this must be a USB device creation request.
+void main_factory::handle_message(std::unique_ptr<msg::root_msg> &message)
 {
   KL_TRC_ENTRY;
 
   // Which route we take depends on what work item has been given to us!
-  std::shared_ptr<create_device_work_item> cd_item = std::dynamic_pointer_cast<create_device_work_item>(item);
-  if (cd_item)
+  create_device_work_item *cdwi = dynamic_cast<create_device_work_item *>(message.get());
+  if (cdwi)
   {
+    message.release();
+    std::unique_ptr<create_device_work_item> cd_item{cdwi};
     create_device_handler(cd_item);
   }
   else
@@ -94,7 +97,7 @@ void main_factory::handle_work_item(std::shared_ptr<work::work_item> item)
 /// @brief Called when a device is being asynchronously initialised.
 ///
 /// @param item The request containing the device core to create a driver around.
-void main_factory::create_device_handler(std::shared_ptr<create_device_work_item> item)
+void main_factory::create_device_handler(std::unique_ptr<create_device_work_item> &item)
 {
   std::shared_ptr<generic_core> device_core = item->device_core;
   std::shared_ptr<generic_device> new_device;
@@ -123,12 +126,28 @@ void main_factory::create_device_handler(std::shared_ptr<create_device_work_item
       {
       case DEVICE_CLASSES::HID:
         KL_TRC_TRACE(TRC_LVL::FLOW, "Human interface device\n");
-        new_device = std::make_shared<hid_device>(device_core, i);
+        {
+          std::shared_ptr<IDevice> empty;
+          std::shared_ptr<hid_device> hid_ptr;
+          if (dev::create_new_device(hid_ptr, empty, device_core, i))
+          {
+            KL_TRC_TRACE(TRC_LVL::FLOW, "Device constructed\n");
+            new_device = hid_ptr;
+          }
+        }
         break;
 
       default:
         KL_TRC_TRACE(TRC_LVL::FLOW, "Unknown device type.\n");
-        new_device = std::make_shared<generic_device>(device_core, i, "Unrecognised USB Device");
+        {
+          std::shared_ptr<IDevice> empty;
+          std::shared_ptr<generic_device> gen_ptr;
+          if (dev::create_new_device(gen_ptr, empty, device_core, i, "Unrecognised USB Device"))
+          {
+            KL_TRC_TRACE(TRC_LVL::FLOW, "Device constructed\n");
+            new_device = gen_ptr;
+          }
+        }
         break;
       }
     }
@@ -148,7 +167,7 @@ void main_factory::create_device_handler(std::shared_ptr<create_device_work_item
 main_factory::create_device_work_item::create_device_work_item(std::shared_ptr<generic_core> core) :
   device_core{core}
 {
-  // Deliberately no actions.
+  this->message_id = SM_USB_CREATE_DEVICE;
 }
 
 }; // USB namespace.

@@ -1,0 +1,9 @@
+# Generic USB drivers.
+
+Import('env')
+obj = env.Library("dev-interface",
+                  [
+                    "device_interface.cpp",
+                    "device_monitor.cpp",
+                  ])
+Return ("obj")

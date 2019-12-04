@@ -16,8 +16,6 @@ terms::vga::vga(std::shared_ptr<IWritable> keyboard_pipe, void *display_area_vir
 {
   KL_TRC_ENTRY;
 
-  current_dev_status = DEV_STATUS::OK;
-
   KL_TRC_EXIT;
 }
 
@@ -215,62 +213,87 @@ void terms::vga::set_cursor_pos(uint8_t x, uint8_t y)
   KL_TRC_EXIT;
 }
 
+/// @brief Override IDevice::handle_private_msg to deal with keyboard keypresses.
+///
+/// Other messages will be discarded.
+///
+/// @param message The message being handled.
+void terms::vga::handle_private_msg(std::unique_ptr<msg::root_msg> &message)
+{
+  msg::basic_msg *b_msg;
+  KL_TRC_ENTRY;
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Term private message\n");
+
+  // I haven't really worked out unique_ptr casting yet, but we don't keep a copy of these pointers so I figure the old
+  // methods are still fine.
+  b_msg = dynamic_cast<msg::basic_msg *>(message.get());
+  if (b_msg &&
+      ((b_msg->message_id == SM_KEYDOWN) || (b_msg->message_id == SM_KEYUP)) &&
+      (b_msg->message_length == sizeof(keypress_msg)))
+  {
+    keypress_msg *k_msg = reinterpret_cast<keypress_msg *>(b_msg->details.get());
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Handle keypress message\n");
+    ASSERT(k_msg != nullptr);
+
+    this->handle_keyboard_msg(b_msg->message_id, *k_msg);
+  }
+  else
+  {
+    terms::generic::handle_private_msg(message);
+  }
+
+  KL_TRC_EXIT;
+}
+
 /// @brief Handle a generic keyboard message
 ///
 /// This may involve translating it in to a printable character, or possibly manipulating the current line according to
 /// the active line discipline.
 ///
-/// @param msg_header The message to handle. This MUST be a keyboard message.
-void terms::vga::handle_keyboard_msg(klib_message_hdr &msg_header)
+/// @param msg_id Must be one of SM_KEYDOWN or SM_KEYUP.
+///
+/// @param key_msg The message to handle. This MUST be a keyboard message.
+void terms::vga::handle_keyboard_msg(uint64_t msg_id, keypress_msg &key_msg)
 {
+  char pc;
   KL_TRC_ENTRY;
-  keypress_msg *key_msg;
 
-  switch(msg_header.msg_id)
+  ASSERT((msg_id == SM_KEYDOWN) || (msg_id == SM_KEYUP));
+
+  switch(msg_id)
   {
   case SM_KEYDOWN:
     KL_TRC_TRACE(TRC_LVL::FLOW, "Printable character message\n");
 
-    if (msg_header.msg_length != sizeof(keypress_msg))
+    pc = key_msg.printable;
+
+    if (pc)
     {
-      KL_TRC_TRACE(TRC_LVL::ERROR, "Wrong sized keyboard message\n");
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Handle printable character\n");
+      this->handle_character(pc);
     }
     else
     {
-      key_msg = reinterpret_cast<keypress_msg *>(msg_header.msg_contents);
-      char pc = key_msg->printable;
+      // Some keys, while not directly printable, do have a meaning to us, so we should add them to the stream.
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Handle certain special keys\n");
 
-      if (pc)
+      switch(key_msg.key_pressed)
       {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Handle printable character\n");
-        this->handle_character(pc);
+      case KEYS::BACKSPACE:
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Backspace\n");
+        this->handle_character('\b');
+        break;
+
+      default:
+        KL_TRC_TRACE(TRC_LVL::FLOw, "Unknown special key - ignore\n");
       }
-      else
-      {
-        // Some keys, while not directly printable, do have a meaning to us, so we should add them to the stream.
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Handle certain special keys\n");
-
-        switch(key_msg->key_pressed)
-        {
-        case KEYS::BACKSPACE:
-          KL_TRC_TRACE(TRC_LVL::FLOW, "Backspace\n");
-          this->handle_character('\b');
-          break;
-
-        default:
-          KL_TRC_TRACE(TRC_LVL::FLOw, "Unknown special key - ignore\n");
-        }
-      }
-
     }
     break;
 
   case SM_KEYUP:
+    // We don't really do key repetition yet.
     KL_TRC_TRACE(TRC_LVL::FLOW, "Unhandled keyboard message\n");
-    break;
-
-  default:
-    panic("Unrecognised message in terminal handler");
     break;
   }
 

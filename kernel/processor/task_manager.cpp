@@ -30,7 +30,7 @@
 #include "object_mgr/object_mgr.h"
 #include "system_tree/system_tree.h"
 #include "system_tree/fs/proc/proc_fs.h"
-#include "processor/work_queue.h"
+#include "processor/work_queue2.h"
 
 #ifdef _MSVC_LANG
 #include <intrin.h>
@@ -164,7 +164,7 @@ std::shared_ptr<task_process> task_create_system_process()
   KL_TRC_TRACE(TRC_LVL::FLOW, "Creating system process\n");
   system_process = task_process::create(proc_interrupt_slowpath_thread, true, task0_mem_info);
   task_thread::create(proc_tidyup_thread, system_process);
-  task_thread::create(work::work_queue_thread, system_process);
+  task_thread::create(work::work_queue2_thread, system_process);
   ASSERT(system_process != nullptr);
   system_process->start_process();
 

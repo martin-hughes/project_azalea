@@ -1335,7 +1335,7 @@ ERR_CODE fat_filesystem::fat_folder::unlink_fdes(uint32_t short_name_fde_idx)
 
           if (result != ERR_CODE::NO_ERROR)
           {
-            KL_TRC_TRACE(TRC_LVL:FLOW, "Failed to write long name FDE\n");
+            KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to write long name FDE\n");
             break;
           }
         }

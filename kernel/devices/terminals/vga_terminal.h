@@ -2,7 +2,6 @@
 /// @brief Declare a VGA text-mode terminal.
 
 #include "devices/generic/gen_vt.h"
-#include "klib/synch/kernel_messages.h"
 
 namespace terms
 {
@@ -15,9 +14,11 @@ public:
   vga(std::shared_ptr<IWritable> keyboard_pipe, void *display_area_virt);
   virtual ~vga() { };
 
+  virtual void handle_private_msg(std::unique_ptr<msg::root_msg> &message) override;
+
   virtual void tmt_callback(tmt_msg_t m, TMT *vt, const void *a) override;
 
-  virtual void handle_keyboard_msg(klib_message_hdr &msg_header);
+  virtual void handle_keyboard_msg(uint64_t msg_id, keypress_msg &key_msg);
 
 protected:
   virtual void enable_cursor() override;

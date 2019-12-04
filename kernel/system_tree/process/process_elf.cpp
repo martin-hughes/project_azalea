@@ -66,6 +66,8 @@ std::shared_ptr<task_process> proc_load_elf_file(kl_string binary_name)
   ASSERT(new_prog_file->read_bytes(0, prog_size, load_buffer, prog_size, bytes_read) == ERR_CODE::NO_ERROR);
   ASSERT(bytes_read == prog_size);
 
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved entire file\n");
+
   // Check that this is a valid ELF64 file.
   file_header = reinterpret_cast<elf64_file_header *>(load_buffer);
   ASSERT((file_header->ident[0] == 0x7f)
@@ -86,6 +88,7 @@ std::shared_ptr<task_process> proc_load_elf_file(kl_string binary_name)
   // Create a task context with the correct entry point - this is needed before we can map pages to copy the image in
   // to.
   fn_ptr start_addr_ptr = reinterpret_cast<fn_ptr>(file_header->entry_addr);
+  KL_TRC_TRACE(TRC_LVL::FLOW, "About to construct new process\n");
   new_proc = task_process::create(start_addr_ptr, false);
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Created new process with entry point ", start_addr_ptr, "\n");
 

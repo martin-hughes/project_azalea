@@ -3,6 +3,7 @@
 #include "system_tree/system_tree.h"
 #include "system_tree/fs/fs_file_interface.h"
 #include "test/test_core/test.h"
+#include "klib/klib.h"
 
 #include "gtest/gtest.h"
 
