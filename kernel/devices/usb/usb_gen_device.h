@@ -14,7 +14,7 @@
 
 #include "devices/device_interface.h"
 #include "devices/usb/usb_gen_device_requests.h"
-#include "processor/work_queue2.h"
+#include "processor/work_queue.h"
 #include "processor/synch_objects.h"
 
 #include "klib/data_structures/lists.h"

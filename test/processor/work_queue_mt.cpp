@@ -4,7 +4,7 @@
 #include "gtest/gtest.h"
 #include "test/test_core/test.h"
 #include "processor/processor.h"
-#include "processor/work_queue2.h"
+#include "processor/work_queue.h"
 
 #include <thread>
 #include <mutex>
@@ -48,7 +48,7 @@ TEST(WorkQueue2Tests, MultiThreadSimpleTest)
 
   test_only_set_cur_thread((task_thread *)&fake_thread);
 
-  std::thread work_thread(work::work_queue2_thread);
+  std::thread work_thread(work::work_queue_thread);
 
   short_msg *msg = new short_msg;
   std::unique_ptr<short_msg> msg_ptr = std::make_unique<short_msg>();

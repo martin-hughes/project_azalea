@@ -12,7 +12,7 @@
 #include "system_tree/system_tree_leaf.h"
 #include "klib/data_structures/string.h"
 #include "processor/synch_objects.h"
-#include "processor/work_queue2.h"
+#include "processor/work_queue.h"
 
 #include "devices/device_interface.h"
 

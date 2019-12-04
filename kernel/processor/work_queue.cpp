@@ -3,7 +3,7 @@
 
 //#define ENABLE_TRACING
 
-#include "work_queue2.h"
+#include "work_queue.h"
 #include "processor.h"
 #include "klib/klib.h"
 
@@ -54,13 +54,12 @@ void work::test_only_terminate_queue()
 bool test_exit_work_queue{false};
 #endif
 
-#warning Rename work_queue2_thread().
 /// @brief Runs the main work queue. There will be one thread per-CPU.
 ///
 #ifndef AZALEA_TEST_CODE
 [[noreturn]]
 #endif
-void work::work_queue2_thread()
+void work::work_queue_thread()
 {
   KL_TRC_ENTRY;
 

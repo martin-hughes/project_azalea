@@ -5,7 +5,7 @@
 
 #include <memory>
 
-#include "processor/work_queue2.h"
+#include "processor/work_queue.h"
 #include "user_interfaces/messages.h"
 #include "device_interface.h"
 

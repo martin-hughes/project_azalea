@@ -67,7 +67,7 @@
 
 #include <stdint.h>
 
-#include "processor/work_queue2.h"
+#include "processor/work_queue.h"
 #include "system_tree/system_tree_simple_branch.h"
 #include "klib/data_structures/string.h"
 

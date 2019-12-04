@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 #include "user_interfaces/keyboard.h"
-#include "processor/work_queue2.h"
+#include "processor/work_queue.h"
 
 class task_process;
 

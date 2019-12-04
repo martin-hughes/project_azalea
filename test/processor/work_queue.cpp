@@ -4,7 +4,7 @@
 #include "gtest/gtest.h"
 #include "test/test_core/test.h"
 #include "processor/processor.h"
-#include "processor/work_queue2.h"
+#include "processor/work_queue.h"
 
 #include <iostream>
 

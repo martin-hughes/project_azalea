@@ -20,7 +20,7 @@ namespace work
 #ifndef AZALEA_TEST_CODE
   [[noreturn]]
 #endif
-  void work_queue2_thread();
+  void work_queue_thread();
   void work_queue_one_loop();
 
   // Forward declarations necessary to create the queue_message function.
@@ -36,7 +36,7 @@ namespace work
   public:
     virtual ~message_receiver() = 0;
 
-    // Documentation in work_queue2.cpp
+    // Documentation in work_queue.cpp
     virtual void begin_processing_msgs();
     virtual bool process_next_message();
 

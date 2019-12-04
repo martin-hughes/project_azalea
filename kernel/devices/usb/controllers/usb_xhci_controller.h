@@ -10,7 +10,7 @@
 #include "devices/usb/controllers/usb_xhci_port.h"
 #include "devices/usb/controllers/usb_xhci_capabilities.h"
 #include "devices/usb/controllers/usb_xhci_contexts.h"
-#include "processor/work_queue2.h"
+#include "processor/work_queue.h"
 #include "klib/klib.h"
 #include <memory>
 
