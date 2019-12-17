@@ -9,6 +9,7 @@
 #include "syscall/syscall_kernel-int.h"
 #include "mem/mem.h"
 #include "object_mgr/object_mgr.h"
+#include "processor/processor.h"
 
 // Known defects:
 // - It isn't possible to deallocate virtual memory, since the kernel doesn't really track the allocations properly

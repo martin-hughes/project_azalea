@@ -3,10 +3,12 @@
 
 #pragma once
 
-#include "klib/synch/kernel_locks.h"
-#include "processor/processor.h"
-
 #include <memory>
+
+#include "klib/synch/kernel_locks.h"
+#include "klib/data_structures/lists.h"
+
+class task_thread;
 
 const uint64_t MUTEX_MAX_WAIT = 0xFFFFFFFFFFFFFFFF; ///< Constant defining an infinite wait to lock a mutex.
 

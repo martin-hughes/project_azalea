@@ -4,6 +4,7 @@
 //#define ENABLE_TRACING
 
 #include "vga_terminal.h"
+#include "processor/processor.h"
 
 /// @brief Construct a new VGA-type terminal.
 ///

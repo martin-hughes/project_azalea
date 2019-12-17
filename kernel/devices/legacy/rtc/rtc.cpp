@@ -7,6 +7,7 @@
 
 #include "rtc.h"
 #include "klib/klib.h"
+#include "processor/processor.h"
 
 using namespace timing;
 

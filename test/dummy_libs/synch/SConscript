@@ -1,5 +1,9 @@
 # Dummy panic library. Used heavily by the test code.
 
 Import('env')
-obj = env.Library("test-dummy-synch", [ "kernel_mutexes.dummy.cpp" ])
+obj = env.Library("test-dummy-synch",
+                  [
+                    "kernel_mutexes.dummy.cpp",
+                    "kernel_semaphores.dummy.cpp",
+                  ])
 Return ("obj")

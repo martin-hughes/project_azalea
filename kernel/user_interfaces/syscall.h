@@ -91,6 +91,10 @@ ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle);
 ERR_CODE syscall_futex_wait(volatile int32_t *futex, int32_t req_value);
 ERR_CODE syscall_futex_wake(volatile int32_t *futex);
 /** @endcond */
+ERR_CODE syscall_create_mutex(GEN_HANDLE *mutex_handle);
+ERR_CODE syscall_release_mutex(GEN_HANDLE mutex_handle);
+ERR_CODE syscall_create_semaphore(GEN_HANDLE *semaphore_handle, uint64_t max_users, uint64_t start_users);
+ERR_CODE syscall_signal_semaphore(GEN_HANDLE semaphore_handle);
 
 /* Timing */
 ERR_CODE syscall_get_system_clock(struct time_expanded *buffer);

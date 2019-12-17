@@ -62,3 +62,7 @@ GENERIC_SYSCALL 33, syscall_rename_object
 GENERIC_SYSCALL 34, syscall_delete_object
 GENERIC_SYSCALL 35, syscall_get_object_properties
 GENERIC_SYSCALL 36, syscall_seek_handle
+GENERIC_SYSCALL 37, syscall_create_mutex
+GENERIC_SYSCALL 38, syscall_release_mutex
+GENERIC_SYSCALL 39, syscall_create_semaphore
+GENERIC_SYSCALL 40, syscall_signal_semaphore

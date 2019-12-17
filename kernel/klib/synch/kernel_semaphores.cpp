@@ -6,6 +6,7 @@
 
 // #define ENABLE_TRACING
 
+#include "processor/processor.h"
 #include "klib/klib.h"
 
 /// @brief Initialize a semaphore object.

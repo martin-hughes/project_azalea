@@ -7,6 +7,7 @@
 
 #include "system_tree/system_tree_branch.h"
 #include "system_tree/fs/fs_file_interface.h"
+#include "processor/work_queue.h"
 
 #include <memory>
 

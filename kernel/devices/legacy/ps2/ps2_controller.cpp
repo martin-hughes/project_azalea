@@ -12,6 +12,7 @@
 #include "klib/klib.h"
 #include "ps2_controller.h"
 #include "devices/device_monitor.h"
+#include "processor/processor.h"
 
 #warning PS2 constructor starts device.
 

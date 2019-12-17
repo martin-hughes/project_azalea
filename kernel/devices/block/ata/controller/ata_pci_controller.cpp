@@ -23,6 +23,7 @@
 #include "processor/timing/timing.h"
 #include "klib/klib.h"
 #include "devices/device_monitor.h"
+#include "processor/processor.h"
 
 #warning still using first_hdd, unlocked.
 extern ata::generic_device *first_hdd;

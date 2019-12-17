@@ -10,6 +10,7 @@
 
 #include "klib/klib.h"
 #include "system_tree/fs/pipe/pipe_fs.h"
+#include "processor/processor.h"
 
 using namespace std;
 

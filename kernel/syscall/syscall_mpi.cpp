@@ -5,6 +5,7 @@
 #include "syscall/syscall_kernel.h"
 #include "syscall/syscall_kernel-int.h"
 #include "klib/klib.h"
+#include "processor/processor.h"
 
 /// @brief Register the currently running process as able to receive messages.
 ///

@@ -3,6 +3,7 @@
 #include "system_tree/system_tree.h"
 #include "system_tree/fs/mem/mem_fs.h"
 #include "user_interfaces/syscall.h"
+#include "processor/processor.h"
 
 #include "gtest/gtest.h"
 
