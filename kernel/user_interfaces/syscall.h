@@ -52,7 +52,8 @@ ERR_CODE syscall_register_for_mp();
 ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
                               uint64_t message_id,
                               uint64_t message_len,
-                              const char *message_ptr);
+                              const char *message_ptr,
+                              GEN_HANDLE completion_semaphore);
 ERR_CODE syscall_receive_message_details(uint64_t *message_id, uint64_t *message_len);
 ERR_CODE syscall_receive_message_body(char *message_buffer, uint64_t buffer_size);
 ERR_CODE syscall_message_complete();

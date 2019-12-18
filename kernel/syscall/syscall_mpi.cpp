@@ -59,16 +59,23 @@ ERR_CODE syscall_register_for_mp()
 ///
 /// @param[in] message_ptr A buffer containing the message to be sent. Must be at least as long as message_len.
 ///
+/// @param[in] completion_semaphore If this handle is non-zero, a semaphore that should be signalled by the handler of
+///                                 this message when the message has been fully dealt with. The caller should be
+///                                 prepared for the possibility that the recipient might *never* signal the semaphore.
+///
 /// @return A suitable error code.
 ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
                               uint64_t message_id,
                               uint64_t message_len,
-                              const char *message_ptr)
+                              const char *message_ptr,
+                              GEN_HANDLE completion_semaphore)
 {
   KL_TRC_ENTRY;
 
   ERR_CODE res{ERR_CODE::NO_ERROR};
   task_thread *this_thread = task_get_cur_thread();
+  std::shared_ptr<IHandledObject> obj;
+  std::shared_ptr<syscall_semaphore_obj> sem;
 
   if (!SYSCALL_IS_UM_ADDRESS(message_ptr))
   {
@@ -87,31 +94,55 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
   }
   else
   {
-    std::shared_ptr<object_data> object = this_thread->thread_handles.retrieve_object(msg_target);
-    std::shared_ptr<work::message_receiver> target_obj =
-      std::dynamic_pointer_cast<work::message_receiver>(object->object_ptr);
-
-    if (target_obj)
+    if (completion_semaphore != 0)
     {
-      std::unique_ptr<msg::basic_msg> new_msg = std::make_unique<msg::basic_msg>();
-
-      new_msg->message_id = message_id;
-      new_msg->message_length = message_len;
-
-      if (message_len > 0)
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Look for semaphore object\n");
+      obj = this_thread->thread_handles.retrieve_handled_object(completion_semaphore);
+      if (obj == nullptr)
       {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Copying message to kernel buffer\n");
-
-        new_msg->details = std::unique_ptr<uint8_t[]>(new uint8_t[message_len]);
-        kl_memcpy(message_ptr, new_msg->details.get(), message_len);
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Object not found!\n");
+        res = ERR_CODE::NOT_FOUND;
       }
+      else
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Semaphore found\n");
+        sem = std::dynamic_pointer_cast<syscall_semaphore_obj>(obj);
+      }
+    }
 
-      work::queue_message(target_obj, std::move(new_msg));
+    if ((completion_semaphore == 0) || (sem))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Completion semaphore check OK, attempt to send\n");
+      std::shared_ptr<object_data> object = this_thread->thread_handles.retrieve_object(msg_target);
+      std::shared_ptr<work::message_receiver> target_obj =
+        std::dynamic_pointer_cast<work::message_receiver>(object->object_ptr);
+
+      if (target_obj)
+      {
+        std::unique_ptr<msg::basic_msg> new_msg = std::make_unique<msg::basic_msg>();
+
+        new_msg->message_id = message_id;
+        new_msg->message_length = message_len;
+
+        if (message_len > 0)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Copying message to kernel buffer\n");
+
+          new_msg->details = std::unique_ptr<uint8_t[]>(new uint8_t[message_len]);
+          kl_memcpy(message_ptr, new_msg->details.get(), message_len);
+        }
+
+        work::queue_message(target_obj, std::move(new_msg));
+      }
+      else
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Target object not found or doesn't support messages\n");
+        res = ERR_CODE::INVALID_OP;
+      }
     }
     else
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Target object not found or doesn't support messages\n");
-      res = ERR_CODE::INVALID_OP;
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Semaphore not found\n");
     }
   }
 

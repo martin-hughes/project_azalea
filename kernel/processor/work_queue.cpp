@@ -215,6 +215,12 @@ bool message_receiver::process_next_message()
     klib_synch_spinlock_unlock(queue_lock);
 
     this->handle_message(msg_header);
+
+    if (msg_header->auto_signal_semaphore && msg_header->completion_semaphore)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Signal the completion semaphore\n");
+      msg_header->completion_semaphore->signal();
+    }
   }
   else
   {
