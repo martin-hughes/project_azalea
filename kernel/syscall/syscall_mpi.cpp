@@ -63,12 +63,22 @@ ERR_CODE syscall_register_for_mp()
 ///                                 this message when the message has been fully dealt with. The caller should be
 ///                                 prepared for the possibility that the recipient might *never* signal the semaphore.
 ///
+///                                 This parameter is incompatible with output_buffer - only one of these must be set.
+///
+/// @param[out] output_buffer Some messages will trigger the receiver to attempt to write data into a buffer - this
+///                           buffer. This feature cannot be used in conjunction with completion_semaphore. Any message
+///                           where output_buffer is used can currently only be handled synchronously.
+///
+/// @param[in] output_buffer_len The size of output_buffer. Must be greater than zero.
+///
 /// @return A suitable error code.
 ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
                               uint64_t message_id,
                               uint64_t message_len,
                               const char *message_ptr,
-                              GEN_HANDLE completion_semaphore)
+                              GEN_HANDLE completion_semaphore,
+                              char *output_buffer,
+                              uint64_t output_buffer_len)
 {
   KL_TRC_ENTRY;
 
@@ -76,8 +86,9 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
   task_thread *this_thread = task_get_cur_thread();
   std::shared_ptr<IHandledObject> obj;
   std::shared_ptr<syscall_semaphore_obj> sem;
+  std::shared_ptr<char> kernel_buffer;
 
-  if (!SYSCALL_IS_UM_ADDRESS(message_ptr))
+  if (!SYSCALL_IS_UM_BUFFER(message_ptr, message_len))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid message buffer ptr\n");
     res = ERR_CODE::INVALID_PARAM;
@@ -91,6 +102,29 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Unknown originating process\n");
     res = ERR_CODE::UNKNOWN;
+  }
+  else if ((completion_semaphore != 0) && (output_buffer != nullptr))
+  {
+    // This is currently a restriction because messages are handled in a context other than the one of the calling user
+    // mode process - so how does the data get written to the correct place? This isn't insurmountable, it just isn't
+    // done yet.
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Can't handle asynchronous messages when expecting output.\n");
+    res = ERR_CODE::INVALID_OP;
+  }
+  else if((output_buffer != nullptr) && (output_buffer_len == 0))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Zero-sized output buffer\n");
+    res = ERR_CODE::INVALID_PARAM;
+  }
+  else if ((output_buffer_len != 0) && (output_buffer == nullptr))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Must provide an output buffer if size is given\n");
+    res = ERR_CODE::INVALID_PARAM;
+  }
+  else if ((output_buffer != nullptr) && (!SYSCALL_IS_UM_BUFFER(output_buffer, output_buffer_len)))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Output buffer not in user-space\n");
+    res = ERR_CODE::INVALID_PARAM;
   }
   else
   {
@@ -110,6 +144,23 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
       }
     }
 
+    // Currently, we handle output buffers for messages by creating a temporary buffer in kernel space, then after
+    // sending the message wait for it to be completed before copying the data back. This is needed because messages
+    // are not handled in the context of the sending process, so the handler wouldn't write data to the correct
+    // location.
+    //
+    // With some work, this will change in future.
+    if (output_buffer != nullptr)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Create temporary kernel buffer\n");
+      kernel_buffer = std::shared_ptr<char>(new char[output_buffer_len], std::default_delete<char[]>());
+      kl_memset(kernel_buffer.get(), 0, output_buffer_len);
+
+      ASSERT(!sem);
+
+      sem = std::make_shared<syscall_semaphore_obj>(1, 1);
+    }
+
     if ((completion_semaphore == 0) || (sem))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Completion semaphore check OK, attempt to send\n");
@@ -123,6 +174,14 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
 
         new_msg->message_id = message_id;
         new_msg->message_length = message_len;
+        new_msg->completion_semaphore = sem;
+
+        if (kernel_buffer)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Setup output buffer\n");
+          new_msg->output_buffer = kernel_buffer;
+          new_msg->output_buffer_len = output_buffer_len;
+        }
 
         if (message_len > 0)
         {
@@ -133,6 +192,18 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
         }
 
         work::queue_message(target_obj, std::move(new_msg));
+
+        if (output_buffer != nullptr)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Waiting for message completion due to output buffer... ");
+          ASSERT(sem);
+          ASSERT(kernel_buffer);
+
+          sem->wait_for_signal();
+          KL_TRC_TRACE(TRC_LVL::FLOW, "DONE.\n");
+
+          kl_memcpy(kernel_buffer.get(), output_buffer, output_buffer_len);
+        }
       }
       else
       {

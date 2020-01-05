@@ -195,6 +195,7 @@ bool message_receiver::process_next_message()
 {
   bool more_msgs{true};
   std::unique_ptr<msg::root_msg> msg_header;
+  std::shared_ptr<syscall_semaphore_obj> completion_sem;
 
   KL_TRC_ENTRY;
 
@@ -214,12 +215,21 @@ bool message_receiver::process_next_message()
 
     klib_synch_spinlock_unlock(queue_lock);
 
-    this->handle_message(msg_header);
-
     if (msg_header->auto_signal_semaphore && msg_header->completion_semaphore)
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Signal the completion semaphore\n");
-      msg_header->completion_semaphore->signal();
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Save the completion semaphore\n");
+      completion_sem = msg_header->completion_semaphore;
+    }
+
+    // After this point, we should assume the message to be invalid, as certain conversions done by receivers can cause
+    // the message to become invalid. (For example, the device manager releases the message pointer in order to cast it
+    // to a different type.)
+    this->handle_message(msg_header);
+
+    if (completion_sem)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Signal completion semaphore\n");
+      completion_sem->signal();
     }
   }
   else

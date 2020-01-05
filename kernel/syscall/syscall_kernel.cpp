@@ -80,20 +80,6 @@ const void *syscall_pointers[] =
 ///
 const uint64_t syscall_max_idx = (sizeof(syscall_pointers) / sizeof(void *)) - 1;
 
-/// @brief Is addr a user-mode address or not?
-///
-/// User mode addresses are those in the lower half of the address space. Kernel mode addresses are in the upper half.
-/// Kernel mode addresses are restricted to kernel mode accesses only.
-///
-/// @param addr The address to check.
-///
-/// @return True if addr is user-mode, false otherwise.
-bool syscall_is_um_address(const void *addr)
-{
-  uint64_t addr_l = reinterpret_cast<uint64_t>(addr);
-  return !(addr_l & 0x8000000000000000ULL);
-}
-
 /// Write desired output to the system debug output
 ///
 /// Transcribe directly from a user mode process into the kernel debug output. There might not always be a debug output

@@ -43,6 +43,17 @@ namespace msg
     ///
     /// It is permissible for completion_semaphore to be nullptr, in which case it is ignored.
     std::shared_ptr<syscall_semaphore_obj> completion_semaphore;
+
+    /// Optional buffer to write results or other similar information in to. The handler should not rely on this
+    /// pointer being set correctly, nor of it being the correct size.
+    //
+    // NB: our current C++ library doesn't natively support shared_ptr to array, so this is a fudge, but if provided a
+    // shared_ptr created using a custom deleter so as to support an array, it will work.
+    std::shared_ptr<char> output_buffer;
+
+    /// The size of output_buffer. If this is zero, output_buffer must be nullptr. If it is non-zero, output_buffer
+    /// must be a valid pointer.
+    uint64_t output_buffer_len;
   };
 
   /// @brief A message that carries a payload of raw bytes.

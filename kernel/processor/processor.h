@@ -71,7 +71,7 @@ public:
     bool accepts_msgs{false};
 
     /// Lock to control the message queue.
-    kernel_spinlock message_lock;
+    kernel_spinlock message_lock{0};
 
     /// Stores messages for retrieval by the process.
     std::queue<std::unique_ptr<msg::basic_msg>> message_queue;

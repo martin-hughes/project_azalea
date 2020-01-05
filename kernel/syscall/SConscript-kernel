@@ -10,6 +10,7 @@ files = [
          "syscall_rw.cpp",
          "syscall_synch.cpp",
          "syscall_timing.cpp",
+         "syscall_validation.cpp",
         ]
 obj = env.Library("syscall", files)
 Return ("obj")
