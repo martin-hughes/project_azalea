@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <string>
+
 #include "devices/pci/pci_constants.h"
 #include "devices/pci/pci_structures.h"
 #include "devices/pci/pci_functions.h"
@@ -17,7 +19,7 @@
 class pci_generic_device : public IDevice, public IInterruptReceiver
 {
 public:
-  pci_generic_device(pci_address address, const kl_string human_name, const kl_string dev_name);
+  pci_generic_device(pci_address address, const std::string human_name, const std::string dev_name);
   pci_generic_device(pci_address address);
   virtual ~pci_generic_device() override;
 

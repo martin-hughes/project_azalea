@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <string>
+
 #include "klib/klib.h"
 
 #include "system_tree/system_tree_branch.h"
@@ -23,11 +25,14 @@ public:
   static std::shared_ptr<pipe_branch> create();
   virtual ~pipe_branch();
 
-  virtual ERR_CODE get_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
-  virtual ERR_CODE add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
-  virtual ERR_CODE rename_child(const kl_string &old_name, const kl_string &new_name) override;
-  virtual ERR_CODE delete_child(const kl_string &name) override;
-  virtual ERR_CODE create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+  virtual ERR_CODE get_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+  virtual ERR_CODE add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
+  virtual ERR_CODE rename_child(const std::string &old_name, const std::string &new_name) override;
+  virtual ERR_CODE delete_child(const std::string &name) override;
+  virtual ERR_CODE create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+  virtual std::pair<ERR_CODE, uint64_t> num_children() override;
+  virtual std::pair<ERR_CODE, std::vector<std::string>>
+    enum_children(std::string start_from, uint64_t max_count) override;
 
   virtual void set_msg_receiver(std::shared_ptr<work::message_receiver> &new_handler);
 

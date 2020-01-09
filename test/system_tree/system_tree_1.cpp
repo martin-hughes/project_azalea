@@ -18,22 +18,23 @@ TEST(SystemTreeTest, SimpleBranches)
 
   system_tree_init();
 
-  ASSERT_EQ(system_tree()->add_child("", a), ERR_CODE::INVALID_NAME);
-  ASSERT_EQ(system_tree()->add_child("branch_a", a), ERR_CODE::NO_ERROR);
-  ASSERT_EQ(system_tree()->add_child("branch_b", b), ERR_CODE::NO_ERROR);
+  ASSERT_EQ(system_tree()->add_child("", a), ERR_CODE::INVALID_OP);
+  ASSERT_EQ(system_tree()->add_child("\\", a), ERR_CODE::INVALID_NAME);
+  ASSERT_EQ(system_tree()->add_child("\\branch_a", a), ERR_CODE::NO_ERROR);
+  ASSERT_EQ(system_tree()->add_child("\\branch_b", b), ERR_CODE::NO_ERROR);
 
-  ASSERT_EQ(system_tree()->add_child("branch_a", c), ERR_CODE::ALREADY_EXISTS);
+  ASSERT_EQ(system_tree()->add_child("\\branch_a", c), ERR_CODE::ALREADY_EXISTS);
 
-  ASSERT_EQ(system_tree()->delete_child("branch_a"), ERR_CODE::NO_ERROR);
-  ASSERT_EQ(system_tree()->add_child("branch_a", c), ERR_CODE::NO_ERROR);
-  ASSERT_EQ(system_tree()->rename_child("branch_a", "branch_c"), ERR_CODE::NO_ERROR);
+  ASSERT_EQ(system_tree()->delete_child("\\branch_a"), ERR_CODE::NO_ERROR);
+  ASSERT_EQ(system_tree()->add_child("\\branch_a", c), ERR_CODE::NO_ERROR);
+  ASSERT_EQ(system_tree()->rename_child("\\branch_a", "\\branch_c"), ERR_CODE::NO_ERROR);
 
-  ASSERT_EQ(system_tree()->get_child("branch_c", leaf_ptr), ERR_CODE::NO_ERROR);
+  ASSERT_EQ(system_tree()->get_child("\\branch_c", leaf_ptr), ERR_CODE::NO_ERROR);
   ASSERT_EQ(leaf_ptr, c);
 
-  ASSERT_EQ(system_tree()->add_child("branch_c", a), ERR_CODE::ALREADY_EXISTS);
-  ASSERT_EQ(system_tree()->delete_child("branch_c"), ERR_CODE::NO_ERROR);
-  ASSERT_EQ(system_tree()->delete_child("branch_b"), ERR_CODE::NO_ERROR);
+  ASSERT_EQ(system_tree()->add_child("\\branch_c", a), ERR_CODE::ALREADY_EXISTS);
+  ASSERT_EQ(system_tree()->delete_child("\\branch_c"), ERR_CODE::NO_ERROR);
+  ASSERT_EQ(system_tree()->delete_child("\\branch_b"), ERR_CODE::NO_ERROR);
 
   test_only_reset_system_tree();
 }

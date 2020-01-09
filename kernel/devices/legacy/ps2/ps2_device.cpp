@@ -11,6 +11,8 @@
 
 //#define ENABLE_TRACING
 
+#include <string>
+
 #include "klib/klib.h"
 #include "processor/processor.h"
 #include "devices/generic/gen_keyboard.h"
@@ -31,8 +33,8 @@ extern const KEYS ps2_set_2_spec_scancode_map[256]; ///< Scancode for 'special' 
 /// @param dev_name The device name to associate with this device.
 gen_ps2_device::gen_ps2_device(std::shared_ptr<gen_ps2_controller_device> parent,
                                bool second_channel,
-                               const kl_string human_name,
-                               const kl_string dev_name) :
+                               const std::string human_name,
+                               const std::string dev_name) :
   IDevice{human_name, dev_name, true},
   _parent{parent},
   _second_channel{second_channel},

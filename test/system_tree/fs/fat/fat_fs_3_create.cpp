@@ -28,7 +28,7 @@ namespace
 
   test_file_details test_list[] = {
     { "TSTCREAT.TXT", true, ERR_CODE::NO_ERROR, "Test create short filename in root." },
-    { "SHORTDIR\\TSTCREAT.txt", true, ERR_CODE::NO_ERROR, "Create a short filename in a directory."},
+    { "SHORTDIR\\TSTCREAT.TXT", true, ERR_CODE::NO_ERROR, "Create a short filename in a directory."},
     { "Long file name - create.txt", true, ERR_CODE::NO_ERROR, "Test create long filename in root."},
     { "Long directory\\Long child name - create.txt", true, ERR_CODE::NO_ERROR, "Test create long filename in directory."},
   };
@@ -114,7 +114,7 @@ TEST_P(FatFsCreateTests, BasicCreate)
   shared_ptr<ISystemTreeLeaf> basic_leaf;
   shared_ptr<IBasicFile> new_file;
   auto [test_details, disk_image_name] = GetParam();
-  const kl_string filename = test_details.filename;
+  const std::string filename = test_details.filename;
   uint32_t new_string_len = strlen(test_details.string_to_write);
   unique_ptr<uint8_t[]> buffer = unique_ptr<uint8_t[]>(new uint8_t[new_string_len + 1]);
   buffer[new_string_len] = 0;

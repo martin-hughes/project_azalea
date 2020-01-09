@@ -26,7 +26,7 @@ namespace
 
   test_file_details test_list[] = {
     { "TESTREAD.TXT", true, ERR_CODE::NO_ERROR },
-    { "SHORTDIR\\TESTFILE.txt", true, ERR_CODE::NO_ERROR },
+    { "SHORTDIR\\TESTFILE.TXT", true, ERR_CODE::NO_ERROR },
     { "Long file name.txt", true, ERR_CODE::NO_ERROR },
     { "Long directory\\Long child name.txt", true, ERR_CODE::NO_ERROR },
     { "BAD.TXT", false, ERR_CODE::NOT_FOUND },
@@ -113,7 +113,7 @@ TEST_P(FatFsDeleteTests, BasicDelete)
 {
   shared_ptr<ISystemTreeLeaf> basic_leaf;
   auto [test_details, disk_image_name] = GetParam();
-  const kl_string filename = test_details.filename;
+  const std::string filename = test_details.filename;
   ERR_CODE result;
 
   result = filesystem->delete_child(test_details.filename);

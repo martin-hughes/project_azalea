@@ -3,9 +3,10 @@
 
 #pragma once
 
+#include <string>
+
 #include <stdint.h>
 #include <type_traits>
-#include "klib/data_structures/string.h"
 #include "user_interfaces/error_codes.h"
 
 enum class DEV_STATUS;
@@ -57,7 +58,7 @@ void kl_trc_char(unsigned char c);
 //template <typename p> void kl_trc_output_argument(p param);
 void kl_trc_output_str_argument(char const *str);
 void kl_trc_output_int_argument(uint64_t value);
-void kl_trc_output_kl_string_argument(kl_string &str);
+void kl_trc_output_std_string_argument(std::string &str);
 void kl_trc_output_err_code_argument(ERR_CODE ec);
 void kl_trc_output_dev_status_argument(DEV_STATUS ds);
 
@@ -78,11 +79,11 @@ T kl_trc_output_single_arg(T param)
   return param;
 }
 
-template<typename T = kl_string, typename = typename std::enable_if<std::is_same<T, kl_string>::value>::type,
+template<typename T = std::string, typename = typename std::enable_if<std::is_same<T, std::string>::value>::type,
     typename B = void, typename C = void, typename D = void, typename E = void>
 T kl_trc_output_single_arg(T& param)
 {
-  kl_trc_output_kl_string_argument(param);
+  kl_trc_output_std_string_argument(param);
   return param;
 }
 

@@ -3,6 +3,8 @@
 
 //#define ENABLE_TRACING
 
+#include <string>
+
 #include "klib/klib.h"
 #include "devices/pci/pci_root.h"
 #include "devices/pci/pci_constants.h"
@@ -81,7 +83,7 @@ void pci_root_device::scan_for_devices()
         snprintf(name, 7, "bus%03hhi", i);
         KL_TRC_TRACE(TRC_LVL::FLOW, "New branch name: ", name, "\n");
 
-        kl_string new_branch_name(name);
+        std::string new_branch_name{name};
 
         ASSERT(this->add_child(new_branch_name, new_bus) == ERR_CODE::NO_ERROR);
       }

@@ -161,12 +161,12 @@ void kernel_start() throw ()
 
   // Start the device management system.
   std::shared_ptr<dev_root_branch> dev_root = std::make_shared<dev_root_branch>();
-  ASSERT(system_tree()->add_child("dev", dev_root) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->add_child("\\dev", dev_root) == ERR_CODE::NO_ERROR);
   dev_root->scan_for_devices();
 
-  ASSERT(system_tree()->get_child("root", leaf) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->get_child("\\root", leaf) == ERR_CODE::NO_ERROR);
 
-  initial_proc = proc_load_elf_file("root\\initprog");
+  initial_proc = proc_load_elf_file("\\root\\initprog");
   setup_task_parameters(initial_proc.get());
   //com_port_proc = proc_load_elf_file("root\\initprog");
   //setup_task_parameters(com_port_proc.get());
@@ -176,10 +176,10 @@ void kernel_start() throw ()
   // Create a temporary in-RAM file system.
   std::shared_ptr<mem_fs_branch> ram_branch = mem_fs_branch::create();
   ASSERT(ram_branch != nullptr);
-  ASSERT(system_tree()->add_child("temp", ram_branch) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->add_child("\\temp", ram_branch) == ERR_CODE::NO_ERROR);
   std::shared_ptr<mem_fs_leaf> ram_file = std::make_shared<mem_fs_leaf>(ram_branch);
   ASSERT(ram_file != nullptr);
-  ASSERT(system_tree()->add_child("temp\\hello.txt", ram_file) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->add_child("\\temp\\hello.txt", ram_file) == ERR_CODE::NO_ERROR);
   ASSERT(ram_file->write_bytes(0,
                                kl_strlen(hello_string, sizeof(hello_string)),
                                reinterpret_cast<const uint8_t *>(hello_string),
@@ -189,8 +189,6 @@ void kernel_start() throw ()
   ASSERT(keyb_ptr != nullptr);
   ASSERT(term_ptr != nullptr);
 
-  kl_trc_trace(TRC_LVL::FLOW, "About to start creating pipes\n");
-
   // Start a simple terminal process.
   std::shared_ptr<IReadable> reader;
   std::shared_ptr<IWritable> stdin_writer;
@@ -198,17 +196,17 @@ void kernel_start() throw ()
   std::shared_ptr<ISystemTreeBranch> pipes_br = std::make_shared<system_tree_simple_branch>();
   ASSERT(pipes_br != nullptr);
   ASSERT(system_tree() != nullptr);
-  ASSERT(system_tree()->add_child("pipes", pipes_br) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->add_child("\\pipes", pipes_br) == ERR_CODE::NO_ERROR);
   std::shared_ptr<pipe_branch> stdout_br = pipe_branch::create();
   ASSERT(pipes_br->add_child("terminal-output", stdout_br) == ERR_CODE::NO_ERROR);
-  ASSERT(system_tree()->get_child("pipes\\terminal-output\\read", leaf) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->get_child("\\pipes\\terminal-output\\read", leaf) == ERR_CODE::NO_ERROR);
   reader = std::dynamic_pointer_cast<IReadable>(leaf);
   ASSERT(reader != nullptr);
 
 
   // Set up an input pipe (which maps to stdin)
   ASSERT(pipes_br->add_child("terminal-input", pipe_branch::create()) == ERR_CODE::NO_ERROR);
-  ASSERT(system_tree()->get_child("pipes\\terminal-input\\write", leaf) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->get_child("\\pipes\\terminal-input\\write", leaf) == ERR_CODE::NO_ERROR);
   stdin_writer = std::dynamic_pointer_cast<IWritable>(leaf);
   ASSERT(stdin_writer != nullptr);
 
@@ -218,18 +216,18 @@ void kernel_start() throw ()
   stdout_br->set_msg_receiver(term_rcv);
 
   // Setup the write end of the terminal pipe. This is a bit dubious, it doesn't do any reference counting...
-  ASSERT(system_tree()->get_child("pipes\\terminal-output\\write", leaf) == ERR_CODE::NO_ERROR);
-  snprintf(proc_ptr_buffer, 34, "proc\\%p\\stdout", initial_proc.get());
+  ASSERT(system_tree()->get_child("\\pipes\\terminal-output\\write", leaf) == ERR_CODE::NO_ERROR);
+  snprintf(proc_ptr_buffer, 34, "\\proc\\%p\\stdout", initial_proc.get());
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "proc: ", (const char *)proc_ptr_buffer, "\n");
   ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
 
-  snprintf(proc_ptr_buffer, 34, "proc\\%p\\stderr", initial_proc.get());
+  snprintf(proc_ptr_buffer, 34, "\\proc\\%p\\stderr", initial_proc.get());
   ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
 
 
-  snprintf(proc_ptr_buffer, 34, "proc\\%p\\stdin", initial_proc.get());
-  ASSERT(system_tree()->get_child("pipes\\terminal-input\\read", leaf) == ERR_CODE::NO_ERROR);
+  snprintf(proc_ptr_buffer, 34, "\\proc\\%p\\stdin", initial_proc.get());
+  ASSERT(system_tree()->get_child("\\pipes\\terminal-input\\read", leaf) == ERR_CODE::NO_ERROR);
   ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
   pipe_read_leaf = std::dynamic_pointer_cast<pipe_branch::pipe_read_leaf>(leaf);
   ASSERT(pipe_read_leaf != nullptr);

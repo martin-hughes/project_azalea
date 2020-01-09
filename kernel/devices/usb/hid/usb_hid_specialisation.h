@@ -10,6 +10,8 @@
 #include "hid_input_reports.h"
 #include "devices/device_interface.h"
 
+#include <string>
+
 namespace usb { namespace hid {
 
 /// @brief An interface that specialisations of USB HID devices can derive from.
@@ -25,7 +27,7 @@ public:
   /// @param name Human readable name for this specialisation.
   ///
   /// @param dev_name Device name for this specialisation.
-  hid_specialisation(const kl_string name, const kl_string dev_name) : IDevice{name, dev_name, true} { };
+  hid_specialisation(const std::string name, const std::string dev_name) : IDevice{name, dev_name, true} { };
   virtual ~hid_specialisation() = default; ///< Default destructor.
 
   // Overrides of IDevice

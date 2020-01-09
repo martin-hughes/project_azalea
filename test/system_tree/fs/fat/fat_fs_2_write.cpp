@@ -29,7 +29,7 @@ namespace
 
   test_file_details test_list[] = {
     { "TESTWRIT.TXT", true, ERR_CODE::NO_ERROR, "This is a test.", "This is a decent string to write." },
-    { "SHORTDIR\\TESTWRIT.txt", true, ERR_CODE::NO_ERROR, "This file is in a directory.", "shortish string."},
+    { "SHORTDIR\\TESTWRIT.TXT", true, ERR_CODE::NO_ERROR, "This file is in a directory.", "shortish string."},
     { "Long file name - write.txt", true, ERR_CODE::NO_ERROR, "This file has a long name.", "A String the same length.."},
     { "Long directory\\Long child name - write.txt", true, ERR_CODE::NO_ERROR, "This file has a long path.", "Not that worried about this string"},
   };
@@ -115,7 +115,7 @@ TEST_P(FatFsWriteTests, BasicWriting)
   shared_ptr<ISystemTreeLeaf> basic_leaf;
   shared_ptr<IBasicFile> input_file;
   auto [test_details, disk_image_name] = GetParam();
-  const kl_string filename = test_details.filename;
+  const std::string filename = test_details.filename;
   const char *expected_text = test_details.expected_contents;
   const uint32_t expected_file_size = strlen(expected_text);
   uint32_t new_string_len = strlen(test_details.string_to_write);

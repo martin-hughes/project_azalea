@@ -6,6 +6,8 @@
 
 //#define ENABLE_TRACING
 
+#include <string>
+
 #include "klib/klib.h"
 #include "acpi_if.h"
 
@@ -97,7 +99,7 @@ ACPI_STATUS acpi_create_device_handler (ACPI_HANDLE ObjHandle,
 /// @param dev_info ACPI device information for the device. This object is deleted after this function completes.
 void acpi_create_one_device(const char *dev_path, ACPI_HANDLE obj_handle, ACPI_DEVICE_INFO &dev_info)
 {
-  kl_string pathname;
+  std::string pathname;
 
   KL_TRC_ENTRY;
 

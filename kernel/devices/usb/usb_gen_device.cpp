@@ -3,6 +3,8 @@
 
 //#define ENABLE_TRACING
 
+#include <string>
+
 #include "devices/usb/usb_gen_device.h"
 
 using namespace usb;
@@ -14,7 +16,7 @@ using namespace usb;
 /// @param interface_num The interface number of this device in a multi-function device.
 ///
 /// @param name A human readable name for this device
-generic_device::generic_device(std::shared_ptr<generic_core> core, uint16_t interface_num, const kl_string name) :
+generic_device::generic_device(std::shared_ptr<generic_core> core, uint16_t interface_num, const std::string name) :
   IDevice{name, "usb-dev", true},
   device_core{core},
   device_interface_num{interface_num},

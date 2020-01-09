@@ -134,8 +134,8 @@ bool device_core::device_request(device_request_type request_type,
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Transfer queued, add to responses list\n");
       transfer_item = std::make_shared<normal_transfer>(nullptr, nullptr, 0);
-      ASSERT(!current_transfers.contains(status_stage_phys_addr));
-      current_transfers.insert(status_stage_phys_addr, transfer_item);
+      ASSERT(map_contains(current_transfers, status_stage_phys_addr));
+      current_transfers.insert({status_stage_phys_addr, transfer_item});
     }
 
     klib_synch_spinlock_unlock(current_transfers_lock);
@@ -255,11 +255,11 @@ void device_core::handle_transfer_event(transfer_event_trb &trb)
   ASSERT(trb.completion_code == C_CODES::SUCCESS);
 
   klib_synch_spinlock_lock(current_transfers_lock);
-  if (current_transfers.contains(trb.trb_pointer))
+  if (map_contains(current_transfers, trb.trb_pointer))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Response item waiting\n");
-    response = current_transfers.search(trb.trb_pointer);
-    current_transfers.remove(trb.trb_pointer);
+    response = current_transfers.find(trb.trb_pointer)->second;
+    current_transfers.erase(trb.trb_pointer);
   }
   else
   {
@@ -473,8 +473,8 @@ bool device_core::queue_transfer(uint8_t endpoint_num,
   if (result)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Transfer queued, add to responses list\n");
-    ASSERT(!current_transfers.contains(trb_phys_addr));
-    current_transfers.insert(trb_phys_addr, transfer_item);
+    ASSERT(!map_contains(current_transfers, trb_phys_addr));
+    current_transfers.insert({trb_phys_addr, transfer_item});
   }
 
   klib_synch_spinlock_unlock(current_transfers_lock);

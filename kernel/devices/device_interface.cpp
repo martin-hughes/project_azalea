@@ -20,7 +20,7 @@
 /// is used in the IDevice constructor.
 std::atomic<uint64_t> dev_count{0};
 
-IDevice::IDevice(const kl_string human_name, const kl_string short_name, bool auto_inc_suffix) :
+IDevice::IDevice(const std::string human_name, const std::string short_name, bool auto_inc_suffix) :
  device_human_name{human_name}, device_short_name{short_name}, current_dev_status{DEV_STATUS::UNKNOWN}
 {
   KL_TRC_ENTRY;
@@ -31,8 +31,8 @@ IDevice::IDevice(const kl_string human_name, const kl_string short_name, bool au
   {
     char number_buffer[17] = { 0 };
     snprintf(number_buffer, 17, "%lu", dev_number);
-    kl_string number{number_buffer};
-    const kl_string true_short_name = short_name + number;
+    std::string number{number_buffer};
+    const std::string true_short_name = short_name + number;
     KL_TRC_TRACE(TRC_LVL::FLOW, "Adding suffix - new device name: ", true_short_name, "\n");
     device_short_name = true_short_name;
   }

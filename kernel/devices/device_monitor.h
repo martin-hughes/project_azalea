@@ -101,6 +101,7 @@ bool create_new_device(std::shared_ptr<t> &new_dev, std::shared_ptr<IDevice> &pa
   result = dev::monitor::register_device(dev_base);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
 
   return result;
 }

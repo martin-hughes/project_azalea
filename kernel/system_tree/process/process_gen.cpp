@@ -13,6 +13,7 @@
 
 #define ENABLE_TRACING
 
+#include <string>
 #include <memory>
 #include "klib/klib.h"
 #include "system_tree/system_tree.h"
@@ -32,7 +33,7 @@ typedef void (*fn_ptr)();
 /// @param binary_name The System Tree name for a binary file to load into a new process.
 ///
 /// @return A task_process control structure for the new process.
-std::shared_ptr<task_process> proc_load_binary_file(kl_string binary_name)
+std::shared_ptr<task_process> proc_load_binary_file(std::string binary_name)
 {
   KL_TRC_ENTRY;
 

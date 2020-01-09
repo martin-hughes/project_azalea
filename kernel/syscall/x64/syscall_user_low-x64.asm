@@ -66,3 +66,4 @@ GENERIC_SYSCALL 37, syscall_create_mutex
 GENERIC_SYSCALL 38, syscall_release_mutex
 GENERIC_SYSCALL 39, syscall_create_semaphore
 GENERIC_SYSCALL 40, syscall_signal_semaphore
+GENERIC_SYSCALL 41, syscall_enum_children

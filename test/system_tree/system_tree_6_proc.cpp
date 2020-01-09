@@ -40,7 +40,7 @@ TEST(SystemTreeTest, ProcFsOneProcessIdFile)
 
   test_only_set_cur_thread(proc->child_threads.head->item.get());
 
-  ec = system_tree()->get_child("proc\\0", branch_leaf);
+  ec = system_tree()->get_child("\\proc\\0", branch_leaf);
   zero_branch = dynamic_pointer_cast<ISystemTreeBranch>(branch_leaf);
   ASSERT_EQ(ec, ERR_CODE::NO_ERROR);
   ASSERT_TRUE(zero_branch);

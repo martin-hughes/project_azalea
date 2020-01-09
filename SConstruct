@@ -72,12 +72,17 @@ def main_build_script(linux_build, config_env):
     echo_prog_obj = default_build_script(echo_deps, "echo", user_mode_env, "echo_prog")
     echo_install_obj = user_mode_env.Install(paths.sys_image_root, echo_prog_obj)
 
+    list_deps = dependencies.list_program
+    list_prog_obj = default_build_script(list_deps, "list", user_mode_env, "list_prog")
+    list_install_obj = user_mode_env.Install(paths.sys_image_root, list_prog_obj)
+
     # Install and other simple targets
     kernel_env.Alias('install-headers', ui_folder)
     Default(kernel_install_obj)
     Default(init_install_obj)
     Default(shell_install_obj)
     Default(echo_install_obj)
+    Default(list_install_obj)
     Default(api_install_obj)
 
   # Unit test program

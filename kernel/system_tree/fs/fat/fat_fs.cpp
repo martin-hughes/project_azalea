@@ -11,6 +11,8 @@
 
 //#define ENABLE_TRACING
 
+#include <string>
+
 #include "fat_fs.h"
 
 namespace
@@ -26,7 +28,7 @@ const uint64_t ASSUMED_SECTOR_SIZE = 512;
 ///
 /// @param parent_device The block device containing this filesystem.
 fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
-    _storage{parent_device}, _status{DEV_STATUS::OK}, _buffer{new uint8_t[ASSUMED_SECTOR_SIZE]}, fat_dirty{false}
+    _storage{parent_device}, _buffer{new uint8_t[ASSUMED_SECTOR_SIZE]}, _status{DEV_STATUS::OK}, fat_dirty{false}
 {
   fat32_bpb* temp_bpb;
   ERR_CODE r;
@@ -136,14 +138,14 @@ fat_filesystem::~fat_filesystem()
   KL_TRC_EXIT;
 }
 
-ERR_CODE fat_filesystem::get_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+ERR_CODE fat_filesystem::get_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child)
 {
   KL_TRC_ENTRY;
 
   ERR_CODE ec = ERR_CODE::UNKNOWN;
   std::shared_ptr<fat_file> file_obj;
-  kl_string first_part;
-  kl_string second_part;
+  std::string first_part;
+  std::string second_part;
 
   // We create an object corresponding to the root directory here, because it relies on a shared
   // pointer to this object, so it can't be created in this class's constructor.
@@ -155,18 +157,18 @@ ERR_CODE fat_filesystem::get_child(const kl_string &name, std::shared_ptr<ISyste
   return ec;
 }
 
-ERR_CODE fat_filesystem::add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child)
+ERR_CODE fat_filesystem::add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child)
 {
   return ERR_CODE::INVALID_OP;
 }
 
-ERR_CODE fat_filesystem::rename_child(const kl_string &old_name, const kl_string &new_name)
+ERR_CODE fat_filesystem::rename_child(const std::string &old_name, const std::string &new_name)
 {
   ERR_CODE result;
-  kl_string old_first_part;
-  kl_string old_last_part;
-  kl_string new_first_part;
-  kl_string new_last_part;
+  std::string old_first_part;
+  std::string old_last_part;
+  std::string new_first_part;
+  std::string new_last_part;
   std::shared_ptr<fat_folder> parent_folder;
   std::shared_ptr<ISystemTreeLeaf> leaf;
 
@@ -231,11 +233,11 @@ ERR_CODE fat_filesystem::rename_child(const kl_string &old_name, const kl_string
   return result;
 }
 
-ERR_CODE fat_filesystem::delete_child(const kl_string &name)
+ERR_CODE fat_filesystem::delete_child(const std::string &name)
 {
   ERR_CODE result = ERR_CODE::NO_ERROR;
-  kl_string first_part;
-  kl_string last_part;
+  std::string first_part;
+  std::string last_part;
   std::shared_ptr<fat_folder> parent_folder;
   std::shared_ptr<ISystemTreeLeaf> leaf;
 
@@ -284,11 +286,11 @@ ERR_CODE fat_filesystem::delete_child(const kl_string &name)
   return result;
 }
 
-ERR_CODE fat_filesystem::create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+ERR_CODE fat_filesystem::create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child)
 {
   ERR_CODE result;
-  kl_string first_part;
-  kl_string last_part;
+  std::string first_part;
+  std::string last_part;
   std::shared_ptr<fat_folder> create_spot;
   std::shared_ptr<ISystemTreeLeaf> leaf;
 
@@ -896,4 +898,35 @@ std::shared_ptr<fat_filesystem::fat_folder> &fat_filesystem::get_root_directory(
   KL_TRC_EXIT;
 
   return root_directory;
+}
+
+std::pair<ERR_CODE, uint64_t> fat_filesystem::num_children()
+{
+  KL_TRC_ENTRY;
+
+  KL_TRC_EXIT;
+  if (root_directory)
+  {
+    return root_directory->num_children();
+  }
+  else
+  {
+    return {ERR_CODE::STORAGE_ERROR, 0};
+  }
+}
+
+std::pair<ERR_CODE, std::vector<std::string>> fat_filesystem::enum_children(std::string start_from, uint64_t max_count)
+{
+
+  KL_TRC_ENTRY;
+
+  KL_TRC_EXIT;
+  if (root_directory)
+  {
+    return root_directory->enum_children(start_from, max_count);
+  }
+  else
+  {
+    return {ERR_CODE::STORAGE_ERROR, std::vector<std::string>() };
+  }
 }

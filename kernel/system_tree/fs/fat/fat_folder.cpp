@@ -7,11 +7,15 @@
 // - No attempt is made to deal with the access/write dates or Archive flags.
 // - We are picky about case, but the file system should be case-insensitive (but case-preserving). Note that the short
 //   name must be stored in upper-case. The system does not, currently, allow long file name aliases for names it
-//   considers would be valid short names.
+//   considers would be valid short names. Also, if creating a file that seems like it might have a valid short name,
+//   then that must be an uppercase name or the function will fail.
 // - How does one create folders?
 // - There is no thread safety!
+// - num_children() and enum_children() are not tested.
 
 //#define ENABLE_TRACING
+
+#include <string>
 
 #include "klib/klib.h"
 #include "fat_fs.h"
@@ -40,7 +44,117 @@ fat_filesystem::fat_folder::fat_folder(fat_dir_entry file_data_record,
   is_root_dir{root_directory},
   underlying_file{file_data_record, fde_index, folder_parent, fs_parent, root_directory}
 {
+  fat_dir_entry fde;
+  uint32_t fde_loop_index = 0;
+  ERR_CODE ec;
+  std::string long_name{""};
+  std::string short_name{""};
+  uint8_t cur_lfn_checksum{0};
+  bool last_was_lfn{false};
+  std::string part_of_lfn{""};
+  uint8_t i;
+  uint16_t cur_lfn_char;
+  char next_char;
+  fat_object_details obj;
+
   KL_TRC_ENTRY;
+
+  // Construct the map of names to FDE indicies.
+  while (1)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Lookup FDE index ", fde_loop_index, "\n");
+    ec = read_one_dir_entry(fde_loop_index, fde);
+
+    if ((ec != ERR_CODE::NO_ERROR) || (fde.name[0] == 0))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "No more entries or another failure\n");
+      break;
+    }
+
+    if (fde.name[0] == 0xE5)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Free entry\n");
+      long_name = "";
+      last_was_lfn = false;
+    }
+    else if (fde.is_long_fn_entry())
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Extend current long file name\n");
+
+      if (last_was_lfn && (cur_lfn_checksum != fde.long_fn.checksum))
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Not a valid LFN continuation\n");
+        last_was_lfn = false;
+      }
+      else
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Extend current long file name\n");
+        last_was_lfn = true;
+        cur_lfn_checksum = fde.long_fn.checksum;
+
+        part_of_lfn = "";
+        for (i = 0; i < 13; i++)
+        {
+          cur_lfn_char = fde.long_fn.lfn_char(i);
+          if (is_valid_filename_char(cur_lfn_char, true) && (cur_lfn_char < 256))
+          {
+            next_char = static_cast<char>(cur_lfn_char);
+            part_of_lfn += next_char;
+          }
+        }
+
+        long_name = part_of_lfn + long_name;
+      }
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Is valid short name entry\n");
+      short_name = short_name_from_fde(fde);
+
+      if ((short_name != ".") && (short_name != ".."))
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Not dot-names\n");
+
+        obj.short_fn = short_name;
+        obj.fde = fde;
+        obj.fde_index = fde_loop_index;
+
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Adding short name: ", short_name, "\n");
+        short_name_to_fde_map.insert({short_name, fde_loop_index});
+
+        if (long_name != "")
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Check long name\n");
+          if (cur_lfn_checksum == generate_short_name_checksum(fde.name))
+          {
+            KL_TRC_TRACE(TRC_LVL::FLOW, "Adding long name: ", long_name, "\n");
+            long_name_to_fde_map.insert({long_name, fde_loop_index});
+            obj.long_fn = long_name;
+            canonical_names.insert(long_name);
+          }
+          else
+          {
+            KL_TRC_TRACE(TRC_LVL::FLOW, "Discard long name due invalid checksum\n");
+            long_name = "";
+          }
+        }
+
+        if (long_name == "")
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "No valid long name, only short name\n");
+          canonical_names.insert(short_name);
+        }
+
+        fde_to_child_map.insert({fde_loop_index, obj});
+      }
+
+      short_name = "";
+      long_name = "";
+      last_was_lfn = false;
+    }
+
+    fde_loop_index++;
+  }
 
   KL_TRC_EXIT;
 }
@@ -84,7 +198,7 @@ fat_filesystem::fat_folder::~fat_folder()
 
 }
 
-ERR_CODE fat_filesystem::fat_folder::get_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+ERR_CODE fat_filesystem::fat_folder::get_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child)
 {
   ERR_CODE ec;
   std::shared_ptr<fat_file> file_obj;
@@ -92,9 +206,10 @@ ERR_CODE fat_filesystem::fat_folder::get_child(const kl_string &name, std::share
   std::shared_ptr<fat_folder> folder_obj;
   uint32_t found_fde_index;
   fat_dir_entry fde;
-  kl_string our_name_part;
-  kl_string child_name_part;
+  std::string our_name_part;
+  std::string child_name_part;
   std::shared_ptr<ISystemTreeLeaf> direct_child;
+  bool child_already_open{false};
 
   KL_TRC_ENTRY;
 
@@ -113,15 +228,11 @@ ERR_CODE fat_filesystem::fat_folder::get_child(const kl_string &name, std::share
       // If there is already an extant file or folder object corresponding to this directory entry, retrieve it. We use
       // weak pointers to allow the system to automatically reclaim memory for closed files, but this does mean results
       // can be stale, so also remove stale results.
-      if (fde_to_child_map.contains(found_fde_index))
+      direct_child = fde_to_child_map.find(found_fde_index)->second.child_object.lock();
+      if (direct_child)
       {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Already got child in map\n");
-        direct_child = fde_to_child_map.search(found_fde_index).lock();
-        if (!direct_child)
-        {
-          KL_TRC_TRACE(TRC_LVL::FLOW, "Previous child object expired\n");
-          fde_to_child_map.remove(found_fde_index);
-        }
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Locked child object => already opened\n");
+        child_already_open = true;
       }
 
       if (fde.attributes.directory)
@@ -188,10 +299,10 @@ ERR_CODE fat_filesystem::fat_folder::get_child(const kl_string &name, std::share
       }
 
       // Store the child in a lookup map for use in the future.
-      if (!fde_to_child_map.contains(found_fde_index))
+      if (!child_already_open)
       {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "First time find.\n");
-        fde_to_child_map.insert(found_fde_index, direct_child);
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Store child object\n");
+        fde_to_child_map[found_fde_index].child_object = direct_child;
       }
     }
   }
@@ -207,23 +318,26 @@ ERR_CODE fat_filesystem::fat_folder::get_child(const kl_string &name, std::share
   return ec;
 }
 
-ERR_CODE fat_filesystem::fat_folder::add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child)
+ERR_CODE fat_filesystem::fat_folder::add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child)
 {
   // add_child kind of represents hard-linking, and that is absolutely unsupported on a FAT filesystem.
   return ERR_CODE::INVALID_OP;
 }
 
-ERR_CODE fat_filesystem::fat_folder::rename_child(const kl_string &old_name, const kl_string &new_name)
+ERR_CODE fat_filesystem::fat_folder::rename_child(const std::string &old_name, const std::string &new_name)
 {
   ERR_CODE result;
   std::shared_ptr<fat_file> file_obj;
   std::shared_ptr<fat_filesystem> parent_shared;
   uint32_t found_fde_index;
+  uint32_t old_fde_index;
   fat_dir_entry fde;
   fat_dir_entry file_entries[21];
   uint8_t num_new_fdes;
   uint32_t new_fde_index;
-  std::weak_ptr<ISystemTreeLeaf> cache_ptr;
+  std::string new_short_name;
+  std::string new_long_name;
+  fat_object_details new_obj;
 
   KL_TRC_ENTRY;
 
@@ -243,12 +357,12 @@ ERR_CODE fat_filesystem::fat_folder::rename_child(const kl_string &old_name, con
     else
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "New name is available\n");
-      result = this->get_dir_entry(old_name, fde, found_fde_index);
+      result = this->get_dir_entry(old_name, fde, old_fde_index);
 
       if (result == ERR_CODE::NO_ERROR)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Attempt rename\n");
-        if (!populate_fdes_from_name(new_name, file_entries, num_new_fdes, true))
+        if (!populate_fdes_from_name(new_name, file_entries, num_new_fdes, true, new_long_name, new_short_name))
         {
           result = ERR_CODE::INVALID_NAME;
         }
@@ -266,15 +380,44 @@ ERR_CODE fat_filesystem::fat_folder::rename_child(const kl_string &old_name, con
 
             // Update the fde_to_child_map to remove the entry for the old index and add the entry for the new FDE
             // index.
-            if (fde_to_child_map.contains(found_fde_index))
+            ASSERT(map_contains(fde_to_child_map, old_fde_index));
+
+            if (map_contains(long_name_to_fde_map, fde_to_child_map[old_fde_index].long_fn))
             {
-              KL_TRC_TRACE(TRC_LVL::FLOW, "Found child in map\n");
-              cache_ptr = fde_to_child_map.search(found_fde_index);
-              fde_to_child_map.remove(found_fde_index);
-              fde_to_child_map.insert(new_fde_index, cache_ptr);
+              KL_TRC_TRACE(TRC_LVL::FLOW, "Remove long name\n");
+              long_name_to_fde_map.erase(fde_to_child_map[old_fde_index].long_fn);
+              canonical_names.erase(fde_to_child_map[old_fde_index].long_fn);
+            }
+            else
+            {
+              KL_TRC_TRACE(TRC_LVL::FLOW, "Remove short name from master list\n");
+              canonical_names.erase(fde_to_child_map[old_fde_index].short_fn);
             }
 
-            result = unlink_fdes(found_fde_index);
+            short_name_to_fde_map.erase(fde_to_child_map[old_fde_index].short_fn);
+            fde_to_child_map.erase(old_fde_index);
+
+            new_obj.fde = file_entries[num_new_fdes - 1];
+            new_obj.fde_index = new_fde_index;
+            new_obj.long_fn = new_long_name;
+            new_obj.short_fn = new_short_name;
+
+            fde_to_child_map.insert({new_fde_index, new_obj});
+            short_name_to_fde_map.insert({new_short_name, new_fde_index});
+            if (new_long_name != "")
+            {
+              KL_TRC_TRACE(TRC_LVL::FLOW, "Insert long name as well\n");
+              long_name_to_fde_map.insert({new_long_name, new_fde_index});
+              canonical_names.insert(new_long_name);
+            }
+            else
+            {
+              KL_TRC_TRACE(TRC_LVL::FLOW, "Insert short name only to master list\n");
+              canonical_names.insert(new_short_name);
+            }
+
+
+            result = unlink_fdes(old_fde_index);
           }
         }
       }
@@ -297,7 +440,7 @@ ERR_CODE fat_filesystem::fat_folder::rename_child(const kl_string &old_name, con
   return result;
 }
 
-ERR_CODE fat_filesystem::fat_folder::delete_child(const kl_string &name)
+ERR_CODE fat_filesystem::fat_folder::delete_child(const std::string &name)
 {
   ERR_CODE result{ERR_CODE::UNKNOWN};
   fat_dir_entry e;
@@ -310,10 +453,23 @@ ERR_CODE fat_filesystem::fat_folder::delete_child(const kl_string &name)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Found child for deletion.\n");
 
-    if (fde_to_child_map.contains(location))
+    if (map_contains(fde_to_child_map, location))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Found child in map\n");
-      fde_to_child_map.remove(location);
+      if(map_contains(long_name_to_fde_map, fde_to_child_map[location].long_fn))
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Erase long names\n");
+        long_name_to_fde_map.erase(fde_to_child_map[location].long_fn);
+        canonical_names.erase(fde_to_child_map[location].long_fn);
+      }
+      else
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Erase short names\n");
+        canonical_names.erase(fde_to_child_map[location].short_fn);
+      }
+
+      short_name_to_fde_map.erase(fde_to_child_map[location].short_fn);
+      fde_to_child_map.erase(location);
     }
 
     result = unlink_fdes(location);
@@ -325,17 +481,19 @@ ERR_CODE fat_filesystem::fat_folder::delete_child(const kl_string &name)
   return result;
 }
 
-ERR_CODE fat_filesystem::fat_folder::create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+ERR_CODE fat_filesystem::fat_folder::create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child)
 {
   ERR_CODE result = ERR_CODE::UNKNOWN;
   fat_dir_entry file_entries[21];
   uint8_t num_file_entries;
   uint32_t entry_idx;
   uint32_t new_idx;
+  std::string new_long_name;
+  std::string new_short_name;
+  fat_object_details new_obj;
 
   KL_TRC_ENTRY;
 
-  // This isn't ideal, it causes populate_short_name and/or populate_long_name to be called twice.
   result = get_dir_entry(name, file_entries[0], entry_idx);
 
   kl_memset(file_entries, 0, sizeof(file_entries));
@@ -349,7 +507,7 @@ ERR_CODE fat_filesystem::fat_folder::create_child(const kl_string &name, std::sh
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Some other error\n");
   }
-  else if(!populate_fdes_from_name(name, file_entries, num_file_entries, true))
+  else if(!populate_fdes_from_name(name, file_entries, num_file_entries, true, new_long_name, new_short_name))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to generate FAT filename\n");
     result = ERR_CODE::INVALID_PARAM;
@@ -366,6 +524,26 @@ ERR_CODE fat_filesystem::fat_folder::create_child(const kl_string &name, std::sh
   if (result == ERR_CODE::NO_ERROR)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Get child\n");
+    new_obj.fde_index = new_idx;
+    new_obj.fde = file_entries[num_file_entries - 1];
+    new_obj.long_fn = new_long_name;
+    new_obj.short_fn = new_short_name;
+
+    fde_to_child_map.insert({new_idx, new_obj});
+    short_name_to_fde_map.insert({new_short_name, new_idx});
+    if (new_long_name != "")
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Insert long name too\n");
+      long_name_to_fde_map.insert({new_long_name, new_idx});
+      canonical_names.insert(new_long_name);
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Insert short name only\n");
+      canonical_names.insert(new_short_name);
+    }
+
+
     result = get_child(name, child);
   }
 
@@ -385,169 +563,52 @@ ERR_CODE fat_filesystem::fat_folder::create_child(const kl_string &name, std::sh
 /// @param[out] found_idx Returns the index of the returned entry in the array of structures that forms a directory in
 ///                       FAT.
 ///
-/// @param[in] use_raw_short_name If this is true, the value in raw_short_name is used instead of the value in name. In
-///                               this case, raw_short_name must point to a buffer of 11 characters containing a
-///                               filename in the short FAT format.
-///
-/// @param[in] raw_short_name The short name to use if use_raw_short_name is true.
-///
 /// @return ERR_CODE::NO_ERROR or ERR_CODE::NOT_FOUND, as appropriate.
-ERR_CODE fat_filesystem::fat_folder::get_dir_entry(const kl_string &name,
+ERR_CODE fat_filesystem::fat_folder::get_dir_entry(const std::string &name,
                                                    fat_dir_entry &storage,
-                                                   uint32_t &found_idx,
-                                                   bool use_raw_short_name,
-                                                   const char *raw_short_name)
+                                                   uint32_t &found_idx)
 {
+  ERR_CODE result{ERR_CODE::NO_ERROR};
+  bool found{false};
+
   KL_TRC_ENTRY;
 
-  ERR_CODE ret_code = ERR_CODE::NO_ERROR;
-  bool continue_looking = true;
-  bool is_long_name = false;
-  char short_name[12];
-  fat_dir_entry long_name_entries[20];
-  fat_dir_entry cur_entry;
-  uint32_t cur_entry_idx = 0;
-  uint8_t long_name_countup = 0;
-  uint8_t long_name_cur_checksum;
-  uint8_t num_long_name_entries;
-  bool long_name_entry_match;
+  auto it = long_name_to_fde_map.find(name);
 
-  // Validate the name as an 8.3 file name.
-  if (!use_raw_short_name)
+  if(it != long_name_to_fde_map.end())
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Use traditional format name\n");
-    if (populate_short_name(name, short_name))
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Looking for short name: ", short_name, "\n");
-      is_long_name = false;
-    }
-    else if(populate_long_name(name, long_name_entries, num_long_name_entries))
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Looking for long name.\n");
-      is_long_name = true;
-    }
-    else
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to generate FAT filename\n");
-      ret_code = ERR_CODE::NOT_FOUND;
-    }
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Found in long name\n");
+    found = true;
   }
   else
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Use raw format filename\n");
-    if (raw_short_name == nullptr)
+    KL_TRC_TRACE(TRC_LVL::FLOW, "look in short names\n");
+    it = short_name_to_fde_map.find(name);
+
+    if (it != short_name_to_fde_map.end())
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "No short name provided\n");
-      ret_code = ERR_CODE::INVALID_PARAM;
-    }
-    else
-    {
-      is_long_name = false;
-      kl_memcpy(raw_short_name, short_name, 11);
-      short_name[11] = 0;
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Found in short names\n");
+      found = true;
     }
   }
 
-  while(continue_looking && (ret_code == ERR_CODE::NO_ERROR))
+  if (found)
   {
-    ret_code = this->read_one_dir_entry(cur_entry_idx, cur_entry);
-
-    if (ret_code == ERR_CODE::NO_ERROR)
-    {
-      // If the first character of a FAT entry is 0x00, then there are no further entries to examine. This is a
-      // deliberate optimisation in the FAT spec.
-      if (cur_entry.name[0] == 0)
-      {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "No further entries!\n");
-        continue_looking = false;
-        ret_code = ERR_CODE::NOT_FOUND;
-        break;
-      }
-
-      if (!is_long_name)
-      {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Examining: ", (const char *)cur_entry.name, "\n");
-        if (kl_memcmp(cur_entry.name, short_name, 11) == 0)
-        {
-          KL_TRC_TRACE(TRC_LVL::FLOW, "Found entry\n");
-          kl_memcpy(&cur_entry, &storage, sizeof(fat_dir_entry));
-          continue_looking = false;
-          break;
-        }
-      }
-      else
-      {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Examining entry ", long_name_countup, " of long filename\n");
-
-        if (long_name_countup == num_long_name_entries)
-        {
-          if (long_name_cur_checksum == generate_short_name_checksum(cur_entry.name))
-          {
-            KL_TRC_TRACE(TRC_LVL::FLOW, "Checksums match, found file\n");
-            kl_memcpy(&cur_entry, &storage, sizeof(fat_dir_entry));
-            continue_looking = false;
-            break;
-          }
-          else
-          {
-            KL_TRC_TRACE(TRC_LVL::FLOW, "Bad checksum\n");
-            long_name_countup = 0;
-          }
-        }
-
-        // This isn't an 'else' part of the if above because it is possible the mismatched checksum was actually
-        // because that structure was part of the next long file name with the previous one being orphaned.
-        if (long_name_countup != num_long_name_entries)
-        {
-          long_name_entry_match = soft_compare_lfn_entries(long_name_entries[long_name_countup], cur_entry);
-
-          if (long_name_entry_match)
-          {
-            KL_TRC_TRACE(TRC_LVL::FLOW, "Matches so far\n");
-            if (long_name_countup == 0)
-            {
-              KL_TRC_TRACE(TRC_LVL::FLOW, "New check, store checksum");
-              long_name_cur_checksum = cur_entry.long_fn.checksum;
-            }
-            else
-            {
-              if (long_name_cur_checksum != cur_entry.long_fn.checksum)
-              {
-                KL_TRC_TRACE(TRC_LVL::FLOW, "Checksum mismatch\n");
-                long_name_entry_match = false;
-              }
-            }
-          }
-
-          if (long_name_entry_match)
-          {
-            KL_TRC_TRACE(TRC_LVL::FLOW, "Still matching\n");
-            long_name_countup++;
-          }
-          else
-          {
-            KL_TRC_TRACE(TRC_LVL::FLOW, "Doesn't match\n");
-            long_name_countup = 0;
-          }
-        }
-      }
-    }
-    else
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "An error occurred - 'not found' is a reasonable response.\n");
-      ret_code = ERR_CODE::NOT_FOUND;
-    }
-
-    cur_entry_idx++;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Found an FDE index: ", it->second, "\n");
+    found_idx = it->second;
+    storage = fde_to_child_map[found_idx].fde;
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Not found in long or short names\n");
+    result = ERR_CODE::NOT_FOUND;
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Disk cluster: ", storage.first_cluster_high, " / ", storage.first_cluster_low, "\n");
-  found_idx = cur_entry_idx;
-
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", ret_code, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
 
-  return ret_code;
+  return result;
 }
 
 /// @brief Read a single directory entry
@@ -584,7 +645,7 @@ ERR_CODE fat_filesystem::fat_folder::read_one_dir_entry(uint32_t entry_idx, fat_
   return ec;
 }
 
-/// @brief If a kl_string filename is already a suitable FAT short filename, convert it into the format used on disk.
+/// @brief If a std::string filename is already a suitable FAT short filename, convert it into the format used on disk.
 ///
 /// This function does not attempt to generate a short name for a long filename - it only works on filenamesthat are
 /// already in 8.3 format.
@@ -594,11 +655,11 @@ ERR_CODE fat_filesystem::fat_folder::read_one_dir_entry(uint32_t entry_idx, fat_
 /// @param[out] short_name The converted filename. Must be a pointer to a buffer of 12 characters (or more)
 ///
 /// @return True if the filename could be converted, false otherwise.
-bool fat_filesystem::fat_folder::populate_short_name(kl_string filename, char *short_name)
+bool fat_filesystem::fat_folder::populate_short_name(std::string filename, char *short_name)
 {
   bool result = true;
-  kl_string first_part;
-  kl_string ext_part;
+  std::string first_part;
+  std::string ext_part;
   uint64_t dot_pos;
 
   KL_TRC_ENTRY;
@@ -613,7 +674,7 @@ bool fat_filesystem::fat_folder::populate_short_name(kl_string filename, char *s
   else
   {
     dot_pos = filename.find(".");
-    if (dot_pos == kl_string::npos)
+    if (dot_pos == std::string::npos)
     {
       if (filename.length() > 8)
       {
@@ -697,7 +758,7 @@ bool fat_filesystem::fat_folder::populate_short_name(kl_string filename, char *s
 /// @param[out] num_entries The number of long file name entry structures that are populated.
 ///
 /// @return true if the long filename structures could be generated successfully, false otherwise.
-bool fat_filesystem::fat_folder::populate_long_name(kl_string filename,
+bool fat_filesystem::fat_folder::populate_long_name(std::string filename,
                                                     fat_dir_entry *long_name_entries,
                                                     uint8_t &num_entries)
 {
@@ -952,7 +1013,7 @@ ERR_CODE fat_filesystem::fat_folder::write_fde(uint32_t index, const fat_dir_ent
 ///                           new file.
 ///
 /// @return True if a basis name could be created, false otherwise.
-bool fat_filesystem::fat_folder::generate_basis_name_entry(kl_string filename, fat_dir_entry &created_entry)
+bool fat_filesystem::fat_folder::generate_basis_name_entry(std::string filename, fat_dir_entry &created_entry)
 {
   bool result = false;
   bool lossy_conversion = false;
@@ -968,6 +1029,7 @@ bool fat_filesystem::fat_folder::generate_basis_name_entry(kl_string filename, f
   fat_dir_entry found_fde;
   uint32_t found_idx = 0;
   ERR_CODE ec;
+  std::string test_name;
 
   KL_TRC_ENTRY;
 
@@ -1044,13 +1106,15 @@ bool fat_filesystem::fat_folder::generate_basis_name_entry(kl_string filename, f
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Converted filename: ", reinterpret_cast<const char *>(created_entry.name), "\n");
 
   // Do numeric-tail generation.
-  ec = get_dir_entry(filename, found_fde, found_idx, true, reinterpret_cast<const char *>(created_entry.name));
+  test_name = short_name_from_fde(created_entry);
+  ec = get_dir_entry(test_name, found_fde, found_idx);
   requires_numeric_tail = lossy_conversion || (ec == ERR_CODE::NO_ERROR);
 
   while ((requires_numeric_tail) && (numeric_tail < 1000000))
   {
     add_numeric_tail(created_entry, number_main_part_chars, numeric_tail);
-    ec = get_dir_entry(filename, found_fde, found_idx, true, reinterpret_cast<const char *>(created_entry.name));
+    test_name = short_name_from_fde(created_entry);
+    ec = get_dir_entry(test_name, found_fde, found_idx);
     if (ec == ERR_CODE::NOT_FOUND)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Found a reasonable filename\n");
@@ -1076,6 +1140,8 @@ bool fat_filesystem::fat_folder::generate_basis_name_entry(kl_string filename, f
 }
 
 /// @brief Add a batch of new directory entries to this directory.
+///
+/// The caller is responsible for updating the various name-fde tables.
 ///
 /// @param new_fdes Pointer to an array of FAT Directory Entries
 ///
@@ -1229,7 +1295,7 @@ void fat_filesystem::fat_folder::add_numeric_tail(fat_dir_entry &fde, uint8_t nu
 
 /// @brief Convert a given filename into a set of file directory entries, either in long or short format.
 ///
-/// @param name The name to fill in to the FDEs.
+/// @param name_in The name to fill in to the FDEs.
 ///
 /// @param[out] fdes An array of 21 file directory entries, at least some of which will contain the filename after this
 ///                  function completes.
@@ -1239,11 +1305,18 @@ void fat_filesystem::fat_folder::add_numeric_tail(fat_dir_entry &fde, uint8_t nu
 /// @param create_basis_name Should this function generate a new basis name for 'name' and append it to the list of
 ///                          FDEs? This will have no effect if 'name' is already a valid short name.
 ///
+/// @param[out] long_name_out The long name that is written to disk - if any. If no long name is written, "" is
+///             returned.
+///
+/// @param[out] short_name_out The short name that is written to disk.
+///
 /// @return True if the function succeeds and the fdes and num_fdes_used are now valid. False otherwise.
-bool fat_filesystem::fat_folder::populate_fdes_from_name(kl_string name,
+bool fat_filesystem::fat_folder::populate_fdes_from_name(std::string name_in,
                                                          fat_dir_entry (&fdes)[21],
                                                          uint8_t &num_fdes_used,
-                                                         bool create_basis_name)
+                                                         bool create_basis_name,
+                                                         std::string &long_name_out,
+                                                         std::string &short_name_out)
 {
   bool result = true;
   char short_name[12]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -1251,22 +1324,26 @@ bool fat_filesystem::fat_folder::populate_fdes_from_name(kl_string name,
 
   KL_TRC_ENTRY;
 
-  if (populate_short_name(name, short_name))
+  if (populate_short_name(name_in, short_name))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Creating short name: ", short_name, "\n");
 
     kl_memcpy(short_name, &fdes[0].name, 11);
     fdes[0].attributes.archive = 1;
 
+    short_name_out = short_name_from_fde(fdes[0]);
+    long_name_out = "";
+
     num_fdes_used = 1;
   }
-  else if(populate_long_name(name, fdes, num_fdes_used))
+  else if(populate_long_name(name_in, fdes, num_fdes_used))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Creating long name.\n");
+    kl_memset(&fdes[num_fdes_used+1], 0, sizeof(fat_dir_entry));
 
     if (create_basis_name)
     {
-      if (!generate_basis_name_entry(name, fdes[num_fdes_used]))
+      if (!generate_basis_name_entry(name_in, fdes[num_fdes_used]))
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to generate basis name\n");
         result = false;
@@ -1283,6 +1360,9 @@ bool fat_filesystem::fat_folder::populate_fdes_from_name(kl_string name,
         num_fdes_used++;
       }
     }
+
+    long_name_out = name_in;
+    short_name_out = short_name_from_fde(fdes[num_fdes_used]);
   }
   else
   {
@@ -1351,6 +1431,94 @@ ERR_CODE fat_filesystem::fat_folder::unlink_fdes(uint32_t short_name_fde_idx)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Tried to start from a long file name entry.\n");
     result = ERR_CODE::INVALID_OP;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+std::pair<ERR_CODE, uint64_t> fat_filesystem::fat_folder::num_children()
+{
+  uint64_t count{0};
+
+  KL_TRC_ENTRY;
+
+  count = fde_to_child_map.size();
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Num children: ", count, "\n");
+  KL_TRC_EXIT;
+
+  return {ERR_CODE::NO_ERROR, count};
+}
+
+std::pair<ERR_CODE, std::vector<std::string>>
+fat_filesystem::fat_folder::enum_children(std::string start_from, uint64_t max_count)
+{
+  std::vector<std::string> child_list;
+  ERR_CODE result{ERR_CODE::NO_ERROR};
+  uint64_t cur_count{0};
+
+  KL_TRC_ENTRY;
+
+  auto it = canonical_names.begin();
+  if (start_from != "")
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Use given name for start point\n");
+    it = canonical_names.lower_bound(start_from);
+  }
+
+  while (((max_count == 0) || (max_count > cur_count)) && (it != canonical_names.end()))
+  {
+    std::string name{*it};
+    child_list.push_back(std::move(name));
+
+    cur_count++;
+    it++;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Error code: ", result, ". Number of children: ", child_list.size(), "\n");
+  KL_TRC_EXIT;
+
+  return { result, std::move(child_list) };
+}
+
+std::string fat_filesystem::fat_folder::short_name_from_fde(fat_dir_entry &fde)
+{
+  std::string result{""};
+  KL_TRC_ENTRY;
+
+  // Construct a string containing the short name for this file.
+  for (uint8_t i = 0; i < 11; i++)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Examine short names character: ", i, "\n");
+    // Either end of the root part, or end of the extension.
+    if (fde.name[i] == 0x20)
+    {
+      if (i >= 8)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Reached end of extension\n");
+        break;
+      }
+      else
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Reached end of main part\n");
+        i = 7;
+      }
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Normal character\n");
+
+      if (i == 8)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Insert dot for extension\n");
+        result += ".";
+      }
+
+      result += toupper(fde.name[i]);
+    }
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");

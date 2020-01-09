@@ -135,6 +135,24 @@ struct fat_long_filename_entry
     final_chars[0] = 0xFFFF;
     final_chars[1] = 0xFFFF;
   }
+
+  uint16_t &lfn_char(uint8_t idx)
+  {
+    ASSERT(idx < 13);
+    if (idx < 5)
+    {
+      return first_chars[idx];
+    }
+    else if (idx < 11)
+    {
+      return next_chars[idx - 5];
+    }
+    else
+    {
+      return final_chars[idx - 11];
+    }
+
+  }
 /// @endcond
 };
 
@@ -153,16 +171,20 @@ struct fat_dir_entry
     {
       /// @cond
       uint8_t name[11];
-      struct
+      union
       {
-        uint8_t read_only :1;
-        uint8_t hidden :1;
-        uint8_t system :1;
-        uint8_t volume_id :1;
-        uint8_t directory :1;
-        uint8_t archive :1;
-        uint8_t reserved :2;
-      } attributes;
+        struct
+        {
+          uint8_t read_only :1;
+          uint8_t hidden :1;
+          uint8_t system :1;
+          uint8_t volume_id :1;
+          uint8_t directory :1;
+          uint8_t archive :1;
+          uint8_t reserved :2;
+        } attributes;
+        uint8_t attributes_raw;
+      };
       uint8_t nt_use_only;
       uint8_t create_time_tenths;
       fat_time create_time;
@@ -176,6 +198,11 @@ struct fat_dir_entry
       /// @endcond
     };
     fat_long_filename_entry long_fn; ///< Long filename version of the directory entry.
+  };
+
+  bool is_long_fn_entry()
+  {
+    return (this->attributes_raw == 0x0F);
   };
 };
 static_assert(sizeof(fat_dir_entry) == 32, "Sizeof fat_dir_entry wrong.");
@@ -195,4 +222,29 @@ enum class FAT_TYPE
   FAT12, ///< FAT12
   FAT16, ///< FAT16
   FAT32, ///< FAT32
+};
+
+class ISystemTreeLeaf;
+
+/// @brief Structure for storing details of the children of FAT directories.
+///
+/// This is intended to avoid having to read them from disk every time they are needed.
+struct fat_object_details
+{
+  /// @brief Long filename of this child object.
+  ///
+  /// May be "" if there is no associated long name.
+  std::string long_fn;
+
+  /// @brief Short filename of this child object.
+  std::string short_fn;
+
+  /// @brief The index of the directory entry for this child within the directory's list.
+  uint32_t fde_index;
+
+  /// @brief Weak pointer to the child object.
+  std::weak_ptr<ISystemTreeLeaf> child_object;
+
+  /// @brief Copy of the basic directory entry for this child object.
+  fat_dir_entry fde;
 };

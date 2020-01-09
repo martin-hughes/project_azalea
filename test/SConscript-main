@@ -14,9 +14,6 @@ files = [ "dummy_libs/processor/processor.dummy.cpp",
           "devices/dev_monitor.cpp",
 
           "klib/data_structures/ds_1.cpp",
-          "klib/data_structures/ds_2.cpp",
-          "klib/data_structures/ds_3.cpp",
-          "klib/data_structures/ds_4.cpp",
 
           "klib/math/maths_1.cpp",
 
@@ -27,6 +24,7 @@ files = [ "dummy_libs/processor/processor.dummy.cpp",
           "klib/misc/misc_2.cpp",
 
           "klib/synch/synch_1.cpp",
+          "klib/synch/synch_2_lock_wrapper.cpp",
 
           "object_mgr/object_mgr_1.cpp",
           "object_mgr/object_mgr_2.cpp",
@@ -43,6 +41,7 @@ files = [ "dummy_libs/processor/processor.dummy.cpp",
           "system_tree/system_tree_2.cpp",
           "system_tree/system_tree_3_pipes.cpp",
           "system_tree/system_tree_6_proc.cpp",
+          "system_tree/system_tree_7_enum.cpp",
 
           "system_tree/fs/fat/fat_fs_1_read.cpp",
           "system_tree/fs/fat/fat_fs_2_write.cpp",

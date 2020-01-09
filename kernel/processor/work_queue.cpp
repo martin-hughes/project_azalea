@@ -153,6 +153,8 @@ void work::queue_message(std::shared_ptr<work::message_receiver> receiver, std::
 
   klib_synch_spinlock_lock(receiver->queue_lock);
 
+  ASSERT(msg.get());
+
   receiver->message_queue.push(std::move(msg));
   if (!receiver->is_in_receiver_queue && !receiver->in_process_mode)
   {
@@ -195,7 +197,7 @@ bool message_receiver::process_next_message()
 {
   bool more_msgs{true};
   std::unique_ptr<msg::root_msg> msg_header;
-  std::shared_ptr<syscall_semaphore_obj> completion_sem;
+  std::shared_ptr<syscall_semaphore_obj> completion_sem{nullptr};
 
   KL_TRC_ENTRY;
 
@@ -204,6 +206,7 @@ bool message_receiver::process_next_message()
   if (!message_queue.empty())
   {
     msg_header = std::move(message_queue.front());
+    ASSERT(msg_header.get());
     message_queue.pop();
 
     if (message_queue.empty())

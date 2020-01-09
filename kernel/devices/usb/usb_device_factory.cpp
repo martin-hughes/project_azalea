@@ -7,6 +7,8 @@
 
 //#define ENABLE_TRACING
 
+#include <map>
+
 // Core includes
 #include "klib/klib.h"
 #include "devices/usb/usb.h"
@@ -21,7 +23,7 @@ namespace
 
   // This is a way to keep hold of USB devices until the device tree is more well developed. In the future USB devices
   // will be children of a reasonable parent device or controller, which is a child of a PCI device, and so on.
-  kl_rb_tree<uint64_t, std::shared_ptr<usb::generic_device>> *devices = nullptr; ///< TEMPO tree of known devices.
+  std::map<uint64_t, std::shared_ptr<usb::generic_device>> *devices = nullptr; ///< TEMPO tree of known devices.
   volatile uint64_t num_devices = 0; ///< TEMPO number of devices previously created.
   kernel_spinlock tree_lock = 0; ///< Lock protecting the devices tree.
 
@@ -49,7 +51,7 @@ void initialise_usb_system()
     factory = new std::shared_ptr<main_factory>;
     *factory = std::make_shared<main_factory>();
 
-    devices = new kl_rb_tree<uint64_t, std::shared_ptr<usb::generic_device>>();
+    devices = new std::map<uint64_t, std::shared_ptr<usb::generic_device>>();
   }
   klib_synch_spinlock_unlock(factory_create_spinlock);
 
@@ -153,7 +155,7 @@ void main_factory::create_device_handler(std::unique_ptr<create_device_work_item
     }
 
     klib_synch_spinlock_lock(tree_lock);
-    devices->insert(num_devices, new_device);
+    devices->insert({num_devices, new_device});
     num_devices++;
     klib_synch_spinlock_unlock(tree_lock);
   }

@@ -65,11 +65,11 @@
 #ifndef CORE_DEVICE_INTFACE_HEADER
 #define CORE_DEVICE_INTFACE_HEADER
 
+#include <string>
 #include <stdint.h>
 
 #include "processor/work_queue.h"
 #include "system_tree/system_tree_simple_branch.h"
-#include "klib/data_structures/string.h"
 
 // Forward declaration to allow the create_new_device forward declaration.
 class IDevice;
@@ -118,7 +118,7 @@ public:
   ///
   /// @param auto_inc_suffix If set to true, the constructor will append a number to the end of short_name equal to the
   ///                        number of devices already using short_name in the system.
-  IDevice(const kl_string human_name, const kl_string short_name, bool auto_inc_suffix);
+  IDevice(const std::string human_name, const std::string short_name, bool auto_inc_suffix);
   virtual ~IDevice() = default;
 
   /// @brief Return a human readable name for this device.
@@ -126,7 +126,7 @@ public:
   /// It is acceptable for more than one device object to have the same human readable name.
   ///
   /// @return The human readable name.
-  virtual const kl_string device_name() { return device_human_name; };
+  virtual const std::string device_name() { return device_human_name; };
 
   /// @brief Return a short name for this device.
   ///
@@ -134,7 +134,7 @@ public:
   /// this device must have a different short name.
   ///
   /// @return The device's short name.
-  virtual const kl_string dev_short_name() { return device_short_name; };
+  virtual const std::string dev_short_name() { return device_short_name; };
 
   /// @brief Return the current status of this device.
   ///
@@ -202,12 +202,12 @@ protected:
   /// @endcond
 
 private:
-  const kl_string device_human_name; ///< The human-friendly name for this device.
+  const std::string device_human_name; ///< The human-friendly name for this device.
 
   /// @brief The short-name for this device.
   ///
   /// Ideally this would be const, but at the moment the constructor adds a suffix if needed.
-  kl_string device_short_name;
+  std::string device_short_name;
   DEV_STATUS current_dev_status; ///< The current status of this device.
 };
 

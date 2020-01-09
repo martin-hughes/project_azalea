@@ -29,6 +29,12 @@ ERR_CODE syscall_get_object_properties(GEN_HANDLE handle,
                                        const char *path,
                                        uint64_t path_length,
                                        struct object_properties *props);
+ERR_CODE syscall_enum_children(GEN_HANDLE handle,
+                               const char *start_from,
+                               uint64_t start_from_len,
+                               uint64_t max_count,
+                               void *buffer,
+                               uint64_t *buffer_size);
 
 /* Data read and write */
 ERR_CODE syscall_read_handle(GEN_HANDLE handle,

@@ -31,7 +31,7 @@ void DeviceMonitorTest::SetUp()
 {
   system_tree_init();
   dev_root = std::make_shared<system_tree_simple_branch>();
-  ASSERT(system_tree()->add_child("dev", dev_root) == ERR_CODE::NO_ERROR);
+  ASSERT_EQ(system_tree()->add_child("\\dev", dev_root), ERR_CODE::NO_ERROR);
   work::init_queue();
   dev::monitor::init();
 }

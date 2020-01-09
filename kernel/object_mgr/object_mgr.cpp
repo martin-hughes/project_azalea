@@ -72,7 +72,7 @@ void object_manager::correlate_object(object_data &object, GEN_HANDLE handle)
   new_object->handle = handle;
 
   klib_synch_spinlock_lock(om_main_lock);
-  object_store.insert(handle, new_object);
+  object_store.insert({handle, new_object});
   klib_synch_spinlock_unlock(om_main_lock);
 
   KL_TRC_EXIT;
@@ -162,7 +162,7 @@ void object_manager::decorrelate_object(GEN_HANDLE handle)
 
   klib_synch_spinlock_lock(om_main_lock);
   found_object = this->int_retrieve_object(handle);
-  object_store.remove(handle);
+  object_store.erase(handle);
   klib_synch_spinlock_unlock(om_main_lock);
 
   KL_TRC_EXIT;
@@ -187,10 +187,10 @@ std::shared_ptr<object_data> object_manager::int_retrieve_object(GEN_HANDLE hand
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Handle to retrieve: ", handle, "\n");
 
-  if (object_store.contains(handle))
+  if (map_contains(object_store, handle))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Object exists.\n");
-    found_object = object_store.search(handle);
+    found_object = object_store.find(handle)->second;
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Found item: ", found_object, "\n");
@@ -203,12 +203,8 @@ std::shared_ptr<object_data> object_manager::int_retrieve_object(GEN_HANDLE hand
 void object_manager::remove_all_objects()
 {
   KL_TRC_ENTRY;
-  GEN_HANDLE root_handle;
 
-  while (object_store.get_root_node_key(root_handle))
-  {
-    remove_object(root_handle);
-  }
+  object_store.clear();
 
   KL_TRC_EXIT;
 }

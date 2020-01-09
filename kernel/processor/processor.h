@@ -10,7 +10,6 @@
 #include "mem/mem.h"
 #include "object_mgr/object_mgr.h"
 #include "system_tree/system_tree_leaf.h"
-#include "klib/data_structures/string.h"
 #include "processor/synch_objects.h"
 #include "processor/work_queue.h"
 

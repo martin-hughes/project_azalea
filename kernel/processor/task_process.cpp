@@ -73,7 +73,7 @@ std::shared_ptr<task_process> task_process::create(ENTRY_PROC entry_point,
   // Add it to the "proc" tree of processes.
   std::shared_ptr<ISystemTreeLeaf> branch_ptr;
   std::shared_ptr<proc_fs_root_branch> proc_fs_root_ptr;
-  system_tree()->get_child("proc", branch_ptr);
+  system_tree()->get_child("\\proc", branch_ptr);
   proc_fs_root_ptr = std::dynamic_pointer_cast<proc_fs_root_branch>(branch_ptr);
   ASSERT(proc_fs_root_ptr);
   proc_fs_root_ptr->add_process(new_proc);
@@ -88,24 +88,24 @@ std::shared_ptr<task_process> task_process::create(ENTRY_PROC entry_point,
     KL_TRC_TRACE(TRC_LVL::FLOW, "Not in initial startup, look for stdio pipes\n");
 
     // If the current process has stdout, stdin or stderr pipes, use those for the newly created process too.
-    if (system_tree()->get_child("proc\\0\\stdout", leaf_ptr) == ERR_CODE::NO_ERROR)
+    if (system_tree()->get_child("\\proc\\0\\stdout", leaf_ptr) == ERR_CODE::NO_ERROR)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Copy stdout from parent to child\n");
-      snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "proc\\%p\\stdout", new_proc.get());
+      snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "\\proc\\%p\\stdout", new_proc.get());
       system_tree()->add_child(proc_path_ptr_buffer, leaf_ptr);
     }
 
-    if (system_tree()->get_child("proc\\0\\stdin", leaf_ptr) == ERR_CODE::NO_ERROR)
+    if (system_tree()->get_child("\\proc\\0\\stdin", leaf_ptr) == ERR_CODE::NO_ERROR)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Copy stdin from parent to child\n");
-      snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "proc\\%p\\stdin", new_proc.get());
+      snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "\\proc\\%p\\stdin", new_proc.get());
       system_tree()->add_child(proc_path_ptr_buffer, leaf_ptr);
     }
 
-    if (system_tree()->get_child("proc\\0\\stderr", leaf_ptr) == ERR_CODE::NO_ERROR)
+    if (system_tree()->get_child("\\proc\\0\\stderr", leaf_ptr) == ERR_CODE::NO_ERROR)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Copy stderr from parent to child\n");
-      snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "proc\\%p\\stderr", new_proc.get());
+      snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "\\proc\\%p\\stderr", new_proc.get());
       system_tree()->add_child(proc_path_ptr_buffer, leaf_ptr);
     }
   }
@@ -145,7 +145,7 @@ void task_process::destroy_process()
 
     std::shared_ptr<ISystemTreeLeaf> branch_ptr;
     std::shared_ptr<proc_fs_root_branch> proc_fs_root_ptr;
-    system_tree()->get_child("proc", branch_ptr);
+    system_tree()->get_child("\\proc", branch_ptr);
     proc_fs_root_ptr = std::dynamic_pointer_cast<proc_fs_root_branch>(branch_ptr);
     ASSERT(proc_fs_root_ptr);
     proc_fs_root_ptr->remove_process(shared_from_this());

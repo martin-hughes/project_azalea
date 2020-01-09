@@ -109,7 +109,7 @@ TEST_P(FatFsLargeReadTests, CompleteRead)
   shared_ptr<IBasicFile> input_file;
   auto [test_details, disk_image_name, range] = GetParam();
   auto [begin, length] = range;
-  const kl_string filename = test_details.filename;
+  const std::string filename = test_details.filename;
   uint64_t bytes_read;
   uint64_t actual_size;
   ERR_CODE result;

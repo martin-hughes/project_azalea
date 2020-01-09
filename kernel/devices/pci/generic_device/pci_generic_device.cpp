@@ -5,6 +5,8 @@
 
 //#define ENABLE_TRACING
 
+#include <string>
+
 #include "klib/klib.h"
 #include "pci_generic_device.h"
 
@@ -24,7 +26,7 @@ pci_generic_device::pci_generic_device(pci_address address) :
 /// @param human_name The human name of this device.
 ///
 /// @param dev_name The device name of this device.
-pci_generic_device::pci_generic_device(pci_address address, const kl_string human_name, const kl_string dev_name) :
+pci_generic_device::pci_generic_device(pci_address address, const std::string human_name, const std::string dev_name) :
   IDevice{human_name, dev_name, true},
   _address(address),
   _base_interrupt_vector(0),

@@ -74,6 +74,7 @@ const void *syscall_pointers[] =
       (void *)syscall_release_mutex,
       (void *)syscall_create_semaphore,
       (void *)syscall_signal_semaphore,
+      (void *)syscall_enum_children,
     };
 
 /// @brief The number of known system calls.

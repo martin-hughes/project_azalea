@@ -8,7 +8,6 @@
 
 #include "devices/device_interface.h"
 #include "user_interfaces/error_codes.h"
-#include "klib/data_structures/string.h"
 #include "system_tree/fs/pipe/pipe_fs.h"
 
 #include <memory>

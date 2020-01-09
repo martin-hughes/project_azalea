@@ -3,6 +3,10 @@
 
 #pragma once
 
+#include <map>
+#include <string>
+#include <set>
+
 #include "klib/klib.h"
 
 #include "system_tree/system_tree_branch.h"
@@ -23,11 +27,14 @@ public:
   static std::shared_ptr<fat_filesystem> create(std::shared_ptr<IBlockDevice> parent_device);
   virtual ~fat_filesystem();
 
-  virtual ERR_CODE get_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
-  virtual ERR_CODE add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
-  virtual ERR_CODE rename_child(const kl_string &old_name, const kl_string &new_name) override;
-  virtual ERR_CODE delete_child(const kl_string &name) override;
-  virtual ERR_CODE create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+  virtual ERR_CODE get_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+  virtual ERR_CODE add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
+  virtual ERR_CODE rename_child(const std::string &old_name, const std::string &new_name) override;
+  virtual ERR_CODE delete_child(const std::string &name) override;
+  virtual ERR_CODE create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+  virtual std::pair<ERR_CODE, uint64_t> num_children() override;
+  virtual std::pair<ERR_CODE, std::vector<std::string>>
+    enum_children(std::string start_from, uint64_t max_count) override;
 
   class fat_folder;
 
@@ -95,11 +102,14 @@ public:
                                               bool root_directory = false);
     virtual ~fat_folder();
 
-    virtual ERR_CODE get_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
-    virtual ERR_CODE add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
-    virtual ERR_CODE rename_child(const kl_string &old_name, const kl_string &new_name) override;
-    virtual ERR_CODE delete_child(const kl_string &name) override;
-    virtual ERR_CODE create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &leaf) override;
+    virtual ERR_CODE get_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+    virtual ERR_CODE add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
+    virtual ERR_CODE rename_child(const std::string &old_name, const std::string &new_name) override;
+    virtual ERR_CODE delete_child(const std::string &name) override;
+    virtual ERR_CODE create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &leaf) override;
+    virtual std::pair<ERR_CODE, uint64_t> num_children() override;
+    virtual std::pair<ERR_CODE, std::vector<std::string>>
+      enum_children(std::string start_from, uint64_t max_count) override;
 
     ERR_CODE write_fde(uint32_t index, const fat_dir_entry &fde);
 
@@ -110,31 +120,31 @@ public:
 
     /// Store a cache of FDE indicies to child objects. This is also useful when renaming or deleting children.
     ///
-    kl_rb_tree<uint32_t, std::weak_ptr<ISystemTreeLeaf>> fde_to_child_map;
+    std::map<uint32_t, fat_object_details> fde_to_child_map;
+    std::map<std::string, uint32_t> long_name_to_fde_map; ///< Store a lookup from long names to FDE numbers.
+    std::map<std::string, uint32_t> short_name_to_fde_map; ///< Store a lookup from short names to FDE numbers.
+    std::set<std::string> canonical_names; ///< Store all names in this folder for ease of enumeration.
 
-    // The following two maps are not currently used.
-    kl_rb_tree<uint32_t, kl_string> fde_to_name_map; ///< Store a lookup from FDE numbers to names
-    kl_rb_tree<kl_string, uint32_t> name_to_fde_map; ///< Store a lookup from names to FDE numbers.
-
-    ERR_CODE get_dir_entry(const kl_string &name,
+    ERR_CODE get_dir_entry(const std::string &name,
                            fat_dir_entry &storage,
-                           uint32_t &found_idx,
-                           bool use_raw_short_name = false,
-                           const char *raw_short_name = nullptr);
+                           uint32_t &found_idx);
     ERR_CODE read_one_dir_entry(uint32_t entry_idx, fat_dir_entry &fde);
-    static bool populate_short_name(kl_string filename, char *short_name);
-    static bool populate_long_name(kl_string filename, fat_dir_entry *long_name_entries, uint8_t &num_entries);
+    static bool populate_short_name(std::string filename, char *short_name);
+    static bool populate_long_name(std::string filename, fat_dir_entry *long_name_entries, uint8_t &num_entries);
     static bool is_valid_filename_char(uint16_t ch, bool long_filename);
     static uint8_t generate_short_name_checksum(uint8_t *short_name);
     static bool soft_compare_lfn_entries(const fat_dir_entry &a, const fat_dir_entry &b);
-    bool generate_basis_name_entry(kl_string filename, fat_dir_entry &created_entry);
+    bool generate_basis_name_entry(std::string filename, fat_dir_entry &created_entry);
     ERR_CODE add_directory_entries(fat_dir_entry *new_fdes, uint8_t num_entries, uint32_t &new_idx);
     void add_numeric_tail(fat_dir_entry &fde, uint8_t num_valid_chars, uint32_t suffix);
-    bool populate_fdes_from_name(kl_string name,
+    bool populate_fdes_from_name(std::string name_in,
                                  fat_dir_entry (&fdes)[21],
                                  uint8_t &num_fdes_used,
-                                 bool create_basis_name);
+                                 bool create_basis_name,
+                                 std::string &long_name_out,
+                                 std::string &short_name_out);
     ERR_CODE unlink_fdes(uint32_t short_name_fde_idx);
+    std::string short_name_from_fde(fat_dir_entry &fde);
   };
 
 protected:

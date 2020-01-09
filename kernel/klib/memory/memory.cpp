@@ -32,15 +32,17 @@
 
 //#define ENABLE_TRACING
 
+#include <map>
+
 #include "memory.h"
 #include "klib/data_structures/lists.h"
+#include "klib/data_structures/map_helpers.h"
 #include "klib/c_helpers/buffers.h"
 #include "klib/panic/panic.h"
 #include "klib/misc/assert.h"
 #include "klib/tracing/tracing.h"
 #include "klib/synch/kernel_locks.h"
 #include "klib/synch/kernel_mutexes.h"
-#include "klib/data_structures/red_black_tree.h"
 
 /// @cond
 typedef klib_list<void *> PTR_LIST;
@@ -59,7 +61,7 @@ struct slab_header
 
 /// Stores details of large allocations so they can be freed later - the key is the address of the beginning of the
 /// allocation, the value the number of pages in it.
-kl_rb_tree<uint64_t, uint64_t> *large_allocations;
+std::map<uint64_t, uint64_t> *large_allocations;
 
 // The assertion below ensures that the size of slab_header hasn't changed. If it does, the number of available chunks
 // and their offsets within the NUM_CHUNKS_PER_SLAB and FIRST_OFFSET_IN_SLAB will need updating.
@@ -178,7 +180,7 @@ void *kmalloc(uint64_t mem_size)
     KL_TRC_TRACE(TRC_LVL::FLOW, "Big allocation - ", mem_size, ". Pages needed: ", required_pages, "\n");
 
     large_alloc_addr = reinterpret_cast<uint64_t>(mem_allocate_pages(required_pages));
-    large_allocations->insert(large_alloc_addr, required_pages);
+    large_allocations->insert({large_alloc_addr, required_pages});
     KL_TRC_EXIT;
 
     return reinterpret_cast<void *>(large_alloc_addr);
@@ -310,10 +312,10 @@ void kfree(void *mem_block)
     KL_TRC_TRACE(TRC_LVL::FLOW, "Deallocate large allocation\n");
 
     dealloc_addr = reinterpret_cast<uint64_t>(mem_block);
-    ASSERT(large_allocations->contains(dealloc_addr));
+    ASSERT(map_contains(*large_allocations, dealloc_addr));
 
-    mem_deallocate_pages(mem_block, large_allocations->search(dealloc_addr));
-    large_allocations->remove(dealloc_addr);
+    mem_deallocate_pages(mem_block, large_allocations->find(dealloc_addr)->second);
+    large_allocations->erase(dealloc_addr);
   }
   else
   {
@@ -454,7 +456,7 @@ void init_allocator_system()
   allocator_initialized = true;
   allocator_initializing = false;
 
-  large_allocations = new kl_rb_tree<uint64_t, uint64_t>();
+  large_allocations = new std::map<uint64_t, uint64_t>();
 
   KL_TRC_EXIT;
 }

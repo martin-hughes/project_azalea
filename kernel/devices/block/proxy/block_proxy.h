@@ -5,7 +5,6 @@
 
 #include "devices/block/block_interface.h"
 #include "user_interfaces/error_codes.h"
-#include "klib/data_structures/string.h"
 
 /// @brief Proxies block device requests onto a parent block device, but with an offset.
 ///

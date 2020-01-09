@@ -8,6 +8,9 @@
 
 //#define ENABLE_TRACING
 
+#include <string>
+#include <set>
+
 #include "klib/klib.h"
 #include "system_tree/fs/pipe/pipe_fs.h"
 #include "processor/processor.h"
@@ -53,7 +56,7 @@ pipe_branch::~pipe_branch()
   KL_TRC_EXIT;
 }
 
-ERR_CODE pipe_branch::get_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+ERR_CODE pipe_branch::get_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child)
 {
   ERR_CODE ret = ERR_CODE::NOT_FOUND;
   KL_TRC_ENTRY;
@@ -77,7 +80,7 @@ ERR_CODE pipe_branch::get_child(const kl_string &name, std::shared_ptr<ISystemTr
   return ret;
 }
 
-ERR_CODE pipe_branch::add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child)
+ERR_CODE pipe_branch::add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child)
 {
   KL_TRC_ENTRY;
   KL_TRC_EXIT;
@@ -86,7 +89,7 @@ ERR_CODE pipe_branch::add_child(const kl_string &name, std::shared_ptr<ISystemTr
   return ERR_CODE::INVALID_OP;
 }
 
-ERR_CODE pipe_branch::rename_child(const kl_string &old_name, const kl_string &new_name)
+ERR_CODE pipe_branch::rename_child(const std::string &old_name, const std::string &new_name)
 {
   KL_TRC_ENTRY;
   KL_TRC_EXIT;
@@ -95,7 +98,7 @@ ERR_CODE pipe_branch::rename_child(const kl_string &old_name, const kl_string &n
   return ERR_CODE::INVALID_OP;
 }
 
-ERR_CODE pipe_branch::delete_child(const kl_string &name)
+ERR_CODE pipe_branch::delete_child(const std::string &name)
 {
   KL_TRC_ENTRY;
   KL_TRC_EXIT;
@@ -354,8 +357,46 @@ ERR_CODE pipe_branch::pipe_write_leaf::write_bytes(uint64_t start,
   return ret;
 }
 
-ERR_CODE pipe_branch::create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+ERR_CODE pipe_branch::create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child)
 {
   // You can't add extra children to a pipe branch.
   return ERR_CODE::INVALID_OP;
+}
+
+std::pair<ERR_CODE, uint64_t> pipe_branch::num_children()
+{
+  KL_TRC_ENTRY;
+  KL_TRC_EXIT;
+  return {ERR_CODE::NO_ERROR, 2};
+}
+
+std::pair<ERR_CODE, std::vector<std::string>> pipe_branch::enum_children(std::string start_from, uint64_t max_count)
+{
+  std::set<std::string> names = {"read", "write"};
+  std::vector<std::string> child_list;
+  uint64_t cur_count{0};
+
+  KL_TRC_ENTRY;
+
+  auto it = names.begin();
+  if (start_from != "")
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Use given name for start point\n");
+    it = names.lower_bound(start_from);
+  }
+
+  while (((max_count == 0) || (max_count > cur_count)) && (it != names.end()))
+  {
+    std::string name{*it};
+    child_list.push_back(std::move(name));
+
+    cur_count++;
+    it++;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Error code: ", result, ". Number of children: ", child_list.size(), "\n");
+  KL_TRC_EXIT;
+
+  return { ERR_CODE::NO_ERROR, std::move(child_list) };
+  KL_TRC_EXIT;
 }

@@ -3,6 +3,7 @@
 
 //#define ENABLE_TRACING
 
+#include <string>
 #include "klib/klib.h"
 #include "system_tree/system_tree_simple_branch.h"
 
@@ -22,26 +23,25 @@ system_tree_simple_branch::~system_tree_simple_branch()
   KL_TRC_EXIT;
 }
 
-ERR_CODE system_tree_simple_branch::get_child(const kl_string &name,
+ERR_CODE system_tree_simple_branch::get_child(const std::string &name,
                                               std::shared_ptr<ISystemTreeLeaf> &child)
 {
   KL_TRC_ENTRY;
 
   ERR_CODE ret_code = ERR_CODE::NO_ERROR;
-  kl_string our_part;
-  kl_string child_part;
+  std::string our_part;
+  std::string child_part;
   std::shared_ptr<ISystemTreeBranch> branch;
   std::shared_ptr<ISystemTreeLeaf> direct_child;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Looking for child with name ", name, "to store in ", &child, "\n");
 
   this->split_name(name, our_part, child_part);
-
   klib_synch_spinlock_lock(child_tree_lock);
-  if (children.contains(our_part))
+  if (map_contains(children, our_part))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieve direct child\n");
-    direct_child = children.search(our_part);
+    direct_child = children.find(our_part)->second;
 
     if (child_part != "")
     {
@@ -77,13 +77,13 @@ ERR_CODE system_tree_simple_branch::get_child(const kl_string &name,
   return ret_code;
 }
 
-ERR_CODE system_tree_simple_branch::add_child (const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child)
+ERR_CODE system_tree_simple_branch::add_child (const std::string &name, std::shared_ptr<ISystemTreeLeaf> child)
 {
   KL_TRC_ENTRY;
   ERR_CODE rt = ERR_CODE::NO_ERROR;
   uint64_t split_pos;
-  kl_string next_branch_name;
-  kl_string continuation_name;
+  std::string next_branch_name;
+  std::string continuation_name;
   std::shared_ptr<ISystemTreeBranch> child_branch;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Adding leaf with name ", name, " and address ", child.get(), "\n");
@@ -100,21 +100,21 @@ ERR_CODE system_tree_simple_branch::add_child (const kl_string &name, std::share
     KL_TRC_TRACE(TRC_LVL::FLOW, "Can't add an unnamed leaf\n");
     rt = ERR_CODE::INVALID_NAME;
   }
-  else if (split_pos != kl_string::npos)
+  else if (split_pos != std::string::npos)
   {
     next_branch_name = name.substr(0, split_pos);
-    continuation_name = name.substr(split_pos + 1, kl_string::npos);
+    continuation_name = name.substr(split_pos + 1, std::string::npos);
 
     KL_TRC_TRACE(TRC_LVL::FLOW, "Looking for ", continuation_name, " in ", next_branch_name, "\n");
 
-    if (!this->children.contains(next_branch_name))
+    if (!map_contains(this->children, next_branch_name))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Child branch not found anyway\n");
       rt = ERR_CODE::NOT_FOUND;
     }
     else
     {
-      child_branch = std::dynamic_pointer_cast<ISystemTreeBranch>(this->children.search(next_branch_name));
+      child_branch = std::dynamic_pointer_cast<ISystemTreeBranch>(this->children.find(next_branch_name)->second);
       if (child_branch != nullptr)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Try to add child to branch\n");
@@ -127,14 +127,14 @@ ERR_CODE system_tree_simple_branch::add_child (const kl_string &name, std::share
       }
     }
   }
-  else if (children.contains(name))
+  else if (map_contains(children, name))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Already got a child of that name\n");
     rt = ERR_CODE::ALREADY_EXISTS;
   }
   else
   {
-    this->children.insert(name, child);
+    this->children.insert({name, child});
   }
   klib_synch_spinlock_unlock(child_tree_lock);
 
@@ -145,10 +145,10 @@ ERR_CODE system_tree_simple_branch::add_child (const kl_string &name, std::share
   return rt;
 }
 
-ERR_CODE system_tree_simple_branch::create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+ERR_CODE system_tree_simple_branch::create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child)
 {
-  kl_string first_part;
-  kl_string second_part;
+  std::string first_part;
+  std::string second_part;
   ERR_CODE result;
   std::shared_ptr<ISystemTreeLeaf> direct_child;
   std::shared_ptr<ISystemTreeBranch> descendant;
@@ -193,7 +193,7 @@ ERR_CODE system_tree_simple_branch::create_child(const kl_string &name, std::sha
   return result;
 }
 
-ERR_CODE system_tree_simple_branch::rename_child(const kl_string &old_name, const kl_string &new_name)
+ERR_CODE system_tree_simple_branch::rename_child(const std::string &old_name, const std::string &new_name)
 {
   KL_TRC_ENTRY;
   ERR_CODE rt = ERR_CODE::NO_ERROR;
@@ -201,9 +201,9 @@ ERR_CODE system_tree_simple_branch::rename_child(const kl_string &old_name, cons
   std::shared_ptr<ISystemTreeLeaf> l;
   uint64_t old_dir_split;
   uint64_t new_dir_split;
-  kl_string child_branch;
-  kl_string grandchild_old_name;
-  kl_string grandchild_new_name;
+  std::string child_branch;
+  std::string grandchild_old_name;
+  std::string grandchild_new_name;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Renaming leaf with name ", old_name, " to ", &new_name, "\n");
 
@@ -211,7 +211,7 @@ ERR_CODE system_tree_simple_branch::rename_child(const kl_string &old_name, cons
   new_dir_split = new_name.find("\\");
 
   klib_synch_spinlock_lock(child_tree_lock);
-  if ((old_dir_split != kl_string::npos) && (old_dir_split == new_dir_split))
+  if ((old_dir_split != std::string::npos) && (old_dir_split == new_dir_split))
   {
     child_branch = old_name.substr(0, old_dir_split);
 
@@ -225,15 +225,15 @@ ERR_CODE system_tree_simple_branch::rename_child(const kl_string &old_name, cons
       KL_TRC_TRACE(TRC_LVL::FLOW, "Can't move between two different child branches\n");
       rt = ERR_CODE::INVALID_OP;
     }
-    else if (!this->children.contains(child_branch))
+    else if (!map_contains(this->children, child_branch))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "The child does not exist\n");
       rt = ERR_CODE::NOT_FOUND;
     }
     else
     {
-      grandchild_old_name = old_name.substr(old_dir_split + 1, kl_string::npos);
-      grandchild_new_name = new_name.substr(new_dir_split + 1, kl_string::npos);
+      grandchild_old_name = old_name.substr(old_dir_split + 1, std::string::npos);
+      grandchild_new_name = new_name.substr(new_dir_split + 1, std::string::npos);
 
       b = get_child_branch(child_branch);
       if (b != nullptr)
@@ -255,12 +255,12 @@ ERR_CODE system_tree_simple_branch::rename_child(const kl_string &old_name, cons
   }
   else
   {
-    if (children.contains(old_name))
+    if (map_contains(children, old_name))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Doing the rename\n");
-      l = this->children.search(old_name);
-      this->children.remove(old_name);
-      this->children.insert(new_name, l);
+      l = this->children.find(old_name)->second;
+      this->children.erase(old_name);
+      this->children.insert({new_name, l});
     }
     else
     {
@@ -276,24 +276,24 @@ ERR_CODE system_tree_simple_branch::rename_child(const kl_string &old_name, cons
   return rt;
 }
 
-ERR_CODE system_tree_simple_branch::delete_child(const kl_string &name)
+ERR_CODE system_tree_simple_branch::delete_child(const std::string &name)
 {
   KL_TRC_ENTRY;
   ERR_CODE rt = ERR_CODE::NO_ERROR;
   uint64_t split_pos;
-  kl_string our_branch;
-  kl_string grandchild;
+  std::string our_branch;
+  std::string grandchild;
   std::shared_ptr<ISystemTreeBranch> branch;
 
   split_pos = name.find("\\");
 
   klib_synch_spinlock_lock(child_tree_lock);
-  if (split_pos == kl_string::npos)
+  if (split_pos == std::string::npos)
   {
-    if (children.contains(name))
+    if (map_contains(children, name))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Deleting a direct child\n");
-      children.remove(name);
+      children.erase(name);
       rt = ERR_CODE::NO_ERROR;
     }
     else
@@ -305,7 +305,7 @@ ERR_CODE system_tree_simple_branch::delete_child(const kl_string &name)
   else
   {
     our_branch = name.substr(0, split_pos);
-    grandchild = name.substr(split_pos + 1, kl_string::npos);
+    grandchild = name.substr(split_pos + 1, std::string::npos);
 
     branch = this->get_child_branch(our_branch);
     if (branch != nullptr)
@@ -331,17 +331,17 @@ ERR_CODE system_tree_simple_branch::create_child_here(std::shared_ptr<ISystemTre
   return ERR_CODE::INVALID_OP;
 }
 
-std::shared_ptr<ISystemTreeBranch> system_tree_simple_branch::get_child_branch(const kl_string &name)
+std::shared_ptr<ISystemTreeBranch> system_tree_simple_branch::get_child_branch(const std::string &name)
 {
   std::shared_ptr<ISystemTreeBranch> child;
   std::shared_ptr<ISystemTreeLeaf> direct_child;
   KL_TRC_ENTRY;
 
   // Don't lock here. This function should only be called internally, and thus should be lock-aware already.
-  if (children.contains(name))
+  if (map_contains(children, name))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieve child object\n");
-    direct_child = children.search(name);
+    direct_child = children.find(name)->second;
 
     child = std::dynamic_pointer_cast<ISystemTreeBranch>(direct_child);
   }
@@ -350,4 +350,44 @@ std::shared_ptr<ISystemTreeBranch> system_tree_simple_branch::get_child_branch(c
   KL_TRC_EXIT;
 
   return child;
+}
+std::pair<ERR_CODE, uint64_t> system_tree_simple_branch::num_children()
+{
+  KL_TRC_ENTRY;
+  KL_TRC_EXIT;
+
+  return {ERR_CODE::NO_ERROR, children.size() };
+}
+
+std::pair<ERR_CODE, std::vector<std::string>>
+system_tree_simple_branch::enum_children(std::string start_from, uint64_t max_count)
+{
+  std::vector<std::string> child_list;
+  ERR_CODE result{ERR_CODE::NO_ERROR};
+  uint64_t cur_count{0};
+
+  KL_TRC_ENTRY;
+
+  klib_synch_spinlock_lock(child_tree_lock);
+  auto it = children.begin();
+  if (start_from != "")
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Use given name for start point\n");
+    it = children.lower_bound(start_from);
+  }
+
+  while (((max_count == 0) || (max_count > cur_count)) && (it != children.end()))
+  {
+    std::string name{it->first};
+    child_list.push_back(std::move(name));
+
+    cur_count++;
+    it++;
+  }
+  klib_synch_spinlock_unlock(child_tree_lock);
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Error code: ", result, ". Number of children: ", child_list.size(), "\n");
+  KL_TRC_EXIT;
+
+  return { result, std::move(child_list) };
 }

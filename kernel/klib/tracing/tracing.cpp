@@ -3,6 +3,8 @@
 ///
 /// In the release version of the kernel, these will probably do nothing.
 
+#include <string>
+
 #include "tracing.h"
 
 // The destination of tracing is controlled by defining one of the following possible flags at compile time.
@@ -105,7 +107,7 @@ void kl_trc_output_str_argument(char const *str)
   }
 }
 
-void kl_trc_output_kl_string_argument(kl_string &str)
+void kl_trc_output_std_string_argument(std::string &str)
 {
   for (uint64_t x = 0; x < str.length(); x++)
   {

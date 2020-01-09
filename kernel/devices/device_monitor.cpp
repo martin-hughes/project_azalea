@@ -54,10 +54,10 @@ void dev::monitor::init()
   std::shared_ptr<system_tree_simple_branch> term_branch = std::make_shared<system_tree_simple_branch>();
   std::shared_ptr<system_tree_simple_branch> block_branch = std::make_shared<system_tree_simple_branch>();
 
-  ASSERT(system_tree()->add_child("dev\\all", all_branch) == ERR_CODE::NO_ERROR);
-  ASSERT(system_tree()->add_child("dev\\keyb", keyboard_branch) == ERR_CODE::NO_ERROR);
-  ASSERT(system_tree()->add_child("dev\\term", term_branch) == ERR_CODE::NO_ERROR);
-  ASSERT(system_tree()->add_child("dev\\block", block_branch) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->add_child("\\dev\\all", all_branch) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->add_child("\\dev\\keyb", keyboard_branch) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->add_child("\\dev\\term", term_branch) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->add_child("\\dev\\block", block_branch) == ERR_CODE::NO_ERROR);
 
   KL_TRC_EXIT;
 }
@@ -106,6 +106,7 @@ bool dev::monitor::register_device(std::shared_ptr<IDevice> &new_dev)
     message->dev = new_dev;
     ASSERT(message->message_id == SM_DEV_REGISTER);
     ASSERT((dev_monitor != nullptr) && (*dev_monitor));
+    ASSERT(message.get());
     work::queue_message(*dev_monitor, std::move(message));
   }
 
@@ -156,7 +157,7 @@ void dev::monitor::handle_message(std::unique_ptr<msg::root_msg> &message)
   { \
     KL_TRC_TRACE(TRC_LVL::FLOW, "Register device of type " # type "\n"); \
     this->devs_by_type. list .push_back(p); \
-    path = "dev\\" subtree "\\"; \
+    path = "\\dev\\" subtree "\\"; \
     path = path + msg->dev->dev_short_name(); \
     KL_TRC_TRACE(TRC_LVL::FLOW, "Add new device path: ", path, "\n"); \
     ASSERT(system_tree()->add_child(path, msg->dev) == ERR_CODE::NO_ERROR); \
@@ -171,11 +172,11 @@ void dev::monitor::handle_message(std::unique_ptr<msg::root_msg> &message)
 /// @param msg Registration message.
 void dev::monitor::handle_register(std::unique_ptr<dev_reg_msg> &msg)
 {
-  kl_string path;
+  std::string path;
   KL_TRC_ENTRY;
 
   registered_devices.push_back(msg->dev);
-  path = "dev\\all\\";
+  path = "\\dev\\all\\";
   path = path + msg->dev->dev_short_name();
   KL_TRC_TRACE(TRC_LVL::FLOW, "Add new device path: ", path, "\n");
   ASSERT(system_tree()->add_child(path, msg->dev) == ERR_CODE::NO_ERROR);
@@ -185,7 +186,7 @@ void dev::monitor::handle_register(std::unique_ptr<dev_reg_msg> &msg)
   REG_TYPE(terms::generic, terminals, "term");
   REG_TYPE(IBlockDevice, block_devices, "block");
 
-  std::unique_ptr<msg::root_msg> start_msg;
+  std::unique_ptr<msg::root_msg> start_msg = std::make_unique<msg::root_msg>();
   start_msg->message_id = SM_DEV_START;
 
   work::queue_message(msg->dev, std::move(start_msg));

@@ -19,7 +19,7 @@ int main (int argc, char **argv, char **env_p)
   while (1)
   {
     SC_DEBUG_MSG("Start shell\n");
-    if (exec_file("root\\shell", 11, &proc_handle, nullptr, nullptr) != ERR_CODE::NO_ERROR)
+    if (exec_file("\\root\\shell", 11, &proc_handle, nullptr, nullptr) != ERR_CODE::NO_ERROR)
     {
       SC_DEBUG_MSG("Failed to execute shell\n");
       break;

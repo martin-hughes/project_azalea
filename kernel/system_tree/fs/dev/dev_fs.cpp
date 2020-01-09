@@ -120,7 +120,7 @@ void dev_root_branch::scan_for_devices()
   kl_trc_trace(TRC_LVL::FLOW, "First HDD created\n");
   std::shared_ptr<fat_filesystem> first_fs = setup_initial_fs();
   ASSERT(first_fs != nullptr);
-  ASSERT(system_tree()->add_child("root", std::dynamic_pointer_cast<ISystemTreeBranch>(first_fs)) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->add_child("\\root", std::dynamic_pointer_cast<ISystemTreeBranch>(first_fs)) == ERR_CODE::NO_ERROR);
 
   keyb_ptr = keyb.get();
   term_ptr = new std::shared_ptr<terms::generic>();

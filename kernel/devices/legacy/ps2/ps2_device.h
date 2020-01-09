@@ -5,9 +5,10 @@
 #ifndef DEVICE_PS2_DEVICE_HDR
 #define DEVICE_PS2_DEVICE_HDR
 
+#include <string>
+
 #include "devices/device_interface.h"
 #include "user_interfaces/error_codes.h"
-#include "klib/data_structures/string.h"
 #include "devices/generic/gen_keyboard.h"
 #include "devices/generic/gen_mouse.h"
 #include <memory>
@@ -23,8 +24,8 @@ public:
   gen_ps2_device(std::shared_ptr<gen_ps2_controller_device> parent, bool second_channel);
   gen_ps2_device(std::shared_ptr<gen_ps2_controller_device> parent,
                  bool second_channel,
-                 const kl_string human_name,
-                 const kl_string dev_name);
+                 const std::string human_name,
+                 const std::string dev_name);
   virtual ~gen_ps2_device();
 
   // IIrqReceiver interface

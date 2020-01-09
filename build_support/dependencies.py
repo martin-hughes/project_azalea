@@ -9,7 +9,6 @@ kernel = [
     '#kernel/mem/SConscript-testable',
     '#kernel/klib/c_helpers/SConscript',
     '#kernel/klib/misc/SConscript',
-    '#kernel/klib/data_structures/SConscript',
     '#kernel/klib/tracing/SConscript',
     '#kernel/klib/synch/SConscript',
     '#kernel/klib/synch/SConscript-spinlocks',
@@ -54,6 +53,10 @@ echo_program = [
     '#user/echo/SConscript',
   ]
 
+list_program = [
+    '#user/list/SConscript',
+  ]
+
 user_mode_api = [
     '#user/libs/libazalea/SConscript',
     '#kernel/syscall/SConscript-user',
@@ -61,7 +64,6 @@ user_mode_api = [
 
 main_tests = [
     '#kernel/klib/c_helpers/SConscript',
-    '#kernel/klib/data_structures/SConscript',
     '#kernel/klib/memory/SConscript',
     '#kernel/klib/misc/SConscript',
     '#kernel/klib/synch/SConscript-spinlocks',

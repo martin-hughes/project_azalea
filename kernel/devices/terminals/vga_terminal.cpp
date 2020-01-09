@@ -287,7 +287,7 @@ void terms::vga::handle_keyboard_msg(uint64_t msg_id, keypress_msg &key_msg)
         break;
 
       default:
-        KL_TRC_TRACE(TRC_LVL::FLOw, "Unknown special key - ignore\n");
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Unknown special key - ignore\n");
       }
     }
     break;

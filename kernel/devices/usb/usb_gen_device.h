@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <string>
 #include <memory>
 
 #include "devices/device_interface.h"
@@ -198,7 +199,7 @@ namespace usb
   class generic_device : public IDevice
   {
   public:
-    generic_device(std::shared_ptr<generic_core> core, uint16_t interface_num, const kl_string name);
+    generic_device(std::shared_ptr<generic_core> core, uint16_t interface_num, const std::string name);
     virtual ~generic_device() = default;
 
     // Overrides of IDevice

@@ -72,3 +72,50 @@ bool klib_synch_spinlock_try_lock(kernel_spinlock &lock)
 
   return res;
 }
+
+/// @brief Basic constructor for kernel spinlock wrapper objects.
+///
+kernel_spinlock_obj::kernel_spinlock_obj()
+{
+  KL_TRC_ENTRY;
+
+  klib_synch_spinlock_init(underlying_lock);
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Default destructor.
+///
+kernel_spinlock_obj::~kernel_spinlock_obj()
+{
+  KL_TRC_ENTRY;
+
+  if(underlying_lock != 0)
+  {
+    klib_synch_spinlock_unlock(underlying_lock);
+  }
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Lock this lock object.
+///
+void kernel_spinlock_obj::lock()
+{
+  KL_TRC_ENTRY;
+
+  klib_synch_spinlock_lock(underlying_lock);
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Unlock this lock object.
+///
+void kernel_spinlock_obj::unlock()
+{
+  KL_TRC_ENTRY;
+
+  klib_synch_spinlock_unlock(underlying_lock);
+
+  KL_TRC_EXIT;
+}

@@ -42,7 +42,7 @@ namespace msg
     /// Correctly coded message senders will be prepared for the possibility this semaphore is never signalled.
     ///
     /// It is permissible for completion_semaphore to be nullptr, in which case it is ignored.
-    std::shared_ptr<syscall_semaphore_obj> completion_semaphore;
+    std::shared_ptr<syscall_semaphore_obj> completion_semaphore{nullptr};
 
     /// Optional buffer to write results or other similar information in to. The handler should not rely on this
     /// pointer being set correctly, nor of it being the correct size.
