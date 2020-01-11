@@ -66,7 +66,7 @@ bool terms::generic::reset()
   set_device_status(DEV_STATUS::RESET);
 
   // Reset terminal options to defaults.
-  filters = terms::terminal_opts();
+  filters = terminal_opts();
 
   set_device_status(DEV_STATUS::STOPPED);
 
@@ -253,7 +253,7 @@ void terms::generic::write_string(const char *out_string, uint16_t num_chars)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Write character: ", static_cast<uint8_t>(*out_string), "\n");
 
-      if ((*out_string == '\n') && (filters.output_newline == newline_mode::LF_TO_CRLF))
+      if ((*out_string == '\n') && (filters.output_newline == term_newline_mode::LF_TO_CRLF))
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Newline translation - \n to \r\n");
         write_raw_string("\r", 1);
@@ -261,7 +261,7 @@ void terms::generic::write_string(const char *out_string, uint16_t num_chars)
 
       write_raw_string(out_string, 1);
 
-      if ((*out_string == '\r') && (filters.output_newline == newline_mode::CR_TO_CRLF))
+      if ((*out_string == '\r') && (filters.output_newline == term_newline_mode::CR_TO_CRLF))
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Newline translation - \r to \r\n");
         write_raw_string("\n", 1);
@@ -270,4 +270,50 @@ void terms::generic::write_string(const char *out_string, uint16_t num_chars)
   }
 
   KL_TRC_EXIT;
+}
+
+bool terms::generic::get_options_struct(void *struct_ptr, uint64_t buffer_length)
+{
+  bool result {true};
+
+  KL_TRC_ENTRY;
+
+  if ((struct_ptr != nullptr) && (buffer_length >= sizeof(terminal_opts)))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Acceptable buffer\n");
+    read_filtering_opts(*reinterpret_cast<terminal_opts *>(struct_ptr));
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Unacceptable buffer\n");
+    result = false;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+bool terms::generic::save_options_struct(void *struct_ptr, uint64_t buffer_length)
+{
+  bool result {true};
+
+  KL_TRC_ENTRY;
+
+  if ((struct_ptr != nullptr) && (buffer_length >= sizeof(terminal_opts)))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Acceptable buffer\n");
+    set_filtering_opts(*reinterpret_cast<terminal_opts *>(struct_ptr));
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Unacceptable buffer\n");
+    result = false;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
 }

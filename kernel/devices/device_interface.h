@@ -144,6 +144,24 @@ public:
   // Override of the message_receiver base class.
   virtual void handle_message(std::unique_ptr<msg::root_msg> &message) override;
 
+  /// @brief Populate a structure with the contents of a device-specific options-structure.
+  ///
+  /// @param[out] struct_ptr Storage space for the device-specific options structure.
+  ///
+  /// @param[in] buffer_length Size of the buffer pointed to by struct_ptr.
+  ///
+  /// @return True if the options structure was written out to struct_ptr successfully, false otherwise.
+  virtual bool get_options_struct(void *struct_ptr, uint64_t buffer_length) { return true; };
+
+  /// @brief Save device specific options from a provided structure.
+  ///
+  /// @param struct_ptr Pointer to the options structure to save.
+  ///
+  /// @param buffer_length Size of the buffer pointed to by struct_ptr.
+  ///
+  /// @return True if the options were successfully saved, false otherwise.
+  virtual bool save_options_struct(void *struct_ptr, uint64_t buffer_length) { return true; };
+
 protected:
   //
   // Device state machine message handlers:

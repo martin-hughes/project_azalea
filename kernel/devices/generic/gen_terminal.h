@@ -9,53 +9,12 @@
 #include "devices/device_interface.h"
 #include "user_interfaces/error_codes.h"
 #include "system_tree/fs/pipe/pipe_fs.h"
+#include "user_interfaces/terminals.h"
 
 #include <memory>
 
 namespace terms
 {
-
-/// @brief Enum defining newline translations to be carried out.
-///
-enum class newline_mode
-{
-  NO_CHANGE, ///< Do not change any newline character.
-  CR_TO_CRLF, ///< Translate CR characters into CRLF.
-  LF_TO_CRLF, ///< Translate LF characters into CRLF.
-};
-
-/// @brief Structure defining filtering options for a terminal.
-///
-/// These options are (or will be) analogous to Linux's stty options.
-///
-/// Input filters refer to data flowing from terminal to system (e.g. keyboard key presses). Output refers to data
-/// going to the terminal (e.g. stdout).
-struct terminal_opts
-{
-  // Input filters.
-
-  /// @brief Should a \\r character be interpreted as a \\n?
-  ///
-  /// Azalea uses \\n to delimit new lines, many terminals use \\r.
-  bool input_return_is_newline{true};
-
-  /// @brief Is line discipline enabled?
-  ///
-  /// Unlike Linux, Azalea only supports two modes - fully enabled and relevant keys translated, or off.
-  bool line_discipline{true};
-
-  /// @brief Should character 127 be treated as a backspace?
-  ///
-  /// If set to false, this character is ignored in line discipline mode.
-  bool char_7f_is_backspace{true};
-
-  // Output filters.
-
-  /// @brief How to translate newline characters being sent to screen.
-  ///
-  /// Default is newline_mode::CR_TO_CRLF.
-  newline_mode output_newline{newline_mode::LF_TO_CRLF};
-};
 
 /// @brief A very simple terminal device.
 ///
@@ -99,6 +58,10 @@ public:
   // Filtering control
   virtual void set_filtering_opts(terminal_opts &opts);
   virtual void read_filtering_opts(terminal_opts &opts);
+
+  // Overrides of IDevice
+  virtual bool get_options_struct(void *struct_ptr, uint64_t buffer_length) override;
+  virtual bool save_options_struct(void *struct_ptr, uint64_t buffer_length) override;
 
 protected:
   // Cursor control

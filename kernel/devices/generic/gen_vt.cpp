@@ -72,7 +72,7 @@ bool terms::vt::reset()
   tmt_reset(inner_vt);
 
   // Reset terminal options to defaults.
-  filters = terms::terminal_opts();
+  filters = terminal_opts();
 
   set_device_status(DEV_STATUS::STOPPED);
 

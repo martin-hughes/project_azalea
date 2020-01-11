@@ -42,7 +42,9 @@ IDevice::IDevice(const std::string human_name, const std::string short_name, boo
 
 void IDevice::handle_message(std::unique_ptr<msg::root_msg> &message)
 {
+  msg::basic_msg *bm;
   KL_TRC_ENTRY;
+
 
   switch(message->message_id)
   {
@@ -59,6 +61,21 @@ void IDevice::handle_message(std::unique_ptr<msg::root_msg> &message)
   case SM_DEV_RESET:
     KL_TRC_TRACE(TRC_LVL::FLOW, "Reset message\n");
     this->reset();
+    break;
+
+  case SM_GET_OPTIONS:
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Get options structure\n");
+    this->get_options_struct(message->output_buffer.get(), message->output_buffer_len);
+    break;
+
+  case SM_SET_OPTIONS:
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Save options structure\n");
+    bm = dynamic_cast<msg::basic_msg *>(message.get());
+    if (bm)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Basic message\n");
+      this->save_options_struct(bm->details.get(), bm->message_length);
+    }
     break;
 
   default:
