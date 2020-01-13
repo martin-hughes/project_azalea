@@ -18,8 +18,8 @@ def main_build_script(linux_build, config_env):
     kernel_env.Install(ui_folder, user_headers)
 
     # Main kernel part
-    kernel_env['CXXFLAGS'] = '-Wall -mno-red-zone -nostdinc++ -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=c++17 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT -D _LIBCPP_NO_EXCEPTIONS'
-    kernel_env['CFLAGS'] = '-Wall -mno-red-zone -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
+    kernel_env['CXXFLAGS'] = '-Wall -nostdinc++ -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=c++17 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT -D _LIBCPP_NO_EXCEPTIONS'
+    kernel_env['CFLAGS'] = '-Wall -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
     kernel_env['LINKFLAGS'] = "-T build_support/kernel_stage.ld --start-group "
     kernel_env['LINK'] = 'ld -gc-sections -Map output/kernel_map.map'
     kernel_env['LIBPATH'] = [paths.libcxx_lib_folder,
@@ -38,8 +38,8 @@ def main_build_script(linux_build, config_env):
 
     # User mode API and programs environment
     user_mode_env = build_default_env(linux_build)
-    user_mode_env['CXXFLAGS'] = '-Wall -mno-red-zone -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=c++17 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
-    user_mode_env['CFLAGS'] = '-Wall -mno-red-zone -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
+    user_mode_env['CXXFLAGS'] = '-Wall -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=c++17 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
+    user_mode_env['CFLAGS'] = '-Wall -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
     user_mode_env['LIBPATH'] = [paths.libc_lib_folder,
                                ]
     user_mode_env['LINK'] = 'ld'
