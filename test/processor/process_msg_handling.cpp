@@ -84,9 +84,9 @@ TEST_F(IPCTests, InterprocessMessages1)
 
   // Check the basics of message sending.
   test_only_set_cur_thread(thread_a.get());
-  res = syscall_send_message(proc_b_handle, 1, msg_len, buffer, 0, nullptr, 0);
+  res = syscall_send_message(proc_b_handle, 1, msg_len, buffer, nullptr);
   ASSERT_EQ(res, ERR_CODE::NO_ERROR);
-  res = syscall_send_message(proc_b_handle, 2, msg_len, buffer, 0, nullptr, 0);
+  res = syscall_send_message(proc_b_handle, 2, msg_len, buffer, nullptr);
   ASSERT_EQ(res, ERR_CODE::NO_ERROR);
 
   // Make sure these messages are moved through the queue.

@@ -1,5 +1,7 @@
 /** @file
  *  @brief Main Azalea kernel system call interface
+ *
+ * There can be at most 6 arguments to any system call, as we do not support passing arguments via the stack.
  */
 
 #ifndef __AZALEA_SYSCALL_USER_H
@@ -7,6 +9,7 @@
 
 #include "error_codes.h"
 #include "kernel_types.h"
+#include "macros.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,9 +62,7 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
                               uint64_t message_id,
                               uint64_t message_len,
                               const char *message_ptr,
-                              GEN_HANDLE completion_semaphore,
-                              char *output_buffer,
-                              uint64_t output_buffer_len);
+                              OPT_STRUCT ssm_output *output);
 ERR_CODE syscall_receive_message_details(uint64_t *message_id, uint64_t *message_len);
 ERR_CODE syscall_receive_message_body(char *message_buffer, uint64_t buffer_size);
 ERR_CODE syscall_message_complete();

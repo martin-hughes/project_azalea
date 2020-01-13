@@ -76,4 +76,31 @@ AZALEA_RENAME_ENUM(SEEK_OFFSET);
 
 #define H_CREATE_IF_NEW 1 /**< If set, create a new file if it didn't already exist */
 
+/**
+ * @brief Output / synchronization options for syscall_send_message.
+ *
+ * Structure details should be read as though they are parameters for syscall_send_message.
+ */
+struct ssm_output
+{
+
+  /** If this handle is non-zero, a semaphore that should be signalled by the handler of the associated message when
+   *  the message has been fully dealt with. The caller should be prepared for the possibility that the recipient might
+   *  *never* signal the semaphore.
+   *
+   *  This parameter is incompatible with output_buffer - only one of these must be set.
+   */
+  GEN_HANDLE completion_semaphore;
+
+  /** Some messages will trigger the receiver to attempt to write data into a buffer - this buffer. This feature cannot
+   *  be used in conjunction with completion_semaphore. Any message where output_buffer is used can currently only be
+   * handled synchronously.
+   */
+  char *output_buffer;
+
+  /** The size of output_buffer. Must be greater than zero.
+   */
+  uint64_t output_buffer_len;
+};
+
 #endif

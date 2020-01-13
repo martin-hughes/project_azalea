@@ -37,19 +37,19 @@ struct terminal_opts
    *
    * Azalea uses \\n to delimit new lines, many terminals use \\r.
    */
-  bool input_return_is_newline{true};
+  bool input_return_is_newline INIT(true);
 
   /** @brief Is line discipline enabled?
    *
    * Unlike Linux, Azalea only supports two modes - fully enabled and relevant keys translated, or off.
    */
-  bool line_discipline{true};
+  bool line_discipline INIT(true);
 
   /** @brief Should character 127 be treated as a backspace?
    *
    * If set to false, this character is ignored in line discipline mode.
    */
-  bool char_7f_is_backspace{true};
+  bool char_7f_is_backspace INIT(true);
 
   /* Output filters. */
 
@@ -57,7 +57,7 @@ struct terminal_opts
    *
    * Default is newline_mode::CR_TO_CRLF.
    */
-  term_newline_mode output_newline{term_newline_mode::LF_TO_CRLF};
+  term_newline_mode output_newline INIT(term_newline_mode::LF_TO_CRLF);
 };
 
 #endif

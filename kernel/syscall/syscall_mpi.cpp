@@ -1,6 +1,8 @@
 /// @file
 /// @brief Message passing functions part of the syscall interface.
 
+//#define ENABLE_TRACING
+
 #include "user_interfaces/syscall.h"
 #include "syscall/syscall_kernel.h"
 #include "syscall/syscall_kernel-int.h"
@@ -59,26 +61,14 @@ ERR_CODE syscall_register_for_mp()
 ///
 /// @param[in] message_ptr A buffer containing the message to be sent. Must be at least as long as message_len.
 ///
-/// @param[in] completion_semaphore If this handle is non-zero, a semaphore that should be signalled by the handler of
-///                                 this message when the message has been fully dealt with. The caller should be
-///                                 prepared for the possibility that the recipient might *never* signal the semaphore.
-///
-///                                 This parameter is incompatible with output_buffer - only one of these must be set.
-///
-/// @param[out] output_buffer Some messages will trigger the receiver to attempt to write data into a buffer - this
-///                           buffer. This feature cannot be used in conjunction with completion_semaphore. Any message
-///                           where output_buffer is used can currently only be handled synchronously.
-///
-/// @param[in] output_buffer_len The size of output_buffer. Must be greater than zero.
+/// @param[in] output Structure containing options for synchronizing with the caller.
 ///
 /// @return A suitable error code.
 ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
                               uint64_t message_id,
                               uint64_t message_len,
                               const char *message_ptr,
-                              GEN_HANDLE completion_semaphore,
-                              char *output_buffer,
-                              uint64_t output_buffer_len)
+                              ssm_output *output)
 {
   KL_TRC_ENTRY;
 
@@ -87,6 +77,20 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
   std::shared_ptr<IHandledObject> obj;
   std::shared_ptr<syscall_semaphore_obj> sem;
   std::shared_ptr<char> kernel_buffer;
+
+  GEN_HANDLE completion_semaphore{0};
+  char *output_buffer{nullptr};
+  uint64_t output_buffer_len{0};
+
+  if (SYSCALL_IS_UM_ADDRESS(output) && (output != nullptr))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Save output options");
+    completion_semaphore = output->completion_semaphore;
+    output_buffer = output->output_buffer;
+    output_buffer_len = output->output_buffer_len;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Buffer size: ", output_buffer_len, "\n");
 
   if (!SYSCALL_IS_UM_BUFFER(message_ptr, message_len))
   {
@@ -202,6 +206,7 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
           sem->wait_for_signal();
           KL_TRC_TRACE(TRC_LVL::FLOW, "DONE.\n");
 
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Buffer size: ", output_buffer_len, "\n");
           kl_memcpy(kernel_buffer.get(), output_buffer, output_buffer_len);
         }
       }
@@ -242,7 +247,7 @@ ERR_CODE syscall_receive_message_details(uint64_t *message_id, uint64_t *message
       !SYSCALL_IS_UM_ADDRESS(message_id) ||
       !SYSCALL_IS_UM_ADDRESS(message_len))
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid parameter addresses\n")
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid parameter addresses\n");
     res = ERR_CODE::INVALID_PARAM;
   }
   if (this_thread == nullptr)

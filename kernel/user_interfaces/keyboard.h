@@ -11,7 +11,7 @@
 /**
  * @cond
  */
-enum AZALEA_ENUM_CLASS KEYS_T : uint8_t
+enum AZALEA_ENUM_CLASS KEYS_T
 {
   UNK = 0,  /* Unknown key. */
 
@@ -197,6 +197,7 @@ struct special_keys
 
   /// @brief Default constructor - simply zero's all fields.
   ///
+#ifdef __cplusplus
   special_keys() :
     left_shift{false},
     right_shift{false},
@@ -208,6 +209,7 @@ struct special_keys
     left_gui{false},
     right_gui{false}
   { };
+#endif
 };
 
 #endif
