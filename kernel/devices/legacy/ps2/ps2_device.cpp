@@ -281,6 +281,8 @@ void ps2_keyboard_device::handle_interrupt_slow(uint8_t irq_num)
     }
     else
     {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Scancode: ", scancode, "\n");
+
       // Scancode conversion table. For the time being, only deal with Scancode set 2.
       switch (scancode)
       {
@@ -345,9 +347,11 @@ void ps2_keyboard_device::handle_interrupt_slow(uint8_t irq_num)
         case 0xE0:
           // Next scan code is for special key
           this->_next_key_is_special = true;
+          break;
 
         case 0xE1:
           this->_pause_seq_chars = 1;
+          break;
 
         default:
           // All other key presses.
@@ -370,6 +374,8 @@ void ps2_keyboard_device::handle_interrupt_slow(uint8_t irq_num)
           {
             translated_code = ps2_set_2_norm_scancode_map[scancode];
           }
+
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Translated: ", (int)translated_code, "\n");
 
           if (this->_next_key_is_release)
           {

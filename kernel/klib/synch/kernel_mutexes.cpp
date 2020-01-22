@@ -4,6 +4,7 @@
 //#define ENABLE_TRACING
 
 #include "processor/processor.h"
+#include "processor/timing/timing.h"
 #include "klib/klib.h"
 
 /// @brief Initialize a mutex object.
@@ -34,7 +35,7 @@ void klib_synch_mutex_init(klib_mutex &mutex)
 ///
 /// @param mutex The mutex to acquire.
 ///
-/// @param max_wait The maximum time to wait in milliseconds. If this parameter is set to MUTEX_MAX_WAIT then the
+/// @param max_wait The maximum time to wait in microseconds. If this parameter is set to MUTEX_MAX_WAIT then the
 ///                 caller waits indefinitely. Note: At present, timed waits other than MUTEX_MAX_WAIT are not
 ///                 supported. If max_wait is set to zero, the mutex is acquired if it is currently free, otherwise the
 ///                 function returns immediately.
@@ -66,9 +67,9 @@ SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, uint64_t max_wait)
     KL_TRC_TRACE(TRC_LVL::FLOW, "Mutex locked, but no timeout, so return now.\n");
     res = SYNC_ACQ_TIMEOUT;
   }
-  else if (max_wait == MUTEX_MAX_WAIT)
+  else
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Mutex locked, indefinite wait.\n");
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Mutex locked, timed or indefinite wait.\n");
 
     // Wait for the mutex to become free. Add this thread to the list of waiting threads, then suspend this thread.
     task_thread *this_thread = task_get_cur_thread();
@@ -85,6 +86,14 @@ SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, uint64_t max_wait)
     task_continue_this_thread();
     this_thread->stop_thread();
 
+    // If there is a period to wait then specify it to the scheduler now. The scheduler won't react until after
+    // scheduling is resumed.
+    if (max_wait != MUTEX_MAX_WAIT)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Set thread wakeup time\n");
+      this_thread->wake_thread_after = time_get_system_timer_count(true) + (1000 * max_wait);
+    }
+
     // Freeing the lock means that we could immediately become the owner thread. That's OK, we'll check once we come
     // back to this code after yielding.
     klib_synch_spinlock_unlock(mutex.access_lock);
@@ -98,16 +107,18 @@ SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, uint64_t max_wait)
     // We've been scheduled again! We should now own the mutex.
     klib_synch_spinlock_lock(mutex.access_lock);
     ASSERT(mutex.mutex_locked);
-    ASSERT(mutex.owner_thread == this_thread);
-
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Acquired mutex: ", &mutex, " in thread ", task_get_cur_thread(), " (", this_thread, ")\n");
-
-    res = SYNC_ACQ_ACQUIRED;
-  }
-  else
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Mutex locked, defined wait.\n");
-    INCOMPLETE_CODE("Mutex timed wait");
+    ASSERT((!(max_wait == MUTEX_MAX_WAIT)) || (mutex.owner_thread == this_thread));
+    if (mutex.owner_thread == this_thread)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Acquired mutex: ", &mutex, " in thread ", task_get_cur_thread(), " (", this_thread, ")\n");
+      res = SYNC_ACQ_ACQUIRED;
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to acquire mutex before timeout\n");
+      res = SYNC_ACQ_TIMEOUT;
+      klib_list_remove(this_thread->synch_list_item);
+    }
   }
 
   if (res == SYNC_ACQ_ACQUIRED)

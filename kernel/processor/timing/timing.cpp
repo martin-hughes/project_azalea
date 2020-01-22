@@ -3,6 +3,7 @@
 
 #include "processor/timing/timing.h"
 #include "processor/timing/timing-int.h"
+#include "processor/processor.h"
 #include "klib/klib.h"
 #include <vector>
 
@@ -51,7 +52,19 @@ void time_gen_init()
 /// @param wait_in_ns The number of nanoseconds to sleep the current process for.
 void time_sleep_process(uint64_t wait_in_ns)
 {
-  INCOMPLETE_CODE(time_sleep_process);
+  task_thread *t = task_get_cur_thread();
+  KL_TRC_ENTRY;
+
+  ASSERT(t);
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Sleep thread ", t, " for ", wait_in_ns, " ns.\n");
+  uint64_t cur_time = time_get_system_timer_count(true);
+  t->wake_thread_after = cur_time + wait_in_ns;
+  kl_trc_trace(TRC_LVL::FLOW, "Wake after time: ", t->wake_thread_after, "\n");
+  t->permit_running = false;
+  task_yield();
+
+  KL_TRC_EXIT;
 }
 
 /// @brief Stall the process for the specified period.

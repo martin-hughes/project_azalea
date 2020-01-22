@@ -102,12 +102,12 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
 {
   KL_TRC_ENTRY;
 
-  uint64_t bytes_read_so_far = 0;
+  uint64_t bytes_read_so_far{0};
   uint64_t read_offset;
-  uint64_t bytes_from_this_sector = 0;
+  uint64_t bytes_from_this_sector{0};
   uint64_t read_sector_num;
-
-  ERR_CODE ec = ERR_CODE::NO_ERROR;
+  bool try_read{true};
+  ERR_CODE ec{ERR_CODE::NO_ERROR};
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Start: ", start, "\n");
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Length: ", length, "\n");
@@ -122,28 +122,27 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
 
   if (start > this->_file_record.file_size)
   {
-    KL_TRC_TRACE(TRC_LVL::ERROR, "Start point must be within the file\n");
-    ec = ERR_CODE::INVALID_PARAM;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Start point must be within the file\n");
+    try_read = false;
   }
   if (length > this->_file_record.file_size)
   {
-    KL_TRC_TRACE(TRC_LVL::ERROR,
+    KL_TRC_TRACE(TRC_LVL::FLOW,
                  "length (", length, ") must be less than the file size (", this->_file_record.file_size, ")\n");
-    ec = ERR_CODE::INVALID_PARAM;
   }
   if ((start + length) > this->_file_record.file_size)
   {
-    KL_TRC_TRACE(TRC_LVL::ERROR, "Read area must be contained completely within file\n");
-    ec = ERR_CODE::INVALID_PARAM;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Read area must be contained completely within file\n");
+    length = this->_file_record.file_size - start;
   }
   if (length > buffer_length)
   {
-    KL_TRC_TRACE(TRC_LVL::ERROR, "Buffer must be sufficiently large\n");
-    ec = ERR_CODE::INVALID_PARAM;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Buffer must be sufficiently large\n");
+    length = buffer_length;
   }
 
   // Compute a starting point for the read.
-  if (ec == ERR_CODE::NO_ERROR)
+  if ((ec == ERR_CODE::NO_ERROR) && try_read)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "No errors so far, attempt read\n");
 

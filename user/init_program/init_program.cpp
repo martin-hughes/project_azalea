@@ -27,7 +27,7 @@ int main (int argc, char **argv, char **env_p)
     else
     {
       SC_DEBUG_MSG("Done\n");
-      syscall_wait_for_object(proc_handle);
+      syscall_wait_for_object(proc_handle, SC_MAX_WAIT);
       syscall_close_handle(proc_handle);
       SC_DEBUG_MSG("Shell terminated - restart.\n");
     }

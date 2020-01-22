@@ -96,7 +96,7 @@ ERR_CODE syscall_map_memory(GEN_HANDLE proc_mapping_in,
 ERR_CODE syscall_unmap_memory();
 
 /* Thread synchronization */
-ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle);
+ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle, uint64_t max_wait);
 /** @cond */
 ERR_CODE syscall_futex_wait(volatile int32_t *futex, int32_t req_value);
 ERR_CODE syscall_futex_wake(volatile int32_t *futex);

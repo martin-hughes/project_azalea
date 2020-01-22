@@ -5,6 +5,11 @@
 #include <stdio.h>
 #include <time.h>
 
+extern "C"
+{
+#include <termios.h>
+}
+
 #define SC_DEBUG_MSG(string) \
   syscall_debug_output((string), strlen((string)) )
 
@@ -29,6 +34,17 @@ bool count_command_details(char *command, uint64_t &num_args, uint64_t &argument
 int main (int argc, char **argv, char **env_p)
 {
   SC_DEBUG_MSG("Welcome to simple shell\n");
+
+  GEN_HANDLE term_h;
+  ERR_CODE ec;
+  const char *t_path = "\\dev\\all\\term3";
+  ec = syscall_open_handle(t_path, strlen(t_path), &term_h, 0);
+  if (ec != ERR_CODE::NO_ERROR)
+  {
+    SC_DEBUG_MSG("FAILED TO OPEN TERM HANDLE\n");
+  }
+  termios t_d;
+  tcgetattr(term_h, &t_d);
 
   char *command_buffer;
   uint8_t buffer_offset = 0;
@@ -142,7 +158,7 @@ void execute_command(char *command)
         {
         case ERR_CODE::NO_ERROR:
           //SC_DEBUG_MSG("Program running\n");
-          syscall_wait_for_object(proc_handle);
+          syscall_wait_for_object(proc_handle, SC_MAX_WAIT);
           syscall_close_handle(proc_handle);
           break;
 

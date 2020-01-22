@@ -5,6 +5,7 @@ obj = env.Library("dev-terminals",
                   [
                     "serial_terminal.cpp",
                     "vga_terminal.cpp",
+                    "vga_terminal_key_seqs.cpp",
                   ]
                  )
 Return ("obj")

@@ -949,7 +949,7 @@ bool controller::generic_device_command(template_trb *trb, device_core *req_dev)
   new_cmd = nullptr;
   doorbell_regs[0] = 0;
 
-  response->wait_for_signal();
+  response->wait_for_signal(WaitObject::MAX_WAIT);
   if (response->trb.completion_code != C_CODES::SUCCESS)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Command failed with code: ", response->trb.completion_code, "\n");

@@ -79,6 +79,7 @@ ERR_CODE syscall_read_handle(GEN_HANDLE handle,
   else
   {
     // Parameters check out, try to read.
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Looking for handle: ", handle, "\n");
     std::shared_ptr<object_data> object = cur_thread->thread_handles.retrieve_object(handle);
     if (object != nullptr)
     {
@@ -99,6 +100,11 @@ ERR_CODE syscall_read_handle(GEN_HANDLE handle,
           bytes_to_read = buffer_size;
         }
         KL_TRC_TRACE(TRC_LVL::FLOW, "Going to attempt a read on file: ", file.get(), "\n");
+        KL_TRC_TRACE(TRC_LVL::EXTRA, "Start position: ", start_offset + object->data.seek_position, "\n");
+        KL_TRC_TRACE(TRC_LVL::EXTRA, "bytes to read: ", bytes_to_read, "\n");
+        KL_TRC_TRACE(TRC_LVL::EXTRA, "Buffer: ", buffer, "\n");
+        KL_TRC_TRACE(TRC_LVL::EXTRA, "Buffer size: ", buffer_size, "\n");
+
         result = file->read_bytes(start_offset + object->data.seek_position,
                                   bytes_to_read,
                                   buffer,

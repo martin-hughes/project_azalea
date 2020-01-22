@@ -238,6 +238,24 @@ void terms::generic::read_filtering_opts(terminal_opts &opts)
   KL_TRC_EXIT;
 }
 
+ERR_CODE terms::generic::write_bytes(uint64_t start,
+                                     uint64_t length,
+                                     const uint8_t *buffer,
+                                     uint64_t buffer_length,
+                                     uint64_t &bytes_written)
+{
+  uint64_t true_num_bytes = std::min(length, buffer_length);
+
+  KL_TRC_ENTRY;
+
+  write_string(reinterpret_cast<const char *>(buffer), true_num_bytes);
+  bytes_written = true_num_bytes;
+
+  KL_TRC_EXIT;
+
+  return ERR_CODE::NO_ERROR;
+}
+
 void terms::generic::write_string(const char *out_string, uint16_t num_chars)
 {
   KL_TRC_ENTRY;

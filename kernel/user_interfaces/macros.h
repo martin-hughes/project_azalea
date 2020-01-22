@@ -23,4 +23,6 @@
 
 #endif
 
+#define SC_MAX_WAIT (~0)
+
 /** @endcond */

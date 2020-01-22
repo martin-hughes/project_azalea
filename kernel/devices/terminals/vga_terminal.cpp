@@ -278,16 +278,20 @@ void terms::vga::handle_keyboard_msg(uint64_t msg_id, keypress_msg &key_msg)
     {
       // Some keys, while not directly printable, do have a meaning to us, so we should add them to the stream.
       KL_TRC_TRACE(TRC_LVL::FLOW, "Handle certain special keys\n");
+      uint16_t key_num = static_cast<uint16_t>(key_msg.key_pressed);
+      ASSERT(key_num <= static_cast<uint16_t>(KEYS::MAX_KNOWN));
+      vga_term_keymap_entry &map_e = vga_keymap[key_num];
 
-      switch(key_msg.key_pressed)
+      if (map_e.num_chars > 0)
       {
-      case KEYS::BACKSPACE:
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Backspace\n");
-        this->handle_character('\b');
-        break;
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Send special key sequence\n");
+        ASSERT(map_e.char_ptr != nullptr);
 
-      default:
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Unknown special key - ignore\n");
+        for (uint8_t i = 0; i < map_e.num_chars; i++)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Send another char\n");
+          this->handle_character(map_e.char_ptr[i]);
+        }
       }
     }
     break;

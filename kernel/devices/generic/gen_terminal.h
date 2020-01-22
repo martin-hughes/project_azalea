@@ -22,7 +22,7 @@ namespace terms
 /// example, terms::vga uses a plugged in keyboard and VGA text terminal for I/O.
 ///
 /// There is scope for this to be *significantly* improved in future versions.
-class generic : public IDevice
+class generic : public IDevice, public IWritable
 {
 public:
   generic(std::shared_ptr<IWritable> keyboard_pipe);
@@ -34,6 +34,13 @@ public:
   virtual bool reset() override;
 
   virtual void handle_private_msg(std::unique_ptr<msg::root_msg> &message) override;
+
+  // Overrides from IWritable
+  virtual ERR_CODE write_bytes(uint64_t start,
+                               uint64_t length,
+                               const uint8_t *buffer,
+                               uint64_t buffer_length,
+                               uint64_t &bytes_written) override;
 
   // Terminal functions
   virtual void handle_character(char key);
@@ -77,7 +84,11 @@ protected:
 
 public:
   std::shared_ptr<IWritable> stdin_writer; ///< The pipe to write stdin inputs to.
-  std::shared_ptr<IReadable> stdout_reader; ///< Optional pipe to get data to pass to write_string.
+
+  /// There are two ways to get data displayed on a terminal. Either via direct calls to write_string or via a pipe set
+  /// in stdout_reader. If the pipe method is used, the terminal will read from the pipe when it receives a
+  /// SM_PIPE_NEW_DATA message
+  std::shared_ptr<IReadable> stdout_reader;
 };
 
 }; // namespace terms

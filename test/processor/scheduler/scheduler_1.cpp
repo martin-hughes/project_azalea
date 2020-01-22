@@ -105,6 +105,14 @@ TEST(SchedulerTest, SimpleTests)
     ASSERT_EQ(idle_thread_a, task_get_next_thread());
   }
 
+  // Set b to wake up and check the scheduler does so:
+  thread_b->wake_thread_after = 10;
+  test_set_system_timer_count(11);
+  ASSERT_EQ(thread_b, task_get_next_thread());
+  thread_b->permit_running = false;
+
+  ASSERT_EQ(idle_thread_a, task_get_next_thread());
+
   proc_a->destroy_process();
   proc_b->destroy_process();
   proc_a = nullptr;

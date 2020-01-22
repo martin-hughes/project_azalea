@@ -147,7 +147,7 @@ bool device_core::device_request(device_request_type request_type,
     if (result)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Wait for response\n");
-      transfer_item->wait_for_signal();
+      transfer_item->wait_for_signal(WaitObject::MAX_WAIT);
       KL_TRC_TRACE(TRC_LVL::FLOW, "Got response\n");
     }
   }

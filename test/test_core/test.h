@@ -41,5 +41,6 @@ class task_thread;
 void test_only_set_cur_thread(task_thread *thread);
 void dummy_thread_fn();
 void test_init_proc_interrupt_table();
+void test_set_system_timer_count(uint64_t count);
 
 #endif

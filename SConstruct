@@ -41,8 +41,9 @@ def main_build_script(linux_build, config_env):
     user_mode_env['CXXFLAGS'] = '-Wall -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=c++17 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
     user_mode_env['CFLAGS'] = '-Wall -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
     user_mode_env['LIBPATH'] = [paths.libc_lib_folder,
+                                os.path.join(paths.developer_root, "ncurses", "lib"),
                                ]
-    user_mode_env['LINK'] = 'ld'
+    user_mode_env['LINK'] = 'ld -Map ${TARGET}.map'
 
     # User mode part of the API
     api_lib_env = user_mode_env.Clone()
@@ -52,18 +53,18 @@ def main_build_script(linux_build, config_env):
     user_api_obj = default_build_script(dependencies.user_mode_api, "azalea", api_lib_env, "api_library", False)
     api_install_obj = api_lib_env.Install(paths.kernel_lib_folder, user_api_obj)
 
-    user_mode_env['LIBS'] = [ 'azalea_libc', user_api_obj]
+    user_mode_env['LIBS'] = [ 'ncurses', 'azalea_linux_shim', 'azalea_libc', user_api_obj]
 
     user_mode_env.AppendENVPath('CPATH', paths.libc_headers_folder)
     user_mode_env.AppendENVPath('CPATH', paths.kernel_headers_folder)
+    user_mode_env.AppendENVPath('CPATH', os.path.join(paths.developer_root, "ncurses", "include"))
 
-    # Init program
+    # User mode programs
     init_deps = dependencies.init_program
     init_prog_obj = default_build_script(init_deps, "initprog", user_mode_env, "init_program")
     init_install_obj = user_mode_env.Install(paths.sys_image_root, init_prog_obj)
     user_mode_env.AddPostAction(init_prog_obj, disasm_action)
 
-    # Simple shell program
     shell_deps = dependencies.shell_program
     shell_prog_obj = default_build_script(shell_deps, "shell", user_mode_env, "simple_shell")
     shell_install_obj = user_mode_env.Install(paths.sys_image_root, shell_prog_obj)
@@ -76,6 +77,10 @@ def main_build_script(linux_build, config_env):
     list_prog_obj = default_build_script(list_deps, "list", user_mode_env, "list_prog")
     list_install_obj = user_mode_env.Install(paths.sys_image_root, list_prog_obj)
 
+    ncurses_deps = dependencies.ncurses_program
+    ncurses_prog_obj = default_build_script(ncurses_deps, "ncurses", user_mode_env, "ncurses_prog")
+    ncurses_install_obj = user_mode_env.Install(paths.sys_image_root, ncurses_prog_obj)
+
     # Install and other simple targets
     kernel_env.Alias('install-headers', ui_folder)
     Default(kernel_install_obj)
@@ -83,6 +88,7 @@ def main_build_script(linux_build, config_env):
     Default(shell_install_obj)
     Default(echo_install_obj)
     Default(list_install_obj)
+    Default(ncurses_install_obj)
     Default(api_install_obj)
 
   # Unit test program

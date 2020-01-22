@@ -82,9 +82,14 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
   char *output_buffer{nullptr};
   uint64_t output_buffer_len{0};
 
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Sending message:\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "ID: ", message_id, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Length: ", message_len, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Target handle: ", msg_target,"\n");
+
   if (SYSCALL_IS_UM_ADDRESS(output) && (output != nullptr))
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Save output options");
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Save output options\n");
     completion_semaphore = output->completion_semaphore;
     output_buffer = output->output_buffer;
     output_buffer_len = output->output_buffer_len;
@@ -203,7 +208,7 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
           ASSERT(sem);
           ASSERT(kernel_buffer);
 
-          sem->wait_for_signal();
+          sem->wait_for_signal(WaitObject::MAX_WAIT);
           KL_TRC_TRACE(TRC_LVL::FLOW, "DONE.\n");
 
           KL_TRC_TRACE(TRC_LVL::FLOW, "Buffer size: ", output_buffer_len, "\n");

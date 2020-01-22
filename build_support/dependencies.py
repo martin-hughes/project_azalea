@@ -57,6 +57,10 @@ list_program = [
     '#user/list/SConscript',
   ]
 
+ncurses_program = [
+    '#user/ncurses_test/SConscript',
+  ]
+
 user_mode_api = [
     '#user/libs/libazalea/SConscript',
     '#kernel/syscall/SConscript-user',

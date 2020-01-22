@@ -16,10 +16,13 @@
 ///
 /// @param wait_object_handle Handle for an object that can be waited on.
 ///
+/// @param max_wait The approximate maximum number of milliseconds to wait for this object. The wait time may be more
+///                 due to having to wait for this thread to be scheduled again once the object has completed its wait.
+///
 /// @return ERR_CODE::NOT_FOUND if the handle does not correlate to any object. ERR_CODE::INVALID_OP if the object
 ///         cannot be waited on. ERR_CODE::NO_ERROR if the object was successfully waited on and then signalled us to
 ///         continue.
-extern "C" ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle)
+extern "C" ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle, uint64_t max_wait)
 {
   KL_TRC_ENTRY;
 
@@ -43,7 +46,7 @@ extern "C" ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle)
     }
     else
     {
-      wait_obj->wait_for_signal();
+      wait_obj->wait_for_signal(max_wait);
       result = ERR_CODE::NO_ERROR;
     }
   }
@@ -107,7 +110,7 @@ ERR_CODE syscall_create_mutex(GEN_HANDLE *mutex_handle)
 
     // Conceivably a user mode process could quickly change the handle in between the last line and the next one, but
     // it has no significant impact if they do.
-    KL_TRC_TRACE(TRC_LVL::EXTRA, "Correlated ", path, " to handle ", *mutex_handle, "\n");
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Correlated ", mut.get(), " to handle ", *mutex_handle, "\n");
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
@@ -155,7 +158,7 @@ ERR_CODE syscall_release_mutex(GEN_HANDLE mutex_handle)
         }
         else
         {
-          KL_TRC_TRACE(TR_LVL::FLOW, "Not owned\n");
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Not owned\n");
           result = ERR_CODE::INVALID_OP;
         }
       }
@@ -214,7 +217,7 @@ ERR_CODE syscall_create_semaphore(GEN_HANDLE *semaphore_handle, uint64_t max_use
 
     // Conceivably a user mode process could quickly change the handle in between the last line and the next one, but
     // it has no significant impact if they do.
-    KL_TRC_TRACE(TRC_LVL::EXTRA, "Correlated ", path, " to handle ", *semaphore_handle, "\n");
+    KL_TRC_TRACE(TRC_LVL::EXTRA, "Correlated ", sem.get(), " to handle ", *semaphore_handle, "\n");
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");

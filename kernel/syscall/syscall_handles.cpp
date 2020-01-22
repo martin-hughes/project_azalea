@@ -69,6 +69,9 @@ ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *ha
     kl_memcpy(path, buf.get(), path_len);
     buf[path_len] = 0;
     std::string str_path(path);
+
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Look for leaf with name: ", path, "\n");
+
     result = system_tree()->get_child(str_path, leaf);
 
     if (result == ERR_CODE::NO_ERROR)

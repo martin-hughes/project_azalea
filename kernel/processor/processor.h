@@ -144,6 +144,10 @@ public:
   /// work item completes.
   bool is_worker_thread;
 
+  /// If this value is set to non-zero, and the thread is sleeping, and the system timer is greater than this value,
+  /// then the scheduler will wake this thread and start it running again. This is an absolute value in nanoseconds.
+  uint64_t wake_thread_after{0};
+
 #ifdef AZALEA_TEST_CODE
   friend void test_only_reset_task_mgr();
 #endif

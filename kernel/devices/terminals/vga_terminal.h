@@ -31,4 +31,13 @@ protected:
   const uint16_t bytes_per_char = 2; ///< How many bytes-per-character are in memory?
 };
 
+/// @brief Structure for holding entries in a map from KEYS values to ANSI terminal key sequences.
+struct vga_term_keymap_entry
+{
+  uint8_t num_chars; ///< How many characters are in this sequence.
+  const char *char_ptr; ///< Pointer to an array of those characters.
+};
+
+extern vga_term_keymap_entry vga_keymap[];
+
 }; // namespace terms.

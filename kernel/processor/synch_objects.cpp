@@ -10,6 +10,7 @@
 #include "klib/klib.h"
 #include "processor/processor.h"
 #include "processor/synch_objects.h"
+#include "processor/timing/timing.h"
 
 WaitObject::WaitObject()
 {
@@ -32,7 +33,9 @@ WaitObject::~WaitObject()
 }
 
 /// @brief Cause this thread to wait until the WaitObject is triggered, at which point it will resume.
-void WaitObject::wait_for_signal()
+///
+/// @param max_wait The approximate maximum time to wait for the object to be signalled, in microseconds.
+void WaitObject::wait_for_signal(uint64_t max_wait)
 {
   KL_TRC_ENTRY;
 
@@ -49,6 +52,12 @@ void WaitObject::wait_for_signal()
   cur_thread->stop_thread();
   klib_list_add_tail(&this->_waiting_threads, list_item);
   klib_synch_spinlock_unlock(this->_list_lock);
+
+  if (max_wait != WaitObject::MAX_WAIT)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Set maximum waiting time");
+    cur_thread->wake_thread_after = time_get_system_timer_count() + (max_wait * 1000);
+  }
 
   task_resume_scheduling();
 
@@ -183,7 +192,7 @@ WaitForFirstTriggerObject::~WaitForFirstTriggerObject()
   KL_TRC_EXIT;
 }
 
-void WaitForFirstTriggerObject::wait_for_signal()
+void WaitForFirstTriggerObject::wait_for_signal(uint64_t max_wait)
 {
   KL_TRC_ENTRY;
 
@@ -204,6 +213,12 @@ void WaitForFirstTriggerObject::wait_for_signal()
     cur_thread->stop_thread();
     klib_list_add_tail(&this->_waiting_threads, list_item);
     klib_synch_spinlock_unlock(this->_list_lock);
+
+    if (max_wait != WaitObject::MAX_WAIT)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Set maximum waiting time");
+      cur_thread->wake_thread_after = time_get_system_timer_count() + (max_wait * 1000);
+    }
 
     task_resume_scheduling();
 
@@ -290,11 +305,11 @@ syscall_mutex_obj::~syscall_mutex_obj()
   KL_TRC_EXIT;
 }
 
-void syscall_mutex_obj::wait_for_signal()
+void syscall_mutex_obj::wait_for_signal(uint64_t max_wait)
 {
   KL_TRC_ENTRY;
 
-  klib_synch_mutex_acquire(base_mutex, MUTEX_MAX_WAIT);
+  klib_synch_mutex_acquire(base_mutex, max_wait);
 
   KL_TRC_EXIT;
 }
@@ -359,11 +374,11 @@ syscall_semaphore_obj::~syscall_semaphore_obj()
   KL_TRC_EXIT;
 }
 
-void syscall_semaphore_obj::wait_for_signal()
+void syscall_semaphore_obj::wait_for_signal(uint64_t max_wait)
 {
   KL_TRC_ENTRY;
 
-  klib_synch_semaphore_wait(base_semaphore, SEMAPHORE_MAX_WAIT);
+  klib_synch_semaphore_wait(base_semaphore, max_wait);
 
   KL_TRC_EXIT;
 }

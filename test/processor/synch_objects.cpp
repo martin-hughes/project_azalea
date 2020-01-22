@@ -49,7 +49,7 @@ TEST(ProcessorTests, WaitObjects)
 
   // Make thread A wait for the wait object, then we should get an idle thread repeatedly.
   test_only_set_cur_thread(thread_a);
-  wait_obj.wait_for_signal();
+  wait_obj.wait_for_signal(WaitObject::MAX_WAIT);
 
   idle_thread_a = task_get_next_thread();
   ASSERT_NE(thread_a, idle_thread_a);
@@ -69,7 +69,7 @@ TEST(ProcessorTests, WaitObjects)
 
   // Make thread A wait for the wait object, then we should get an idle thread repeatedly.
   test_only_set_cur_thread(thread_a);
-  wait_obj.wait_for_signal();
+  wait_obj.wait_for_signal(WaitObject::MAX_WAIT);
 
   idle_thread_a = task_get_next_thread();
   ASSERT_NE(thread_a, idle_thread_a);

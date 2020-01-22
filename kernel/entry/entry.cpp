@@ -190,18 +190,12 @@ void kernel_start() throw ()
   ASSERT(term_ptr != nullptr);
 
   // Start a simple terminal process.
-  std::shared_ptr<IReadable> reader;
   std::shared_ptr<IWritable> stdin_writer;
 
   std::shared_ptr<ISystemTreeBranch> pipes_br = std::make_shared<system_tree_simple_branch>();
   ASSERT(pipes_br != nullptr);
   ASSERT(system_tree() != nullptr);
   ASSERT(system_tree()->add_child("\\pipes", pipes_br) == ERR_CODE::NO_ERROR);
-  std::shared_ptr<pipe_branch> stdout_br = pipe_branch::create();
-  ASSERT(pipes_br->add_child("terminal-output", stdout_br) == ERR_CODE::NO_ERROR);
-  ASSERT(system_tree()->get_child("\\pipes\\terminal-output\\read", leaf) == ERR_CODE::NO_ERROR);
-  reader = std::dynamic_pointer_cast<IReadable>(leaf);
-  ASSERT(reader != nullptr);
 
 
   // Set up an input pipe (which maps to stdin)
@@ -211,12 +205,9 @@ void kernel_start() throw ()
   ASSERT(stdin_writer != nullptr);
 
   (*term_ptr)->stdin_writer = stdin_writer;
-  (*term_ptr)->stdout_reader = reader;
-  std::shared_ptr<work::message_receiver> term_rcv = (*term_ptr);
-  stdout_br->set_msg_receiver(term_rcv);
 
   // Setup the write end of the terminal pipe. This is a bit dubious, it doesn't do any reference counting...
-  ASSERT(system_tree()->get_child("\\pipes\\terminal-output\\write", leaf) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->get_child("\\dev\\all\\term3", leaf) == ERR_CODE::NO_ERROR);
   snprintf(proc_ptr_buffer, 34, "\\proc\\%p\\stdout", initial_proc.get());
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "proc: ", (const char *)proc_ptr_buffer, "\n");
@@ -256,7 +247,7 @@ void kernel_start() throw ()
 
   // If (when!) the initial process exits, we want the system to shut down. But since we don't really do shutting down
   // at the moment, just crash instead.
-  initial_proc->wait_for_signal();
+  initial_proc->wait_for_signal(WaitObject::MAX_WAIT);
 
   panic("System has 'shut down'");
 }
@@ -317,12 +308,15 @@ void setup_task_parameters(task_process *startup_proc)
 
   environ_ptr_k = reinterpret_cast<char **>(reinterpret_cast<uint64_t>(kernel_map) + 64);
   environ_ptr_u = reinterpret_cast<char **>(default_posn + 64);
-  environ_ptr_k[1] = nullptr;
-  string_ptr_k = reinterpret_cast<char *>(environ_ptr_k + 2);
-  string_ptr_u = reinterpret_cast<char *>(environ_ptr_u + 2);
+  environ_ptr_k[2] = nullptr;
+  string_ptr_k = reinterpret_cast<char *>(environ_ptr_k + 3);
+  string_ptr_u = reinterpret_cast<char *>(environ_ptr_u + 3);
   environ_ptr_k[0] = string_ptr_u;
-
   kl_memcpy("OSTYPE=azalea", string_ptr_k, 14);
+  string_ptr_k += 14;
+  string_ptr_u += 14;
+  environ_ptr_k[1] = string_ptr_u;
+  kl_memcpy("TERM=ansi\0", string_ptr_k, 11);
 
   task_set_start_params(startup_proc, 2, argv_ptr_u, environ_ptr_u);
 

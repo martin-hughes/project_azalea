@@ -31,6 +31,7 @@
 #include "system_tree/system_tree.h"
 #include "system_tree/fs/proc/proc_fs.h"
 #include "processor/work_queue.h"
+#include "processor/timing/timing.h"
 
 #ifdef _MSVC_LANG
 #include <intrin.h>
@@ -220,9 +221,11 @@ task_thread *task_get_next_thread()
   task_thread *start_thread = nullptr;
   uint32_t proc_id;
   bool found_thread;
+  uint64_t schedule_start_time; // The system's high precision timer value at the start of this schedule.
   KL_TRC_ENTRY;
 
   proc_id = proc_mp_this_proc_id();
+  schedule_start_time = time_get_system_timer_count(true);
 
 #ifdef AZALEA_SCHED_DIAGS
   uint64_t our_count;
@@ -231,7 +234,7 @@ task_thread *task_get_next_thread()
   if (our_count <= max_times_written)
   {
     num_times_written++;
-    timing_buffer[num_times_written] = time_hpet_cur_value(true);
+    timing_buffer[num_times_written] = schedule_start_time;
 
     if (our_count == max_times_written)
     {
@@ -280,12 +283,26 @@ task_thread *task_get_next_thread()
     do
     {
       KL_TRC_TRACE(TRC_LVL::EXTRA, "Considering thread", (uint64_t)next_thread, "\n");
+
+      // If the thread is sleeping, it might be time to wake up. I don't think there's any harm in not locking this
+      // operation, only one instance of the schedule will be able to lock it to run anyway.
+      if ((!next_thread->permit_running) &&
+          (next_thread->wake_thread_after != 0) &&
+          (next_thread->wake_thread_after < schedule_start_time))
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Waking thread after sleep\n");
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Schedule started at: ", schedule_start_time, "\n");
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Wake requested at: ", next_thread->wake_thread_after, "\n");
+        next_thread->wake_thread_after = 0;
+        next_thread->permit_running = true;
+      }
+
       if ((next_thread->permit_running) && (next_thread->cycle_lock != 1))
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Trying to lock for ourselves... ");
         if (klib_synch_spinlock_try_lock(next_thread->cycle_lock))
         {
-          // Having locked it, double check that it's still OK to run, otherwise release it and carry on
+          // Having locked it, double check that it's still OK to run, otherwise release it and carry on.
           if (next_thread->permit_running)
           {
             KL_TRC_TRACE(TRC_LVL::FLOW, "SUCCESS!\n");
