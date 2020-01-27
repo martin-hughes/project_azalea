@@ -29,6 +29,7 @@ kernel = [
     '#kernel/devices/generic/SConscript',
     '#kernel/devices/legacy/ps2/SConscript',
     '#kernel/devices/legacy/rtc/SConscript',
+    '#kernel/devices/legacy/serial/SConscript',
     '#kernel/devices/pci/SConscript',
     '#kernel/devices/terminals/SConscript',
     '#kernel/devices/usb/SConscript',

@@ -168,10 +168,13 @@ void kernel_start() throw ()
 
   initial_proc = proc_load_elf_file("\\root\\initprog");
   setup_task_parameters(initial_proc.get());
-  //com_port_proc = proc_load_elf_file("root\\initprog");
-  //setup_task_parameters(com_port_proc.get());
   ASSERT(initial_proc != nullptr);
-  //ASSERT(com_port_proc != nullptr);
+
+#ifdef INC_SERIAL_TERM
+  com_port_proc = proc_load_elf_file("\\root\\initprog");
+  setup_task_parameters(com_port_proc.get());
+  ASSERT(com_port_proc != nullptr);
+#endif
 
   // Create a temporary in-RAM file system.
   std::shared_ptr<mem_fs_branch> ram_branch = mem_fs_branch::create();
@@ -207,7 +210,7 @@ void kernel_start() throw ()
   (*term_ptr)->stdin_writer = stdin_writer;
 
   // Setup the write end of the terminal pipe. This is a bit dubious, it doesn't do any reference counting...
-  ASSERT(system_tree()->get_child("\\dev\\all\\term3", leaf) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->get_child("\\dev\\all\\term5", leaf) == ERR_CODE::NO_ERROR);
   snprintf(proc_ptr_buffer, 34, "\\proc\\%p\\stdout", initial_proc.get());
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "proc: ", (const char *)proc_ptr_buffer, "\n");
@@ -223,27 +226,39 @@ void kernel_start() throw ()
   pipe_read_leaf = std::dynamic_pointer_cast<pipe_branch::pipe_read_leaf>(leaf);
   ASSERT(pipe_read_leaf != nullptr);
   pipe_read_leaf->set_block_on_read(true);
+  initial_proc->start_process();
+
+#ifdef INC_SERIAL_TERM
+  std::shared_ptr<ISystemTreeBranch> s_pipes_br = std::make_shared<system_tree_simple_branch>();
+  ASSERT(s_pipes_br != nullptr);
+  ASSERT(pipes_br->add_child("serial-input", pipe_branch::create()) == ERR_CODE::NO_ERROR);
 
   // Do the same for the process connected to the serial port process.
-  /*ASSERT(system_tree()->get_child("pipes\\serial-output\\write", leaf) == ERR_CODE::NO_ERROR);
-  snprintf(proc_ptr_buffer, 34, "proc\\%p\\stdout", com_port_proc.get());
+  ASSERT(system_tree()->get_child("\\dev\\all\\term23", leaf) == ERR_CODE::NO_ERROR);
+  snprintf(proc_ptr_buffer, 34, "\\proc\\%p\\stdout", com_port_proc.get());
+  std::shared_ptr<terms::generic> term_ptr = std::dynamic_pointer_cast<terms::generic>(leaf);
+  ASSERT(term_ptr);
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "proc: ", (const char *)proc_ptr_buffer, "\n");
   ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
 
-  snprintf(proc_ptr_buffer, 34, "proc\\%p\\stderr", com_port_proc.get());
+  snprintf(proc_ptr_buffer, 34, "\\proc\\%p\\stderr", com_port_proc.get());
   ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
 
-  snprintf(proc_ptr_buffer, 34, "proc\\%p\\stdin", com_port_proc.get());
-  ASSERT(system_tree()->get_child("pipes\\serial-input\\read", leaf) == ERR_CODE::NO_ERROR);
+  snprintf(proc_ptr_buffer, 34, "\\proc\\%p\\stdin", com_port_proc.get());
+  ASSERT(system_tree()->get_child("\\pipes\\serial-input\\read", leaf) == ERR_CODE::NO_ERROR);
   ASSERT(system_tree()->add_child(proc_ptr_buffer, leaf) == ERR_CODE::NO_ERROR);
   pipe_read_leaf = std::dynamic_pointer_cast<pipe_branch::pipe_read_leaf>(leaf);
   ASSERT(pipe_read_leaf != nullptr);
-  pipe_read_leaf->set_block_on_read(true);*/
+  pipe_read_leaf->set_block_on_read(true);
+
+  ASSERT(system_tree()->get_child("\\pipes\\serial-input\\write", leaf) == ERR_CODE::NO_ERROR);
+  term_ptr->stdin_writer = std::dynamic_pointer_cast<IWritable>(leaf);
+  ASSERT(term_ptr->stdin_writer);
 
   // Process should be good to go!
-  initial_proc->start_process();
-  //com_port_proc->start_process();
+  com_port_proc->start_process();
+#endif
 
   // If (when!) the initial process exits, we want the system to shut down. But since we don't really do shutting down
   // at the moment, just crash instead.

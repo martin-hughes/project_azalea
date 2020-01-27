@@ -8,25 +8,98 @@
 
 #include "processor/x64/processor-x64-int.h"
 
-const uint16_t TERM_COM_BASE_PORT = 0x2F8; ///< Base port for COM2 - temporary variable.
-
 /// @brief Create a new terminal that operates over a serial port.
 ///
 /// @param keyboard_pipe The pipe to write keypresses in to (which becomes stdin for the attached process).
-terms::serial::serial(std::shared_ptr<IWritable> keyboard_pipe) :
-  terms::generic(keyboard_pipe)
+terms::serial::serial(std::shared_ptr<IWritable> keyboard_pipe,
+                      std::shared_ptr<IWritable> output_port_s,
+                      std::shared_ptr<IReadable> input_port_s) :
+  terms::generic{keyboard_pipe},
+  output_port{output_port_s},
+  input_port{input_port_s}
 {
-  asm_proc_write_port(TERM_COM_BASE_PORT + 1, 0x00, 8); // Disable all interrupts
-  asm_proc_write_port(TERM_COM_BASE_PORT + 3, 0x80, 8); // Enable DLAB (set baud rate divisor)
-  asm_proc_write_port(TERM_COM_BASE_PORT + 0, 0x03, 8); // Set divisor to 3 (lo byte) 38400 baud
-  asm_proc_write_port(TERM_COM_BASE_PORT + 1, 0x00, 8); //                  (hi byte)
-  asm_proc_write_port(TERM_COM_BASE_PORT + 3, 0x03, 8); // 8 bits, no parity, one stop bit
-  asm_proc_write_port(TERM_COM_BASE_PORT + 2, 0xC7, 8); // Enable FIFO, clear them, with 14-byte threshold
-  asm_proc_write_port(TERM_COM_BASE_PORT + 4, 0x0B, 8); // IRQs enabled, RTS/DSR set
+
+}
+
+void terms::serial::handle_private_msg(std::unique_ptr<msg::root_msg> &message)
+{
+  KL_TRC_ENTRY;
+
+  // Either stdout_reader has data or input_port has data.
+  if (message->message_id == SM_PIPE_NEW_DATA)
+  {
+    const uint64_t buffer_size = 10;
+    char buffer[buffer_size];
+    uint64_t bytes_read;
+
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Passing data from pipe to screen\n");
+
+    if (stdout_reader)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Deal with stdout data\n");
+      while(1)
+      {
+        if (stdout_reader->read_bytes(0, buffer_size, reinterpret_cast<uint8_t *>(buffer), buffer_size, bytes_read) ==
+            ERR_CODE::NO_ERROR)
+        {
+          if (bytes_read != 0)
+          {
+            KL_TRC_TRACE(TRC_LVL::FLOW, "Write output\n");
+            this->write_string(buffer, bytes_read);
+          }
+          else
+          {
+            KL_TRC_TRACE(TRC_LVL::FLOW, "Stop reading as end of stream\n");
+            break;
+          }
+        }
+        else
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Stop reading due error\n");
+          break;
+        }
+      }
+    }
+
+    if (input_port)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Passing data from serial port towards user space\n");
+      while(1)
+      {
+        if (input_port->read_bytes(0, buffer_size, reinterpret_cast<uint8_t *>(buffer), buffer_size, bytes_read) ==
+            ERR_CODE::NO_ERROR)
+        {
+          if (bytes_read != 0)
+          {
+            KL_TRC_TRACE(TRC_LVL::FLOW, "Write output\n");
+            for (uint64_t i = 0; i < bytes_read; i++)
+            {
+              KL_TRC_TRACE(TRC_LVL::FLOW, "Write character: ", buffer[i], "\n");
+              this->handle_character(buffer[i]);
+            }
+          }
+          else
+          {
+            KL_TRC_TRACE(TRC_LVL::FLOW, "Stop reading as end of stream\n");
+            break;
+          }
+        }
+        else
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Stop reading due error\n");
+          break;
+        }
+      }
+    }
+  }
+
+  KL_TRC_EXIT;
 }
 
 void terms::serial::write_raw_string(const char *out_string, uint16_t num_chars)
 {
+  uint64_t bw{0};
+
   KL_TRC_ENTRY;
 
   if (get_device_status() != DEV_STATUS::OK)
@@ -36,34 +109,11 @@ void terms::serial::write_raw_string(const char *out_string, uint16_t num_chars)
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Handle request while running\n");
-
-    for (uint16_t i = 0; i < num_chars; i++)
+    if (output_port)
     {
-      while (!(bool(asm_proc_read_port(TERM_COM_BASE_PORT + 5, 8) & 0x20)))
-      {
-        //spin!
-      }
-      asm_proc_write_port(TERM_COM_BASE_PORT, (uint64_t)(out_string[i]), 8);
+      output_port->write_bytes(0, num_chars, reinterpret_cast<const uint8_t *>(out_string), num_chars, bw);
     }
   }
 
   KL_TRC_EXIT;
 }
-
-/// @brief Temporary function until a serial port driver is written.
-void terms::serial::temp_read_port()
-{
-  char c;
-
-  KL_TRC_ENTRY;
-
-  while ((asm_proc_read_port(TERM_COM_BASE_PORT + 5, 8) & 1) == 1)
-  {
-    c = static_cast<uint8_t>(asm_proc_read_port(TERM_COM_BASE_PORT, 8));
-    KL_TRC_TRACE(TRC_LVL::FLOW, "char: ", c, "\n");
-    this->handle_character(c);
-  }
-
-  KL_TRC_EXIT;
-}
-

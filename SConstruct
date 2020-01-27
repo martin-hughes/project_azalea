@@ -17,9 +17,33 @@ def main_build_script(linux_build, config_env):
     kernel_env.Install(ui_folder, headers)
     kernel_env.Install(ui_folder, user_headers)
 
+    main_compile_flags = [ # Flags for all C-like builds
+      '-Wall',
+      '-nostdinc',
+      '-nostdlib',
+      '-nodefaultlibs',
+      '-mcmodel=large',
+      '-ffreestanding',
+      '-fno-exceptions',
+      '-U _LINUX',
+      '-U __linux__',
+      '-D __AZALEA__',
+      '-D KL_TRACE_BY_SERIAL_PORT',
+
+      # Uncomment this define to include a serial port based terminal as well as the normal VGA/keyboard one. This is
+      # normally disabled as the locking in the kernel isn't great at the moment so it's a bit unstable.
+      #'-D INC_SERIAL_TERM',
+    ]
+
+    cxx_flags = [ # Flags specific to C++ builds
+      '-nostdinc++',
+      '-std=c++17',
+      '-D _LIBCPP_NO_EXCEPTIONS',
+    ]
+
     # Main kernel part
-    kernel_env['CXXFLAGS'] = '-Wall -nostdinc++ -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=c++17 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT -D _LIBCPP_NO_EXCEPTIONS'
-    kernel_env['CFLAGS'] = '-Wall -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
+    kernel_env['CXXFLAGS'] = ' '.join(main_compile_flags + cxx_flags)
+    kernel_env['CFLAGS'] = ' '.join(main_compile_flags)
     kernel_env['LINKFLAGS'] = "-T build_support/kernel_stage.ld --start-group "
     kernel_env['LINK'] = 'ld -gc-sections -Map output/kernel_map.map'
     kernel_env['LIBPATH'] = [paths.libcxx_lib_folder,

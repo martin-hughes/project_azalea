@@ -13,7 +13,9 @@
 #include "acpi/acpi_if.h"
 #include "devices/pci/pci.h"
 #include "devices/legacy/ps2/ps2_controller.h"
+#include "devices/legacy/serial/serial.h"
 #include "devices/terminals/vga_terminal.h"
+#include "devices/terminals/serial_terminal.h"
 
 // TEMP Assistance constructing a filesystem until the device monitor is more developed.
 #include "system_tree/fs/fat/fat_fs.h"
@@ -125,6 +127,24 @@ void dev_root_branch::scan_for_devices()
   keyb_ptr = keyb.get();
   term_ptr = new std::shared_ptr<terms::generic>();
   *term_ptr = term;
+
+
+#ifdef INC_SERIAL_TERM
+  std::shared_ptr<ISystemTreeLeaf> leaf;
+  ASSERT(system_tree()->get_child("\\dev\\all\\COM2", leaf) == ERR_CODE::NO_ERROR);
+  std::shared_ptr<serial_port> port = std::dynamic_pointer_cast<serial_port>(leaf);
+  ASSERT(port);
+
+  std::shared_ptr<terms::serial> st;
+  ASSERT(dev::create_new_device(st,
+         empty,
+         fake_stream,
+         std::dynamic_pointer_cast<IWritable>(port),
+         std::dynamic_pointer_cast<IReadable>(port)));
+
+  std::shared_ptr<work::message_receiver> mr = std::dynamic_pointer_cast<work::message_receiver>(st);
+  port->set_msg_receiver(mr);
+#endif
 
   KL_TRC_EXIT;
 }

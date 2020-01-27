@@ -35,17 +35,6 @@ int main (int argc, char **argv, char **env_p)
 {
   SC_DEBUG_MSG("Welcome to simple shell\n");
 
-  GEN_HANDLE term_h;
-  ERR_CODE ec;
-  const char *t_path = "\\dev\\all\\term3";
-  ec = syscall_open_handle(t_path, strlen(t_path), &term_h, 0);
-  if (ec != ERR_CODE::NO_ERROR)
-  {
-    SC_DEBUG_MSG("FAILED TO OPEN TERM HANDLE\n");
-  }
-  termios t_d;
-  tcgetattr(term_h, &t_d);
-
   char *command_buffer;
   uint8_t buffer_offset = 0;
   int version = azalea_version();

@@ -13,6 +13,8 @@
 
 #include "devices/pci/pci_int_link_device.h"
 #include "devices/legacy/rtc/rtc.h"
+#include "devices/legacy/serial/serial.h"
+#include "devices/device_monitor.h"
 
 namespace
 {
@@ -100,9 +102,9 @@ ACPI_STATUS acpi_create_device_handler (ACPI_HANDLE ObjHandle,
 void acpi_create_one_device(const char *dev_path, ACPI_HANDLE obj_handle, ACPI_DEVICE_INFO &dev_info)
 {
   std::string pathname;
+  std::shared_ptr<IDevice> empty;
 
   KL_TRC_ENTRY;
-
 
   pathname = dev_path;
 
@@ -122,6 +124,12 @@ void acpi_create_one_device(const char *dev_path, ACPI_HANDLE obj_handle, ACPI_D
       KL_TRC_TRACE(TRC_LVL::FLOW, "RTC\n");
       std::shared_ptr<timing::rtc> clock = timing::rtc::create(obj_handle);
       time_register_clock_source(clock);
+    }
+    else if (IS_DEV_HID("PNP0501"))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "16550A-compatible serial port\n");
+      std::shared_ptr<serial_port> s_port;
+      dev::create_new_device(s_port, empty, obj_handle);
     }
     else
     {
