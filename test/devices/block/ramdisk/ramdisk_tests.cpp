@@ -21,6 +21,8 @@ TEST(RamdiskTest, EmptyDevice)
 
   ASSERT_EQ(device->read_blocks(0, 5, buffer.get(), 10), ERR_CODE::DEVICE_FAILED);
   ASSERT_EQ(device->write_blocks(0, 5, buffer.get(), 10), ERR_CODE::DEVICE_FAILED);
+
+  test_only_reset_name_counts();
 }
 
 TEST(RamdiskTest, ReadWrite)
@@ -40,4 +42,6 @@ TEST(RamdiskTest, ReadWrite)
   ASSERT_EQ(device->read_blocks(0, num_blocks, buffer_out.get(), num_blocks * block_size), ERR_CODE::NO_ERROR);
 
   ASSERT_EQ(std::equal(buffer_in.get(), buffer_in.get() + (num_blocks * block_size), buffer_out.get()), true);
+
+  test_only_reset_name_counts();
 }

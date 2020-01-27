@@ -102,6 +102,7 @@ protected:
     {
       cout << "Not removing temporary file: " << image_temp_name << endl;
     }
+    test_only_reset_name_counts();
   };
 };
 

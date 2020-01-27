@@ -13,7 +13,13 @@ void callback(tmt_msg_t m, TMT *vt, const void *a, void *p);
 ///
 /// @param keyboard_pipe The pipe to write key presses in to, which will come out as stdin in an attached process.
 terms::vt::vt(std::shared_ptr<IWritable> keyboard_pipe) :
-  terms::generic{keyboard_pipe}
+  terms::generic{keyboard_pipe, "term"}
+{
+
+}
+
+terms::vt::vt(std::shared_ptr<IWritable> keyboard_pipe, std::string root_name) :
+  terms::generic{keyboard_pipe, root_name}
 {
   KL_TRC_ENTRY;
 

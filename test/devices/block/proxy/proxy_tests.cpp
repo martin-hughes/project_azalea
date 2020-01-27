@@ -51,4 +51,6 @@ TEST(BlockProxyTest, SimpleTests)
 
   ASSERT_EQ(device->read_blocks(0, 10, buffer.get(), buffer_len), ERR_CODE::NO_ERROR);
   ASSERT_EQ(memcmp(buffer.get(), "12347890901234567890", 20), 0);
+
+  test_only_reset_name_counts();
 }

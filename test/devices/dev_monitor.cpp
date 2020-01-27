@@ -41,6 +41,7 @@ void DeviceMonitorTest::TearDown()
   dev::monitor::terminate();
   work::test_only_terminate_queue();
   test_only_reset_system_tree();
+  test_only_reset_name_counts();
 }
 
 TEST_F(DeviceMonitorTest, SimpleRegister)

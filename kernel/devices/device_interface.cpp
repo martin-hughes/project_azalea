@@ -12,29 +12,55 @@
 #include "klib/klib.h"
 
 #include <atomic>
+#include <map>
 #include <stdio.h>
 
-/// @brief The number of distinct devices seen by the system.
-///
-/// This counter increments every time a new device is constructed. It is then used as the suffix if "auto_inc_suffix"
-/// is used in the IDevice constructor.
-std::atomic<uint64_t> dev_count{0};
+namespace
+{
+  /// @brief Stores the number of devices using a given name in the system.
+  ///
+  /// This allows devices using `auto_inc_suffix` to increment predictably, for example going through COM1, COM2, etc.
+  std::map<std::string, uint64_t> *name_counts{nullptr};
+
+  /// Lock to protect `name_counts`
+  kernel_spinlock name_count_lock{0};
+}
 
 IDevice::IDevice(const std::string human_name, const std::string short_name, bool auto_inc_suffix) :
  device_human_name{human_name}, device_short_name{short_name}, current_dev_status{DEV_STATUS::UNKNOWN}
 {
-  KL_TRC_ENTRY;
+  uint64_t dev_number{0};
 
-  uint64_t dev_number = dev_count++;
+  KL_TRC_ENTRY;
 
   if (auto_inc_suffix)
   {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Add automatic suffix number\n");
+
+    klib_synch_spinlock_lock(name_count_lock);
+
+    if (name_counts == nullptr)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Construct name_counts object\n");
+      name_counts = new std::map<std::string, uint64_t>();
+    }
+
+    if (!map_contains(*name_counts, short_name))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Add ", short_name, " to name_counts\n");
+      name_counts->insert({short_name, 0});
+    }
+
+    dev_number = ++((*name_counts)[short_name]);
+
     char number_buffer[17] = { 0 };
     snprintf(number_buffer, 17, "%lu", dev_number);
     std::string number{number_buffer};
     const std::string true_short_name = short_name + number;
     KL_TRC_TRACE(TRC_LVL::FLOW, "Adding suffix - new device name: ", true_short_name, "\n");
     device_short_name = true_short_name;
+
+    klib_synch_spinlock_unlock(name_count_lock);
   }
 
   KL_TRC_EXIT;
@@ -96,3 +122,14 @@ void IDevice::set_device_status(DEV_STATUS new_state)
 
   KL_TRC_EXIT;
 }
+
+#ifdef AZALEA_TEST_CODE
+void test_only_reset_name_counts()
+{
+  if (name_counts)
+  {
+    delete name_counts;
+    name_counts = nullptr;
+  }
+}
+#endif

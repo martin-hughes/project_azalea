@@ -282,4 +282,8 @@ public:
   virtual void handle_interrupt_slow(uint8_t interrupt_number) { };
 };
 
+#ifdef AZALEA_TEST_CODE
+void test_only_reset_name_counts();
+#endif
+
 #endif

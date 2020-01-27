@@ -26,6 +26,7 @@ class generic : public IDevice, public IWritable
 {
 public:
   generic(std::shared_ptr<IWritable> keyboard_pipe);
+  generic(std::shared_ptr<IWritable> keyboard_pipe, std::string root_name);
   virtual ~generic() = default;
 
   // Overrides from IDevice.

@@ -86,7 +86,7 @@ protected:
 
   void TearDown() override
   {
-
+    test_only_reset_name_counts();
   };
 };
 

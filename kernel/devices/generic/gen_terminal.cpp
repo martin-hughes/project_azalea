@@ -20,7 +20,14 @@
 ///
 /// @param keyboard_pipe Pipe that the terminal will write processsed keypresses in to (e.g. for stdin).
 terms::generic::generic(std::shared_ptr<IWritable> keyboard_pipe) :
-  IDevice{"Generic Terminal", "term", true}
+  terms::generic{keyboard_pipe, "term"}
+{
+
+}
+
+
+terms::generic::generic(std::shared_ptr<IWritable> keyboard_pipe, std::string root_name) :
+  IDevice{"Generic Terminal", root_name, true}
 {
   KL_TRC_ENTRY;
 

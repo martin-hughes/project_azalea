@@ -210,7 +210,7 @@ void kernel_start() throw ()
   (*term_ptr)->stdin_writer = stdin_writer;
 
   // Setup the write end of the terminal pipe. This is a bit dubious, it doesn't do any reference counting...
-  ASSERT(system_tree()->get_child("\\dev\\all\\term5", leaf) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->get_child("\\dev\\all\\video_term1", leaf) == ERR_CODE::NO_ERROR);
   snprintf(proc_ptr_buffer, 34, "\\proc\\%p\\stdout", initial_proc.get());
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "proc: ", (const char *)proc_ptr_buffer, "\n");

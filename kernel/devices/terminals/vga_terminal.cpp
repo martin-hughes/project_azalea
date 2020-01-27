@@ -12,7 +12,7 @@
 ///
 /// @param display_area_virt Base address of the text mode display storage in virtual memory.
 terms::vga::vga(std::shared_ptr<IWritable> keyboard_pipe, void *display_area_virt) :
-  terms::vt{keyboard_pipe},
+  terms::vt{keyboard_pipe, "video_term"},
   display_ptr{reinterpret_cast<unsigned char *>(display_area_virt)}
 {
   KL_TRC_ENTRY;
