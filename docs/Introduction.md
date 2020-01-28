@@ -60,7 +60,7 @@ Being a hobby project, there are some fairly specific requirements for this proj
 To compile the full system, you will need the following tools and libraries installed:
 - azalea-libc source code
 - azalea-acpica source code
-- libcxx (part of the LLVM suite) source code
+- llvm-project source code
 - azalea-libcxx builder source code
 - Python 2.6 or later (*)
 - GCC 5.4 or later (no longer tested)

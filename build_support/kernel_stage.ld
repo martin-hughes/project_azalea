@@ -65,10 +65,27 @@ SECTIONS
       *(.rodata)
   }
   . = ALIGN(1024);
+
   start_loc = . - 0xFFFFFFFF00000000;
+  __eh_frame_hdr_start = .;
+  .eh_frame_hdr : AT ( start_loc )
+  {
+      *(.eh_frame_hdr)
+  }
+  __eh_frame_hdr_end = .;
+
+  start_loc = . - 0xFFFFFFFF00000000;
+  __eh_frame_start = .;
   .eh_frame : AT ( start_loc )
   {
       *(.eh_frame)
+  }
+  __eh_frame_end = .;
+
+  start_loc = . - 0xFFFFFFFF00000000;
+  .gcc_except_table : AT ( start_loc )
+  {
+      *(.gcc_except_table)
   }
 
   . = ALIGN(1024);

@@ -47,10 +47,13 @@ end_of_irq_ack_fn_wrapper:
     push r13
     push r14
     push r15
+    mov rdi, [rsp + 128] ; Save RIP
+    mov rsi, [rsp + 152] ; Save RSP
 
     ALIGN_STACK_AND_SAVE
 
-    mov rdi, %2
+    mov rdx, %2 ; Save numeric argument
+    mov rcx, r12 ; Copy address of stack as a parameter
     call %1
 
     call end_of_irq_ack_fn_wrapper
@@ -94,10 +97,13 @@ end_of_irq_ack_fn_wrapper:
     push r13
     push r14
     push r15
-    mov rdi, [rsp + 128]
-    mov rsi, [rsp + 136]
+    mov rdi, [rsp + 136] ; Save RIP
+    mov rsi, [rsp + 160] ; Save RSP
+    mov rdx, [rsp + 128] ; Save error code
 
     ALIGN_STACK_AND_SAVE
+
+    mov rcx, r12 ; Copy address of stack as a parameter
 
     call %1
 

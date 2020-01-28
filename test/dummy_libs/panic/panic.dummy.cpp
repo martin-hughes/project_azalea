@@ -6,7 +6,11 @@
 #include "test/test_core/test.h"
 #include "gtest/gtest.h"
 
-void panic(const char *message)
+void panic(const char *message,
+           bool override_address,
+           uint64_t k_rsp,
+           uint64_t r_rip,
+           uint64_t r_rsp)
 {
   // Cause Google Test to print out the assertion message by doing ADD_FAILURE(). However, this allows the test to
   // continue after this point, which is undesirable, so then throw a C++ assertion. Google Test will catch it and end

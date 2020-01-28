@@ -148,6 +148,15 @@ public:
   /// then the scheduler will wake this thread and start it running again. This is an absolute value in nanoseconds.
   uint64_t wake_thread_after{0};
 
+  /// The number of TLS slots provided per thread in the kernel.
+  static const uint8_t MAX_TLS_KEY = 16;
+
+  /// @brief Slots for thread local storage.
+  ///
+  /// These slots are for thread local storage within the kernel only. User-mode thread local storage is dealt with in
+  /// user-mode by the user's preferred library.
+  void *thread_local_storage_slot[MAX_TLS_KEY];
+
 #ifdef AZALEA_TEST_CODE
   friend void test_only_reset_task_mgr();
 #endif

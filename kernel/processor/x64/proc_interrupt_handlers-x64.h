@@ -33,42 +33,42 @@ extern "C" void asm_proc_handle_irq_15();
 
 // Exception handlers:
 extern "C" void asm_proc_div_by_zero_fault_handler();  // 0
-extern "C" void proc_div_by_zero_fault_handler();
+extern "C" void proc_div_by_zero_fault_handler(uint64_t rip, uint64_t rsp, uint64_t opt, uint64_t k_rsp);
 extern "C" void asm_proc_debug_fault_handler(); // 1
-extern "C" void proc_debug_fault_handler();
+extern "C" void proc_debug_fault_handler(uint64_t rip, uint64_t rsp, uint64_t opt, uint64_t k_rsp);
 extern "C" void asm_proc_nmi_int_handler(); // 2
 extern "C" void asm_proc_brkpt_trap_handler(); // 3
-extern "C" void proc_brkpt_trap_handler();
+extern "C" void proc_brkpt_trap_handler(uint64_t rip, uint64_t rsp, uint64_t opt, uint64_t k_rsp);
 extern "C" void asm_proc_overflow_trap_handler(); // 4
-extern "C" void proc_overflow_trap_handler();
+extern "C" void proc_overflow_trap_handler(uint64_t rip, uint64_t rsp, uint64_t opt, uint64_t k_rsp);
 extern "C" void asm_proc_bound_range_fault_handler(); // 5
-extern "C" void proc_bound_range_fault_handler();
+extern "C" void proc_bound_range_fault_handler(uint64_t rip, uint64_t rsp, uint64_t opt, uint64_t k_rsp);
 extern "C" void asm_proc_invalid_opcode_fault_handler(); // 6
-extern "C" void proc_invalid_opcode_fault_handler();
+extern "C" void proc_invalid_opcode_fault_handler(uint64_t rip, uint64_t rsp, uint64_t opt, uint64_t k_rsp);
 extern "C" void asm_proc_device_not_avail_fault_handler(); // 7
-extern "C" void proc_device_not_avail_fault_handler();
+extern "C" void proc_device_not_avail_fault_handler(uint64_t rip, uint64_t rsp, uint64_t opt, uint64_t k_rsp);
 extern "C" void asm_proc_double_fault_abort_handler(); // 8
-extern "C" void proc_double_fault_abort_handler(uint64_t err_code, uint64_t rip);
+extern "C" void proc_double_fault_abort_handler(uint64_t rip, uint64_t rsp, uint64_t err_code, uint64_t k_rsp);
 extern "C" void asm_proc_invalid_tss_fault_handler(); // 10
-extern "C" void proc_invalid_tss_fault_handler(uint64_t err_code, uint64_t rip);
+extern "C" void proc_invalid_tss_fault_handler(uint64_t rip, uint64_t rsp, uint64_t err_code, uint64_t k_rsp);
 extern "C" void asm_proc_seg_not_present_fault_handler(); // 11
-extern "C" void proc_seg_not_present_fault_handler(uint64_t err_code, uint64_t rip);
+extern "C" void proc_seg_not_present_fault_handler(uint64_t rip, uint64_t rsp, uint64_t err_code, uint64_t k_rsp);
 extern "C" void asm_proc_ss_fault_handler(); // 12
-extern "C" void proc_ss_fault_handler(uint64_t err_code, uint64_t rip);
+extern "C" void proc_ss_fault_handler(uint64_t rip, uint64_t rsp, uint64_t err_code, uint64_t k_rsp);
 extern "C" void asm_proc_gen_prot_fault_handler(); // 13
-extern "C" void proc_gen_prot_fault_handler(uint64_t err_code, uint64_t rip);
+extern "C" void proc_gen_prot_fault_handler(uint64_t rip, uint64_t rsp, uint64_t err_code, uint64_t k_rsp);
 extern "C" void asm_proc_fp_except_fault_handler(); // 16
-extern "C" void proc_fp_except_fault_handler();
+extern "C" void proc_fp_except_fault_handler(uint64_t rip, uint64_t rsp, uint64_t opt, uint64_t k_rsp);
 extern "C" void asm_proc_align_check_fault_handler(); // 17
-extern "C" void proc_align_check_fault_handler(uint64_t err_code, uint64_t rip);
+extern "C" void proc_align_check_fault_handler(uint64_t rip, uint64_t rsp, uint64_t err_code, uint64_t k_rsp);
 extern "C" void asm_proc_machine_check_abort_handler(); // 18
-extern "C" void proc_machine_check_abort_handler();
+extern "C" void proc_machine_check_abort_handler(uint64_t rip, uint64_t rsp, uint64_t opt, uint64_t k_rsp);
 extern "C" void asm_proc_simd_fpe_fault_handler(); // 19
-extern "C" void proc_simd_fpe_fault_handler();
+extern "C" void proc_simd_fpe_fault_handler(uint64_t rip, uint64_t rsp, uint64_t opt, uint64_t k_rsp);
 extern "C" void asm_proc_virt_except_fault_handler(); // 20
-extern "C" void proc_virt_except_fault_handler();
+extern "C" void proc_virt_except_fault_handler(uint64_t rip, uint64_t rsp, uint64_t opt, uint64_t k_rsp);
 extern "C" void asm_proc_security_fault_handler(); // 30
-extern "C" void proc_security_fault_handler(uint64_t err_code, uint64_t rip);
+extern "C" void proc_security_fault_handler(uint64_t rip, uint64_t rsp, uint64_t err_code, uint64_t k_rsp);
 
 // Boring plain interrupt handlers.
 extern "C" void asm_proc_interrupt_0_handler();
