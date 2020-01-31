@@ -155,5 +155,6 @@ TEST(SystemTreeTest, SyscallEnums)
   ASSERT_EQ(ptr_table[2], nullptr);
 
   test_only_set_cur_thread(nullptr);
+  test_only_reset_task_mgr();
   test_only_reset_system_tree();
 }

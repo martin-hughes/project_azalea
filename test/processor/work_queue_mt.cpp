@@ -50,7 +50,6 @@ TEST(WorkQueue2Tests, MultiThreadSimpleTest)
 
   std::thread work_thread(work::work_queue_thread);
 
-  short_msg *msg = new short_msg;
   std::unique_ptr<short_msg> msg_ptr = std::make_unique<short_msg>();
 
   {
