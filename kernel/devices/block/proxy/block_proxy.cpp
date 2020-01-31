@@ -6,6 +6,7 @@
 //
 // Known defects:
 // - Only lip service is paid to the IDevice interface - stop/start/reset don't really work.
+// - Also, how do we cope with the change in status of the device we're proxying?
 
 //#define ENABLE_TRACING
 
@@ -103,7 +104,6 @@ DEV_STATUS block_proxy_device::get_device_status()
 
   DEV_STATUS ret = IDevice::get_device_status();
 
-#warning This will confuse the device manager! Need to work on the correct paradigm still.
   if (ret == DEV_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Check parent device\n");

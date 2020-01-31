@@ -1,9 +1,6 @@
 /// @file
 /// @brief Memory related functions that are not specific to virtual or physical memory managers.
 
-// Known deficiencies:
-// - Is mem_task_get_task0_entry() still necessary?
-
 //#define ENABLE_TRACING
 
 #include "klib/klib.h"

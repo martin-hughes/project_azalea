@@ -2,7 +2,6 @@
 /// @brief Implements core IDevice functionality.
 //
 // Known defects:
-// - dev_count is system wide rather than per device, which looks a bit odd.
 // - There's no testing, but we could test (e.g.) names.
 
 //#define ENABLE_TRACING
