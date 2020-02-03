@@ -172,7 +172,7 @@ std::shared_ptr<fat_filesystem> setup_initial_fs()
 #warning Should sort true parent-child relationship.
   std::shared_ptr<IDevice> empty;
 
-  kl_memset(sector_buffer.get(), 0, 512);
+  memset(sector_buffer.get(), 0, 512);
   if (first_hdd->read_blocks(0, 1, sector_buffer.get(), 512) != ERR_CODE::NO_ERROR)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Disk read failed\n");
@@ -187,8 +187,8 @@ std::shared_ptr<fat_filesystem> setup_initial_fs()
   uint32_t sector_count;
 
   // Parse the MBR to find the first partition.
-  kl_memcpy(sector_buffer.get() + 454, &start_sector, 4);
-  kl_memcpy(sector_buffer.get() + 458, &sector_count, 4);
+  memcpy(&start_sector, sector_buffer.get() + 454, 4);
+  memcpy(&sector_count, sector_buffer.get() + 458, 4);
 
   kl_trc_trace(TRC_LVL::EXTRA, "First partition: ", (uint64_t)start_sector, " -> +", (uint64_t)sector_count, "\n");
   std::shared_ptr<block_proxy_device> pd;

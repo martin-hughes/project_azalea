@@ -19,7 +19,7 @@ void keyboard::process_report(decoded_descriptor &descriptor, int64_t *values, u
   KL_TRC_ENTRY;
 
   // This array is used to tell us which keys are listed as pressed in this report.
-  kl_memset(key_in_report_pressed, 0, sizeof(key_in_report_pressed));
+  memset(key_in_report_pressed, 0, sizeof(key_in_report_pressed));
 
   // Start by looking through all fields in the report and seeing which keys are pressed.
   for (report_field_description &field : descriptor.input_fields)

@@ -7,6 +7,7 @@
 #include "system_tree/fs/proc/proc_fs.h"
 #include "system_tree/fs/mem/mem_fs.h"
 
+#include <string.h>
 #include <stdio.h>
 
 using namespace std;
@@ -32,7 +33,7 @@ proc_fs_root_branch::proc_fs_proc_branch::proc_fs_proc_branch(std::shared_ptr<ta
   ASSERT(_id_file != nullptr);
 
   snprintf(id_buffer, 22, "%p", related_proc.get());
-  strl = kl_strlen(id_buffer, 22);
+  strl = strnlen(id_buffer, 22);
 
   ec = _id_file->write_bytes(0, strl + 1, reinterpret_cast<const uint8_t *>(id_buffer), 22, br);
   ASSERT(ec == ERR_CODE::NO_ERROR);

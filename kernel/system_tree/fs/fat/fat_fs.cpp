@@ -12,6 +12,7 @@
 //#define ENABLE_TRACING
 
 #include <string>
+#include <string.h>
 
 #include "fat_fs.h"
 
@@ -61,7 +62,7 @@ fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
   if ((type == FAT_TYPE::FAT16) || (type == FAT_TYPE::FAT12))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Copying FAT12/16 block\n");
-    kl_memcpy(temp_bpb, &this->bpb_16, sizeof(this->bpb_16));
+    memcpy(&this->bpb_16, temp_bpb, sizeof(this->bpb_16));
 
     // These sums come directly from the FAT specification.
     root_dir_start_sector = bpb_16.shared.rsvd_sec_cnt + (bpb_16.shared.num_fats * bpb_16.shared.fat_size_16);
@@ -93,7 +94,7 @@ fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
   else
   {
     ASSERT(type == FAT_TYPE::FAT32);KL_TRC_TRACE(TRC_LVL::FLOW, "Copying FAT32 block\n");
-    kl_memcpy(temp_bpb, &this->bpb_32, sizeof(this->bpb_32));
+    memcpy(&this->bpb_32, temp_bpb, sizeof(this->bpb_32));
     root_dir_start_sector = 0;
     root_dir_sector_count = 0;
 
@@ -483,7 +484,7 @@ uint64_t fat_filesystem::read_fat_entry(uint64_t cluster_num)
         // FAT12 entries are 1.5 bytes long, so every odd entry begins one nybble in to the byte - that is, even clusters
         // are bytes n and the first nybble of n+1, odd clusters are the second nybble of n+1 and the whole of n+2.
 
-        kl_memcpy(&this->_raw_fat[offset], &next_cluster, 2);
+        memcpy(&next_cluster, &this->_raw_fat[offset], 2);
         if (cluster_num % 2 == 1)
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "FAT 12, half-offset\n");
@@ -498,13 +499,13 @@ uint64_t fat_filesystem::read_fat_entry(uint64_t cluster_num)
 
       case FAT_TYPE::FAT16:
         offset = cluster_num * 2;
-        kl_memcpy(&this->_raw_fat[offset], &next_cluster, 2);
+        memcpy(&next_cluster, &this->_raw_fat[offset], 2);
 
         break;
 
       case FAT_TYPE::FAT32:
         offset = cluster_num * 4;
-        kl_memcpy(&this->_raw_fat[offset], &next_cluster, 4);
+        memcpy(&next_cluster, &this->_raw_fat[offset], 4);
         next_cluster &= 0x0FFFFFFF;
 
         break;
@@ -554,7 +555,7 @@ ERR_CODE fat_filesystem::write_fat_entry(uint64_t cluster_num, uint64_t new_entr
         // FAT12 entries are 1.5 bytes long, so every odd entry begins one nybble in to the byte - that is, even clusters
         // are bytes n and the first nybble of n+1, odd clusters are the second nybble of n+1 and the whole of n+2.
 
-        kl_memcpy(&this->_raw_fat[offset], &old_entry, 2);
+        memcpy(&old_entry, &this->_raw_fat[offset], 2);
 
         if (cluster_num % 2 == 1)
         {
@@ -570,20 +571,20 @@ ERR_CODE fat_filesystem::write_fat_entry(uint64_t cluster_num, uint64_t new_entr
           old_entry |= new_entry;
         }
 
-        kl_memcpy(&old_entry, &this->_raw_fat[offset], 2);
+        memcpy(&this->_raw_fat[offset], &old_entry, 2);
 
         break;
 
       case FAT_TYPE::FAT16:
         offset = cluster_num * 2;
-        kl_memcpy(&new_entry, &this->_raw_fat[offset], 2);
+        memcpy(&this->_raw_fat[offset], &new_entry, 2);
 
         break;
 
       case FAT_TYPE::FAT32:
         offset = cluster_num * 4;
         new_entry &= 0x0FFFFFFF;
-        kl_memcpy(&new_entry, &this->_raw_fat[offset], 4);
+        memcpy(&this->_raw_fat[offset], &new_entry, 4);
 
         break;
 
@@ -885,7 +886,7 @@ std::shared_ptr<fat_filesystem::fat_folder> &fat_filesystem::get_root_directory(
   if (!root_directory)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Create root directory.\n");
-    kl_memset(&fde, 0, sizeof(fat_dir_entry));
+    memset(&fde, 0, sizeof(fat_dir_entry));
     if (this->type == FAT_TYPE::FAT32)
     {
       fde.first_cluster_high = bpb_32.root_cluster >> 16;

@@ -3,6 +3,8 @@
 
 //#define ENABLE_TRACING
 
+#include <string.h>
+
 #include "user_interfaces/syscall.h"
 #include "syscall/syscall_kernel.h"
 #include "syscall/syscall_kernel-int.h"
@@ -163,7 +165,7 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Create temporary kernel buffer\n");
       kernel_buffer = std::shared_ptr<char>(new char[output_buffer_len], std::default_delete<char[]>());
-      kl_memset(kernel_buffer.get(), 0, output_buffer_len);
+      memset(kernel_buffer.get(), 0, output_buffer_len);
 
       ASSERT(!sem);
 
@@ -197,7 +199,7 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
           KL_TRC_TRACE(TRC_LVL::FLOW, "Copying message to kernel buffer\n");
 
           new_msg->details = std::unique_ptr<uint8_t[]>(new uint8_t[message_len]);
-          kl_memcpy(message_ptr, new_msg->details.get(), message_len);
+          memcpy(new_msg->details.get(), message_ptr, message_len);
         }
 
         work::queue_message(target_obj, std::move(new_msg));
@@ -212,7 +214,7 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
           KL_TRC_TRACE(TRC_LVL::FLOW, "DONE.\n");
 
           KL_TRC_TRACE(TRC_LVL::FLOW, "Buffer size: ", output_buffer_len, "\n");
-          kl_memcpy(kernel_buffer.get(), output_buffer, output_buffer_len);
+          memcpy(output_buffer, kernel_buffer.get(), output_buffer_len);
         }
       }
       else
@@ -355,9 +357,9 @@ ERR_CODE syscall_receive_message_body(char *message_buffer, uint64_t buffer_size
       if (restricting_size > 0)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Copy message buffer\n");
-        kl_memcpy(this_thread->parent_process->messaging.message_queue.front()->details.get(),
-                  message_buffer,
-                  restricting_size);
+        memcpy(message_buffer,
+               this_thread->parent_process->messaging.message_queue.front()->details.get(),
+               restricting_size);
       }
       else
       {

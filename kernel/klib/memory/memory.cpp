@@ -33,11 +33,11 @@
 //#define ENABLE_TRACING
 
 #include <map>
+#include <string.h>
 
 #include "memory.h"
 #include "klib/data_structures/lists.h"
 #include "klib/data_structures/map_helpers.h"
-#include "klib/c_helpers/buffers.h"
 #include "klib/panic/panic.h"
 #include "klib/misc/assert.h"
 #include "klib/tracing/tracing.h"
@@ -496,7 +496,7 @@ void *allocate_new_slab(uint32_t chunk_size_idx)
 
   slab_buffer = (char *)new_slab;
   slab_buffer = slab_buffer + sizeof(slab_header);
-  kl_memset(slab_buffer, 0, bitmap_bytes);
+  memset(slab_buffer, 0, bitmap_bytes);
 
   KL_TRC_EXIT;
 

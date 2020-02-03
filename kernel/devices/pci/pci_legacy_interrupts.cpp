@@ -361,7 +361,7 @@ void pci_init_int_map()
     else
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Create new details\n");
-      kl_memset(&int_table, 0, sizeof(int_table));
+      memset(&int_table, 0, sizeof(int_table));
     }
 
     // If there's a device name, use it. Otherwise, the source index is the IRQ number.

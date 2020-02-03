@@ -184,7 +184,7 @@ void kernel_start() throw ()
   ASSERT(ram_file != nullptr);
   ASSERT(system_tree()->add_child("\\temp\\hello.txt", ram_file) == ERR_CODE::NO_ERROR);
   ASSERT(ram_file->write_bytes(0,
-                               kl_strlen(hello_string, sizeof(hello_string)),
+                               strnlen(hello_string, sizeof(hello_string)),
                                reinterpret_cast<const uint8_t *>(hello_string),
                                sizeof(hello_string), br) == ERR_CODE::NO_ERROR);
   ASSERT(br == sizeof(hello_string) - 1);
@@ -312,12 +312,12 @@ void setup_task_parameters(task_process *startup_proc)
   string_ptr_u = reinterpret_cast<char *>(argv_ptr_u + 3);
 
   argv_ptr_k[0] = string_ptr_u;
-  kl_memcpy("initprog", string_ptr_k, 9);
+  memcpy(string_ptr_k, "initprog", 9);
   string_ptr_k += 9;
   string_ptr_u += 9;
 
   argv_ptr_k[1] = string_ptr_u;
-  kl_memcpy("testparam", string_ptr_k, 10);
+  memcpy(string_ptr_k, "testparam", 10);
   string_ptr_k += 10;
   string_ptr_u += 10;
 
@@ -327,11 +327,11 @@ void setup_task_parameters(task_process *startup_proc)
   string_ptr_k = reinterpret_cast<char *>(environ_ptr_k + 3);
   string_ptr_u = reinterpret_cast<char *>(environ_ptr_u + 3);
   environ_ptr_k[0] = string_ptr_u;
-  kl_memcpy("OSTYPE=azalea", string_ptr_k, 14);
+  memcpy(string_ptr_k, "OSTYPE=azalea", 14);
   string_ptr_k += 14;
   string_ptr_u += 14;
   environ_ptr_k[1] = string_ptr_u;
-  kl_memcpy("TERM=ansi\0", string_ptr_k, 11);
+  memcpy(string_ptr_k, "TERM=ansi\0", 11);
 
   task_set_start_params(startup_proc, 2, argv_ptr_u, environ_ptr_u);
 

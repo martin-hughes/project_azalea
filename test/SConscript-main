@@ -20,9 +20,6 @@ files = [ "dummy_libs/processor/processor.dummy.cpp",
           "klib/memory/memory_1.cpp",
           "klib/memory/memory_2.cpp",
 
-          "klib/misc/misc_1.cpp",
-          "klib/misc/misc_2.cpp",
-
           "klib/synch/synch_1.cpp",
           "klib/synch/synch_2_lock_wrapper.cpp",
 

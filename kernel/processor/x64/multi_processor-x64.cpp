@@ -170,9 +170,9 @@ void proc_mp_init()
                       reinterpret_cast<uint64_t>(&asm_ap_trampoline_start);
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Trampoline start", reinterpret_cast<uint64_t>(&asm_ap_trampoline_addr), "\n");
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Trampoline length", trampoline_length, "\n");
-  kl_memcpy(reinterpret_cast<void *>(&asm_ap_trampoline_addr),
-            reinterpret_cast<void *>(0x1000),
-            trampoline_length);
+  memcpy(reinterpret_cast<void *>(0x1000),
+         reinterpret_cast<void *>(&asm_ap_trampoline_addr),
+         trampoline_length);
 
   // Signal all of the processors to wake up. They will then suspend themselves, awaiting a RESUME IPI message.
   wait_offset = time_get_system_timer_offset(10000000000); // How many HPET units is a 1-second wait?

@@ -62,7 +62,7 @@ void proc_recreate_gdt(uint32_t num_procs)
 
   ASSERT(length_of_gdt >= initial_gdt_len);
 
-  kl_memcpy(&initial_gdt_table, system_gdt, initial_gdt_len);
+  memcpy(system_gdt, &initial_gdt_table, initial_gdt_len);
 
   // Populate all the other TSSs
   for (int i = 0; i < num_procs; i++)
@@ -178,7 +178,7 @@ void proc_generate_tss(uint8_t *tss_descriptor,
   tss_segment = new uint8_t[TSS_SEG_LENGTH];
   uint64_t *segment_rsp0;
   tss_seg_ulong = (uint64_t)tss_segment;
-  kl_memset(tss_segment, 0, TSS_SEG_LENGTH);
+  memset(tss_segment, 0, TSS_SEG_LENGTH);
 
   ////////////////////////////////////
   // Fill in TSS segment descriptor //

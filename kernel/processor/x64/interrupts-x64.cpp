@@ -51,7 +51,7 @@ namespace
 void proc_configure_idt()
 {
   // Start by zero-ing out everything.
-  kl_memset(interrupt_descriptor_table, 0, sizeof(interrupt_descriptor_table));
+  memset(interrupt_descriptor_table, 0, sizeof(interrupt_descriptor_table));
   proc_x64_config_plain_handlers();
 
   // Configure the Intel-defined exception handlers.

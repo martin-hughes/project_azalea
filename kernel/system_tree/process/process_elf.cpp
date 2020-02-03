@@ -186,7 +186,7 @@ std::shared_ptr<task_process> proc_load_elf_file(std::string binary_name)
           KL_TRC_TRACE(TRC_LVL::EXTRA, "Write pointer: ", write_ptr, "\n");
           KL_TRC_TRACE(TRC_LVL::EXTRA, "Read pointer: ", read_ptr, "\n");
           KL_TRC_TRACE(TRC_LVL::EXTRA, "Length: ", copy_length, "\n");
-          kl_memcpy(read_ptr, write_ptr, copy_length);
+          memcpy(write_ptr, read_ptr, copy_length);
           bytes_written += copy_length;
           offset += copy_length;
 
@@ -204,7 +204,7 @@ std::shared_ptr<task_process> proc_load_elf_file(std::string binary_name)
           }
 
           write_ptr = reinterpret_cast<void *>(reinterpret_cast<uint64_t>(kernel_write_window) + offset);
-          kl_memset(write_ptr, 0, bytes_now);
+          memset(write_ptr, 0, bytes_now);
           bytes_to_zero -= bytes_now;
         }
 

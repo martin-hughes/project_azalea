@@ -6,6 +6,8 @@
 
 //#define ENABLE_TRACING
 
+#include <string.h>
+
 #include "klib/klib.h"
 #include "system_tree/fs/fat/fat_fs.h"
 
@@ -193,9 +195,9 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
         }
         else
         {
-          kl_memcpy((void *)(((uint8_t *)sector_buffer.get()) + read_offset),
-                    buffer + bytes_read_so_far,
-                    bytes_from_this_sector);
+          memcpy(buffer + bytes_read_so_far,
+                 (void *)(((uint8_t *)sector_buffer.get()) + read_offset),
+                 bytes_from_this_sector);
 
           bytes_read_so_far += bytes_from_this_sector;
           advance_sector_num(read_sector_num, parent_ptr);
@@ -267,9 +269,9 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
 
             KL_TRC_TRACE(TRC_LVL::EXTRA, "Bytes now", bytes_from_this_sector, "\n");
 
-            kl_memcpy(reinterpret_cast<void *>(sector_buffer.get()),
-                      buffer + bytes_read_so_far,
-                      bytes_from_this_sector);
+            memcpy(buffer + bytes_read_so_far,
+                   reinterpret_cast<void *>(sector_buffer.get()),
+                   bytes_from_this_sector);
 
             bytes_read_so_far += bytes_from_this_sector;
           }
@@ -391,7 +393,7 @@ ERR_CODE fat_filesystem::fat_file::write_bytes(uint64_t start,
             }
 
             // Copy the relevant amount of data into the buffer, then write it back to disk.
-            kl_memcpy(buffer + bytes_written_so_far, sector_buffer.get() + write_offset, bytes_from_this_sector);
+            memcpy(sector_buffer.get() + write_offset, buffer + bytes_written_so_far, bytes_from_this_sector);
             ec = parent_ptr->_storage->write_blocks(write_sector_num,
                                                     1,
                                                     sector_buffer.get(),
@@ -472,7 +474,7 @@ ERR_CODE fat_filesystem::fat_file::set_file_size(uint64_t file_size)
         uint64_t bw;
         ASSERT(new_bytes > 0);
         std::unique_ptr<uint8_t[]> zero_buffer = std::make_unique<uint8_t[]>(new_bytes);
-        kl_memset(zero_buffer.get(), 0, new_bytes);
+        memset(zero_buffer.get(), 0, new_bytes);
         result = write_bytes(old_file_size, new_bytes, zero_buffer.get(), new_bytes, bw);
 
         if ((result == ERR_CODE::NO_ERROR) && (bw != new_bytes))

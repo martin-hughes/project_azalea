@@ -66,7 +66,7 @@ ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *ha
     std::shared_ptr<ISystemTreeLeaf> leaf;
     GEN_HANDLE new_handle;
     std::unique_ptr<char[]> buf = std::make_unique<char[]>(path_len + 1);
-    kl_memcpy(path, buf.get(), path_len);
+    memcpy(buf.get(), path, path_len);
     buf[path_len] = 0;
     std::string str_path(path);
 

@@ -491,15 +491,15 @@ bool controller::prepare_control_structures()
   // devices are enabled yet, all pointers are set to nullptr. The xHCI must be given the physical address, of course.
   device_ctxt_base_addr_array =
     std::make_unique<device_context *[]>(capability_regs->struct_params_1.max_device_slots + 1);
-  kl_memset(device_ctxt_base_addr_array.get(),
-            0,
-            sizeof(device_context *) * (capability_regs->struct_params_1.max_device_slots + 1));
+  memset(device_ctxt_base_addr_array.get(),
+         0,
+         sizeof(device_context *) * (capability_regs->struct_params_1.max_device_slots + 1));
 
   // At the same time, create an array to allow us to correlate slot numbers to device cores.
   slot_to_device_obj_map = std::make_unique<device_core *[]>(capability_regs->struct_params_1.max_device_slots + 1);
-  kl_memset(slot_to_device_obj_map.get(),
-            0,
-            sizeof(device_core *) * (capability_regs->struct_params_1.max_device_slots + 1));
+  memset(slot_to_device_obj_map.get(),
+         0,
+         sizeof(device_core *) * (capability_regs->struct_params_1.max_device_slots + 1));
 
   // If the controller needs it, add some scratchpad space via the DCBAA.
   num_scratchpads = (capability_regs->struct_params_2.max_scratchpad_bufs_hi << 5) &
@@ -812,7 +812,7 @@ void controller::handle_enable_slot_completion(command_completion_event_trb &trb
     KL_TRC_TRACE(TRC_LVL::FLOW, "Raw: ", ((template_trb *)&trb)->reserved_2, "\n");
 
     device_context *out_context = new device_context;
-    kl_memset(out_context, 0, sizeof(device_context));
+    memset(out_context, 0, sizeof(device_context));
 
     device_ctxt_base_addr_array[new_slot] = reinterpret_cast<device_context *>(mem_get_phys_addr(out_context));
     ASSERT(slot_to_device_obj_map[new_slot] == nullptr);

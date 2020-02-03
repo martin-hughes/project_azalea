@@ -6,6 +6,8 @@
 
 //#define ENABLE_TRACING
 
+#include <string.h>
+
 #include "klib/klib.h"
 #include "ramdisk.h"
 
@@ -132,7 +134,7 @@ ERR_CODE ramdisk_device::read_blocks(uint64_t start_block,
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Read should be good to go\n");
-    kl_memcpy((this->_ramdisk_storage + read_start), buffer, read_length);
+    memcpy(buffer, (this->_ramdisk_storage + read_start), read_length);
   }
 
   KL_TRC_EXIT;
@@ -169,7 +171,7 @@ ERR_CODE ramdisk_device::write_blocks(uint64_t start_block,
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Write should be good to go\n");
-    kl_memcpy(buffer, (this->_ramdisk_storage + write_start), write_length);
+    memcpy((this->_ramdisk_storage + write_start), buffer, write_length);
   }
 
   KL_TRC_EXIT;

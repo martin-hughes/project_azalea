@@ -6,7 +6,6 @@
 /// @cond
 
 #include "memory.h"
-#include "klib/c_helpers/buffers.h"
 #include "klib/panic/panic.h"
 
 #include <stdlib.h>
@@ -60,7 +59,7 @@ void *malloc(size_t size)
 void *calloc(size_t num, size_t size)
 {
   void *r = kmalloc(num * size);
-  kl_memset(r, 0, num * size);
+  memset(r, 0, num * size);
   return r;
 }
 
@@ -94,7 +93,7 @@ void* realloc (void* ptr, size_t size)
 
     if (min_size != 0)
     {
-      kl_memcpy(ptr, newptr, min_size);
+      memcpy(newptr, ptr, min_size);
     }
   }
   else

@@ -32,7 +32,7 @@ generic_device::generic_device(generic_controller *parent, uint16_t drive_index,
 {
   KL_TRC_ENTRY;
 
-  kl_memcpy(&identity_buf, &identity, sizeof(identify_cmd_output));
+  memcpy(&identity, &identity_buf, sizeof(identify_cmd_output));
 
   if (identity.lba_48 == 1)
   {

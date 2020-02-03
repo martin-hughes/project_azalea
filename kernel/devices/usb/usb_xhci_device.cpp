@@ -180,7 +180,7 @@ void device_core::handle_slot_enabled(uint8_t slot_id, device_context *new_outpu
     current_max_packet_size = parent_port->get_default_max_packet_size();
 
     dev_input_context = std::make_unique<input_context>();
-    kl_memset(dev_input_context.get(), 0, sizeof(input_context));
+    memset(dev_input_context.get(), 0, sizeof(input_context));
 
     // Initialize the new input context as per the xHCI spec, section 4.3.3 ("Device Slot Initialization")
     dev_input_context->control.add_context_flags = 3;  // That is, set A0 and A1 to true.

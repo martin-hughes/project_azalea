@@ -21,6 +21,7 @@
 #include "fat_fs.h"
 
 #include <stdio.h>
+#include <string.h>
 
 /// @brief Standard constructor.
 ///
@@ -370,9 +371,9 @@ ERR_CODE fat_filesystem::fat_folder::rename_child(const std::string &old_name, c
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "Add new entries, remove old ones.\n");
           // Copy everything except the name part.
-          kl_memcpy(&fde.attributes,
-                    &file_entries[num_new_fdes - 1].attributes,
-                    sizeof(fat_dir_entry) - sizeof(fde.name));
+          memcpy(&file_entries[num_new_fdes - 1].attributes,
+                 &fde.attributes,
+                 sizeof(fat_dir_entry) - sizeof(fde.name));
           result = add_directory_entries(file_entries, num_new_fdes, new_fde_index);
           if (result == ERR_CODE::NO_ERROR)
           {
@@ -496,7 +497,7 @@ ERR_CODE fat_filesystem::fat_folder::create_child(const std::string &name, std::
 
   result = get_dir_entry(name, file_entries[0], entry_idx);
 
-  kl_memset(file_entries, 0, sizeof(file_entries));
+  memset(file_entries, 0, sizeof(file_entries));
 
   if (result == ERR_CODE::NO_ERROR)
   {
@@ -706,7 +707,7 @@ bool fat_filesystem::fat_folder::populate_short_name(std::string filename, char 
 
     if (result)
     {
-      kl_memset(short_name, 0x20, 11);
+      memset(short_name, 0x20, 11);
       short_name[11] = 0;
 
       for (int i = 0; i < first_part.length(); i++)
@@ -944,9 +945,9 @@ bool fat_filesystem::fat_folder::soft_compare_lfn_entries(const fat_dir_entry &a
 
   result = ((a.long_fn.entry_idx == b.long_fn.entry_idx) &&
             (a.long_fn.lfn_flag == b.long_fn.lfn_flag) &&
-            (kl_memcmp(a.long_fn.first_chars, b.long_fn.first_chars, 5) == 0) &&
-            (kl_memcmp(a.long_fn.next_chars, b.long_fn.next_chars, 6) == 0) &&
-            (kl_memcmp(a.long_fn.final_chars, b.long_fn.final_chars, 2) == 0));
+            (memcmp(a.long_fn.first_chars, b.long_fn.first_chars, 5) == 0) &&
+            (memcmp(a.long_fn.next_chars, b.long_fn.next_chars, 6) == 0) &&
+            (memcmp(a.long_fn.final_chars, b.long_fn.final_chars, 2) == 0));
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
@@ -1033,9 +1034,9 @@ bool fat_filesystem::fat_folder::generate_basis_name_entry(std::string filename,
 
   KL_TRC_ENTRY;
 
-  kl_memset(created_entry.name, 0x20, 11);
+  memset(created_entry.name, 0x20, 11);
   converted_buffer = std::unique_ptr<char[]>(new char[filename.length() + 1]);
-  kl_memset(converted_buffer.get(), 0, filename.length() + 1);
+  memset(converted_buffer.get(), 0, filename.length() + 1);
 
   // Make uppercase and remove unsuitable characters. This will also remove all space characters.
   for (i = 0; i < filename.length(); i++)
@@ -1235,7 +1236,7 @@ ERR_CODE fat_filesystem::fat_folder::add_directory_entries(fat_dir_entry *new_fd
     if (move_eod_marker)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Write empty EOD marker\n");
-      kl_memset(&cur_entry, 0, sizeof(cur_entry));
+      memset(&cur_entry, 0, sizeof(cur_entry));
       ret_code = write_fde(found_first_idx + num_entries, cur_entry);
     }
   }
@@ -1272,11 +1273,11 @@ void fat_filesystem::fat_folder::add_numeric_tail(fat_dir_entry &fde, uint8_t nu
   ASSERT((num_valid_chars >= 1) && (num_valid_chars <= 8));
   ASSERT(suffix < 1000000);
 
-  kl_memset(number_buf, 0, 8);
+  memset(number_buf, 0, 8);
 
   snprintf(number_buf, 8, "%d", suffix);
 
-  num_suffix_chars = 1 + kl_strlen(number_buf, 8);
+  num_suffix_chars = 1 + strnlen(number_buf, 8);
   ASSERT(num_suffix_chars <= 7);
 
   total_chars = num_suffix_chars + num_valid_chars;
@@ -1287,7 +1288,7 @@ void fat_filesystem::fat_folder::add_numeric_tail(fat_dir_entry &fde, uint8_t nu
   }
 
   fde.name[num_valid_chars] = '~';
-  kl_memcpy(number_buf, fde.name + num_valid_chars + 1, num_suffix_chars);
+  memcpy(fde.name + num_valid_chars + 1, number_buf, num_suffix_chars);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "New name: ", reinterpret_cast<const char *>(fde.name), "\n");
   KL_TRC_EXIT;
@@ -1328,7 +1329,7 @@ bool fat_filesystem::fat_folder::populate_fdes_from_name(std::string name_in,
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Creating short name: ", short_name, "\n");
 
-    kl_memcpy(short_name, &fdes[0].name, 11);
+    memcpy(&fdes[0].name, short_name, 11);
     fdes[0].attributes.archive = 1;
 
     short_name_out = short_name_from_fde(fdes[0]);
@@ -1339,7 +1340,7 @@ bool fat_filesystem::fat_folder::populate_fdes_from_name(std::string name_in,
   else if(populate_long_name(name_in, fdes, num_fdes_used))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Creating long name.\n");
-    kl_memset(&fdes[num_fdes_used+1], 0, sizeof(fat_dir_entry));
+    memset(&fdes[num_fdes_used+1], 0, sizeof(fat_dir_entry));
 
     if (create_basis_name)
     {

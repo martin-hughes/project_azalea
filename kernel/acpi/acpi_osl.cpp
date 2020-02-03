@@ -4,6 +4,7 @@
 //#define ENABLE_TRACING
 
 #include <stdint.h>
+#include <string.h>
 
 #include "klib/klib.h"
 
@@ -560,7 +561,7 @@ ACPI_STATUS AcpiOsWriteMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 Value, UINT3
   KL_TRC_ENTRY;
   uint64_t *mem = (uint64_t *)AcpiOsMapMemory(Address, Width / 8);
 
-  kl_memcpy(&Value, (void *)mem, Width / 8);
+  memcpy((void *)mem, &Value, Width / 8);
 
   AcpiOsUnmapMemory((void *)mem, Width / 8);
   KL_TRC_EXIT;
@@ -748,7 +749,7 @@ void AcpiOsVprintf(const char *Format, va_list Args)
     return;
   }
 
-  kl_memset(exception_message_buf, 0, 1000);
+  memset(exception_message_buf, 0, 1000);
   vsnprintf(exception_message_buf, em_buf_len, Format, Args);
 
   kl_trc_trace(TRC_LVL::EXTRA, (const char *)exception_message_buf);

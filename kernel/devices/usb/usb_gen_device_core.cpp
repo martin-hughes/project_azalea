@@ -235,7 +235,7 @@ bool generic_core::read_config_descriptor(uint8_t index, device_config &config)
     desc = reinterpret_cast<config_descriptor *>(config.raw_descriptor.get());
     raw_ptr = reinterpret_cast<uint8_t *>(config.raw_descriptor.get());
 
-    kl_memcpy(desc, &config.desc, sizeof(config_descriptor));
+    memcpy(&config.desc, desc, sizeof(config_descriptor));
     raw_ptr += sizeof(config_descriptor);
     raw_ptr_offset = sizeof(config_descriptor);
 
@@ -266,7 +266,7 @@ bool generic_core::read_config_descriptor(uint8_t index, device_config &config)
         }
 
         found_an_interface_before = true;
-        kl_memcpy(raw_ptr, &(config.interfaces.get()[current_interface].desc), sizeof(interface_descriptor));
+        memcpy(&(config.interfaces.get()[current_interface].desc), raw_ptr, sizeof(interface_descriptor));
         current_endpoint = 0;
         klib_list_initialize(&config.interfaces[current_interface].other_descriptors);
 
@@ -283,9 +283,9 @@ bool generic_core::read_config_descriptor(uint8_t index, device_config &config)
           break;
         }
 
-        kl_memcpy(raw_ptr,
-                 &(config.interfaces[current_interface].endpoints.get()[current_endpoint]),
-                 sizeof(endpoint_descriptor));
+        memcpy(&(config.interfaces[current_interface].endpoints.get()[current_endpoint]),
+              raw_ptr,
+              sizeof(endpoint_descriptor));
         current_endpoint++;
 
         break;

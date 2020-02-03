@@ -387,7 +387,7 @@ bool pci_controller::poll_wait_for_drive_not_busy(uint16_t drive_index)
   do
   {
     result_c = read_ata_cmd_port(drive_index, COMMAND_STATUS_PORT);
-    kl_memcpy(&result_c, &result, 1);
+    memcpy(&result, &result_c, 1);
   } while ((result.busy_flag == 1)
            || ((result.error_flag = 0)
            && (result.data_ready_flag == 0)
@@ -471,7 +471,7 @@ void pci_controller::dma_read_sectors_to_buffers()
     KL_TRC_TRACE(TRC_LVL::FLOW, ", length: ", real_byte_length,
                                 " from: ", bounce_buffer,
                                 " to: ", transfer_block_details[i].buffer, "\n");
-    kl_memcpy(bounce_buffer, transfer_block_details[i].buffer, real_byte_length);
+    memcpy(transfer_block_details[i].buffer, bounce_buffer, real_byte_length);
     bounce_buffer += real_byte_length; ///< TODO: Is this correct??
   }
 
@@ -645,7 +645,7 @@ bool pci_controller::queue_dma_transfer_block(void *buffer, uint16_t bytes_this_
           actual_num_bytes = 65536;
         }
 
-        kl_memcpy(buffer, reinterpret_cast<void *>(entry_virt_ptr), actual_num_bytes);
+        memcpy(reinterpret_cast<void *>(entry_virt_ptr), buffer, actual_num_bytes);
       }
 
       if (num_prd_table_entries > 0)

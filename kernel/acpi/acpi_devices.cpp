@@ -89,7 +89,10 @@ ACPI_STATUS acpi_create_device_handler (ACPI_HANDLE ObjHandle,
 }
 
 /// @cond
-#define IS_DEV_HID(y) (kl_strcmp(dev_info.HardwareId.String, dev_info.HardwareId.Length, (y), sizeof(y)) == 0)
+#define IS_DEV_HID(y) \
+  (strncmp(dev_info.HardwareId.String, \
+           (y), \
+           std::min(static_cast<uint16_t>(dev_info.HardwareId.Length), static_cast<uint16_t>(sizeof(y)))) == 0)
 /// @endcond
 
 /// @brief Create a single device driver for a device that has been enumerated.

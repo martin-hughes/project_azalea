@@ -8,6 +8,8 @@
 
 //#define ENABLE_TRACING
 
+#include <string.h>
+
 #include <klib/klib.h>
 #include "mem_fs.h"
 
@@ -124,7 +126,7 @@ ERR_CODE mem_fs_leaf::read_bytes(uint64_t start,
         length = buffer_length;
       }
 
-      kl_memcpy(_buffer.get() + start, buffer, length);
+      memcpy(buffer, _buffer.get() + start, length);
       bytes_read = length;
     }
 
@@ -162,7 +164,7 @@ ERR_CODE mem_fs_leaf::write_bytes(uint64_t start,
   }
 
   ASSERT(start + length <= _buffer_length);
-  kl_memcpy(buffer, _buffer.get() + start, length);
+  memcpy(_buffer.get() + start, buffer, length);
 
   bytes_written = length;
 
@@ -221,12 +223,12 @@ void mem_fs_leaf::_no_lock_set_file_size(uint64_t file_size)
     copy_size = _buffer_length;
   }
 
-  kl_memcpy(_buffer.get(), new_buffer, copy_size);
+  memcpy(new_buffer, _buffer.get(), copy_size);
 
   if (file_size > _buffer_length)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Extending file\n");
-    kl_memset(new_buffer + _buffer_length, 0, file_size - _buffer_length);
+    memset(new_buffer + _buffer_length, 0, file_size - _buffer_length);
   }
 
   _buffer_length = file_size;

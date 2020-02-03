@@ -139,7 +139,7 @@ void mem_gen_phys_pages_bitmap(e820_pointer *e820_ptr, uint64_t *bitmap_loc, uin
   cur_record = e820_ptr->table_ptr;
 
   // Set the bitmap to 0 - i.e. unallocated.
-  kl_memset(bitmap_loc, 0, max_num_pages / 8);
+  memset(bitmap_loc, 0, max_num_pages / 8);
 
   while (((cur_record->start_addr != 0) ||
          (cur_record->length != 0) ||

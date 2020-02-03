@@ -232,7 +232,7 @@ bool hid_device::read_hid_descriptor(hid_descriptor &storage)
     if (hdr->descriptor_type == DESCRIPTOR_TYPES::HID)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "HID Descriptor found\n");
-      kl_memcpy(hdr, &storage, sizeof(storage));
+      memcpy(&storage, hdr, sizeof(storage));
       result = true;
       break;
     }

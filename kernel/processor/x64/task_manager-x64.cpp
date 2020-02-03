@@ -63,7 +63,7 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
   new_context->cr3_value = (void *)memmgr_x64_data->pml4_phys_addr;
   KL_TRC_TRACE(TRC_LVL::EXTRA, "CR3: ", new_context->cr3_value, "\n");
 
-  kl_memset(new_context->saved_stack.fx_state, 0, sizeof(new_context->saved_stack.fx_state));
+  memset(new_context->saved_stack.fx_state, 0, sizeof(new_context->saved_stack.fx_state));
 
   new_context->saved_stack.r15 = 0;
   new_context->saved_stack.r14 = 0;
@@ -239,7 +239,7 @@ task_x64_exec_context *task_int_swap_task(uint64_t stack_addr, uint64_t cr3_valu
     current_context = reinterpret_cast<task_x64_exec_context *>(current_thread->execution_context);
     current_context->cr3_value = (void *)cr3_value;
 
-    kl_memcpy(stack_ptr, &(current_context->saved_stack), sizeof(task_x64_saved_stack));
+    memcpy(&(current_context->saved_stack), stack_ptr, sizeof(task_x64_saved_stack));
 
     current_context->fs_base = proc_read_msr(PROC_X64_MSRS::IA32_FS_BASE);
     current_context->gs_base = proc_read_msr(PROC_X64_MSRS::IA32_GS_BASE);
@@ -260,7 +260,7 @@ task_x64_exec_context *task_int_swap_task(uint64_t stack_addr, uint64_t cr3_valu
   // be that of the next scheduled task. We could switch the stack pointer to point at the saved stack structure, but
   // that requires aligning the structure appropriately. Instead, simply blat away the old stack with the stack
   // corresponding to the task we want to switch to.
-  kl_memcpy(&(next_context->saved_stack), stack_ptr, sizeof(task_x64_saved_stack));
+  memcpy(stack_ptr, &(next_context->saved_stack), sizeof(task_x64_saved_stack));
 
   // Save the thread context's address in IA32_KERNEL_GS_BASE in order that the processor can uniquely identify the
   // thread without having to look in a list (which is subject to threads moving between processors whilst looking in

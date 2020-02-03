@@ -138,7 +138,7 @@ void task_gen_init()
 
 #ifdef AZALEA_SCHED_DIAGS
   timing_buffer = reinterpret_cast<uint64_t *>(kmalloc(MEM_PAGE_SIZE));
-  kl_memset(timing_buffer, 0, MEM_PAGE_SIZE);
+  memset(timing_buffer, 0, MEM_PAGE_SIZE);
 #endif
 
   KL_TRC_EXIT;
