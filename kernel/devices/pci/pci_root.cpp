@@ -78,7 +78,7 @@ void pci_root_device::scan_for_devices()
       if (dev0_reg0.vendor_id != PCI_INVALID_VENDOR)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Examine bus ", i, "\n");
-        ASSERT(dev::create_new_device(new_bus, this_ptr, i, this));
+        ASSERT(dev::create_new_device(new_bus, this_ptr, i, std::dynamic_pointer_cast<pci_root_device>(this_ptr)));
 
         snprintf(name, 7, "bus%03hhi", i);
         KL_TRC_TRACE(TRC_LVL::FLOW, "New branch name: ", name, "\n");
@@ -91,7 +91,7 @@ void pci_root_device::scan_for_devices()
   }
   else
   {
-    ASSERT(dev::create_new_device(new_bus, this_ptr, 0, this));
+    ASSERT(dev::create_new_device(new_bus, this_ptr, 0, std::dynamic_pointer_cast<pci_root_device>(this_ptr)));
     ASSERT(this->add_child("bus000", new_bus) == ERR_CODE::NO_ERROR);
   }
 

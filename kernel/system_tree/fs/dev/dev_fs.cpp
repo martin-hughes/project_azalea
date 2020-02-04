@@ -198,7 +198,6 @@ std::shared_ptr<fat_filesystem> setup_initial_fs(std::shared_ptr<ata::generic_de
   KL_TRC_ENTRY;
   ASSERT(first_hdd.get() != nullptr); // new ata::generic_device(nullptr, 0);
   std::unique_ptr<unsigned char[]> sector_buffer(new unsigned char[512]);
-#warning Should sort true parent-child relationship.
   std::shared_ptr<IDevice> empty;
 
   memset(sector_buffer.get(), 0, 512);

@@ -2,8 +2,6 @@
 /// @brief Implements a generic and simple PCI bus. This is mostly so it can be used as a container for PCI devices in
 /// System Tree, to keep a logical looking tree.
 
-#warning pci_root_device has raw pointer to parent
-
 //#define ENABLE_TRACING
 
 #include "klib/klib.h"
@@ -18,7 +16,7 @@
 /// @param bus The bus number of this device on the parent.
 ///
 /// @param parent The parent PCI device.
-pci_generic_bus::pci_generic_bus(uint8_t bus, pci_root_device *parent) :
+pci_generic_bus::pci_generic_bus(uint8_t bus, std::shared_ptr<pci_root_device> parent) :
   IDevice{"Generic PCI bus", "pcibus", true},
   _bus_number(bus), _parent(parent)
 {

@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "devices/device_interface.h"
 #include "system_tree/system_tree_simple_branch.h"
 
@@ -16,7 +18,7 @@
 class pci_generic_bus : public IDevice
 {
 public:
-  pci_generic_bus(uint8_t bus, pci_root_device *parent);
+  pci_generic_bus(uint8_t bus, std::shared_ptr<pci_root_device> parent);
   virtual ~pci_generic_bus() override;
 
   // Overrides of IDevice.
@@ -30,5 +32,5 @@ protected:
   virtual void add_new_device(uint8_t slot, uint8_t func);
 
   uint8_t _bus_number; ///< What is the bus number of this bus on the parent.
-  pci_root_device *_parent; ///< The parent PCI device.
+  std::shared_ptr<pci_root_device> _parent; ///< The parent PCI device.
 };

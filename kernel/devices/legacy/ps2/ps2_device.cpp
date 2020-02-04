@@ -199,9 +199,6 @@ ps2_mouse_device::ps2_mouse_device(std::shared_ptr<gen_ps2_controller_device> pa
 {
   KL_TRC_ENTRY;
 
-#warning violation of IDevice
-  set_device_status(DEV_STATUS::OK);
-
   KL_TRC_EXIT;
 }
 
@@ -229,6 +226,8 @@ bool ps2_keyboard_device::start()
 
   KL_TRC_ENTRY;
 
+  set_device_status(DEV_STATUS::STARTING);
+
   if (parent)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Parent running\n");
@@ -242,6 +241,12 @@ bool ps2_keyboard_device::start()
     KL_TRC_TRACE(TRC_LVL::FLOW, "Parent not available\n");
     result = false;
     set_device_status(DEV_STATUS::FAILED);
+  }
+
+  if (result)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Successful start\n");
+    set_device_status(DEV_STATUS::OK);
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");

@@ -14,8 +14,6 @@
 #include "devices/device_monitor.h"
 #include "processor/processor.h"
 
-#warning PS2 constructor starts device.
-
 /// @brief Standard constructor.
 gen_ps2_controller_device::gen_ps2_controller_device() :
   IDevice{"Generic PS/2 controller", "ps2c", false},
