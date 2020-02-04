@@ -14,8 +14,6 @@
 // - There's no checking that DMA transfers are queued properly before beginning the transfer.
 // - Totally ignores the IDevice start/stop/reset paradigm.
 
-#warning ata::generic_device has pointer to parent.
-
 //#define ENABLE_TRACING
 
 #include "ata_pci_controller.h"
@@ -24,9 +22,6 @@
 #include "klib/klib.h"
 #include "devices/device_monitor.h"
 #include "processor/processor.h"
-
-#warning still using first_hdd, unlocked.
-extern ata::generic_device *first_hdd;
 
 using namespace ata;
 
@@ -65,15 +60,11 @@ bool pci_controller::start()
     if(cmd_identify(ident, i))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Found device\n");
-      ASSERT(dev::create_new_device(drives_by_index_num[i].child_ptr, self_ptr, this, i, ident));
-
-      // TEMP
-      if (first_hdd == nullptr)
-      {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Setting first_hdd\n");
-        first_hdd = drives_by_index_num[i].child_ptr.get();
-        break;
-      }
+      ASSERT(dev::create_new_device(drives_by_index_num[i].child_ptr,
+                                    self_ptr,
+                                    std::dynamic_pointer_cast<ata::generic_controller>(self_ptr),
+                                    i,
+                                    ident));
     }
   }
 
@@ -84,7 +75,7 @@ bool pci_controller::start()
     proc_register_irq_handler(channel_irq_nums[1], this);
   }
 
-  set_device_status(DEV_STATUS::STARTING);
+  set_device_status(DEV_STATUS::OK);
 
   return true;
 }

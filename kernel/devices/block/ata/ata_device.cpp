@@ -3,6 +3,8 @@
 //
 // Known defects:
 // - Amongst many others, does no error checking at all.
+// - By keeping a shared_ptr to the parent controller, there's a pointer cycle - this isn't a problem until
+//   hot-swappable ATA devices are implemented (if ever)
 
 //#define ENABLE_TRACING
 
@@ -25,7 +27,7 @@ using namespace ata;
 ///                    specific meaning and is effectively opaque to this device.
 ///
 /// @param identity_buf Output from an earlier IDENTIFY command used to show that this device existed.
-generic_device::generic_device(generic_controller *parent, uint16_t drive_index, identify_cmd_output &identity_buf) :
+generic_device::generic_device(std::shared_ptr<generic_controller> parent, uint16_t drive_index, identify_cmd_output &identity_buf) :
     IBlockDevice{"Generic ATA device", "ata"},
     parent_controller{parent},
     controller_index{drive_index}

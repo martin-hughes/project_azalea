@@ -9,6 +9,7 @@
 #include "klib/klib.h"
 #include "system_tree/fs/dev/dev_fs.h"
 #include "devices/device_monitor.h"
+#include "processor/timing/timing.h"
 
 #include "acpi/acpi_if.h"
 #include "devices/pci/pci.h"
@@ -20,13 +21,9 @@
 // TEMP Assistance constructing a filesystem until the device monitor is more developed.
 #include "system_tree/fs/fat/fat_fs.h"
 #include "system_tree/system_tree.h"
-std::shared_ptr<fat_filesystem> setup_initial_fs();
-
-// TEMP this is a shortcut to put the first HDD into until the device monitor and dev FS are more connected.
 #include "devices/block/proxy/block_proxy.h"
 #include "devices/block/ata/ata_device.h"
-extern ata::generic_device *first_hdd;
-ata::generic_device *first_hdd{nullptr};
+std::shared_ptr<fat_filesystem> setup_initial_fs(std::shared_ptr<ata::generic_device> first_hdd);
 
 extern generic_keyboard *keyb_ptr;
 extern std::shared_ptr<terms::generic> *term_ptr;
@@ -116,11 +113,43 @@ void dev_root_branch::scan_for_devices()
   keyb->set_receiver(t_r);
 
   // Setup a basic file system. Start by waiting for the first HDD to become ready.
-  // This does occasionally hit a race condition where first_hdd is actually set to the second ATA device.
-  while (first_hdd == nullptr) { };
-  while(first_hdd->get_device_status() != DEV_STATUS::OK) { };
-  kl_trc_trace(TRC_LVL::FLOW, "First HDD created\n");
-  std::shared_ptr<fat_filesystem> first_fs = setup_initial_fs();
+  uint64_t start_time = time_get_system_timer_count(true);
+  uint64_t end_time = start_time + (10ULL * 1000 * 1000 * 1000); // i.e. max wait of 10 seconds.
+
+  std::shared_ptr<ISystemTreeLeaf> hdd_leaf;
+  std::shared_ptr<ata::generic_device> hdd_dev;
+  bool ready{false};
+
+  // Keep trying to get the first ATA device until it is ready or we run out of time.
+  // There's an obvious assumption here that ATA1 is the desired HDD...
+  while (time_get_system_timer_count(true) < end_time)
+  {
+    if (system_tree()->get_child("\\dev\\all\\ata1", hdd_leaf) == ERR_CODE::NO_ERROR)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Got device leaf\n");
+      hdd_dev = std::dynamic_pointer_cast<ata::generic_device>(hdd_leaf);
+      if (hdd_dev)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Got device object\n");
+        while ((hdd_dev->get_device_status() != DEV_STATUS::OK) &&
+               (time_get_system_timer_count(true) < end_time))
+        {
+          // Just spin
+        }
+
+        if (hdd_dev->get_device_status() == DEV_STATUS::OK)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Started OK\n");
+          ready = true;
+          break;
+        }
+      }
+    }
+  }
+
+  ASSERT(ready);
+
+  std::shared_ptr<fat_filesystem> first_fs = setup_initial_fs(hdd_dev);
   ASSERT(first_fs != nullptr);
   ASSERT(system_tree()->add_child("\\root", std::dynamic_pointer_cast<ISystemTreeBranch>(first_fs)) == ERR_CODE::NO_ERROR);
 
@@ -164,10 +193,10 @@ dev_root_branch::dev_sub_branch::~dev_sub_branch()
 /// This function is temporary.
 ///
 /// @return Pointer toa FAT filesystem presumed to exist on the first attached HDD.
-std::shared_ptr<fat_filesystem> setup_initial_fs()
+std::shared_ptr<fat_filesystem> setup_initial_fs(std::shared_ptr<ata::generic_device> first_hdd)
 {
   KL_TRC_ENTRY;
-  ASSERT(first_hdd != nullptr); // new ata::generic_device(nullptr, 0);
+  ASSERT(first_hdd.get() != nullptr); // new ata::generic_device(nullptr, 0);
   std::unique_ptr<unsigned char[]> sector_buffer(new unsigned char[512]);
 #warning Should sort true parent-child relationship.
   std::shared_ptr<IDevice> empty;
@@ -192,7 +221,7 @@ std::shared_ptr<fat_filesystem> setup_initial_fs()
 
   kl_trc_trace(TRC_LVL::EXTRA, "First partition: ", (uint64_t)start_sector, " -> +", (uint64_t)sector_count, "\n");
   std::shared_ptr<block_proxy_device> pd;
-  ASSERT(dev::create_new_device(pd, empty, first_hdd, start_sector, sector_count));
+  ASSERT(dev::create_new_device(pd, empty, first_hdd.get(), start_sector, sector_count));
   while(pd->get_device_status() != DEV_STATUS::OK)
   { };
 
