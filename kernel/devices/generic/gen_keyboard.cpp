@@ -3,7 +3,7 @@
 ///
 /// At present these don't form a true driver so they seem a bit misplaced.
 // Known defects:
-// - Should generic_keyboard::set_receiver() lock?
+// - These functions don't form a true driver so they seem a bit misplaced.
 
 //#define ENABLE_TRACING
 
@@ -12,9 +12,7 @@
 #include "klib/klib.h"
 #include "devices/generic/gen_keyboard.h"
 #include "keyboard_maps.h"
-
-// This is a temporary addition until the device driver system is more developed.
-extern task_process *term_proc; ///< Tempo.
+#include <mutex>
 
 /// @brief Retrieve the properties of the key that has been pressed.
 ///
@@ -94,6 +92,7 @@ void generic_keyboard::set_receiver(std::shared_ptr<work::message_receiver> &new
 {
   KL_TRC_ENTRY;
 
+  std::scoped_lock<kernel_spinlock_obj> guard(receiver_lock);
   receiver = new_receiver;
 
   KL_TRC_EXIT;
@@ -107,7 +106,11 @@ void generic_keyboard::set_receiver(std::shared_ptr<work::message_receiver> &new
 void generic_keyboard::handle_key_down(KEYS key, special_keys specs)
 {
   char printable_char;
-  std::shared_ptr<work::message_receiver> recip{this->receiver.lock()};
+  std::shared_ptr<work::message_receiver> recip;
+  {
+    std::scoped_lock<kernel_spinlock_obj> guard(receiver_lock);
+    recip = this->receiver.lock();
+  }
 
   KL_TRC_ENTRY;
 
@@ -152,7 +155,11 @@ void generic_keyboard::handle_key_down(KEYS key, special_keys specs)
 void generic_keyboard::handle_key_up(KEYS key, special_keys specs)
 {
   char printable_char;
-  std::shared_ptr<work::message_receiver> recip{this->receiver.lock()};
+  std::shared_ptr<work::message_receiver> recip;
+  {
+    std::scoped_lock<kernel_spinlock_obj> guard(receiver_lock);
+    recip = this->receiver.lock();
+  }
 
   KL_TRC_ENTRY;
 

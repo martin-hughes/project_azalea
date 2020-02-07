@@ -61,9 +61,6 @@ void setup_task_parameters(task_process *startup_proc);
 std::shared_ptr<task_process> *system_process; ///< The process containing idle processes, etc.
 std::shared_ptr<task_process> *kernel_start_process; ///< Process running the kernel start procedure.
 
-extern task_process *term_proc;
-task_process *term_proc = nullptr; ///< Process running the main terminal (temporary variable)
-
 extern generic_keyboard *keyb_ptr;
 extern std::shared_ptr<terms::generic> *term_ptr;
 
