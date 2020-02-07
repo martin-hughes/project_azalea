@@ -1,8 +1,5 @@
 /// @file
 /// @brief Implementation for a simple RAM disk block device
-//
-// Known defects:
-// - Only lip service is paid to the IDevice interface - stop/start/reset don't really work.
 
 //#define ENABLE_TRACING
 
@@ -21,8 +18,6 @@ ramdisk_device::ramdisk_device(uint64_t num_blocks, uint64_t block_size) :
 {
   KL_TRC_ENTRY;
 
-  set_device_status(DEV_STATUS::STARTING);
-
   if ((this->_num_blocks == 0) || (this->_block_size == 0))
   {
     _ramdisk_storage = nullptr;
@@ -31,6 +26,7 @@ ramdisk_device::ramdisk_device(uint64_t num_blocks, uint64_t block_size) :
   else
   {
     _ramdisk_storage = new char[num_blocks * block_size];
+    set_device_status(DEV_STATUS::STOPPED);
   }
 
   KL_TRC_EXIT;
@@ -117,7 +113,12 @@ ERR_CODE ramdisk_device::read_blocks(uint64_t start_block,
   uint64_t read_start = start_block * this->_block_size;
   uint64_t read_length = num_blocks * this->_block_size;
 
-  if (this->_ramdisk_storage == nullptr)
+  if (get_device_status() != DEV_STATUS::OK)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Device not running\n");
+    ret = ERR_CODE::DEVICE_FAILED;
+  }
+  else if (this->_ramdisk_storage == nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "No storage available\n");
     ret = ERR_CODE::DEVICE_FAILED;
@@ -154,7 +155,12 @@ ERR_CODE ramdisk_device::write_blocks(uint64_t start_block,
   uint64_t write_start = start_block * this->_block_size;
   uint64_t write_length = num_blocks * this->_block_size;
 
-  if (this->_ramdisk_storage == nullptr)
+  if (get_device_status() != DEV_STATUS::OK)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Device not running\n");
+    ret = ERR_CODE::DEVICE_FAILED;
+  }
+  else if (this->_ramdisk_storage == nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "No storage available\n");
     ret = ERR_CODE::DEVICE_FAILED;

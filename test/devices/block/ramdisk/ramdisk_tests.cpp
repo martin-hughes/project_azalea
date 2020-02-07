@@ -17,6 +17,7 @@ TEST(RamdiskTest, EmptyDevice)
 
   ASSERT_EQ(device->num_blocks(), 0);
   ASSERT_EQ(device->block_size(), 0);
+  device->start();
   ASSERT_EQ(device->get_device_status(), DEV_STATUS::FAILED);
 
   ASSERT_EQ(device->read_blocks(0, 5, buffer.get(), 10), ERR_CODE::DEVICE_FAILED);
@@ -30,6 +31,7 @@ TEST(RamdiskTest, ReadWrite)
   const unsigned int num_blocks = 4;
   const unsigned int block_size = 512;
   std::unique_ptr<ramdisk_device> device(new ramdisk_device(num_blocks, block_size));
+  device->start();
   std::unique_ptr<char[]> buffer_in(new char[num_blocks * block_size]);
   std::unique_ptr<char[]> buffer_out(new char[num_blocks * block_size]);
 
