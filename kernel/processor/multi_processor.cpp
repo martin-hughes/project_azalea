@@ -42,7 +42,12 @@ uint32_t proc_mp_proc_count()
 /// @param proc_id The processor ID (not APIC ID) to signal.
 ///
 /// @param msg The message to be sent.
-void proc_mp_signal_processor(uint32_t proc_id, PROC_IPI_MSGS msg)
+///
+/// @param must_complete If set to true, this function will spin until the remote processor has finished handling the
+///                      sent message. This may deadlock, if, for example, the message is to suspend the remote proc.
+///                      If false, this function will return when the remote processor has received the message without
+///                      waiting for it to be handled.
+void proc_mp_signal_processor(uint32_t proc_id, PROC_IPI_MSGS msg, bool must_complete)
 {
   KL_TRC_ENTRY;
 
@@ -51,7 +56,7 @@ void proc_mp_signal_processor(uint32_t proc_id, PROC_IPI_MSGS msg)
 
   ASSERT(proc_id < processor_count);
 
-  proc_mp_x64_signal_proc(proc_id, msg);
+  proc_mp_x64_signal_proc(proc_id, msg, must_complete);
 
   KL_TRC_EXIT;
 }
@@ -104,7 +109,7 @@ void proc_stop_other_procs()
     if ((this_proc_id != i) && (proc_info_block[i].processor_running))
     {
       KL_TRC_TRACE(TRC_LVL::EXTRA, "Signalling processor", i, "\n");
-      proc_mp_signal_processor(i, PROC_IPI_MSGS::SUSPEND);
+      proc_mp_signal_processor(i, PROC_IPI_MSGS::SUSPEND, false);
     }
   }
 
@@ -140,13 +145,14 @@ void proc_mp_start_aps()
     KL_TRC_TRACE(TRC_LVL::FLOW, "Starting other processors\n");
     for (uint32_t i = 1; i < processor_count; i++)
     {
-      proc_mp_signal_processor(i, PROC_IPI_MSGS::RESUME);
+      proc_mp_signal_processor(i, PROC_IPI_MSGS::RESUME, true);
     }
   }
 
   KL_TRC_EXIT;
 }
 
+/* This code is currently unusued so don't bother compiling it.
 /// @brief Send an IPI message to all processors, including the one running this code.
 ///
 /// @param msg The message to send to all processors.
@@ -157,3 +163,4 @@ void proc_mp_signal_all_processors(PROC_IPI_MSGS msg)
     proc_mp_signal_processor(i, msg);
   }
 }
+*/

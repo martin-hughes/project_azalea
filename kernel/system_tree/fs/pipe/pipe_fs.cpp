@@ -4,7 +4,6 @@
 // Known defects:
 // - block_on_read is untested
 // - message send on write is untested.
-// - Does the parent weak_ptr need lock protection in case it is overwritten and locked at the same time?
 
 //#define ENABLE_TRACING
 

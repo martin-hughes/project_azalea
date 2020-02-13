@@ -76,6 +76,6 @@ extern "C" void *end_of_irq_ack_fn; ///< Function to call to acknowledge an IRQ.
 extern uint8_t interrupt_descriptor_table[NUM_INTERRUPTS * IDT_ENTRY_LEN];
 
 // Multi-processor control
-void proc_mp_x64_signal_proc(uint32_t proc_id, PROC_IPI_MSGS msg);
+void proc_mp_x64_signal_proc(uint32_t proc_id, PROC_IPI_MSGS msg, bool must_complete);
 extern "C" void proc_mp_x64_receive_signal_int();
 extern "C" void proc_mp_ap_startup();

@@ -35,9 +35,12 @@ enum class PROC_MP_X64_MSG_STATE
   /// Tells the target processor that a message is waiting for it.
   MSG_WAITING,
 
+  /// The target processor has received this message and will deal with it imminently.
+  ACKNOWLEDGED,
+
   /// The target processor sets this value after dealing with its IPI in order to let the source know it has done its
   /// work.
-  ACKNOWLEDGED,
+  COMPLETED,
 };
 
 /// A structure for storing details of inter-processor communications
@@ -321,7 +324,12 @@ uint32_t proc_mp_this_proc_id()
 /// @param proc_id The processor ID (not APIC ID) to signal.
 ///
 /// @param msg The message to be sent.
-void proc_mp_x64_signal_proc(uint32_t proc_id, PROC_IPI_MSGS msg)
+///
+/// @param must_complete If set to true, this function will spin until the remote processor has finished handling the
+///                      sent message. This may deadlock, if, for example, the message is to suspend the remote proc.
+///                      If false, this function will return when the remote processor has received the message without
+///                      waiting for it to be handled.
+void proc_mp_x64_signal_proc(uint32_t proc_id, PROC_IPI_MSGS msg, bool must_complete)
 {
   KL_TRC_ENTRY;
 
@@ -365,9 +373,9 @@ void proc_mp_x64_receive_signal_int()
 
   ASSERT(inter_proc_signals[this_proc_id].msg_control_state == PROC_MP_X64_MSG_STATE::MSG_WAITING);
 
-  proc_mp_receive_signal(inter_proc_signals[this_proc_id].msg_being_sent);
-
   inter_proc_signals[this_proc_id].msg_control_state = PROC_MP_X64_MSG_STATE::ACKNOWLEDGED;
+  proc_mp_receive_signal(inter_proc_signals[this_proc_id].msg_being_sent);
+  inter_proc_signals[this_proc_id].msg_control_state = PROC_MP_X64_MSG_STATE::COMPLETED;
 
   KL_TRC_EXIT;
 }
