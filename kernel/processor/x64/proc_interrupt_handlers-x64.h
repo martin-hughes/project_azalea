@@ -10,7 +10,11 @@
 
 // Specialised interrupt handlers:
 extern "C" void asm_proc_page_fault_handler();
-extern "C" void proc_page_fault_handler(uint64_t fault_code, uint64_t fault_addr, uint64_t fault_instruction);
+extern "C" void proc_page_fault_handler(uint64_t fault_code,
+                                        uint64_t fault_addr,
+                                        uint64_t fault_instruction,
+                                        uint64_t rsp,
+                                        uint64_t k_rsp);
 extern "C" void asm_task_switch_interrupt();
 
 // IRQ handlers

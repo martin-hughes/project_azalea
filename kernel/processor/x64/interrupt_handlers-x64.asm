@@ -26,10 +26,18 @@ asm_proc_page_fault_handler:
     push r13
     push r14
     push r15
-    mov rdi, [rsp + 128]
-    mov rsi, cr2
-    mov rdx, [rsp + 136]
+    mov rdi, [rsp + 128] ; Save error code
+    mov rsi, cr2         ; Save fault address
+    mov rdx, [rsp + 136] ; Save RIP
+    mov rcx, [rsp + 160] ; Save RSP
+
+    ALIGN_STACK_AND_SAVE
+    mov r8, r12 ; Copy address of kernel stack as a parameter
+
     call proc_page_fault_handler
+
+    RESTORE_ORIG_STACK
+
     pop r15
     pop r14
     pop r13

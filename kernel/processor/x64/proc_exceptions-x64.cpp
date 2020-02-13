@@ -24,9 +24,9 @@ namespace
   {
     task_thread *cur_thread = task_get_cur_thread();
 
-    if (!cur_thread || cur_thread->parent_process->kernel_mode)
+    if (!cur_thread || cur_thread->parent_process->kernel_mode || (r_rip > 0x8000000000000000ULL))
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Kernel mode process fault: ", error_string, "\n");
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Kernel space process fault: ", error_string, "\n");
       KL_TRC_TRACE(TRC_LVL::FLOW, "RIP: ", r_rip, ", RSP: ", r_rsp, "\n");
 
       panic(error_string, true, k_rsp, r_rip, r_rsp);
@@ -335,7 +335,13 @@ void proc_security_fault_handler(uint64_t rip, uint64_t rsp, uint64_t err_code, 
 /// @param fault_code See the Intel manual for more
 /// @param fault_addr See the Intel manual for more
 /// @param fault_instruction See the Intel manual for more
-void proc_page_fault_handler(uint64_t fault_code, uint64_t fault_addr, uint64_t fault_instruction)
+/// @param rsp Address of the stack in the thread where this interrupt was generated
+/// @param k_rsp Address of the stack of the interrupt handler
+void proc_page_fault_handler(uint64_t fault_code,
+                             uint64_t fault_addr,
+                             uint64_t fault_instruction,
+                             uint64_t rsp,
+                             uint64_t k_rsp)
 {
   KL_TRC_ENTRY;
   static bool in_page_fault = false;
@@ -355,5 +361,5 @@ void proc_page_fault_handler(uint64_t fault_code, uint64_t fault_addr, uint64_t 
     in_page_fault = false;
   }
   KL_TRC_EXIT;
-  panic("Page fault!");
+  panic("Page fault!", true, k_rsp, fault_instruction, rsp);
 }
