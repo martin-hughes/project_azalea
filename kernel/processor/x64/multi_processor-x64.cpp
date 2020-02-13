@@ -9,6 +9,9 @@
 ///
 /// Functions in this file that do not contain _x64 in their name would be generic to all platforms, but the exact
 /// implementation is platform specific.
+// Known defects
+// - Suspend and resume messages both do an 'asm("hlt")' so never reach completed. So what's the point? Does it cause
+//   any problems elsewhere? Not sure.
 
 //#define ENABLE_TRACING
 

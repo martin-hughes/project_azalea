@@ -41,9 +41,10 @@
 #include <intrin.h>
 #endif
 
-//#define AZALEA_SCHED_DIAGS
+//#define AZALEA_SCHED_TIME_DIAGS
+//#define AZALEA_SCHED_PERIODIC_DUMP
 
-#ifdef AZALEA_SCHED_DIAGS
+#ifdef AZALEA_SCHED_TIME_DIAGS
 #include "timing/hpet.h"
 #endif
 
@@ -69,10 +70,21 @@ namespace
   // Protects the thread cycle from two threads making simultaneous changes.
   kernel_spinlock thread_cycle_lock;
 
-#ifdef AZALEA_SCHED_DIAGS
+#ifdef AZALEA_SCHED_TIME_DIAGS
   uint64_t *timing_buffer = nullptr;
   uint64_t num_times_written = 0;
   const uint64_t max_times_written = 10000;
+#endif
+
+#ifdef AZALEA_SCHED_PERIODIC_DUMP
+
+#ifndef AZALEA_SCHED_DUMP_PERIOD
+#define AZALEA_SCHED_DUMP_PERIOD 996
+#endif
+
+  const uint64_t max_dump_count{AZALEA_SCHED_DUMP_PERIOD};
+
+  uint64_t current_dump_count{0};
 #endif
 }
 
@@ -136,7 +148,7 @@ void task_gen_init()
     idle_threads[i] = nullptr;
   }
 
-#ifdef AZALEA_SCHED_DIAGS
+#ifdef AZALEA_SCHED_TIME_DIAGS
   timing_buffer = reinterpret_cast<uint64_t *>(kmalloc(MEM_PAGE_SIZE));
   memset(timing_buffer, 0, MEM_PAGE_SIZE);
 #endif
@@ -227,7 +239,7 @@ task_thread *task_get_next_thread()
   proc_id = proc_mp_this_proc_id();
   schedule_start_time = time_get_system_timer_count(true);
 
-#ifdef AZALEA_SCHED_DIAGS
+#ifdef AZALEA_SCHED_TIME_DIAGS
   uint64_t our_count;
   our_count = num_times_written;
 
@@ -249,6 +261,47 @@ task_thread *task_get_next_thread()
 
   ASSERT(continue_this_thread != nullptr);
   ASSERT(current_threads != nullptr);
+
+#ifdef AZALEA_SCHED_PERIODIC_DUMP
+
+  if (proc_id == 0)
+  {
+    if (current_dump_count == max_dump_count)
+    {
+      kl_trc_trace(TRC_LVL::FLOW, "BEGIN TASK MANAGER DUMP\n");
+      for (uint16_t i = 0; i < proc_mp_proc_count(); i++)
+      {
+        kl_trc_trace(TRC_LVL::FLOW, "Proc: ", i,
+                                    ". Thr addr: ", current_threads[i],
+                                    ". RIP: ",
+                reinterpret_cast<task_x64_exec_context *>(current_threads[i]->execution_context)->saved_stack.proc_rip,
+                                    "\n");
+      }
+
+      task_thread *c{start_of_thread_cycle};
+      do
+      {
+        kl_trc_trace(TRC_LVL::FLOW, "Thread: ", c,
+                                    ". RIP: ",
+                                 reinterpret_cast<task_x64_exec_context *>(c->execution_context)->saved_stack.proc_rip,
+                                    ". Awake? ", c->permit_running,
+                                    "\n");
+
+        c = c->next_thread;
+      } while (c != start_of_thread_cycle);
+
+
+      kl_trc_trace(TRC_LVL::FLOW, "COMPLETE\n");
+
+      current_dump_count = 0;
+    }
+    else
+    {
+      ++current_dump_count;
+    }
+  }
+
+#endif
 
   if (continue_this_thread[proc_id])
   {
