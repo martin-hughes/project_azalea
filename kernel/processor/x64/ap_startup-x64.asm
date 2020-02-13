@@ -11,6 +11,8 @@ asm_proc_mp_ap_startup:
   and rax, qword 0xFFFFFFFFFFFFFFF0
   mov rsp, rax
 
+  mov rbp, 0
+
   mov rax, proc_mp_ap_startup
   call rax
   cli

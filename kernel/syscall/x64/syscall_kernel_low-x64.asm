@@ -93,6 +93,7 @@ asm_syscall_x64_syscall:
   add rax, r12
 
   mov rcx, r10
+  mov rbp, 0
   call [rax]
 
   jmp end_of_syscall
