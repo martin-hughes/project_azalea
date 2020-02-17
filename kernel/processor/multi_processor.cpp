@@ -82,7 +82,7 @@ void proc_mp_receive_signal(PROC_IPI_MSGS msg)
       break;
 
     case PROC_IPI_MSGS::TLB_SHOOTDOWN:
-      INCOMPLETE_CODE(TLB SHOOTDOWN MSG);
+      mem_invalidate_tlb();
       break;
 
     case PROC_IPI_MSGS::RELOAD_IDT:
@@ -152,15 +152,30 @@ void proc_mp_start_aps()
   KL_TRC_EXIT;
 }
 
-/* This code is currently unusued so don't bother compiling it.
 /// @brief Send an IPI message to all processors, including the one running this code.
 ///
 /// @param msg The message to send to all processors.
-void proc_mp_signal_all_processors(PROC_IPI_MSGS msg)
+///
+/// @param exclude_self If set to true, the message is sent to all processors except this one. Note that this function
+///                     may move between processors as part of the threading process. The processor excluded will be
+///                     the one that this function was running on at the time the function starts.
+///
+/// @param wait_for_complete If true, wait for each processor to handle this message in sequence. Don't return until
+///                          all processors have handled the message.
+void proc_mp_signal_all_processors(PROC_IPI_MSGS msg, bool exclude_self, bool wait_for_complete)
 {
+  uint32_t this_proc = proc_mp_this_proc_id();
+
+  KL_TRC_ENTRY;
+
   for (uint32_t i = 0; i < processor_count; i++)
   {
-    proc_mp_signal_processor(i, msg);
+    if (!(exclude_self && (i == this_proc)))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Signal processor ", i, "\n");
+      proc_mp_signal_processor(i, msg, wait_for_complete);
+    }
   }
+
+  KL_TRC_EXIT;
 }
-*/

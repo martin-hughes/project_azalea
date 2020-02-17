@@ -106,6 +106,7 @@ struct e820_pointer
 };
 
 void mem_gen_init(e820_pointer *e820_ptr);
+void mem_free_startup_mem();
 
 void *mem_allocate_physical_pages(uint32_t num_pages);
 void *mem_allocate_virtual_range(uint32_t num_pages, task_process *process_to_use = nullptr);
@@ -136,5 +137,6 @@ mem_process_info *mem_task_get_task0_entry();
 mem_process_info *mem_task_create_task_entry();
 void mem_task_free_task(task_process *proc);
 
+extern "C" void mem_invalidate_tlb();
 
 #endif /* MEM_H_ */

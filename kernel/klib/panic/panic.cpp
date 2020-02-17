@@ -1,6 +1,10 @@
 /// @file
 /// @brief Implements a kernel-stopping panic function.
 
+// Known defects:
+// - If a panic occurs during the sending of a message between processors, the panic will not be displayed because the
+//   function proc_stop_other_procs() will deadlock.
+
 #define ENABLE_TRACING
 
 #include "panic.h"

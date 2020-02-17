@@ -35,6 +35,8 @@ ERR_CODE system_tree_root::get_child(const std::string &name, std::shared_ptr<IS
   ERR_CODE result;
   KL_TRC_ENTRY;
 
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Look for name: ", name, "\n");
+
   if (name[0] != '\\')
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Incomplete path\n");

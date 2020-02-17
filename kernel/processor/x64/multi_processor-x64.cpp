@@ -221,15 +221,12 @@ void proc_mp_init()
       {
         // Keep waiting.
       }
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Processor ", i, " enabled\n");
 
       // We could probably handle this slightly more gracefully...
       ASSERT(proc_info_block[i].processor_running);
     }
   }
-
-  // The APs have had their NMI handlers overwritten, ready to go. They are triggered in to life by proc_mp_start_aps()
-  // Now all interrupt controllers needed for the BSP are good to go. Enable interrupts.
-  asm_proc_start_interrupts();
 
   KL_TRC_EXIT;
 }
@@ -336,26 +333,34 @@ void proc_mp_x64_signal_proc(uint32_t proc_id, PROC_IPI_MSGS msg, bool must_comp
 {
   KL_TRC_ENTRY;
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Sending signal to processor", proc_id, "\n");
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Message", static_cast<uint64_t>(msg), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Sending signal to processor ", proc_id, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Message ", static_cast<uint64_t>(msg), "\n");
 
   ASSERT(proc_id < processor_count);
 
+  ASSERT(inter_proc_signals != nullptr);
   klib_synch_spinlock_lock(inter_proc_signals[proc_id].signal_lock);
   ASSERT(inter_proc_signals[proc_id].msg_control_state == PROC_MP_X64_MSG_STATE::NO_MSG);
   inter_proc_signals[proc_id].msg_being_sent = msg;
   inter_proc_signals[proc_id].msg_control_state = PROC_MP_X64_MSG_STATE::MSG_WAITING;
 
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Receiving LAPIC: ", proc_info_block[proc_id].platform_data.lapic_id, "\n");
   proc_send_ipi(proc_info_block[proc_id].platform_data.lapic_id,
                 PROC_IPI_SHORT_TARGET::NONE,
                 PROC_IPI_INTERRUPT::NMI,
                 0,
                 false);
 
-  while(inter_proc_signals[proc_id].msg_control_state != PROC_MP_X64_MSG_STATE::ACKNOWLEDGED)
+  PROC_MP_X64_MSG_STATE cur_state;
+  bool completed;
+  do
   {
     // Spin while we wait.
-  }
+    cur_state = inter_proc_signals[proc_id].msg_control_state;
+    completed = (!must_complete && (cur_state == PROC_MP_X64_MSG_STATE::ACKNOWLEDGED)) ||
+                (cur_state == PROC_MP_X64_MSG_STATE::COMPLETED);
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Currrent state: ", static_cast<int>(cur_state), ". Completed? ", completed, "\n");
+  } while(!completed);
 
   inter_proc_signals[proc_id].msg_control_state = PROC_MP_X64_MSG_STATE::NO_MSG;
   klib_synch_spinlock_unlock(inter_proc_signals[proc_id].signal_lock);
@@ -373,12 +378,16 @@ void proc_mp_x64_receive_signal_int()
   KL_TRC_ENTRY;
 
   uint32_t this_proc_id = proc_mp_this_proc_id();
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Receiving interrupt on CPU ", this_proc_id, "\n");
 
+  ASSERT(inter_proc_signals != nullptr);
   ASSERT(inter_proc_signals[this_proc_id].msg_control_state == PROC_MP_X64_MSG_STATE::MSG_WAITING);
 
   inter_proc_signals[this_proc_id].msg_control_state = PROC_MP_X64_MSG_STATE::ACKNOWLEDGED;
   proc_mp_receive_signal(inter_proc_signals[this_proc_id].msg_being_sent);
   inter_proc_signals[this_proc_id].msg_control_state = PROC_MP_X64_MSG_STATE::COMPLETED;
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Leave\n");
 
   KL_TRC_EXIT;
 }

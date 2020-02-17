@@ -354,16 +354,22 @@ void mem_x64_unmap_virtual_page(uint64_t virt_addr, task_process *context)
   virt_addr_cpy = virt_addr_cpy >> 9;
   pml4_entry_idx = (virt_addr_cpy & 0x00000000000001FF);
 
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "PML4 idx: ", pml4_entry_idx, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "PDPT idx: ", page_dir_ptr_entry_idx, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "PDE idx: ", page_dir_entry_idx, "\n");
+
   // Start moving through the page table tree by looking at the PML4 table.
   encoded_entry = table_addr + pml4_entry_idx;
   if (PT_MARKED_PRESENT(*encoded_entry))
   {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Leaded PML4, get next table\n");
     // Get the physical address of the next table.
     table_phys_addr = (void *)mem_x64_phys_addr_from_pte(*encoded_entry);
   }
   else
   {
     // Presumably it isn't already mapped, so bail out.
+    KL_TRC_TRACE(TRC_LVL::FLOW, "No PML4, don't unmap\n");
     KL_TRC_EXIT;
     return;
   }
@@ -374,11 +380,13 @@ void mem_x64_unmap_virtual_page(uint64_t virt_addr, task_process *context)
   encoded_entry = table_addr + page_dir_ptr_entry_idx;
   if (PT_MARKED_PRESENT(*encoded_entry))
   {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Leaded PDPT, get next table\n");
     table_phys_addr = (void *)mem_x64_phys_addr_from_pte(*encoded_entry);
   }
   else
   {
     // Presumably the address is unmapped, return.
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to load PDPT, don't unmap\n");
     KL_TRC_EXIT;
     return;
   }
@@ -387,6 +395,7 @@ void mem_x64_unmap_virtual_page(uint64_t virt_addr, task_process *context)
   mem_set_working_page_dir((uint64_t)table_phys_addr);
   table_addr = (uint64_t *)working_table_virtual_addr;
   encoded_entry = table_addr + page_dir_entry_idx;
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Setting entry ", encoded_entry, "\n");
   *encoded_entry = 0;
 
   // We now need to flush this page table.
@@ -642,7 +651,7 @@ void *mem_get_phys_addr(void *virtual_addr, task_process *context)
 uint64_t *get_pml4_table_addr(task_process *context)
 {
   KL_TRC_ENTRY;
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Context", context, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Context: ", context, "\n");
 
   task_thread *cur_thread = task_get_cur_thread();
   task_process *cur_process;
@@ -681,7 +690,7 @@ uint64_t *get_pml4_table_addr(task_process *context)
   }
 
   ASSERT(table_addr != nullptr);
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Returning PML4 address", table_addr, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Returning PML4 address ", table_addr, "\n");
 
   KL_TRC_EXIT;
   return table_addr;
@@ -753,4 +762,23 @@ namespace
 
     return result;
   }
+}
+
+/// @brief Free memory and maps used only during system startup.
+///
+/// For example, the kernel is loaded, and started at an address of 1MB, but is linked at a higher memory address, so
+/// once the system is started the low address mapping can be freed.
+void mem_free_startup_mem()
+{
+  KL_TRC_ENTRY;
+
+  uint64_t *true_pml4_table = reinterpret_cast<uint64_t *>(&pml4_table);
+  true_pml4_table[0] = 0;
+  mem_invalidate_page_table(0);
+  KL_TRC_TRACE(TRC_LVL::FLOW, "PML4 entry 0 reset at address: ", get_pml4_table_addr(nullptr), "\n");
+
+  proc_mp_signal_all_processors(PROC_IPI_MSGS::TLB_SHOOTDOWN, true, false);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Signals sent\n");
+
+  KL_TRC_EXIT;
 }

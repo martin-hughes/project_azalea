@@ -231,7 +231,7 @@ void task_yield();
 uint32_t proc_mp_proc_count();
 uint32_t proc_mp_this_proc_id();
 void proc_mp_signal_processor(uint32_t proc_id, PROC_IPI_MSGS msg, bool must_complete);
-void proc_mp_signal_all_processors(PROC_IPI_MSGS msg);
+void proc_mp_signal_all_processors(PROC_IPI_MSGS msg, bool exclude_self, bool wait_for_complete);
 void proc_mp_receive_signal(PROC_IPI_MSGS msg);
 
 // Force the scheduler to re-schedule this thread continually, or allow it to schedule normally. This allows a thread

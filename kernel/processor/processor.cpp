@@ -307,6 +307,8 @@ void proc_interrupt_slowpath_thread()
   ASSERT(interrupt_table_cfgd);
   uint32_t interrupt_num;
 
+  task_get_cur_thread()->is_worker_thread = true;
+
   while(1)
   {
     for (uint32_t i = 0; i < PROC_NUM_INTERRUPTS; i++)

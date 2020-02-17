@@ -148,6 +148,7 @@ void mem_x64_pml4_synchronize(void *updated_pml4_table)
   {
     proc_data = (process_x64_data *)list_item->item;
     pml4_destination = (uint8_t *)(proc_data->pml4_virt_addr + PML4_LENGTH / 2);
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Copying from ", pml4_copy_buffer, " to ", pml4_destination, "\n");
     memcpy((void *)pml4_destination, (void *)pml4_copy_buffer, PML4_LENGTH / 2);
 
     updated_pml4s++;

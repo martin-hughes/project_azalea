@@ -295,7 +295,7 @@ void task_install_task_switcher()
 {
   KL_TRC_ENTRY;
 
-  proc_configure_idt_entry(TM_INTERRUPT_NUM, 0, (void *)asm_task_switch_interrupt, 2);
+  proc_configure_idt_entry(TM_INTERRUPT_NUM, 0, (void *)asm_task_switch_interrupt, 3);
   asm_proc_install_idt();
 
   KL_TRC_EXIT;

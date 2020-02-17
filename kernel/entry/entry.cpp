@@ -112,12 +112,14 @@ int main(uint32_t magic_number, multiboot_hdr *mb_header)
   kernel_start_process = new std::shared_ptr<task_process>();
 
   *system_process = task_init();
+  mem_free_startup_mem();
 
   KL_TRC_TRACE(TRC_LVL::IMPORTANT, "Welcome to the OS!\n");
 
   *kernel_start_process = task_process::create(kernel_start, true, mem_task_get_task0_entry());
   (*kernel_start_process)->start_process();
 
+  proc_start_interrupts();
   task_start_tasking();
 
   // If the kernel gets back to here, just run in a loop. The task manager will soon kick in.
