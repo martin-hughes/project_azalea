@@ -21,6 +21,8 @@ public:
 
 class handled_msg : public msg::root_msg
 {
+public:
+  handled_msg() : msg::root_msg{0} { };
   bool handled{false};
 };
 

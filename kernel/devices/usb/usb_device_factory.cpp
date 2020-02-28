@@ -63,11 +63,14 @@ void initialise_usb_system()
 /// This takes an initialised device core and creates the generic part of the driver to drive it.
 ///
 /// @param device_core The USB controller-specific device core to create a driver around.
-void main_factory::create_device(std::shared_ptr<generic_core> device_core)
+///
+/// @param phase The phase of creation to execute
+void main_factory::create_device(std::shared_ptr<generic_core> device_core, CREATION_PHASE phase)
 {
   KL_TRC_ENTRY;
 
-  std::unique_ptr<create_device_work_item> item = std::make_unique<create_device_work_item>(device_core);
+  std::unique_ptr<create_device_work_item> item =
+    std::make_unique<create_device_work_item>(device_core, phase);
   work::queue_message(*factory, std::move(item));
 
   KL_TRC_EXIT;
@@ -107,19 +110,33 @@ void main_factory::create_device_handler(std::unique_ptr<create_device_work_item
 
   KL_TRC_ENTRY;
 
-  device_core->do_device_discovery();
+  switch(item->cur_phase)
+  {
+  case CREATION_PHASE::NOT_STARTED:
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Do discovery first\n");
+    device_core->do_device_discovery();
+    break;
+
+  case CREATION_PHASE::DISCOVERY_COMPLETE:
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Discovery completed\n");
 
 #ifdef ENABLE_TRACING
-  trace_device_descriptors(device_core);
+    trace_device_descriptors(device_core);
 #endif
+    // Note that at present select_configuration() doesn't communicate with the device, so doesn't need to wait for any
+    // commands to complete, so doesn't need an extra phase of device creation.
+    config_idx = select_configuration(device_core);
+    if (!device_core->configure_device(config_idx))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Device creation failed\n");
+    }
+    break;
 
-  config_idx = select_configuration(device_core);
-  if (!device_core->configure_device(config_idx))
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Device creation failed\n");
-  }
-  else
-  {
+  case CREATION_PHASE::DEVICE_CONFIGURED:
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Device configuration complete, instantiate main driver\n");
+
+    config_idx = device_core->active_configuration;
+
     // At some time in the future, we will support looking up whole devices, but not just yet - we just do interfaces.
     for (uint8_t i = 0; i < device_core->configurations[config_idx].desc.num_interfaces; i++)
     {
@@ -158,6 +175,10 @@ void main_factory::create_device_handler(std::unique_ptr<create_device_work_item
     devices->insert({num_devices, new_device});
     num_devices++;
     klib_synch_spinlock_unlock(tree_lock);
+    break;
+
+  default:
+    panic("Unknown USB creation phase");
   }
 
   KL_TRC_EXIT;
@@ -166,10 +187,16 @@ void main_factory::create_device_handler(std::unique_ptr<create_device_work_item
 /// @brief Simple constructor
 ///
 /// @param core The core to store in this work item.
-main_factory::create_device_work_item::create_device_work_item(std::shared_ptr<generic_core> core) :
-  device_core{core}
+///
+/// @param discovery_done One of the steps to creating a USB device is "discovery" - the process of reading all the
+///                       device and config descriptors. Has this step been completed for this core?
+main_factory::create_device_work_item::create_device_work_item(std::shared_ptr<generic_core> core,
+                                                               CREATION_PHASE phase) :
+  msg::root_msg{SM_USB_CREATE_DEVICE},
+  device_core{core},
+  cur_phase{phase}
 {
-  this->message_id = SM_USB_CREATE_DEVICE;
+
 }
 
 }; // USB namespace.

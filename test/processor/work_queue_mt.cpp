@@ -29,6 +29,7 @@ public:
 class short_msg : public msg::root_msg
 {
 public:
+  short_msg() : msg::root_msg{0} { };
   bool handled{false};
 };
 

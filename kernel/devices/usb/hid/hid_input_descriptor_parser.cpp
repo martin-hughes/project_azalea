@@ -94,7 +94,7 @@ bool parse_descriptor(std::unique_ptr<uint8_t[]> &raw_descriptor,
     data_mask = ~data_mask;
     data_buffer = data_buffer & data_mask;
 
-    kl_trc_trace(TRC_LVL::FLOW, "Tag: ", tag->raw, ", Data: ", data_buffer, ", length: ", data_length, "\n");
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Tag: ", tag->raw, ", Data: ", data_buffer, ", length: ", data_length, "\n");
 
     // Advance the pointers for the next pass.
     raw_ptr += data_length;
@@ -218,8 +218,15 @@ namespace
 
     case HID_MAIN_ITEMS::END_COLLECTION:
       KL_TRC_TRACE(TRC_LVL::FLOW, "End collection\n");
+      ASSERT(parser.current_collection);
       collection_ptr = parser.current_collection->parent_collection;
-      collection_ptr->parent_collection = nullptr; // Ensure that this isn't used after the end of parsing.
+      if (collection_ptr)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Null out parent collection pointer\n");
+        // Ensure that this isn't used after the end of parsing. This is really a cross check that the parser isn't
+        // crazy.
+        collection_ptr->parent_collection = nullptr;
+      }
       parser.current_collection = collection_ptr;
       break;
 
@@ -230,6 +237,7 @@ namespace
     }
 
     // Reset the parser's local state after each Main item.
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Reset parser state\n");
     parser.local_state = parser_local_state();
 
     KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");

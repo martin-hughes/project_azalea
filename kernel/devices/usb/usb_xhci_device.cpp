@@ -9,6 +9,7 @@
 
 #include "klib/klib.h"
 #include "devices/usb/usb_xhci_device.h"
+#include "usb.h"
 
 using namespace usb::xhci;
 
@@ -23,7 +24,6 @@ device_core::device_core(controller *parent, uint8_t port, root_port *parent_por
   parent{parent},
   port_num{port},
   parent_port{parent_port},
-  last_known_state{DEV_STATE::UNKNOWN},
   slot_id{0},
   current_max_packet_size{0},
   dev_context{nullptr}
@@ -32,10 +32,34 @@ device_core::device_core(controller *parent, uint8_t port, root_port *parent_por
 
   klib_synch_spinlock_init(current_transfers_lock);
 
-  last_known_state = DEV_STATE::CREATE_CONTEXT;
-  parent->request_slot(this);
-
   KL_TRC_EXIT;
+}
+
+/// @brief Create a new instance of an XHCI device core.
+///
+/// @param parent The parent controller, must not be nullptr.
+///
+/// @param port The ID of the port on the controller this device is connected to.
+///
+/// @param parent_port Pointer to the port object in the controller that this device is connected to.
+///
+/// @return Shared pointer to newly created device.
+std::shared_ptr<device_core> device_core::create(controller *parent, uint8_t port, root_port *parent_port)
+{
+  std::shared_ptr<device_core> result;
+
+  KL_TRC_ENTRY;
+
+  result = std::shared_ptr<device_core>(new device_core(parent, port, parent_port));
+  result->self_weak_ptr = result;
+
+  result->current_state = CORE_STATE::CREATE_CONTEXT;
+  parent->request_slot(result);
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Newly created object pointer: ", result.get(), "\n");
+  KL_TRC_EXIT;
+
+  return result;
 }
 
 device_core::~device_core()
@@ -133,22 +157,18 @@ bool device_core::device_request(device_request_type request_type,
     if (result)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Transfer queued, add to responses list\n");
-      transfer_item = std::make_shared<normal_transfer>(nullptr, nullptr, 0);
-      ASSERT(map_contains(current_transfers, status_stage_phys_addr));
+      transfer_item = normal_transfer::create(this->self_weak_ptr.lock(), nullptr, 0);
+      ASSERT(!map_contains(current_transfers, status_stage_phys_addr));
       current_transfers.insert({status_stage_phys_addr, transfer_item});
     }
 
     klib_synch_spinlock_unlock(current_transfers_lock);
 
-    // Ring doorbell of transfer ring.
-    parent->ring_doorbell(this->slot_id, EP_DOORBELL_CODE::CONTROL_EP_0);
-
     // Wait for response.
     if (result)
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Wait for response\n");
-      transfer_item->wait_for_signal(WaitObject::MAX_WAIT);
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Got response\n");
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Ring doorbell for new transfer\n");
+      parent->ring_doorbell(this->slot_id, EP_DOORBELL_CODE::CONTROL_EP_0);
     }
   }
 
@@ -168,7 +188,7 @@ void device_core::handle_slot_enabled(uint8_t slot_id, device_context *new_outpu
 {
   KL_TRC_ENTRY;
 
-  if (last_known_state == DEV_STATE::CREATE_CONTEXT)
+  if (current_state == CORE_STATE::CREATE_CONTEXT)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Slot enabled\n");
 
@@ -176,7 +196,7 @@ void device_core::handle_slot_enabled(uint8_t slot_id, device_context *new_outpu
 
     def_ctrl_endpoint_transfer_ring = std::make_unique<trb_transfer_ring>(128);
 
-    last_known_state = DEV_STATE::ENABLED;
+    current_state = CORE_STATE::ENABLED;
     current_max_packet_size = parent_port->get_default_max_packet_size();
 
     dev_input_context = std::make_unique<input_context>();
@@ -201,12 +221,15 @@ void device_core::handle_slot_enabled(uint8_t slot_id, device_context *new_outpu
 
     this->slot_id = slot_id;
 
-    parent->address_device(this, reinterpret_cast<uint64_t>(mem_get_phys_addr(dev_input_context.get())), slot_id);
+    std::shared_ptr<device_core> self_shared = std::dynamic_pointer_cast<device_core>(self_weak_ptr.lock());
+    ASSERT(self_shared);
+
+    parent->address_device(self_shared, reinterpret_cast<uint64_t>(mem_get_phys_addr(dev_input_context.get())), slot_id);
   }
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Spurious slot enabled event\n");
-    last_known_state = DEV_STATE::UNKNOWN;
+    current_state = CORE_STATE::FAILED;
   }
 
   KL_TRC_EXIT;
@@ -218,17 +241,17 @@ void device_core::handle_addressed()
 {
   KL_TRC_ENTRY;
 
-  if (last_known_state == DEV_STATE::ENABLED)
+  if (current_state == CORE_STATE::ENABLED)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Now addressed - new slot state: ", dev_context->slot.slot_state, "\n");
-    last_known_state = DEV_STATE::ADDRESSED;
+    current_state = CORE_STATE::ADDRESSED;
 
     parent_port->handle_child_device_addressed();
   }
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Spurious device addressed event\n");
-    last_known_state = DEV_STATE::UNKNOWN;
+    current_state = CORE_STATE::FAILED;
   }
 
   KL_TRC_EXIT;
@@ -297,7 +320,10 @@ bool device_core::set_max_packet_size(uint16_t new_packet_size)
     dev_input_context->control.add_context_flags = 3;
     dev_input_context->device.ep_0_bi_dir.max_packet_size = new_packet_size;
 
-    if (!this->parent->evaluate_context(this,
+    std::shared_ptr<device_core> self_shared = std::dynamic_pointer_cast<device_core>(self_weak_ptr.lock());
+    ASSERT(self_shared);
+
+    if (!this->parent->evaluate_context(self_shared,
                                         reinterpret_cast<uint64_t>(mem_get_phys_addr(dev_input_context.get())),
                                         this->slot_id))
     {
@@ -319,7 +345,28 @@ bool device_core::set_max_packet_size(uint16_t new_packet_size)
 bool device_core::configure_device(uint8_t config_num)
 {
   bool result = false;
-  device_config *active_cfg_ptr = &configurations[config_num];
+
+  KL_TRC_ENTRY;
+
+  current_state = CORE_STATE::SETTING_CONFIG;
+  result = set_configuration(config_num);
+
+  if (!result)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Device configuration failed!\n");
+    current_state = CORE_STATE::FAILED;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+void device_core::configuration_set()
+{
+  bool result{true};
+  device_config *active_cfg_ptr = &configurations[this->active_configuration];
   endpoint_descriptor *endpoint = nullptr;
   endpoint_context *cur_endpoint_ctxt = nullptr;
   uint8_t addr;
@@ -327,118 +374,125 @@ bool device_core::configure_device(uint8_t config_num)
   uint32_t flag_number;
 
   KL_TRC_ENTRY;
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Device config set, configure endpoints\n");
+  dev_input_context->control.add_context_flags = 1;
 
-  result = set_configuration(config_num);
+  for (uint8_t i = 0; i < active_cfg_ptr->desc.num_interfaces; i++)
+  {
+    for (uint8_t j = 0; j < active_cfg_ptr->interfaces[i].desc.num_endpoints; j++)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Configure endpoint ", i, ":", j);
+      endpoint = &active_cfg_ptr->interfaces[i].endpoints[j];
+
+      in_direction = ((endpoint->endpoint_address & 0x80) != 0); // In or out direction endpoint?
+      addr = endpoint->endpoint_address & 0x0F; // Truncate reserved and ignored bits.
+
+      transfer_rings[addr][in_direction ? 1 : 0] = std::make_unique<trb_transfer_ring>(1024);
+      cur_endpoint_ctxt = in_direction ?
+                                &dev_input_context->device.endpoints[addr - 1].in :
+                                &dev_input_context->device.endpoints[addr - 1].out;
+
+      flag_number = (addr * 2) + (in_direction ? 1 : 0);
+      dev_input_context->control.add_context_flags |= (1 << flag_number);
+      KL_TRC_TRACE(TRC_LVL::FLOW, ", new flags: ", dev_input_context->control.add_context_flags, "\n");
+
+      switch (endpoint->attributes.transfer_type)
+      {
+      case 0: // Control endpoint.
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Control endpoint number: ", endpoint->endpoint_address, "\n");
+
+        if (in_direction)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Tried to create an inwards-only control EP\n");
+          result = false;
+          break;
+        }
+
+        cur_endpoint_ctxt->endpoint_state = 0;
+        cur_endpoint_ctxt->mult = 0;
+        cur_endpoint_ctxt->max_primary_streams = 0;
+        cur_endpoint_ctxt->linear_stream_array = 1;
+        cur_endpoint_ctxt->interval = endpoint->service_interval;
+        cur_endpoint_ctxt->max_esit_payload_hi = 0;
+        cur_endpoint_ctxt->error_count = 0;
+        cur_endpoint_ctxt->endpoint_type = EP_TYPES::CONTROL;
+        cur_endpoint_ctxt->host_initiate_disable = 0;
+        cur_endpoint_ctxt->max_burst_size = 0;
+        cur_endpoint_ctxt->max_packet_size = endpoint->max_packet_size;
+        cur_endpoint_ctxt->tr_dequeue_phys_ptr = reinterpret_cast<uint64_t>(
+                                                  transfer_rings[addr][0]->get_phys_base_address());
+        cur_endpoint_ctxt->dequeue_cycle_state = 1;
+        // Ideally, we'd keep a track of this, but the spec says this is reasonable starting value:
+        cur_endpoint_ctxt->average_trb_length = 8;
+        cur_endpoint_ctxt->max_esit_payload_lo = 0;
+
+        break;
+
+      case 1: // Isochronous endpoint
+      case 2: // Bulk endpoint
+        INCOMPLETE_CODE("Unsupported endpoint type");
+        break;
+
+      case 3: // Interrupt endpoint
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Interrupt ", in_direction ? "IN" : "OUT", " endpoint number: ", addr, "\n");
+        cur_endpoint_ctxt->endpoint_state = 0;
+        cur_endpoint_ctxt->mult = 0;
+        cur_endpoint_ctxt->max_primary_streams = 0;
+        cur_endpoint_ctxt->linear_stream_array = 1;
+        cur_endpoint_ctxt->interval = endpoint->service_interval;
+        cur_endpoint_ctxt->max_esit_payload_hi = 0;
+        cur_endpoint_ctxt->error_count = 0;
+        cur_endpoint_ctxt->endpoint_type = in_direction ? EP_TYPES::INTERRUPT_IN : EP_TYPES::INTERRUPT_OUT;
+        cur_endpoint_ctxt->host_initiate_disable = 0;
+        cur_endpoint_ctxt->max_burst_size = 0;
+        cur_endpoint_ctxt->max_packet_size = endpoint->max_packet_size;
+        cur_endpoint_ctxt->tr_dequeue_phys_ptr = reinterpret_cast<uint64_t>(
+                                                  transfer_rings[addr][in_direction ? 1:0]->get_phys_base_address());
+        cur_endpoint_ctxt->dequeue_cycle_state = 1;
+        cur_endpoint_ctxt->average_trb_length = endpoint->max_packet_size;
+        cur_endpoint_ctxt->max_esit_payload_lo = 0;
+
+        break;
+
+      default:
+        panic("Invalid USB endpoint transfer type.");
+      }
+      ASSERT(cur_endpoint_ctxt->tr_dequeue_phys_ptr != 0);
+    }
+  }
+
   if (result)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Device config set, configure endpoints\n");
-    dev_input_context->control.add_context_flags = 1;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Endpoint config data setup, send configure message\n");
 
-    for (uint8_t i = 0; i < active_cfg_ptr->desc.num_interfaces; i++)
-    {
-      for (uint8_t j = 0; j < active_cfg_ptr->interfaces[i].desc.num_endpoints; j++)
-      {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Configure endpoint ", i, ":", j);
-        endpoint = &active_cfg_ptr->interfaces[i].endpoints[j];
+    std::shared_ptr<device_core> self_shared = std::dynamic_pointer_cast<device_core>(self_weak_ptr.lock());
+    ASSERT(self_shared);
 
-        in_direction = ((endpoint->endpoint_address & 0x80) != 0); // In or out direction endpoint?
-        addr = endpoint->endpoint_address & 0x0F; // Truncate reserved and ignored bits.
-
-        transfer_rings[addr][in_direction ? 1 : 0] = std::make_unique<trb_transfer_ring>(1024);
-        cur_endpoint_ctxt = in_direction ?
-                                  &dev_input_context->device.endpoints[addr - 1].in :
-                                  &dev_input_context->device.endpoints[addr - 1].out;
-
-        flag_number = (addr * 2) + (in_direction ? 1 : 0);
-        dev_input_context->control.add_context_flags |= (1 << flag_number);
-        KL_TRC_TRACE(TRC_LVL::FLOW, ", new flags: ", dev_input_context->control.add_context_flags, "\n");
-
-        switch (endpoint->attributes.transfer_type)
-        {
-        case 0: // Control endpoint.
-          KL_TRC_TRACE(TRC_LVL::FLOW, "Control endpoint number: ", endpoint->endpoint_address, "\n");
-
-          if (in_direction)
-          {
-            KL_TRC_TRACE(TRC_LVL::FLOW, "Tried to create an inwards-only control EP\n");
-            result = false;
-            break;
-          }
-
-          cur_endpoint_ctxt->endpoint_state = 0;
-          cur_endpoint_ctxt->mult = 0;
-          cur_endpoint_ctxt->max_primary_streams = 0;
-          cur_endpoint_ctxt->linear_stream_array = 1;
-          cur_endpoint_ctxt->interval = endpoint->service_interval;
-          cur_endpoint_ctxt->max_esit_payload_hi = 0;
-          cur_endpoint_ctxt->error_count = 0;
-          cur_endpoint_ctxt->endpoint_type = EP_TYPES::CONTROL;
-          cur_endpoint_ctxt->host_initiate_disable = 0;
-          cur_endpoint_ctxt->max_burst_size = 0;
-          cur_endpoint_ctxt->max_packet_size = endpoint->max_packet_size;
-          cur_endpoint_ctxt->tr_dequeue_phys_ptr = reinterpret_cast<uint64_t>(
-                                                   transfer_rings[addr][0]->get_phys_base_address());
-          cur_endpoint_ctxt->dequeue_cycle_state = 1;
-          // Ideally, we'd keep a track of this, but the spec says this is reasonable starting value:
-          cur_endpoint_ctxt->average_trb_length = 8;
-          cur_endpoint_ctxt->max_esit_payload_lo = 0;
-
-          break;
-
-        case 1: // Isochronous endpoint
-        case 2: // Bulk endpoint
-          INCOMPLETE_CODE("Unsupported endpoint type");
-          break;
-
-        case 3: // Interrupt endpoint
-          KL_TRC_TRACE(TRC_LVL::FLOW, "Interrupt ", in_direction ? "IN" : "OUT", " endpoint number: ", addr, "\n");
-          cur_endpoint_ctxt->endpoint_state = 0;
-          cur_endpoint_ctxt->mult = 0;
-          cur_endpoint_ctxt->max_primary_streams = 0;
-          cur_endpoint_ctxt->linear_stream_array = 1;
-          cur_endpoint_ctxt->interval = endpoint->service_interval;
-          cur_endpoint_ctxt->max_esit_payload_hi = 0;
-          cur_endpoint_ctxt->error_count = 0;
-          cur_endpoint_ctxt->endpoint_type = in_direction ? EP_TYPES::INTERRUPT_IN : EP_TYPES::INTERRUPT_OUT;
-          cur_endpoint_ctxt->host_initiate_disable = 0;
-          cur_endpoint_ctxt->max_burst_size = 0;
-          cur_endpoint_ctxt->max_packet_size = endpoint->max_packet_size;
-          cur_endpoint_ctxt->tr_dequeue_phys_ptr = reinterpret_cast<uint64_t>(
-                                                   transfer_rings[addr][in_direction ? 1:0]->get_phys_base_address());
-          cur_endpoint_ctxt->dequeue_cycle_state = 1;
-          cur_endpoint_ctxt->average_trb_length = endpoint->max_packet_size;
-          cur_endpoint_ctxt->max_esit_payload_lo = 0;
-
-          break;
-
-        default:
-          panic("Invalid USB endpoint transfer type.");
-        }
-        ASSERT(cur_endpoint_ctxt->tr_dequeue_phys_ptr != 0);
-      }
-    }
-
-    result = this->parent->configure_endpoints(this,
+    result = this->parent->configure_endpoints(self_shared,
                                                reinterpret_cast<uint64_t>(mem_get_phys_addr(dev_input_context.get())),
                                                this->slot_id);
-
   }
 
-  if (result)
+  if (!result)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Configuration successful.\n");
-    last_known_state = DEV_STATE::CONFIGURED;
-  }
-  else
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Device configuration failed!\n");
-    last_known_state = DEV_STATE::UNKNOWN;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Endpoint config failed\n");
+    current_state = CORE_STATE::FAILED;
   }
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
+}
 
-  return result;
+/// @brief Called as a result of all endpoints being configured during the setup process.
+void device_core::endpoints_configured()
+{
+  KL_TRC_ENTRY;
+
+  ASSERT(current_state == CORE_STATE::SETTING_CONFIG);
+  current_state = CORE_STATE::STARTED;
+
+  usb::main_factory::create_device(self_weak_ptr.lock(), usb::main_factory::CREATION_PHASE::DEVICE_CONFIGURED);
+
+  KL_TRC_EXIT;
 }
 
 bool device_core::queue_transfer(uint8_t endpoint_num,
@@ -486,4 +540,52 @@ bool device_core::queue_transfer(uint8_t endpoint_num,
   KL_TRC_EXIT;
 
   return result;
+}
+
+void device_core::handle_message(std::unique_ptr<msg::root_msg> &message)
+{
+  KL_TRC_ENTRY;
+
+  switch(message->message_id)
+  {
+  case SM_XHCI_CMD_COMPLETE:
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Handle XHCI command completion\n");
+    {
+      command_complete_msg *cc_msg = dynamic_cast<command_complete_msg *>(message.get());
+      ASSERT(cc_msg);
+
+      if (cc_msg->completion_code != C_CODES::SUCCESS)
+      {
+        INCOMPLETE_CODE("Command failed");
+      }
+      else
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Received command response for TRB type ", cc_msg->generated_command, "\n");
+        switch (cc_msg->generated_command)
+        {
+        case TRB_TYPES::EVAL_CONTEXT_CMD:
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Evaluate context command - must be set packet size\n");
+          set_max_packet_size_complete();
+          break;
+
+        case TRB_TYPES::CONFIG_ENDPOINT_CMD:
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Configure endpoint command response\n");
+          endpoints_configured();
+          break;
+
+        default:
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Unknown command: ", cc_msg->generated_command);
+          INCOMPLETE_CODE("Unknown command response\n");
+        }
+      }
+    }
+    break;
+
+  default:
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Pass message with ID ", message->message_id, " to parent\n");
+    generic_core::handle_message(message);
+    break;
+  }
+
+  KL_TRC_EXIT;
 }

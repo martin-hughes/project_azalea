@@ -45,7 +45,9 @@ namespace usb
     /// The descriptor pointers in this list will point in to the buffer of raw_descriptor.
     klib_list<descriptor_header *> other_descriptors;
 
-    std::unique_ptr<uint8_t[]> raw_descriptor; ///< Copy of the descriptor in raw format.
+    std::unique_ptr<uint8_t[]> raw_descriptor{nullptr}; ///< Copy of the descriptor in raw format.
+
+    uint32_t raw_descriptor_length{0}; ///< Size of the buffer currently stored in raw_descriptor.
   };
 
   /// @brief Known device classes that could populate the "Class" field.
@@ -77,27 +79,46 @@ namespace usb
 
   /// @brief Stores details of a normal (non-command) USB transfer.
   ///
-  class normal_transfer : public WaitForFirstTriggerObject
+  class normal_transfer
   {
+  protected:
+    normal_transfer(std::shared_ptr<work::message_receiver> receiver,
+                    std::unique_ptr<uint8_t[]> buffer,
+                    uint32_t length);
   public:
-    normal_transfer(generic_device *owner, std::unique_ptr<uint8_t[]> buffer, uint32_t length);
+    static std::shared_ptr<normal_transfer> create(std::shared_ptr<work::message_receiver> receiver,
+                                                   std::unique_ptr<uint8_t[]> buffer,
+                                                   uint32_t length);
     virtual ~normal_transfer();
-    virtual void owner_dying();
 
-    /// @brief Trigger waiting threads to continue, but also signal the owner object that this transfer is complete.
+    /// @brief Send a message to the receiver object that this transfer is complete.
     ///
-    virtual void set_response_complete() { this->trigger_all_threads(); };
+    virtual void set_response_complete();
 
     std::unique_ptr<uint8_t[]> transfer_buffer; ///< The buffer containing the transfer to either send or receive.
     uint32_t buffer_size; ///< The number of bytes in the buffer.
 
   protected:
-    generic_device *owner_device; ///< The USB device that this transfer belongs to.
+    /// The object that should be signalled when this transfer is complete.
+    std::shared_ptr<work::message_receiver> msg_receiver;
+
+    /// Stores a "this" pointer that works with the standard library shared pointers.
+    std::weak_ptr<normal_transfer> self_weak_ptr;
+  };
+
+  /// @brief Message sent to receiver class when a transfer is complete.
+  class transfer_complete_msg : public msg::root_msg
+  {
+  public:
+    transfer_complete_msg(std::shared_ptr<normal_transfer> &completed_transfer);
+    ~transfer_complete_msg() = default;
+
+    std::shared_ptr<normal_transfer> transfer;
   };
 
   /// @brief Generic USB device core.
   ///
-  class generic_core
+  class generic_core : public work::message_receiver
   {
   public:
     virtual ~generic_core() = default;
@@ -159,6 +180,8 @@ namespace usb
     /// @return True if this operation completed successfully, false otherwise.
     virtual bool set_max_packet_size(uint16_t new_packet_size) = 0;
 
+    virtual void set_max_packet_size_complete();
+
     /// @brief Configure the USB device using the specific configuration number given.
     ///
     /// @param config_num The number of the configuration to use. Must be less than
@@ -167,6 +190,9 @@ namespace usb
     ///
     /// @return True if the device entered the configured state successfully. False otherwise.
     virtual bool configure_device(uint8_t config_num) = 0;
+
+    /// @brief Called when the device has accepted a new configuration.
+    virtual void configuration_set() = 0;
 
     /// @brief Queue a transfer for the specified endpoint and direction.
     ///
@@ -190,6 +216,36 @@ namespace usb
     std::unique_ptr<device_config[]> configurations; ///< Contains copies of all configurations for this device.
 
     uint8_t active_configuration; ///< Index in to configurations for the active configuration on this device.
+
+    /// @brief Basic states of a state machine controlling this device core.
+    enum class CORE_STATE
+    {
+      UNINITIALIZED, ///< Not yet initialized.
+      CREATE_CONTEXT, ///< Awaiting completion of the Create Context command.
+      ENABLED, ///< Enabled but not yet addressed.
+      ADDRESSED, ///< Addressed, but not yet configured.
+      CONFIGURED, ///< Configured and running.
+      READING_DEV_DESCRIPTOR, ///< Waiting for device descriptor to return.
+      READING_CFG_DESCRIPTORS, ///< Waiting for config descriptor to return.
+      SETTING_CONFIG, ///< Waiting for the configuration to be set.
+
+      STARTED, ///< Core fully ready.
+      FAILED, ///< Core device has failed.
+    };
+
+    CORE_STATE current_state{CORE_STATE::UNINITIALIZED}; ///< Current state of this device core.
+    uint64_t configs_read{0}; ///< Number of configurations read in the config reading stage.
+
+    ///< Weak pointer to self to allow easier use of shared_ptr. MUST be populated by inheriting classes.
+    std::weak_ptr<generic_core> self_weak_ptr;
+
+    // Override of work::message_receiver
+    virtual void handle_message(std::unique_ptr<msg::root_msg> &message) override;
+
+    virtual void handle_transfer_complete(transfer_complete_msg *message);
+    virtual void got_device_descriptor();
+    virtual void got_config_descriptor();
+    virtual bool interpret_raw_descriptor(uint64_t config_num);
   };
 
   /// A generic USB device.
@@ -206,6 +262,7 @@ namespace usb
     virtual bool start() override { set_device_status(DEV_STATUS::OK); return true; };
     virtual bool stop() override { set_device_status(DEV_STATUS::STOPPED); return true; };
     virtual bool reset() override { set_device_status(DEV_STATUS::STOPPED); return true; };
+    virtual void handle_private_msg(std::unique_ptr<msg::root_msg> &message) override;
 
     virtual void transfer_completed(normal_transfer *complete_transfer);
 

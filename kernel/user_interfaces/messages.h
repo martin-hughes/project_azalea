@@ -20,6 +20,8 @@ static const uint64_t SM_PIPE_NEW_DATA = 7; /**< A pipe has generated new data. 
 static const uint64_t SM_USB_CREATE_DEVICE = 8; /**< A new USB device has been discovered and should be created. */
 static const uint64_t SM_SET_OPTIONS = 9; /**< Set options associated with the target */
 static const uint64_t SM_GET_OPTIONS = 10; /**< Return options associated with the target */
+static const uint64_t SM_USB_TRANSFER_COMPLETE = 11; /**< Requested USB transfer is complete */
+static const uint64_t SM_XHCI_CMD_COMPLETE = 12; /**< XHCI controller command complete */
 
 /* System message structures */
 

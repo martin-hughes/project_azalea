@@ -18,8 +18,6 @@ namespace msg
   class root_msg
   {
   public:
-    root_msg() = default; ///< Default constructor.
-
     /// @brief Constructs and sets the message ID internally.
     ///
     /// @param msg_id The ID of the message being sent.
@@ -63,7 +61,10 @@ namespace msg
   class basic_msg : public root_msg
   {
   public:
-    basic_msg() = default; ///< Default constructor.
+    /// @brief Constructs and sets the message ID internally.
+    ///
+    /// @param msg_id The ID of the message being sent.
+    basic_msg(uint64_t msg_id) : root_msg{msg_id} { };
     virtual ~basic_msg() override = default; ///< Default destructor.
 
     uint64_t message_length{0}; ///< The number of bytes stored in details.

@@ -181,9 +181,8 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
 
       if (target_obj)
       {
-        std::unique_ptr<msg::basic_msg> new_msg = std::make_unique<msg::basic_msg>();
+        std::unique_ptr<msg::basic_msg> new_msg = std::make_unique<msg::basic_msg>(message_id);
 
-        new_msg->message_id = message_id;
         new_msg->message_length = message_len;
         new_msg->completion_semaphore = sem;
 

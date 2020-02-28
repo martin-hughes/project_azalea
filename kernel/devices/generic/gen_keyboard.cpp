@@ -123,7 +123,7 @@ void generic_keyboard::handle_key_down(KEYS key, special_keys specs)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Send keypress to recipient... \n");
 
-    std::unique_ptr<msg::basic_msg> msg = std::make_unique<msg::basic_msg>();
+    std::unique_ptr<msg::basic_msg> msg = std::make_unique<msg::basic_msg>(SM_KEYDOWN);
     keypress_msg *key_msg = new keypress_msg;
     key_msg->key_pressed = key;
     key_msg->modifiers = specs;
@@ -137,7 +137,6 @@ void generic_keyboard::handle_key_down(KEYS key, special_keys specs)
       KL_TRC_TRACE(TRC_LVL::FLOW, "Non printable key press\n");
       key_msg->printable = 0;
     }
-    msg->message_id = SM_KEYDOWN;
     msg->details = std::unique_ptr<uint8_t[]>(reinterpret_cast<uint8_t*>(key_msg));
     msg->message_length = sizeof(keypress_msg);
 
@@ -173,7 +172,7 @@ void generic_keyboard::handle_key_up(KEYS key, special_keys specs)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Send keyup to recipient... \n");
 
-    std::unique_ptr<msg::basic_msg> msg = std::make_unique<msg::basic_msg>();
+    std::unique_ptr<msg::basic_msg> msg = std::make_unique<msg::basic_msg>(SM_KEYUP);
     keypress_msg *key_msg = new keypress_msg;
     key_msg->key_pressed = key;
     key_msg->modifiers = specs;
@@ -187,7 +186,6 @@ void generic_keyboard::handle_key_up(KEYS key, special_keys specs)
       KL_TRC_TRACE(TRC_LVL::FLOW, "Non printable key press\n");
       key_msg->printable = 0;
     }
-    msg->message_id = SM_KEYUP;
     msg->details = std::unique_ptr<uint8_t[]>(reinterpret_cast<uint8_t*>(key_msg));
     msg->message_length = sizeof(keypress_msg);
 

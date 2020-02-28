@@ -186,8 +186,7 @@ void dev::monitor::handle_register(std::unique_ptr<dev_reg_msg> &msg)
   REG_TYPE(terms::generic, terminals, "term");
   REG_TYPE(IBlockDevice, block_devices, "block");
 
-  std::unique_ptr<msg::root_msg> start_msg = std::make_unique<msg::root_msg>();
-  start_msg->message_id = SM_DEV_START;
+  std::unique_ptr<msg::root_msg> start_msg = std::make_unique<msg::root_msg>(SM_DEV_START);
 
   work::queue_message(msg->dev, std::move(start_msg));
 

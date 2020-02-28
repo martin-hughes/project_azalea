@@ -5,7 +5,7 @@
 // - We allocate a buffer for decoded reports in advance, which could lead to some multithreading issues if we get two
 //   reports simultaneously.
 
-#define ENABLE_TRACING
+//#define ENABLE_TRACING
 
 #include "usb_hid_device.h"
 #include "hid_input_reports.h"
@@ -152,9 +152,9 @@ bool hid_device::start()
     KL_TRC_TRACE(TRC_LVL::FLOW, "Set report mode, schedule a transfer (", report_packet_size, " bytes) and begin!\n");
 
     decode_buffer = std::unique_ptr<int64_t[]>(new int64_t[report_descriptor.input_fields.size()]);
-    current_transfer = std::make_shared<normal_transfer>(this,
-                                                         std::unique_ptr<uint8_t[]>(new uint8_t[report_packet_size]),
-                                                         report_packet_size);
+    current_transfer = normal_transfer::create(self_weak_ptr.lock(),
+                                               std::unique_ptr<uint8_t[]>(new uint8_t[report_packet_size]),
+                                               report_packet_size);
     success = device_core->queue_transfer(interrupt_in_endpoint_num,
                                           true,
                                           current_transfer);
@@ -283,9 +283,9 @@ void hid_device::transfer_completed(normal_transfer *complete_transfer)
     }
 
     // Queue up a new transfer.
-    current_transfer = std::make_shared<normal_transfer>(this,
-                                                         std::unique_ptr<uint8_t[]>(new uint8_t[report_packet_size]),
-                                                         report_packet_size);
+    current_transfer = normal_transfer::create(self_weak_ptr.lock(),
+                                               std::unique_ptr<uint8_t[]>(new uint8_t[report_packet_size]),
+                                               report_packet_size);
     success = device_core->queue_transfer(interrupt_in_endpoint_num,
                                           true,
                                           current_transfer);

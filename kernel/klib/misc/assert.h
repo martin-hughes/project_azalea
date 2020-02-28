@@ -23,4 +23,4 @@
 /// @brief Marker that a particular code path hasn't been written yet.
 ///
 /// @param X Text to display alongside the panic message.
-#define INCOMPLETE_CODE(X) panic("Incomplete code: " # X)
+#define INCOMPLETE_CODE(X) panic("Incomplete code: " # X "\nAt "  __FILE__  ":" STRIZE(__LINE__))

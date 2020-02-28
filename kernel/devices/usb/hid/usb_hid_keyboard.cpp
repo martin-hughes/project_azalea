@@ -1,7 +1,7 @@
 /// @file
 /// @brief Implementation of a USB HID Mouse (or mouse-like device)
 
-// #define ENABLE_TRACING
+//#define ENABLE_TRACING
 
 #include "hid_usages.h"
 #include "usb_hid_keyboard.h"

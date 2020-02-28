@@ -242,8 +242,7 @@ void serial_port::handle_interrupt_slow(uint8_t interrupt_number)
     if (rcv)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Send new data message\n");
-      std::unique_ptr<msg::root_msg> msg = std::make_unique<msg::root_msg>();
-      msg->message_id = SM_PIPE_NEW_DATA;
+      std::unique_ptr<msg::root_msg> msg = std::make_unique<msg::root_msg>(SM_PIPE_NEW_DATA);
       work::queue_message(rcv, std::move(msg));
     }
   }
