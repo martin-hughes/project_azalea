@@ -19,7 +19,7 @@ extern const KEYS scancode_map[];
 class keyboard : public hid_specialisation, public generic_keyboard
 {
 public:
-  keyboard() : hid_specialisation{"Generic USB Keyboard", "usb-kbd" } { }; ///< Default constructor
+  keyboard() : hid_specialisation{"Generic USB Keyboard", "usb-hid-kbd" } { }; ///< Default constructor
   virtual ~keyboard() = default; ///< Default destructor
 
   virtual void process_report(decoded_descriptor &descriptor, int64_t *values, uint16_t num_values) override;

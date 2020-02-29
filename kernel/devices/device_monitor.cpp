@@ -18,6 +18,8 @@ namespace
 std::shared_ptr<dev::monitor> *dev_monitor{nullptr};
 }
 
+extern std::shared_ptr<terms::generic> *term_ptr;
+
 namespace dev
 {
 
@@ -185,6 +187,18 @@ void dev::monitor::handle_register(std::unique_ptr<dev_reg_msg> &msg)
   REG_TYPE(generic_keyboard, keyboards, "keyb");
   REG_TYPE(terms::generic, terminals, "term");
   REG_TYPE(IBlockDevice, block_devices, "block");
+
+  // Temporary special handling for keyboard devices to get them associated with the terminal.
+  {
+    std::shared_ptr<generic_keyboard> p = std::dynamic_pointer_cast<generic_keyboard>(msg->dev);
+    if (p && term_ptr && (*term_ptr))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Keyboard special handling procedure\n");
+      std::shared_ptr<work::message_receiver> r = std::dynamic_pointer_cast<work::message_receiver>(*term_ptr);
+      ASSERT(r);
+      p->set_receiver(r);
+    }
+  }
 
   std::unique_ptr<msg::root_msg> start_msg = std::make_unique<msg::root_msg>(SM_DEV_START);
 

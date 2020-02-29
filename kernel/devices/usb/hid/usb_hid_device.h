@@ -64,7 +64,7 @@ namespace usb
 
     /// If the HID device is of a known type, store the specialisation here.
     ///
-    std::unique_ptr<hid::hid_specialisation> child_specialisation;
+    std::shared_ptr<hid::hid_specialisation> child_specialisation;
 
     std::unique_ptr<int64_t[]> decode_buffer; ///< Storage for decoding an input report in to.
 

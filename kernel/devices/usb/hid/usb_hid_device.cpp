@@ -14,6 +14,8 @@
 #include "usb_hid_mouse.h"
 #include "usb_hid_keyboard.h"
 
+#include "devices/device_monitor.h"
+
 #include <klib/klib.h>
 
 namespace usb
@@ -317,17 +319,24 @@ void hid_device::create_specialisation()
     {
     case hid::USAGE::MOUSE:
       KL_TRC_TRACE(TRC_LVL::FLOW, "Found mouse specialisation!\n");
-      child_specialisation = std::make_unique<hid::mouse>();
+      child_specialisation = std::make_shared<hid::mouse>();
       break;
 
     case hid::USAGE::KEYBOARD:
       KL_TRC_TRACE(TRC_LVL::FLOW, "Found keyboard specialisation!\n");
-      child_specialisation = std::make_unique<hid::keyboard>();
+      child_specialisation = std::make_shared<hid::keyboard>();
       break;
 
     default:
       KL_TRC_TRACE(TRC_LVL::FLOW, "No known specialisation\n");
     }
+  }
+
+  if (child_specialisation)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Register child device\n");
+    std::shared_ptr<IDevice> gen_dev = child_specialisation;
+    dev::monitor::register_device(gen_dev);
   }
 
   KL_TRC_EXIT;

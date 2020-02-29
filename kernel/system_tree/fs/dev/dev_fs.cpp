@@ -28,7 +28,7 @@ std::shared_ptr<fat_filesystem> setup_initial_fs(std::shared_ptr<ata::generic_de
 extern generic_keyboard *keyb_ptr;
 extern std::shared_ptr<terms::generic> *term_ptr;
 generic_keyboard *keyb_ptr;
-std::shared_ptr<terms::generic> *term_ptr;
+std::shared_ptr<terms::generic> *term_ptr{nullptr};
 
 /// @brief Simple constructor
 dev_root_branch::dev_root_branch()

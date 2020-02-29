@@ -7,6 +7,9 @@
 
 #include <memory>
 
+extern std::shared_ptr<terms::generic> *term_ptr;
+std::shared_ptr<terms::generic> *term_ptr{nullptr};
+
 class DeviceMonitorTest : public ::testing::Test
 {
 protected:

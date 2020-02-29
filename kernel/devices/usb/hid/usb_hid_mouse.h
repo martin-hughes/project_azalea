@@ -13,7 +13,7 @@ namespace usb { namespace hid {
 class mouse : public hid_specialisation, public generic_mouse
 {
 public:
-  mouse() : hid_specialisation{"Generic USB Mouse", "usb-mouse"} { }; ///< Default constructor
+  mouse() : hid_specialisation{"Generic USB Mouse", "usb-hid-mouse"} { }; ///< Default constructor
   virtual ~mouse() = default; ///< Default destructor
 
   virtual void process_report(decoded_descriptor &descriptor, int64_t *values, uint16_t num_values) override;
