@@ -11,6 +11,10 @@
 /// @brief Create a new terminal that operates over a serial port.
 ///
 /// @param keyboard_pipe The pipe to write keypresses in to (which becomes stdin for the attached process).
+///
+/// @param output_port_s Shared pointer to an object to write data to send it towards the terminal.
+///
+/// @param input_port_s Shared pointer to an object to read data from when it is sent by the terminal.
 terms::serial::serial(std::shared_ptr<IWritable> keyboard_pipe,
                       std::shared_ptr<IWritable> output_port_s,
                       std::shared_ptr<IReadable> input_port_s) :

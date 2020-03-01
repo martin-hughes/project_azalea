@@ -43,7 +43,7 @@ namespace usb
       create_device_work_item(std::shared_ptr<generic_core> core, CREATION_PHASE phase);
 
       std::shared_ptr<generic_core> device_core; ///< The core object of the device to instantiate.
-      CREATION_PHASE cur_phase;
+      CREATION_PHASE cur_phase; ///< Current phase of constructing a USB device core.
     };
 
     void create_device_handler(std::unique_ptr<create_device_work_item> &item);

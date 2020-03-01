@@ -33,7 +33,7 @@ public:
   kernel_spinlock_obj(kernel_spinlock_obj &&) = delete;
   ~kernel_spinlock_obj();
 
-  kernel_spinlock underlying_lock;
+  kernel_spinlock underlying_lock; ///< The object providing locking to this wrapper class.
 
   // To satisfy BasicLockable.
   void lock();

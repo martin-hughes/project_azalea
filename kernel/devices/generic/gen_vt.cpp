@@ -18,6 +18,11 @@ terms::vt::vt(std::shared_ptr<IWritable> keyboard_pipe) :
 
 }
 
+/// @brief Construct a virtual terminal
+///
+/// @param keyboard_pipe The pipe to write key presses in to, which will come out as stdin in an attached process.
+///
+/// @param root_name The root part of a device name for this terminal (defaults to "term" in the other constructor)
 terms::vt::vt(std::shared_ptr<IWritable> keyboard_pipe, std::string root_name) :
   terms::generic{keyboard_pipe, root_name}
 {

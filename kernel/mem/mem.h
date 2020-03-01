@@ -137,6 +137,7 @@ mem_process_info *mem_task_get_task0_entry();
 mem_process_info *mem_task_create_task_entry();
 void mem_task_free_task(task_process *proc);
 
+/// @brief Invalidate the page table TLB on the calling processor.
 extern "C" void mem_invalidate_tlb();
 
 #endif /* MEM_H_ */

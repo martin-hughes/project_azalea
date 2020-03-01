@@ -127,6 +127,9 @@ serial_port::~serial_port()
   KL_TRC_EXIT;
 }
 
+/// @brief Set an object to receive messages when new data arrives at this serial port.
+///
+/// @param new_handler The object to receive messages.
 void serial_port::set_msg_receiver(std::shared_ptr<work::message_receiver> &new_handler)
 {
   KL_TRC_ENTRY;

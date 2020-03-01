@@ -61,8 +61,11 @@ void setup_task_parameters(task_process *startup_proc);
 std::shared_ptr<task_process> *system_process; ///< The process containing idle processes, etc.
 std::shared_ptr<task_process> *kernel_start_process; ///< Process running the kernel start procedure.
 
+/// @cond
+// Temporary variables
 extern generic_keyboard *keyb_ptr;
 extern std::shared_ptr<terms::generic> *term_ptr;
+/// @endcond
 
 // Assumptions used throughout the kernel
 static_assert(sizeof(uint64_t) == sizeof(uintptr_t), "Code throughout assumes pointers are 64-bits long.");

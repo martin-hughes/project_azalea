@@ -383,6 +383,7 @@ void syscall_semaphore_obj::wait_for_signal(uint64_t max_wait)
   KL_TRC_EXIT;
 }
 
+/// @brief Signal this semaphore.
 bool syscall_semaphore_obj::signal()
 {
   KL_TRC_ENTRY;

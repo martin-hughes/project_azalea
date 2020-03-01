@@ -36,13 +36,14 @@ namespace usb { namespace xhci
     std::shared_ptr<command_response> response_item; ///< Stores data about the controller's response to the command.
   };
 
+  /// @brief Message sent when a command issued by an XHCI controller completes.
   class command_complete_msg : public msg::root_msg
   {
   public:
     command_complete_msg(uint8_t cmd, uint8_t code);
 
-    uint8_t generated_command;
-    uint8_t completion_code;
+    uint8_t generated_command; ///< The value of TRB type for the generated command.
+    uint8_t completion_code; ///< The TRB completion code of the completed command.
   };
 
   /// @brief An implementation of the USB xHCI specification

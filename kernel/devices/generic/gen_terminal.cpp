@@ -25,7 +25,11 @@ terms::generic::generic(std::shared_ptr<IWritable> keyboard_pipe) :
 
 }
 
-
+/// @brief Construct a terminal.
+///
+/// @param keyboard_pipe Pipe that the terminal will write processsed keypresses in to (e.g. for stdin).
+///
+/// @param root_name The root part of a device name for this terminal (defaults to "term" in the other constructor)
 terms::generic::generic(std::shared_ptr<IWritable> keyboard_pipe, std::string root_name) :
   IDevice{"Generic Terminal", root_name, true}
 {

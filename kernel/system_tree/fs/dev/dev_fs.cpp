@@ -25,10 +25,13 @@
 #include "devices/block/ata/ata_device.h"
 std::shared_ptr<fat_filesystem> setup_initial_fs(std::shared_ptr<ata::generic_device> first_hdd);
 
+/// @cond
+// Temporary variables
 extern generic_keyboard *keyb_ptr;
 extern std::shared_ptr<terms::generic> *term_ptr;
 generic_keyboard *keyb_ptr;
 std::shared_ptr<terms::generic> *term_ptr{nullptr};
+/// @endcond
 
 /// @brief Simple constructor
 dev_root_branch::dev_root_branch()
@@ -191,6 +194,8 @@ dev_root_branch::dev_sub_branch::~dev_sub_branch()
 /// @brief Configure the filesystem of the (presumed) boot device as part of System Tree.
 ///
 /// This function is temporary.
+///
+/// @param first_hdd Pointer to the HDD with the filesystem to load.
 ///
 /// @return Pointer toa FAT filesystem presumed to exist on the first attached HDD.
 std::shared_ptr<fat_filesystem> setup_initial_fs(std::shared_ptr<ata::generic_device> first_hdd)

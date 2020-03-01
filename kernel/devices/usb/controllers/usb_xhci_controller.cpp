@@ -1047,6 +1047,11 @@ void controller::ring_doorbell(uint8_t doorbell_num, uint8_t endpoint_code, uint
   KL_TRC_EXIT;
 }
 
+/// @brief Construct a command completed message to send to the designated receiver.
+///
+/// @param cmd The value of TRB type for the generated command.
+///
+/// @param code The TRB completion code of the completed command.
 command_complete_msg::command_complete_msg(uint8_t cmd, uint8_t code) :
   msg::root_msg{SM_XHCI_CMD_COMPLETE},
   generated_command{cmd},

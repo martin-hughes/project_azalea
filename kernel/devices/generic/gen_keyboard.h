@@ -40,6 +40,6 @@ public:
   void set_receiver(std::shared_ptr<work::message_receiver> &new_receiver);
 
 protected:
-  kernel_spinlock_obj receiver_lock;
+  kernel_spinlock_obj receiver_lock; ///< A lock protecting receiver.
   std::weak_ptr<work::message_receiver> receiver; ///< An object key press messages should be sent to.
 };

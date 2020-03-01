@@ -200,6 +200,9 @@ struct fat_dir_entry
     fat_long_filename_entry long_fn; ///< Long filename version of the directory entry.
   };
 
+  /// @brief Is this entry a long file name entry, or a short name entry?
+  ///
+  /// @return True if a long name entry, false otherwise.
   bool is_long_fn_entry()
   {
     return (this->attributes_raw == 0x0F);

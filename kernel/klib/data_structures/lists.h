@@ -18,18 +18,18 @@ template <typename T> struct klib_list_item
 {
   /// @brief Pointer to the previous item in the list, or nullptr if this item is the head of the list.
   ///
-	klib_list_item<T>* prev;
+  klib_list_item<T>* prev;
 
   /// @brief The item being stored in the list.
   ///
-	T item;
+  T item;
 
   /// @brief The list this item is being stored in. Must not be nullptr, unless this item is not associated with any
   /// list.
-	klib_list<T> *list_obj;
+  klib_list<T> *list_obj;
 
   /// @brief Pointer to the next item in the list, or nullptr if this item is the tail of the list.
-	klib_list_item<T> *next;
+  klib_list_item<T> *next;
 };
 
 /// @brief The 'root' of a simple list of objects of type T.
@@ -44,11 +44,11 @@ template <typename T> struct klib_list
 {
   /// @brief Pointer to the head of the list, or nullptr if there are no items in the list.
   ///
-	klib_list_item<T> *head;
+  klib_list_item<T> *head;
 
   /// @brief Pointer to the tail of the list, or nullptr if there are no items in the list.
   ///
-	klib_list_item<T> *tail;
+  klib_list_item<T> *tail;
 };
 
 /// @brief Initialise a new list root object.

@@ -18,7 +18,7 @@ using namespace usb;
 /// with, for example, tracking of control transfers. In that case, this object behaves as though it were a normal
 /// work_response object.
 ///
-/// @param owner The device to receive notifications when this transfer is complete.
+/// @param receiver The device to receive notifications when this transfer is complete.
 ///
 /// @param buffer The buffer to send or receive to/from.
 ///
@@ -45,7 +45,7 @@ normal_transfer::normal_transfer(std::shared_ptr<work::message_receiver> receive
 /// Call this factory function rather than the normal constructor in order to ensure that a contained weak pointer is
 /// set up correctly.
 ///
-/// @param owner The device to receive notifications when this transfer is complete.
+/// @param receiver The device to receive notifications when this transfer is complete.
 ///
 /// @param buffer The buffer to send or receive to/from.
 ///
@@ -91,6 +91,9 @@ void normal_transfer::set_response_complete()
   KL_TRC_EXIT;
 };
 
+/// @brief Construct a new transfer completed message to send to the previously declared receiver object.
+///
+/// @param completed_transfer The transfer that has completed.
 transfer_complete_msg::transfer_complete_msg(std::shared_ptr<normal_transfer> &completed_transfer) :
   msg::root_msg{SM_USB_TRANSFER_COMPLETE},
   transfer{completed_transfer}

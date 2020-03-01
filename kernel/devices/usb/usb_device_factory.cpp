@@ -188,8 +188,7 @@ void main_factory::create_device_handler(std::unique_ptr<create_device_work_item
 ///
 /// @param core The core to store in this work item.
 ///
-/// @param discovery_done One of the steps to creating a USB device is "discovery" - the process of reading all the
-///                       device and config descriptors. Has this step been completed for this core?
+/// @param phase Which phase of creating the device core is next?
 main_factory::create_device_work_item::create_device_work_item(std::shared_ptr<generic_core> core,
                                                                CREATION_PHASE phase) :
   msg::root_msg{SM_USB_CREATE_DEVICE},

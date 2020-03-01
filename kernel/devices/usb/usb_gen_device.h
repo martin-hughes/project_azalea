@@ -113,7 +113,7 @@ namespace usb
     transfer_complete_msg(std::shared_ptr<normal_transfer> &completed_transfer);
     ~transfer_complete_msg() = default;
 
-    std::shared_ptr<normal_transfer> transfer;
+    std::shared_ptr<normal_transfer> transfer; ///< Pointer to the newly completed transfer.
   };
 
   /// @brief Generic USB device core.
@@ -236,7 +236,7 @@ namespace usb
     CORE_STATE current_state{CORE_STATE::UNINITIALIZED}; ///< Current state of this device core.
     uint64_t configs_read{0}; ///< Number of configurations read in the config reading stage.
 
-    ///< Weak pointer to self to allow easier use of shared_ptr. MUST be populated by inheriting classes.
+    /// Weak pointer to self to allow easier use of shared_ptr. MUST be populated by inheriting classes.
     std::weak_ptr<generic_core> self_weak_ptr;
 
     // Override of work::message_receiver

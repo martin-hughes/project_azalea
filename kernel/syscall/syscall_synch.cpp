@@ -228,7 +228,7 @@ ERR_CODE syscall_create_semaphore(GEN_HANDLE *semaphore_handle, uint64_t max_use
 
 /// @brief Signal the next thread waiting for this semaphore to continue.
 ///
-/// @brief semaphore_handle The handle of the semaphore to signal.
+/// @param semaphore_handle The handle of the semaphore to signal.
 ///
 /// @return A suitable error code.
 ERR_CODE syscall_signal_semaphore(GEN_HANDLE semaphore_handle)

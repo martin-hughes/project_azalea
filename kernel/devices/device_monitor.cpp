@@ -18,7 +18,9 @@ namespace
 std::shared_ptr<dev::monitor> *dev_monitor{nullptr};
 }
 
+/// @cond
 extern std::shared_ptr<terms::generic> *term_ptr;
+/// @endcond
 
 namespace dev
 {

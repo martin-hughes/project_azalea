@@ -88,5 +88,5 @@ protected:
   virtual void trigger_next_thread(const bool should_lock = true) override;
   virtual void trigger_all_threads() override;
 
-  klib_semaphore base_semaphore;
+  klib_semaphore base_semaphore; ///< The underlying semaphore object providing locking.
 };

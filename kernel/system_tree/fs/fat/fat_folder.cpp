@@ -1485,6 +1485,13 @@ fat_filesystem::fat_folder::enum_children(std::string start_from, uint64_t max_c
   return { result, std::move(child_list) };
 }
 
+/// @brief Construct a 'normal' short file name from a FAT FDE.
+///
+/// The FDE stores the filename in a fixed-length format that doesn't always suit us.
+///
+/// @param fde The FDE containing the name to normalise.
+///
+/// @return String containing the normalised name.
 std::string fat_filesystem::fat_folder::short_name_from_fde(fat_dir_entry &fde)
 {
   std::string result{""};
