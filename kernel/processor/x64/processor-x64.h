@@ -1,5 +1,7 @@
-#ifndef __PROCESSOR_X64_H
-#define __PROCESSOR_X64_H
+/// @file
+/// @brief x64-processor specific control functions.
+
+#pragma once
 
 #include "processor/processor.h"
 
@@ -13,13 +15,20 @@ struct processor_info_x64
   uint32_t lapic_id;
 };
 
-typedef processor_info_generic<processor_info_x64> processor_info;
+typedef processor_info_generic<processor_info_x64> processor_info; ///< Processor info block on x64
 
+/// @cond
+// Dunno why doxygen can't find the docs for these externs...
 extern processor_info *proc_info_block;
 extern uint32_t processor_count;
+/// @endcond
 
+/// @brief Indicies of known MSRS.
+///
+/// These correspond to the Intel documentation, so are not documented further.
 enum class PROC_X64_MSRS : uint64_t
 {
+/// @cond
   IA32_APIC_BASE = 0x1b,
   IA32_MTRRCAP = 0xfe,
   IA32_MTRR_PHYSBASE0 = 0x200,
@@ -41,16 +50,26 @@ enum class PROC_X64_MSRS : uint64_t
   IA32_FS_BASE = 0xC0000100,
   IA32_GS_BASE = 0xC0000101,
   IA32_KERNEL_GS_BASE = 0xC0000102,
+/// @endcond
 };
 
 uint64_t proc_read_msr(PROC_X64_MSRS msr);
 void proc_write_msr(PROC_X64_MSRS msr, uint64_t value);
 
+/// @brief Execute the CPUID instruction on this CPU.
+///
+/// Parameter values can be found in the Intel documentation
+///
+/// @param eax_value The value of EAX when CPUID is executed
+///
+/// @param ecx_value The value of ECX when CPUID is executed
+///
+/// @param[out] ebx_eax The packed result stored in EBX and EAX
+///
+/// @param[out] edx_ecx The packed result stored in EDX and ECX
 extern "C" void asm_proc_read_cpuid(uint64_t eax_value,
                                     uint64_t ecx_value,
                                     uint64_t *ebx_eax,
                                     uint64_t *edx_ecx);
 
 uint64_t proc_x64_generate_msi_address(uint32_t kernel_proc_id);
-
-#endif

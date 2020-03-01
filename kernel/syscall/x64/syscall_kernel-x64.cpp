@@ -1,11 +1,13 @@
-// x64 specific functions for the kernel to manage its system call interface.
+/// @file
+/// @brief x64 specific functions for the kernel to manage its system call interface.
 
 //#define ENABLE_TRACING
 
 #include "syscall/x64/syscall_kernel-x64.h"
 #include "klib/klib.h"
 
-// Prepare the system call interface for use.
+/// @brief Prepare the system call interface for use.
+///
 void syscall_gen_init()
 {
   KL_TRC_ENTRY;

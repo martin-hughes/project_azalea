@@ -1,0 +1,6 @@
+# A program to help evaluate ncurses support.
+
+Import('env')
+files = [ "ncurses.cpp"]
+obj = env.Object("ncurses", files)
+Return ("obj")

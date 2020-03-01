@@ -1,12 +1,20 @@
-#ifndef _KLIB_TRACING_H
-#define _KLIB_TRACING_H
+/// @file
+/// @brief Kernel tracing functions
+
+#pragma once
+
+#include <string>
 
 #include <stdint.h>
 #include <type_traits>
-#include "klib/data_structures/string.h"
 #include "user_interfaces/error_codes.h"
 
+enum class DEV_STATUS;
+
 //#define ENABLE_TRACING
+
+// None of these functions are documented because they're reasonable self-explanatory.
+/// @cond
 
 #ifdef KL_TRACE_INCLUDE_TID
 #include "pthread.h"
@@ -50,8 +58,9 @@ void kl_trc_char(unsigned char c);
 //template <typename p> void kl_trc_output_argument(p param);
 void kl_trc_output_str_argument(char const *str);
 void kl_trc_output_int_argument(uint64_t value);
-void kl_trc_output_kl_string_argument(kl_string &str);
+void kl_trc_output_std_string_argument(std::string &str);
 void kl_trc_output_err_code_argument(ERR_CODE ec);
+void kl_trc_output_dev_status_argument(DEV_STATUS ds);
 
 // Template to output integral types
 template<typename T = uint64_t, typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
@@ -70,11 +79,11 @@ T kl_trc_output_single_arg(T param)
   return param;
 }
 
-template<typename T = kl_string, typename = typename std::enable_if<std::is_same<T, kl_string>::value>::type,
+template<typename T = std::string, typename = typename std::enable_if<std::is_same<T, std::string>::value>::type,
     typename B = void, typename C = void, typename D = void, typename E = void>
 T kl_trc_output_single_arg(T& param)
 {
-  kl_trc_output_kl_string_argument(param);
+  kl_trc_output_std_string_argument(param);
   return param;
 }
 
@@ -94,6 +103,15 @@ template<typename T, typename = typename std::enable_if<std::is_same<T, ERR_CODE
 T kl_trc_output_single_arg(T param)
 {
   kl_trc_output_err_code_argument(param);
+  return param;
+}
+
+// Template to output DEV_STATUS results
+template<typename T, typename = typename std::enable_if<std::is_same<T, DEV_STATUS>::value>::type,
+    typename B = void, typename C = void, typename D = void, typename E = void, typename F = void, typename G = void>
+T kl_trc_output_single_arg(T param)
+{
+  kl_trc_output_dev_status_argument(param);
   return param;
 }
 
@@ -118,4 +136,4 @@ template<typename p> void kl_trc_output_arguments(p param)
   kl_trc_output_single_arg(param);
 }
 
-#endif
+/// @endcond

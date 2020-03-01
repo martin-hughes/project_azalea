@@ -1,23 +1,43 @@
+/// @file
 /// @brief A simple PS/2 controller driver. PS/2 connected devices are dealt with separately.
 
 // Known issues:
 // - During PS/2 device startup, only one attempt is made to reset devices before they are declared failed.
 // - Failure of the device on channel 1 causes the controller to be considered failed, inhibiting device 2.
+// - There's no attempt to support stop/reset, and doing so would leak the existing child devices.
+// - At present, only one PS/2 controller per system is permitted (hence the false in the constructor)
 
 //#define ENABLE_TRACING
 
 #include "klib/klib.h"
 #include "ps2_controller.h"
+#include "devices/device_monitor.h"
+#include "processor/processor.h"
 
+/// @brief Standard constructor.
 gen_ps2_controller_device::gen_ps2_controller_device() :
-  IDevice{"Generic PS/2 controller"},
+  IDevice{"Generic PS/2 controller", "ps2c", false},
   chan_1_dev(nullptr),
   chan_2_dev(nullptr)
 {
   KL_TRC_ENTRY;
 
-  // Unless anything goes wrong, assume the PS/2 controller is fine.
-  current_dev_status = DEV_STATUS::OK;
+  KL_TRC_EXIT;
+}
+
+gen_ps2_controller_device::~gen_ps2_controller_device()
+{
+  KL_TRC_ENTRY;
+
+  KL_TRC_EXIT;
+}
+
+bool gen_ps2_controller_device::start()
+{
+  bool success{true};
+  bool result{true};
+
+  KL_TRC_ENTRY;
 
   // Start by assuming a two-channel PS/2 controller. We check this assumption below.
   _dual_channel = true;
@@ -39,6 +59,8 @@ gen_ps2_controller_device::gen_ps2_controller_device() :
   // Both devices are enabled, but with scanning and IRQs turned off.
 
   uint8_t response;
+
+  set_device_status(DEV_STATUS::STARTING);
 
   // 1 - Disable both connected devices.
   send_ps2_command(PS2_CONST::DISABLE_DEV_1, false, 0, false, response);
@@ -63,7 +85,7 @@ gen_ps2_controller_device::gen_ps2_controller_device() :
   if (response != PS2_CONST::SELF_TEST_SUCCESS)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "PS/2 self-test failed\n");
-    current_dev_status = DEV_STATUS::FAILED;
+    success = false;
   }
   else
   {
@@ -110,7 +132,7 @@ gen_ps2_controller_device::gen_ps2_controller_device() :
       if (response != PS2_CONST::DEV_CMD_ACK)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Device one failed to reset\n");
-        current_dev_status = DEV_STATUS::FAILED;
+        success = false;
       }
 
       send_byte(PS2_CONST::DEV_DISABLE_SCANNING, false);
@@ -131,7 +153,7 @@ gen_ps2_controller_device::gen_ps2_controller_device() :
         if (response != PS2_CONST::DEV_CMD_ACK)
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "Device one failed to reset\n");
-          current_dev_status = DEV_STATUS::FAILED;
+          success = false;
         }
 
         send_byte(PS2_CONST::DEV_DISABLE_SCANNING, true);
@@ -146,27 +168,66 @@ gen_ps2_controller_device::gen_ps2_controller_device() :
       }
 
       // Construct and enable child devices.
-      chan_1_dev = this->instantiate_device(false, _chan_1_dev_type);
+      this->instantiate_device(chan_1_dev, false, _chan_1_dev_type);
       if (_dual_channel)
       {
-        chan_2_dev = this->instantiate_device(true, _chan_2_dev_type);
+        this->instantiate_device(chan_2_dev, true, _chan_2_dev_type);
       }
     }
     else
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Test of channel 1 failed, response: ", response, "\n");
-      current_dev_status = DEV_STATUS::FAILED;
+      success = false;
     }
   }
 
+  if (success)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Set device to started\n");
+    set_device_status(DEV_STATUS::OK);
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Set device to failed\n");
+    set_device_status(DEV_STATUS::FAILED);
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
+
+  return result;
 }
 
-gen_ps2_controller_device::~gen_ps2_controller_device()
+bool gen_ps2_controller_device::stop()
 {
+  bool result{true};
+
   KL_TRC_ENTRY;
 
+  set_device_status(DEV_STATUS::STOPPING);
+
+  INCOMPLETE_CODE("PS/2 controller stop");
+
+  set_device_status(DEV_STATUS::STOPPED);
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
+
+  return result;
+}
+
+bool gen_ps2_controller_device::reset()
+{
+  bool result{true};
+
+  INCOMPLETE_CODE("PS/2 controller reset");
+
+  KL_TRC_ENTRY;
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
 }
 
 /// @brief Send a command to the PS/2 controller.
@@ -310,6 +371,10 @@ ERR_CODE gen_ps2_controller_device::read_byte(uint8_t &data)
 }
 
 /// @brief Identify the type of device connected to the PS/2 controller.
+///
+/// @param second_channel If true, send the command to the second channel of the controller.
+///
+/// @return The type of device connected.
 PS2_DEV_TYPE gen_ps2_controller_device::identify_device(bool second_channel)
 {
   KL_TRC_ENTRY;
@@ -379,34 +444,61 @@ PS2_DEV_TYPE gen_ps2_controller_device::identify_device(bool second_channel)
   return dev_type;
 }
 
-gen_ps2_device *gen_ps2_controller_device::instantiate_device(bool second_channel, PS2_DEV_TYPE dev_type)
+/// @brief Construct a new PS/2 device object.
+///
+/// @param[out] dev Shared pointer to the newly instantiated device.
+///
+/// @param[in] second_channel Is this device attached to the second channel of the controller?
+///
+/// @param[in] dev_type The type of attached device.
+void gen_ps2_controller_device::instantiate_device(std::shared_ptr<gen_ps2_device> &dev,
+                                                   bool second_channel,
+                                                   PS2_DEV_TYPE dev_type)
 {
+  std::shared_ptr<IDevice> parent = this->self_weak_ptr.lock();
+  std::shared_ptr<gen_ps2_controller_device> p_spec = std::dynamic_pointer_cast<gen_ps2_controller_device>(parent);
+
   KL_TRC_ENTRY;
 
-  gen_ps2_device *res;
-
-  switch(dev_type)
+  if (!parent)
   {
-    case PS2_DEV_TYPE::KEYBOARD_MF2:
-      res = new ps2_keyboard_device(this, second_channel);
-      break;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Device being destroyed\n");
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Construct new object\n");
 
-    case PS2_DEV_TYPE::MOUSE_5_BUTTON:
-    case PS2_DEV_TYPE::MOUSE_STANDARD:
-    case PS2_DEV_TYPE::MOUSE_WITH_WHEEL:
-      res = new ps2_mouse_device(this, second_channel);
-      break;
+/// @cond
+#define CREATE_PS2(type, sc) \
+{ \
+  std::shared_ptr<type> spec_dev; \
+  dev::create_new_device(spec_dev, parent, p_spec, second_channel); \
+  dev = std::dynamic_pointer_cast<gen_ps2_device>(spec_dev); \
+}
+/// @endcond
+    switch(dev_type)
+    {
+      case PS2_DEV_TYPE::KEYBOARD_MF2:
+        CREATE_PS2(ps2_keyboard_device, second_channel);
+        break;
 
-    default:
-      res = new gen_ps2_device(this, second_channel);
+      case PS2_DEV_TYPE::MOUSE_5_BUTTON:
+      case PS2_DEV_TYPE::MOUSE_STANDARD:
+      case PS2_DEV_TYPE::MOUSE_WITH_WHEEL:
+        CREATE_PS2(ps2_mouse_device, second_channel);
+        break;
+
+      default:
+        CREATE_PS2(gen_ps2_device, second_channel);
+    }
   }
 
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Returning: ", res, "\n");
   KL_TRC_EXIT;
-
-  return res;
 }
 
+/// @brief Read the configuration register from the controller.
+///
+/// @return Contents of the configuration register.
 gen_ps2_controller_device::ps2_config_register gen_ps2_controller_device::read_config()
 {
   KL_TRC_ENTRY;
@@ -419,6 +511,9 @@ gen_ps2_controller_device::ps2_config_register gen_ps2_controller_device::read_c
   return config;
 }
 
+/// @brief Write the configuration register of this controller.
+///
+/// @param reg The configuration to write to the controller.
 void gen_ps2_controller_device::write_config(gen_ps2_controller_device::ps2_config_register reg)
 {
   KL_TRC_ENTRY;

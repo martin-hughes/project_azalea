@@ -1,11 +1,16 @@
 /// @file
 /// @brief Implementation of common synchronization objects that threads may choose to wait on.
+//
+// Known defects:
+// - It isn't possible to report whether "wait_for_signal()" was successful or not...
+// - Signalling a semaphore beyond empty will assert.
 
 //#define ENABLE_TRACING
 
 #include "klib/klib.h"
 #include "processor/processor.h"
 #include "processor/synch_objects.h"
+#include "processor/timing/timing.h"
 
 WaitObject::WaitObject()
 {
@@ -28,11 +33,15 @@ WaitObject::~WaitObject()
 }
 
 /// @brief Cause this thread to wait until the WaitObject is triggered, at which point it will resume.
-void WaitObject::wait_for_signal()
+///
+/// @param max_wait The approximate maximum time to wait for the object to be signalled, in microseconds.
+void WaitObject::wait_for_signal(uint64_t max_wait)
 {
   KL_TRC_ENTRY;
 
   task_thread *cur_thread = task_get_cur_thread();
+  ASSERT(cur_thread);
+  ASSERT(!cur_thread->is_worker_thread);
   klib_list_item<task_thread *> *list_item = new klib_list_item<task_thread *>;
   klib_list_item_initialize(list_item);
   list_item->item = cur_thread;
@@ -43,6 +52,12 @@ void WaitObject::wait_for_signal()
   cur_thread->stop_thread();
   klib_list_add_tail(&this->_waiting_threads, list_item);
   klib_synch_spinlock_unlock(this->_list_lock);
+
+  if (max_wait != WaitObject::MAX_WAIT)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Set maximum waiting time");
+    cur_thread->wake_thread_after = time_get_system_timer_count() + (max_wait * 1000);
+  }
 
   task_resume_scheduling();
 
@@ -147,6 +162,7 @@ void WaitObject::trigger_next_thread(const bool should_lock)
 
 /// @brief Trigger all threads waiting for this object to continue.
 ///
+/// This may not be a valid operation for all child types.
 void WaitObject::trigger_all_threads()
 {
   KL_TRC_ENTRY;
@@ -176,11 +192,13 @@ WaitForFirstTriggerObject::~WaitForFirstTriggerObject()
   KL_TRC_EXIT;
 }
 
-void WaitForFirstTriggerObject::wait_for_signal()
+void WaitForFirstTriggerObject::wait_for_signal(uint64_t max_wait)
 {
   KL_TRC_ENTRY;
 
   task_thread *cur_thread = task_get_cur_thread();
+  ASSERT(cur_thread);
+  ASSERT(!cur_thread->is_worker_thread);
   klib_list_item<task_thread *> *list_item = new klib_list_item<task_thread *>;
   klib_list_item_initialize(list_item);
   list_item->item = cur_thread;
@@ -195,6 +213,12 @@ void WaitForFirstTriggerObject::wait_for_signal()
     cur_thread->stop_thread();
     klib_list_add_tail(&this->_waiting_threads, list_item);
     klib_synch_spinlock_unlock(this->_list_lock);
+
+    if (max_wait != WaitObject::MAX_WAIT)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Set maximum waiting time");
+      cur_thread->wake_thread_after = time_get_system_timer_count() + (max_wait * 1000);
+    }
 
     task_resume_scheduling();
 
@@ -260,4 +284,123 @@ void WaitForFirstTriggerObject::trigger_all_threads()
   klib_synch_spinlock_unlock(this->_list_lock);
 
   KL_TRC_EXIT;
+}
+
+/// @brief Create a mutex object that can be exposed by the system call API to user processes
+///
+syscall_mutex_obj::syscall_mutex_obj()
+{
+  KL_TRC_ENTRY;
+
+  klib_synch_mutex_init(this->base_mutex);
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Destroy this object.
+///
+syscall_mutex_obj::~syscall_mutex_obj()
+{
+  KL_TRC_ENTRY;
+  KL_TRC_EXIT;
+}
+
+void syscall_mutex_obj::wait_for_signal(uint64_t max_wait)
+{
+  KL_TRC_ENTRY;
+
+  klib_synch_mutex_acquire(base_mutex, max_wait);
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Release the mutex.
+///
+/// @return True if this thread previously owned the mutex and has now released it. False otherwise.
+bool syscall_mutex_obj::release()
+{
+  bool result{true};
+
+  KL_TRC_ENTRY;
+
+  // It is possible for mutex_locked and owner_thread to change part way through this if statement - but not if both
+  // parts are true, because otherwise this thread would be executing in two places at once, which is a contradiction.
+  if (base_mutex.mutex_locked && (base_mutex.owner_thread == task_get_cur_thread()))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Release the mutex!\n");
+    klib_synch_mutex_release(base_mutex, false);
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "This thread doesn't own the mutex anyway...\n");
+    result = false;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+void syscall_mutex_obj::trigger_next_thread(const bool should_lock)
+{
+  panic("Not valid for mutexes");
+}
+
+void syscall_mutex_obj::trigger_all_threads()
+{
+  panic("Not valid for mutexes");
+}
+
+/// @brief Create a semaphore object that can be exposed by the system call API to user mode processes.
+///
+/// @param max_users The maximum number of threads that can hold the semaphore at once.
+///
+/// @param start_users How many users should the semaphore consider itself to be held by at the start?
+syscall_semaphore_obj::syscall_semaphore_obj(uint64_t max_users, uint64_t start_users)
+{
+  KL_TRC_ENTRY;
+
+  klib_synch_semaphore_init(base_semaphore, max_users, start_users);
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Destroy the semaphore.
+///
+syscall_semaphore_obj::~syscall_semaphore_obj()
+{
+  KL_TRC_ENTRY;
+  KL_TRC_EXIT;
+}
+
+void syscall_semaphore_obj::wait_for_signal(uint64_t max_wait)
+{
+  KL_TRC_ENTRY;
+
+  klib_synch_semaphore_wait(base_semaphore, max_wait);
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Signal this semaphore.
+bool syscall_semaphore_obj::signal()
+{
+  KL_TRC_ENTRY;
+
+  klib_synch_semaphore_clear(base_semaphore);
+
+  KL_TRC_EXIT;
+
+  return true;
+}
+
+void syscall_semaphore_obj::trigger_next_thread(const bool should_lock)
+{
+  panic("Not valid for semaphores");
+}
+
+void syscall_semaphore_obj::trigger_all_threads()
+{
+  panic("Not valid for semaphores");
 }

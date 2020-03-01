@@ -19,53 +19,8 @@ available on the GRUB website at https://www.gnu.org/software/grub/
 
 The full GPLv3 licence can be read at https://www.gnu.org/licenses/gpl.html.
 
-libcxxrt:
----------
-
-Provided on GitHub at https://github.com/pathscale/libcxxrt. BSD Licensed - see libcxxrt-master/LICENSE.txt for
-details, or the same is reproduced in each individual source file.
-
-Only the RTTI portion of the code is currently used, and some excess code is commented out and some excess files
-deleted compared to the original version.
-
-Pure64:
+libtmt:
 -------
 
-Pure64 v0.5.0 was used historically by the project as a bootloader, before being replaced by GRUB. It can still be
-found in earlier revisions of the Git repository and was provided under the licence appended at the end.
-
-===============================================================================
-Pure64 -- License
-===============================================================================
-
-Copyright (C) 2008-2012 Return Infinity -- http://www.returninfinity.com
-
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in the
-      documentation and/or other materials provided with the distribution.
-
-    * Neither the name Pure64 nor the names of any Pure64 contributors
-      may be used to endorse or promote products derived from this software
-      without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY RETURN INFINITY AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL RETURN INFINITY BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
-USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-
-===============================================================================
+Provided on github at https://github.com/deadpixi/libtmt and forked at https://github.com/martin-hughes/libtmt. The
+licence is given in the header of each file, and includes a requirement for a copyright notice in binary distributions.

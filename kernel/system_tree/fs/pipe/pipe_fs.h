@@ -1,10 +1,15 @@
-#ifndef ST_FS_PIPE_HEADER
-#define ST_FS_PIPE_HEADER
+/// @file
+/// @brief Declares pipes for use in the filesystem
+
+#pragma once
+
+#include <string>
 
 #include "klib/klib.h"
 
 #include "system_tree/system_tree_branch.h"
 #include "system_tree/fs/fs_file_interface.h"
+#include "processor/work_queue.h"
 
 #include <memory>
 
@@ -20,11 +25,16 @@ public:
   static std::shared_ptr<pipe_branch> create();
   virtual ~pipe_branch();
 
-  virtual ERR_CODE get_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
-  virtual ERR_CODE add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
-  virtual ERR_CODE rename_child(const kl_string &old_name, const kl_string &new_name) override;
-  virtual ERR_CODE delete_child(const kl_string &name) override;
-  virtual ERR_CODE create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+  virtual ERR_CODE get_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+  virtual ERR_CODE add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
+  virtual ERR_CODE rename_child(const std::string &old_name, const std::string &new_name) override;
+  virtual ERR_CODE delete_child(const std::string &name) override;
+  virtual ERR_CODE create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+  virtual std::pair<ERR_CODE, uint64_t> num_children() override;
+  virtual std::pair<ERR_CODE, std::vector<std::string>>
+    enum_children(std::string start_from, uint64_t max_count) override;
+
+  virtual void set_msg_receiver(std::shared_ptr<work::message_receiver> &new_handler);
 
   /// @brief The read-only output leaf of a pipe branch.
   ///
@@ -43,8 +53,8 @@ public:
     virtual void set_block_on_read(bool block);
 
   protected:
-    std::weak_ptr<pipe_branch> _parent;
-    bool block_on_read;
+    std::weak_ptr<pipe_branch> _parent; ///< Parent pipe branch.
+    bool block_on_read; ///< Should the pipe block until the requested number of bytes are available?
   };
 
   /// @brief The write-only input leaf of a pipe branch.
@@ -62,15 +72,15 @@ public:
                                  uint64_t &bytes_written) override;
 
   protected:
-    std::weak_ptr<pipe_branch> _parent;
+    std::weak_ptr<pipe_branch> _parent; ///< The parent pipe branch.
   };
 
 protected:
-  std::unique_ptr<uint8_t[]> _buffer;
-  uint8_t *_read_ptr;
-  uint8_t *_write_ptr;
+  std::unique_ptr<uint8_t[]> _buffer; ///< Buffer storing written-but-not-read content.
+  uint8_t *_read_ptr; ///< Position of the read pointer in the buffer.
+  uint8_t *_write_ptr; ///< Position of the write pointer in the buffer.
 
-  kernel_spinlock _pipe_lock;
+  kernel_spinlock _pipe_lock; ///< Synchronises reads and writes so only one occurs at a time.
+
+  std::weak_ptr<work::message_receiver> new_data_handler; ///< Object to send messages to when new data arrives.
 };
-
-#endif

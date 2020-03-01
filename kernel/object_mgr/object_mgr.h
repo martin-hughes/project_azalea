@@ -1,9 +1,11 @@
-#ifndef __OBJECT_MGR_H
-#define __OBJECT_MGR_H
+/// @file
+/// @brief Declare the object_manager class
 
+#pragma once
+
+#include <map>
 #include "handles.h"
 #include "object_type.h"
-#include "klib/data_structures/red_black_tree.h"
 #include "klib/synch/kernel_locks.h"
 
 /// @brief Managers the relationship between handles an objects.
@@ -27,11 +29,9 @@ public:
   void remove_all_objects();
 
 private:
-  kl_rb_tree<GEN_HANDLE, std::shared_ptr<object_data>> object_store;
+  std::map<GEN_HANDLE, std::shared_ptr<object_data>> object_store; ///< Stores pointers to all managed objects.
 
-  kernel_spinlock om_main_lock;
+  kernel_spinlock om_main_lock{0}; ///< Synchronising lock.
 
   std::shared_ptr<object_data> int_retrieve_object(GEN_HANDLE handle);
 };
-
-#endif

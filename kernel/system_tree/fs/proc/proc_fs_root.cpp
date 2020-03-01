@@ -1,7 +1,9 @@
+/// @file
 /// @brief Implementation of the root of a file system similar to 'proc' in Linux.
-///
 
 //#define ENABLE_TRACING
+
+#include <string>
 
 #include "klib/klib.h"
 #include "system_tree/fs/proc/proc_fs.h"
@@ -27,10 +29,10 @@ proc_fs_root_branch::~proc_fs_root_branch()
 //
 // System Tree Branch interface.
 //
-ERR_CODE proc_fs_root_branch::add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child)
+ERR_CODE proc_fs_root_branch::add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child)
 {
-  kl_string first_part;
-  kl_string second_part;
+  std::string first_part;
+  std::string second_part;
   std::shared_ptr<ISystemTreeBranch> child_branch;
 
   ERR_CODE result;
@@ -42,14 +44,14 @@ ERR_CODE proc_fs_root_branch::add_child(const kl_string &name, std::shared_ptr<I
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Attempt to add child to existing branch\n");
 
-    if (!this->children.contains(first_part))
+    if (!map_contains(this->children, first_part))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Child branch not found anyway\n");
       result = ERR_CODE::NOT_FOUND;
     }
     else
     {
-      child_branch = std::dynamic_pointer_cast<ISystemTreeBranch>(this->children.search(first_part));
+      child_branch = std::dynamic_pointer_cast<ISystemTreeBranch>(this->children.find(first_part)->second);
       if (child_branch != nullptr)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Try to add child to branch\n");
@@ -75,7 +77,7 @@ ERR_CODE proc_fs_root_branch::add_child(const kl_string &name, std::shared_ptr<I
 
 }
 
-ERR_CODE proc_fs_root_branch::rename_child(const kl_string &old_name, const kl_string &new_name)
+ERR_CODE proc_fs_root_branch::rename_child(const std::string &old_name, const std::string &new_name)
 {
   KL_TRC_ENTRY;
   KL_TRC_EXIT;
@@ -84,7 +86,7 @@ ERR_CODE proc_fs_root_branch::rename_child(const kl_string &old_name, const kl_s
   return ERR_CODE::INVALID_OP;
 }
 
-ERR_CODE proc_fs_root_branch::delete_child(const kl_string &name)
+ERR_CODE proc_fs_root_branch::delete_child(const std::string &name)
 {
   KL_TRC_ENTRY;
   KL_TRC_EXIT;
@@ -107,7 +109,7 @@ ERR_CODE proc_fs_root_branch::add_process(std::shared_ptr<task_process> new_proc
   KL_TRC_ENTRY;
 
   ERR_CODE ec = ERR_CODE::NO_ERROR;
-  kl_string branch_name;
+  std::string branch_name;
   char name_buffer[22];
 
   if (!new_process)
@@ -156,7 +158,7 @@ ERR_CODE proc_fs_root_branch::remove_process(std::shared_ptr<task_process> old_p
   ERR_CODE ec = ERR_CODE::NO_ERROR;
   std::shared_ptr<ISystemTreeLeaf> i_branch;
   std::shared_ptr<proc_fs_proc_branch> true_branch;
-  kl_string branch_name;
+  std::string branch_name;
   char name_buffer[22];
 
   if (!old_process)

@@ -1,4 +1,5 @@
-// Interface to the HPET.
+/// @file
+/// @brief Interface to the HPET.
 
 //#define ENABLE_TRACING
 
@@ -12,6 +13,14 @@ extern "C"
 #endif
 }
 
+namespace
+{
+  bool hpet_inited{false};
+}
+
+/// @brief The system's HPET configuration
+///
+/// We assume only one HPET per system.
 hpet_hardware_cfg_block *hpet_config = nullptr;
 
 void time_hpet_set_flag(uint64_t &hpet_reg, const uint64_t flag);
@@ -125,6 +134,8 @@ void time_hpet_init()
   // Resume the HPET
   time_hpet_set_flag(hpet_config->gen_config, hpet_cfg_glbl_enable);
 
+  hpet_inited = true;
+
   KL_TRC_EXIT;
 }
 
@@ -229,6 +240,8 @@ void time_hpet_stall(uint64_t wait_in_ns)
 {
   KL_TRC_ENTRY;
 
+  ASSERT(hpet_inited);
+
   uint64_t wait_in_cycles = time_hpet_compute_wait(wait_in_ns);
   uint64_t cur_count;
   uint64_t end_count;
@@ -260,6 +273,8 @@ uint64_t time_hpet_cur_value(bool output_in_ns)
 {
   uint64_t val;
   KL_TRC_ENTRY;
+
+  ASSERT(hpet_inited);
 
   val = hpet_config->main_counter_val;
   if (output_in_ns)

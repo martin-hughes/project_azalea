@@ -6,10 +6,13 @@
 // - We should definitely be retrieving error codes from the drive after issuing commands!
 // - We only allow queueing slightly less than 2MB of DMA transfer at once.
 // - DMA transfers always go into a bounce buffer.
-// - We don't check to see if the transfer fails, the drive just becomes unusable.
+// - We don't check to see if the transfer fails, the drive just becomes unusable - there are some trace comments, but
+//   they don't do anything.
 // - The interrupt code assumes the two channels have different interrupt numbers, which may not be true.
 // - We only support one DMA transfer by channel, but some systems do support one per drive apparently.
 // - - actually, the DMA mutex locks us to one per controller, but this could be changed easily enough.
+// - There's no checking that DMA transfers are queued properly before beginning the transfer.
+// - Totally ignores the IDevice start/stop/reset paradigm.
 
 //#define ENABLE_TRACING
 
@@ -17,21 +20,32 @@
 #include "devices/block/ata/ata_structures.h"
 #include "processor/timing/timing.h"
 #include "klib/klib.h"
+#include "devices/device_monitor.h"
+#include "processor/processor.h"
 
 using namespace ata;
-
-// This declares a device used in entry.cpp to load the init program from.
-extern ata::generic_device *first_hdd; ///< TEMPORARY global variable.
 
 /// @brief Normal constructor for PCI ATA Host Controllers
 ///
 /// @param address The address of this controller on the PCI bus.
 pci_controller::pci_controller(pci_address address) :
-  pci_generic_device{address, "PCI ATA Host Controller"}
+  pci_generic_device{address, "PCI ATA Host Controller", "ata_controller"}
+{
+  KL_TRC_ENTRY;
+
+  set_device_status(DEV_STATUS::STOPPED);
+
+  KL_TRC_EXIT;
+};
+
+bool pci_controller::start()
 {
   identify_cmd_output ident;
+  std::shared_ptr<IDevice> self_ptr = this->self_weak_ptr.lock();
 
-  KL_TRC_ENTRY;
+  set_device_status(DEV_STATUS::STARTING);
+
+  ASSERT(self_ptr);
 
   klib_synch_spinlock_init(cmd_spinlock);
   klib_synch_mutex_init(dma_mutex);
@@ -46,12 +60,13 @@ pci_controller::pci_controller(pci_address address) :
     if(cmd_identify(ident, i))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Found device\n");
-      drives_by_index_num[i].child_ptr = std::make_shared<ata::generic_device>(this, i, ident);
+      ASSERT(dev::create_new_device(drives_by_index_num[i].child_ptr,
+                                    self_ptr,
+                                    std::dynamic_pointer_cast<ata::generic_controller>(self_ptr),
+                                    i,
+                                    ident));
     }
   }
-
-  // Give the first device special treatment (for now)
-  first_hdd = drives_by_index_num[0].child_ptr.get();
 
   proc_register_irq_handler(channel_irq_nums[0], this);
   if (channel_irq_nums[1] != channel_irq_nums[0])
@@ -60,10 +75,22 @@ pci_controller::pci_controller(pci_address address) :
     proc_register_irq_handler(channel_irq_nums[1], this);
   }
 
-  current_dev_status = DEV_STATUS::OK;
+  set_device_status(DEV_STATUS::OK);
 
-  KL_TRC_EXIT;
-};
+  return true;
+}
+
+bool pci_controller::stop()
+{
+  set_device_status(DEV_STATUS::STOPPED);
+  return true;
+}
+
+bool pci_controller::reset()
+{
+  set_device_status(DEV_STATUS::STOPPED);
+  return true;
+}
 
 /// @brief Determine which I/O ports the child devices will respond to.
 ///
@@ -146,8 +173,15 @@ bool pci_controller::issue_command(uint16_t drive_index,
 
   if (command_props.dma_command)
   {
+    bm_ide_status st_byte;
     KL_TRC_TRACE(TRC_LVL::FLOW, "Make sure we have DMA mutex\n");
     result = continue_with_dma_setup();
+
+    st_byte.raw = read_bus_master_reg(BUS_MASTER_PORTS::STATUS, drive.channel_number);
+    st_byte.interrupt_status = 0;
+    st_byte.dma_error = 0;
+    st_byte.bus_master_active = 0;
+    write_bus_master_reg(BUS_MASTER_PORTS::STATUS, drive.channel_number, st_byte.raw);
   }
 
   if (result)
@@ -219,7 +253,7 @@ bool pci_controller::issue_command(uint16_t drive_index,
       if (dma_transfer_is_read)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "DMA read command, reading output\n");
-        dma_read_sectors_to_bufers();
+        dma_read_sectors_to_buffers();
       }
       else
       {
@@ -246,6 +280,11 @@ bool pci_controller::issue_command(uint16_t drive_index,
   KL_TRC_EXIT;
 
   return result;
+}
+
+bool pci_controller::dma_transfer_supported()
+{
+  return this->bm_enabled();
 }
 
 /// @brief Write a value to an ATA port for the specified drive.
@@ -307,6 +346,7 @@ bool pci_controller::wait_for_cmd_completion(uint16_t drive_index)
   channel = drives_by_index_num[drive_index].channel_number;
 
   while (!interrupt_on_chan[channel]) { };
+  interrupt_on_chan[channel] = false;
 
   result = poll_wait_for_drive_not_busy(drive_index);
 
@@ -338,7 +378,7 @@ bool pci_controller::poll_wait_for_drive_not_busy(uint16_t drive_index)
   do
   {
     result_c = read_ata_cmd_port(drive_index, COMMAND_STATUS_PORT);
-    kl_memcpy(&result_c, &result, 1);
+    memcpy(&result, &result_c, 1);
   } while ((result.busy_flag == 1)
            || ((result.error_flag = 0)
            && (result.data_ready_flag == 0)
@@ -400,7 +440,7 @@ void pci_controller::pio_read_sectors_to_buffer(uint16_t drive_index,
 }
 
 /// @brief Copy our bounce buffers to the user-provided buffer after completion of a DMA transfer.
-void pci_controller::dma_read_sectors_to_bufers()
+void pci_controller::dma_read_sectors_to_buffers()
 {
   uint8_t *bounce_buffer;
   uint32_t real_byte_length;
@@ -412,21 +452,25 @@ void pci_controller::dma_read_sectors_to_bufers()
   bounce_buffer += 65536;
   for (uint16_t i = 0; i < num_prd_table_entries; i++)
   {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Copy block index: ", i);
     real_byte_length = transfer_block_details[i].bytes_to_transfer;
     if (real_byte_length == 0)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Copy 64kB\n"); // This behaviour is specified in the ATA spec.
       real_byte_length = 65536;
     }
-    kl_memcpy(bounce_buffer, transfer_block_details[i].buffer, real_byte_length);
-    bounce_buffer += real_byte_length;
+    KL_TRC_TRACE(TRC_LVL::FLOW, ", length: ", real_byte_length,
+                                " from: ", bounce_buffer,
+                                " to: ", transfer_block_details[i].buffer, "\n");
+    memcpy(transfer_block_details[i].buffer, bounce_buffer, real_byte_length);
+    bounce_buffer += real_byte_length; ///< TODO: Is this correct??
   }
 
   KL_TRC_EXIT;
 }
 
-bool pci_controller::handle_translated_interrupt_fast(unsigned char interrupt_offset,
-                                                      unsigned char raw_interrupt_num) // Actually the IRQ number.
+bool pci_controller::handle_translated_interrupt_fast(uint8_t interrupt_offset,
+                                                      uint8_t raw_interrupt_num) // Actually the IRQ number.
 {
   uint16_t port_num = static_cast<uint16_t>(BUS_MASTER_PORTS::STATUS) + bus_master_base_port;
   bm_ide_status status;
@@ -440,8 +484,19 @@ bool pci_controller::handle_translated_interrupt_fast(unsigned char interrupt_of
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Primary interrupt\n");
     status.raw = proc_read_port(port_num, 8);
+
+    if (status.dma_error)
+    {
+      KL_TRC_TRACE(TRC_LVL::IMPORTANT, "DMA error result\n");
+    }
+    if (status.bus_master_active)
+    {
+      KL_TRC_TRACE(TRC_LVL::IMPORTANT, "DMA active\n");
+    }
+
     if (status.interrupt_status == 1)
     {
+      status.raw = 0;
       status.interrupt_status = 1; // Set 1 to clear.
       proc_write_port(port_num, status.raw, 8);
       was_for_us = true;
@@ -455,6 +510,7 @@ bool pci_controller::handle_translated_interrupt_fast(unsigned char interrupt_of
     status.raw = proc_read_port(port_num, 8);
     if (status.interrupt_status == 1)
     {
+      status.raw = 0;
       status.interrupt_status = 1; // Set 1 to clear.
       proc_write_port(port_num, status.raw, 8);
       was_for_us = true;
@@ -467,8 +523,8 @@ bool pci_controller::handle_translated_interrupt_fast(unsigned char interrupt_of
   return was_for_us; // For now, always allow interrupts to be handled in the slow path.
 }
 
-void pci_controller::handle_translated_interrupt_slow(unsigned char interrupt_offset,
-                                                      unsigned char raw_interrupt_num)
+void pci_controller::handle_translated_interrupt_slow(uint8_t interrupt_offset,
+                                                      uint8_t raw_interrupt_num)
 {
   KL_TRC_ENTRY;
 
@@ -516,17 +572,11 @@ bool pci_controller::start_prepare_dma_transfer(bool is_read, uint16_t drive_ind
       buffer_phys_addr = reinterpret_cast<uint64_t>(mem_get_phys_addr(prd_table));
       ASSERT((buffer_phys_addr & 0xFFFFFFFF00000000) == 0);
 
-      for (uint16_t i = 0; i < MAX_CHANNEL; i++)
-      {
-        write_prd_table_addr(buffer_phys_addr, i);
-      }
     }
-
+    dma_transfer_drive_idx = drive_index;
     num_prd_table_entries = 0;
     prd_table[0].end_of_table = 1;
     dma_transfer_is_read = is_read;
-
-    set_bus_master_direction(is_read, drives_by_index_num[drive_index].channel_number);
   }
   else
   {
@@ -562,13 +612,15 @@ bool pci_controller::queue_dma_transfer_block(void *buffer, uint16_t bytes_this_
     }
     else
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Queue new transfer item\n");
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Current num PRD table entries: ", num_prd_table_entries, "\n");
       entry_phys_ptr = buffer_phys_addr + (65536 * (num_prd_table_entries + 1));
       ASSERT((entry_phys_ptr & 0xFFFFFFFF00000000) == 0);
       entry_virt_ptr = buffer_virt_addr + (65536 * (num_prd_table_entries + 1));
 
       prd_table[num_prd_table_entries].region_phys_base_addr = static_cast<uint32_t>(entry_phys_ptr);
-      prd_table[num_prd_table_entries].end_of_table = false;
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Queue new transfer item - ptr: ",
+                                  prd_table[num_prd_table_entries].region_phys_base_addr, "\n");
+      prd_table[num_prd_table_entries].end_of_table = true;
       prd_table[num_prd_table_entries].byte_count = bytes_this_block;
 
       transfer_block_details[num_prd_table_entries].buffer = buffer;
@@ -584,11 +636,14 @@ bool pci_controller::queue_dma_transfer_block(void *buffer, uint16_t bytes_this_
           actual_num_bytes = 65536;
         }
 
-        kl_memcpy(buffer, reinterpret_cast<void *>(entry_virt_ptr), actual_num_bytes);
+        memcpy(reinterpret_cast<void *>(entry_virt_ptr), buffer, actual_num_bytes);
       }
 
+      if (num_prd_table_entries > 0)
+      {
+        prd_table[num_prd_table_entries - 1].end_of_table = false;
+      }
       num_prd_table_entries++;
-      prd_table[num_prd_table_entries].end_of_table = true;
     }
   }
 
@@ -606,14 +661,11 @@ bool pci_controller::queue_dma_transfer_block(void *buffer, uint16_t bytes_this_
 void pci_controller::write_prd_table_addr(uint32_t address, uint16_t channel)
 {
   KL_TRC_ENTRY;
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Write address ", address, " to channel ", channel, "\n");
+  uint16_t port_num = static_cast<uint16_t>(BUS_MASTER_PORTS::PRD_TABLE_ADDR_0) + bus_master_base_port;
+  port_num += (channel * 8);
 
-  write_bus_master_reg(BUS_MASTER_PORTS::PRD_TABLE_ADDR_0, channel, address & 0xFF);
-  address >>= 8;
-  write_bus_master_reg(BUS_MASTER_PORTS::PRD_TABLE_ADDR_1, channel, address & 0xFF);
-  address >>= 8;
-  write_bus_master_reg(BUS_MASTER_PORTS::PRD_TABLE_ADDR_2, channel, address & 0xFF);
-  address >>= 8;
-  write_bus_master_reg(BUS_MASTER_PORTS::PRD_TABLE_ADDR_3, channel, address & 0xFF);
+  proc_write_port(port_num, address, 32);
 
   KL_TRC_EXIT;
 }
@@ -629,7 +681,10 @@ void pci_controller::set_bus_master_direction(bool is_read, uint16_t channel)
   KL_TRC_ENTRY;
 
   command_byte.raw = read_bus_master_reg(BUS_MASTER_PORTS::COMMAND, channel);
-  command_byte.is_write = !is_read;
+
+  // Yes, this looks a bit odd. It's because the kernel refers to reads as being from disk to RAM, but bus mastering
+  // considers device-to-ram to mean a write.
+  command_byte.is_write = is_read;
   write_bus_master_reg(BUS_MASTER_PORTS::COMMAND, channel, command_byte.raw);
 
   KL_TRC_EXIT;
@@ -798,6 +853,30 @@ bool pci_controller::pio_write_sectors_to_drive(uint16_t drive_index,
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+bool pci_controller::dma_transfer_blocks_queued()
+{
+  bool result;
+
+  KL_TRC_ENTRY;
+
+  result = continue_with_dma_setup();
+
+  if (result)
+  {
+    for (uint16_t i = 0; i < MAX_CHANNEL; i++)
+    {
+      write_prd_table_addr(buffer_phys_addr, i);
+    }
+
+    set_bus_master_direction(dma_transfer_is_read, drives_by_index_num[dma_transfer_drive_idx].channel_number);
+  }
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Result: ", result, "\n");
   KL_TRC_EXIT;
 
   return result;

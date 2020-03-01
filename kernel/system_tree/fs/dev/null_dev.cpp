@@ -28,7 +28,7 @@ ERR_CODE null_file::read_bytes(uint64_t start,
       length = buffer_length;
     }
 
-    kl_memset(buffer, 0, length);
+    memset(buffer, 0, length);
     bytes_read = length;
   }
 

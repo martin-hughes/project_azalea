@@ -49,6 +49,11 @@ namespace usb
 
     virtual void transfer_completed(normal_transfer *complete_transfer) override;
 
+    // Overrides of IDevice
+    virtual bool start() override;
+    virtual bool stop() override;
+    virtual bool reset() override;
+
   protected:
     hid_descriptor interface_hid_descriptor; ///< Store an easy-to-access copy of the HID descriptor for this interface
     std::unique_ptr<uint8_t[]> raw_class_descriptor; ///< Stores the HID class descriptor.
@@ -59,9 +64,9 @@ namespace usb
 
     /// If the HID device is of a known type, store the specialisation here.
     ///
-    std::unique_ptr<hid::hid_specialisation> child_specialisation;
+    std::shared_ptr<hid::hid_specialisation> child_specialisation;
 
-    std::unique_ptr<int64_t[]> decode_buffer; // Storage for decoding an input report in to.
+    std::unique_ptr<int64_t[]> decode_buffer; ///< Storage for decoding an input report in to.
 
     bool read_hid_descriptor(hid_descriptor &storage);
     void create_specialisation();

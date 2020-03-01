@@ -11,8 +11,10 @@
 
 //#define ENABLE_TRACING
 
+#include <string>
+#include <string.h>
+
 #include "fat_fs.h"
-#include "fat_internal.h"
 
 namespace
 {
@@ -21,8 +23,13 @@ namespace
 
 const uint64_t ASSUMED_SECTOR_SIZE = 512;
 
+/// @brief Standard constructor.
+///
+/// New FAT filesystem objects should be created using the static 'create' method.
+///
+/// @param parent_device The block device containing this filesystem.
 fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
-    _storage{parent_device}, _status{DEV_STATUS::OK}, _buffer{new uint8_t[ASSUMED_SECTOR_SIZE]}, fat_dirty{false}
+    _storage{parent_device}, _buffer{new uint8_t[ASSUMED_SECTOR_SIZE]}, _status{DEV_STATUS::OK}, fat_dirty{false}
 {
   fat32_bpb* temp_bpb;
   ERR_CODE r;
@@ -55,7 +62,7 @@ fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
   if ((type == FAT_TYPE::FAT16) || (type == FAT_TYPE::FAT12))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Copying FAT12/16 block\n");
-    kl_memcpy(temp_bpb, &this->bpb_16, sizeof(this->bpb_16));
+    memcpy(&this->bpb_16, temp_bpb, sizeof(this->bpb_16));
 
     // These sums come directly from the FAT specification.
     root_dir_start_sector = bpb_16.shared.rsvd_sec_cnt + (bpb_16.shared.num_fats * bpb_16.shared.fat_size_16);
@@ -87,7 +94,7 @@ fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
   else
   {
     ASSERT(type == FAT_TYPE::FAT32);KL_TRC_TRACE(TRC_LVL::FLOW, "Copying FAT32 block\n");
-    kl_memcpy(temp_bpb, &this->bpb_32, sizeof(this->bpb_32));
+    memcpy(&this->bpb_32, temp_bpb, sizeof(this->bpb_32));
     root_dir_start_sector = 0;
     root_dir_sector_count = 0;
 
@@ -113,6 +120,11 @@ fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
   klib_synch_spinlock_unlock(this->gen_lock);
 }
 
+/// @brief Create a new FAT filesystem root object.
+///
+/// @param parent_device The block device containing this filesystem.
+///
+/// @return A shared_ptr containing a new fat filesystem object.
 std::shared_ptr<fat_filesystem> fat_filesystem::create(std::shared_ptr<IBlockDevice> parent_device)
 {
   return std::shared_ptr<fat_filesystem>(new fat_filesystem(parent_device));
@@ -127,14 +139,14 @@ fat_filesystem::~fat_filesystem()
   KL_TRC_EXIT;
 }
 
-ERR_CODE fat_filesystem::get_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+ERR_CODE fat_filesystem::get_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child)
 {
   KL_TRC_ENTRY;
 
   ERR_CODE ec = ERR_CODE::UNKNOWN;
   std::shared_ptr<fat_file> file_obj;
-  kl_string first_part;
-  kl_string second_part;
+  std::string first_part;
+  std::string second_part;
 
   // We create an object corresponding to the root directory here, because it relies on a shared
   // pointer to this object, so it can't be created in this class's constructor.
@@ -146,18 +158,18 @@ ERR_CODE fat_filesystem::get_child(const kl_string &name, std::shared_ptr<ISyste
   return ec;
 }
 
-ERR_CODE fat_filesystem::add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child)
+ERR_CODE fat_filesystem::add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child)
 {
   return ERR_CODE::INVALID_OP;
 }
 
-ERR_CODE fat_filesystem::rename_child(const kl_string &old_name, const kl_string &new_name)
+ERR_CODE fat_filesystem::rename_child(const std::string &old_name, const std::string &new_name)
 {
   ERR_CODE result;
-  kl_string old_first_part;
-  kl_string old_last_part;
-  kl_string new_first_part;
-  kl_string new_last_part;
+  std::string old_first_part;
+  std::string old_last_part;
+  std::string new_first_part;
+  std::string new_last_part;
   std::shared_ptr<fat_folder> parent_folder;
   std::shared_ptr<ISystemTreeLeaf> leaf;
 
@@ -222,11 +234,11 @@ ERR_CODE fat_filesystem::rename_child(const kl_string &old_name, const kl_string
   return result;
 }
 
-ERR_CODE fat_filesystem::delete_child(const kl_string &name)
+ERR_CODE fat_filesystem::delete_child(const std::string &name)
 {
   ERR_CODE result = ERR_CODE::NO_ERROR;
-  kl_string first_part;
-  kl_string last_part;
+  std::string first_part;
+  std::string last_part;
   std::shared_ptr<fat_folder> parent_folder;
   std::shared_ptr<ISystemTreeLeaf> leaf;
 
@@ -275,11 +287,11 @@ ERR_CODE fat_filesystem::delete_child(const kl_string &name)
   return result;
 }
 
-ERR_CODE fat_filesystem::create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+ERR_CODE fat_filesystem::create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child)
 {
   ERR_CODE result;
-  kl_string first_part;
-  kl_string last_part;
+  std::string first_part;
+  std::string last_part;
   std::shared_ptr<fat_folder> create_spot;
   std::shared_ptr<ISystemTreeLeaf> leaf;
 
@@ -472,7 +484,7 @@ uint64_t fat_filesystem::read_fat_entry(uint64_t cluster_num)
         // FAT12 entries are 1.5 bytes long, so every odd entry begins one nybble in to the byte - that is, even clusters
         // are bytes n and the first nybble of n+1, odd clusters are the second nybble of n+1 and the whole of n+2.
 
-        kl_memcpy(&this->_raw_fat[offset], &next_cluster, 2);
+        memcpy(&next_cluster, &this->_raw_fat[offset], 2);
         if (cluster_num % 2 == 1)
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "FAT 12, half-offset\n");
@@ -487,13 +499,13 @@ uint64_t fat_filesystem::read_fat_entry(uint64_t cluster_num)
 
       case FAT_TYPE::FAT16:
         offset = cluster_num * 2;
-        kl_memcpy(&this->_raw_fat[offset], &next_cluster, 2);
+        memcpy(&next_cluster, &this->_raw_fat[offset], 2);
 
         break;
 
       case FAT_TYPE::FAT32:
         offset = cluster_num * 4;
-        kl_memcpy(&this->_raw_fat[offset], &next_cluster, 4);
+        memcpy(&next_cluster, &this->_raw_fat[offset], 4);
         next_cluster &= 0x0FFFFFFF;
 
         break;
@@ -515,7 +527,7 @@ uint64_t fat_filesystem::read_fat_entry(uint64_t cluster_num)
 ///
 /// @param cluster_num The FAT entry to update.
 ///
-/// @param new entry The value to write into the FAT - this will be truncated to be a suitable number of bits!
+/// @param new_entry The value to write into the FAT - this will be truncated to be a suitable number of bits!
 ///
 /// @return A suitable error code.
 ERR_CODE fat_filesystem::write_fat_entry(uint64_t cluster_num, uint64_t new_entry)
@@ -543,7 +555,7 @@ ERR_CODE fat_filesystem::write_fat_entry(uint64_t cluster_num, uint64_t new_entr
         // FAT12 entries are 1.5 bytes long, so every odd entry begins one nybble in to the byte - that is, even clusters
         // are bytes n and the first nybble of n+1, odd clusters are the second nybble of n+1 and the whole of n+2.
 
-        kl_memcpy(&this->_raw_fat[offset], &old_entry, 2);
+        memcpy(&old_entry, &this->_raw_fat[offset], 2);
 
         if (cluster_num % 2 == 1)
         {
@@ -559,20 +571,20 @@ ERR_CODE fat_filesystem::write_fat_entry(uint64_t cluster_num, uint64_t new_entr
           old_entry |= new_entry;
         }
 
-        kl_memcpy(&old_entry, &this->_raw_fat[offset], 2);
+        memcpy(&this->_raw_fat[offset], &old_entry, 2);
 
         break;
 
       case FAT_TYPE::FAT16:
         offset = cluster_num * 2;
-        kl_memcpy(&new_entry, &this->_raw_fat[offset], 2);
+        memcpy(&this->_raw_fat[offset], &new_entry, 2);
 
         break;
 
       case FAT_TYPE::FAT32:
         offset = cluster_num * 4;
         new_entry &= 0x0FFFFFFF;
-        kl_memcpy(&new_entry, &this->_raw_fat[offset], 4);
+        memcpy(&this->_raw_fat[offset], &new_entry, 4);
 
         break;
 
@@ -584,7 +596,7 @@ ERR_CODE fat_filesystem::write_fat_entry(uint64_t cluster_num, uint64_t new_entr
     fat_dirty = true;
   }
 
-  KL_TRC_TRACE(TRC_LVL:EXTRA, "Result: ", result, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
 
   return result;
@@ -667,9 +679,9 @@ uint64_t fat_filesystem::convert_cluster_to_sector_num(uint64_t cluster_num)
 ///
 /// @param sector_num The number of the sector to find the cluster for.
 ///
-/// @param cluster_num[out] The number of the cluster the sector resides in.
+/// @param[out] cluster_num The number of the cluster the sector resides in.
 ///
-/// @param offset[out] How many sectors in to the cluster the sector is.
+/// @param[out] offset How many sectors in to the cluster the sector is.
 ///
 /// @return True if the sector is in a normal cluster, false otherwise. If false, the output parameters are invalid.
 bool fat_filesystem::convert_sector_to_cluster_num(uint64_t sector_num, uint64_t &cluster_num, uint16_t &offset)
@@ -698,8 +710,19 @@ bool fat_filesystem::convert_sector_to_cluster_num(uint64_t sector_num, uint64_t
   return result;
 }
 
-/// @brief Update the number of clusters
-ERR_CODE fat_filesystem::change_file_chain_length(uint64_t &start_cluster, uint64_t old_chain_length, uint64_t new_chain_length)
+/// @brief Update the number of clusters in a file.
+///
+/// @param[inout] start_cluster The starting cluster of the file being updated. start_cluster may change if the chain
+///                             needs to move.
+///
+/// @param old_chain_length The original length of the chain associated with this file.
+///
+/// @param new_chain_length The desired length of the chain associated with this file.
+///
+/// @return A suitable error code.
+ERR_CODE fat_filesystem::change_file_chain_length(uint64_t &start_cluster,
+                                                  uint64_t old_chain_length,
+                                                  uint64_t new_chain_length)
 {
   ERR_CODE result = ERR_CODE::UNKNOWN;
   uint64_t cur_cluster_num;
@@ -788,6 +811,7 @@ ERR_CODE fat_filesystem::change_file_chain_length(uint64_t &start_cluster, uint6
 
 /// @brief After modifying it, write the FAT back to the disk.
 ///
+/// @return A suitable error code.
 ERR_CODE fat_filesystem::write_fat_to_disk()
 {
   ERR_CODE result = ERR_CODE::NO_ERROR;
@@ -845,12 +869,14 @@ ERR_CODE fat_filesystem::select_free_cluster(uint64_t &free_cluster)
     }
   }
 
-  KL_TRC_TRACE(TRC_LVL:EXTRA, "Result: ", result, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
   return result;
 }
 
-/// @brief
+/// @brief Return a fat_folder object pointing at the filesystem's root directory.
+///
+/// @return Folder object containing the root directory.
 std::shared_ptr<fat_filesystem::fat_folder> &fat_filesystem::get_root_directory()
 {
   fat_dir_entry fde;
@@ -860,7 +886,7 @@ std::shared_ptr<fat_filesystem::fat_folder> &fat_filesystem::get_root_directory(
   if (!root_directory)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Create root directory.\n");
-    kl_memset(&fde, 0, sizeof(fat_dir_entry));
+    memset(&fde, 0, sizeof(fat_dir_entry));
     if (this->type == FAT_TYPE::FAT32)
     {
       fde.first_cluster_high = bpb_32.root_cluster >> 16;
@@ -873,4 +899,35 @@ std::shared_ptr<fat_filesystem::fat_folder> &fat_filesystem::get_root_directory(
   KL_TRC_EXIT;
 
   return root_directory;
+}
+
+std::pair<ERR_CODE, uint64_t> fat_filesystem::num_children()
+{
+  KL_TRC_ENTRY;
+
+  KL_TRC_EXIT;
+  if (root_directory)
+  {
+    return root_directory->num_children();
+  }
+  else
+  {
+    return {ERR_CODE::STORAGE_ERROR, 0};
+  }
+}
+
+std::pair<ERR_CODE, std::vector<std::string>> fat_filesystem::enum_children(std::string start_from, uint64_t max_count)
+{
+
+  KL_TRC_ENTRY;
+
+  KL_TRC_EXIT;
+  if (root_directory)
+  {
+    return root_directory->enum_children(start_from, max_count);
+  }
+  else
+  {
+    return {ERR_CODE::STORAGE_ERROR, std::vector<std::string>() };
+  }
 }

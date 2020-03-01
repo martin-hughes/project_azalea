@@ -9,12 +9,20 @@ asm_proc_mp_ap_startup:
   ; Set up a suitable stack, then call the main code.
   mov rax, temp_64_bit_stack_end
   and rax, qword 0xFFFFFFFFFFFFFFF0
+
+  ; Make sure stack pointer is actually in top half, since bottom half will be unmapped shortly.
+  mov rbx, qword 0xFFFFFFFF00000000
+  add rax, rbx
   mov rsp, rax
+
+  mov rbp, 0
 
   mov rax, proc_mp_ap_startup
   call rax
+return_pt:
   cli
   hlt
+  jmp return_pt
 
 ALIGN 16
 temp_64_bit_stack:

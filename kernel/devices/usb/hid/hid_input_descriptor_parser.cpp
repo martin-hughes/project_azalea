@@ -38,13 +38,15 @@ namespace usb::hid
 /// @param[out] descriptor The decoded form of the descriptor.
 ///
 /// @return True if the descriptor was successfully parsed, false otherwise.
-bool parse_descriptor(void *raw_descriptor, uint32_t descriptor_length, decoded_descriptor &descriptor)
+bool parse_descriptor(std::unique_ptr<uint8_t[]> &raw_descriptor,
+                      uint32_t descriptor_length,
+                      decoded_descriptor &descriptor)
 {
   bool result = true;
 
   KL_TRC_ENTRY;
 
-  uint8_t *raw_ptr = reinterpret_cast<uint8_t *>(raw_descriptor);
+  uint8_t *raw_ptr = raw_descriptor.get();
   uint16_t offset = 0;
   hid_short_tag *tag;
   uint8_t data_length;
@@ -92,7 +94,7 @@ bool parse_descriptor(void *raw_descriptor, uint32_t descriptor_length, decoded_
     data_mask = ~data_mask;
     data_buffer = data_buffer & data_mask;
 
-    KL_TRC_TRACE(TRC_LVL::FLOW, "(", *raw_ptr, ") ", data_buffer, "\n");
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Tag: ", tag->raw, ", Data: ", data_buffer, ", length: ", data_length, "\n");
 
     // Advance the pointers for the next pass.
     raw_ptr += data_length;
@@ -216,8 +218,15 @@ namespace
 
     case HID_MAIN_ITEMS::END_COLLECTION:
       KL_TRC_TRACE(TRC_LVL::FLOW, "End collection\n");
+      ASSERT(parser.current_collection);
       collection_ptr = parser.current_collection->parent_collection;
-      collection_ptr->parent_collection = nullptr; // Ensure that this isn't used after the end of parsing.
+      if (collection_ptr)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Null out parent collection pointer\n");
+        // Ensure that this isn't used after the end of parsing. This is really a cross check that the parser isn't
+        // crazy.
+        collection_ptr->parent_collection = nullptr;
+      }
       parser.current_collection = collection_ptr;
       break;
 
@@ -228,6 +237,7 @@ namespace
     }
 
     // Reset the parser's local state after each Main item.
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Reset parser state\n");
     parser.local_state = parser_local_state();
 
     KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
@@ -519,7 +529,11 @@ namespace
       // Calculate the bit and byte offsets.
 
       // Get the next queued values for these fields.
-      if (new_field.flags.variable)
+      if (new_field.flags.constant)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Constant input, skip using up a usage field.\n");
+      }
+      else if (new_field.flags.variable)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Variable input\n");
         new_field.usage = get_next_field_index_val(parser.local_state.usage);
@@ -527,6 +541,7 @@ namespace
       else
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Array input - use min.\n");
+        ASSERT(parser.local_state.usage.size() > 0);
         new_field.usage = parser.local_state.usage.front().item_min;
       }
 

@@ -1,13 +1,17 @@
-#ifndef __SYSTEM_TREE_BRANCH_INTERFACE_H
-#define __SYSTEM_TREE_BRANCH_INTERFACE_H
+/// @file
+/// @brief Declare system tree branches
 
+#pragma once
+
+#include <string>
 #include <stdint.h>
 #include <memory>
+#include <vector>
 
 #include "object_mgr/handled_obj.h"
 #include "user_interfaces/error_codes.h"
-#include "klib/data_structures/string.h"
 #include "system_tree/system_tree_leaf.h"
+#include "klib/tracing/tracing.h"
 
 /// @brief The interface which all branch implementations must implement.
 ///
@@ -32,7 +36,7 @@ public:
   /// @param[out] child If the named child can be found, a pointer to it is stored in child.
   ///
   /// @return An appropriate choice from `ERR_CODE`
-  virtual ERR_CODE get_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) = 0;
+  virtual ERR_CODE get_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child) = 0;
 
   /// @brief Add a child to this branch of System Tree.
   ///
@@ -41,7 +45,7 @@ public:
   /// @param child The child to add.
   ///
   /// @return An appropriate choice from `ERR_CODE`
-  virtual ERR_CODE add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child) = 0;
+  virtual ERR_CODE add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child) = 0;
 
   /// @brief Create a new child and add to System Tree.
   ///
@@ -53,7 +57,7 @@ public:
   /// @param[out] child A pointer to the newly created child object.
   ///
   /// @return An appropriate choice from `ERR_CODE`
-  virtual ERR_CODE create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) = 0;
+  virtual ERR_CODE create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child) = 0;
 
   /// @brief Rename a child of this branch.
   ///
@@ -62,7 +66,7 @@ public:
   /// @param new_name The name to rename the child to. This name must not exist in the tree already.
   ///
   /// @return An appropriate choice from `ERR_CODE`
-  virtual ERR_CODE rename_child(const kl_string &old_name, const kl_string &new_name) = 0;
+  virtual ERR_CODE rename_child(const std::string &old_name, const std::string &new_name) = 0;
 
   /// @brief Remove the child from this branch.
   ///
@@ -72,7 +76,28 @@ public:
   /// @param name The name of the child to remove.
   ///
   /// @return An appropriate choice from `ERR_CODE`
-  virtual ERR_CODE delete_child(const kl_string &name) = 0;
+  virtual ERR_CODE delete_child(const std::string &name) = 0;
+
+  /// @brief Return the number of children in this branch.
+  ///
+  /// @return A pair containing a suitable error code and the number of children of this branch. The number of children
+  ///         is only valid if the error code is ERR_CODE::NO_ERROR.
+  virtual std::pair<ERR_CODE, uint64_t> num_children() = 0;
+
+  /// @brief Enumerate immediate children of this branch.
+  ///
+  /// Return a list of children of this branch, ordered in the same order given natively by std::string.
+  ///
+  /// @param start_from The name of the first child to begin enumerating from. If this is empty then the first child is
+  ///                   used as the beginning of the list. If the name doesn't exist, then the first child after this
+  ///                   name is returned.
+  ///
+  /// @param max_count The maximum number of entries to return. If zero, there is no limit - this may have a
+  ///                  significant performance impact for branches with many children!
+  ///
+  /// @return A pair containing a suitable error code and, if no error was encountered, a vector of names of children
+  ///         in this branch.
+  virtual std::pair<ERR_CODE, std::vector<std::string>> enum_children(std::string start_from, uint64_t max_count) = 0;
 
   /// @brief Splits a child's path name into the part referring to a child of this branch, and the remainder.
   ///
@@ -92,9 +117,9 @@ public:
   /// @param[in] split_from_end If false, this will split the name at the first \ character. If True, it will split at
   ///                           the last \ character, which may be useful if trying to derive the name of the deepest
   ///                           child in the path name.
-  void split_name(const kl_string name_to_split,
-                  kl_string &first_part,
-                  kl_string &second_part,
+  void split_name(const std::string name_to_split,
+                  std::string &first_part,
+                  std::string &second_part,
                   bool split_from_end = false) const
   {
     uint64_t split_pos;
@@ -102,7 +127,7 @@ public:
     if (split_from_end)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Split from end\n");
-      split_pos = name_to_split.find_last("\\");
+      split_pos = name_to_split.find_last_of("\\");
     }
     else
     {
@@ -110,7 +135,7 @@ public:
       split_pos = name_to_split.find("\\");
     }
 
-    if (split_pos == kl_string::npos)
+    if (split_pos == std::string::npos)
     {
       first_part = name_to_split;
       second_part = "";
@@ -118,9 +143,7 @@ public:
     else
     {
       first_part = name_to_split.substr(0, split_pos);
-      second_part = name_to_split.substr(split_pos + 1, kl_string::npos);
+      second_part = name_to_split.substr(split_pos + 1, std::string::npos);
     }
   }
 };
-
-#endif

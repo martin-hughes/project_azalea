@@ -1,12 +1,16 @@
-#ifndef _KLIB_MUTEX
-#define _KLIB_MUTEX
+/// @file
+/// @brief Declare a mutex class.
 
-#include "klib/synch/kernel_locks.h"
-#include "processor/processor.h"
+#pragma once
 
 #include <memory>
 
-const uint64_t MUTEX_MAX_WAIT = 0xFFFFFFFFFFFFFFFF;
+#include "klib/synch/kernel_locks.h"
+#include "klib/data_structures/lists.h"
+
+class task_thread;
+
+const uint64_t MUTEX_MAX_WAIT = 0xFFFFFFFFFFFFFFFF; ///< Constant defining an infinite wait to lock a mutex.
 
 /// @brief A mutex structure used for basic locking.
 ///
@@ -30,5 +34,3 @@ struct klib_mutex
 void klib_synch_mutex_init(klib_mutex &mutex);
 SYNC_ACQ_RESULT klib_synch_mutex_acquire(klib_mutex &mutex, uint64_t max_wait);
 void klib_synch_mutex_release(klib_mutex &mutex, const bool disregard_owner);
-
-#endif

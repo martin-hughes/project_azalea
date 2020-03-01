@@ -277,6 +277,7 @@ void syscall_exit_process()
 
   this_proc->destroy_process();
 
+  // This panic should never hit because destroy_process() should kill this process and never return.
   panic("Reached end of syscall_exit_process!");
   KL_TRC_EXIT;
 }

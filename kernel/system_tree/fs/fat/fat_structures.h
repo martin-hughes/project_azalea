@@ -9,8 +9,10 @@
 
 /// @brief Fields of the FAT BPB that are generic to all sizes of FAT filesystem.
 ///
+/// Members are documented in the Microsoft FAT specification, so are not covered here.
 struct fat_generic_bpb
 {
+/// @cond
   char jmp_code[3];
   char oem_name[8];
   uint16_t bytes_per_sec;
@@ -25,14 +27,17 @@ struct fat_generic_bpb
   uint16_t num_heads;
   uint32_t hidden_secs;
   uint32_t total_secs_32;
+/// @endcond
 };
 
 static_assert(sizeof(fat_generic_bpb) == 36, "Size of FAT Generic BPB wrong.");
 
 /// @brief A FAT12 and FAT16 style BPB.
 //
+/// Members are documented in the Microsoft FAT specification, so are not covered here.
 struct fat16_bpb
 {
+/// @cond
   fat_generic_bpb shared;
 
   uint8_t drive_number;
@@ -41,14 +46,17 @@ struct fat16_bpb
   uint32_t volume_id;
   char volume_label[11];
   char fs_type[8];
+/// @endcond
 };
 
 static_assert(sizeof(fat16_bpb) == 62, "Sizeof FAT12/16 BPB wrong.");
 
 /// @brief A FAT32 style BPB.
 ///
+/// Members are documented in the Microsoft FAT specification, so are not covered here.
 struct fat32_bpb
 {
+/// @cond
   fat_generic_bpb shared;
 
   uint32_t fat_size_32;
@@ -64,32 +72,41 @@ struct fat32_bpb
   uint32_t volume_id;
   char volume_label[11];
   char fs_type[8];
+/// @endcond
 };
 
 static_assert(sizeof(fat32_bpb) == 90, "Size of FAT32 BPB wrong.");
 
 /// @brief FAT style time storage structure.
 ///
+/// Members are documented in the Microsoft FAT specification, so are not covered here.
 struct fat_time
 {
+/// @cond
   uint16_t two_seconds :5;
   uint16_t minutes :6;
   uint16_t hours :5;
+/// @endcond
 };
 
 /// @brief FAT style date storage structure.
 ///
+/// Members are documented in the Microsoft FAT specification, so are not covered here.
 struct fat_date
 {
+/// @cond
   uint16_t day :5;
   uint16_t month :4;
   uint16_t year :7;
+/// @endcond
 };
 
 /// @brief FAT long filename directory entry structure.
 ///
+/// Members are documented in the Microsoft FAT specification, so are not covered here.
 struct fat_long_filename_entry
 {
+/// @cond
   uint8_t entry_idx;
   uint16_t first_chars[5];
   uint8_t lfn_flag;
@@ -118,6 +135,25 @@ struct fat_long_filename_entry
     final_chars[0] = 0xFFFF;
     final_chars[1] = 0xFFFF;
   }
+
+  uint16_t &lfn_char(uint8_t idx)
+  {
+    ASSERT(idx < 13);
+    if (idx < 5)
+    {
+      return first_chars[idx];
+    }
+    else if (idx < 11)
+    {
+      return next_chars[idx - 5];
+    }
+    else
+    {
+      return final_chars[idx - 11];
+    }
+
+  }
+/// @endcond
 };
 
 /// @brief FAT directory entry structure.
@@ -125,21 +161,30 @@ struct fat_long_filename_entry
 /// Can be used for both long and short forms.
 struct fat_dir_entry
 {
+  /// @brief simple containing union.
+  ///
+  /// A directory entry can be either the normal style, or long filename style.
   union
   {
-    struct // 'Normal' FAT directory entry structure.
+    /// @brief 'Normal' FAT directory entry structure.
+    struct
     {
+      /// @cond
       uint8_t name[11];
-      struct
+      union
       {
-        uint8_t read_only :1;
-        uint8_t hidden :1;
-        uint8_t system :1;
-        uint8_t volume_id :1;
-        uint8_t directory :1;
-        uint8_t archive :1;
-        uint8_t reserved :2;
-      } attributes;
+        struct
+        {
+          uint8_t read_only :1;
+          uint8_t hidden :1;
+          uint8_t system :1;
+          uint8_t volume_id :1;
+          uint8_t directory :1;
+          uint8_t archive :1;
+          uint8_t reserved :2;
+        } attributes;
+        uint8_t attributes_raw;
+      };
       uint8_t nt_use_only;
       uint8_t create_time_tenths;
       fat_time create_time;
@@ -150,8 +195,17 @@ struct fat_dir_entry
       fat_date write_date;
       uint16_t first_cluster_low;
       uint32_t file_size;
+      /// @endcond
     };
-    fat_long_filename_entry long_fn;
+    fat_long_filename_entry long_fn; ///< Long filename version of the directory entry.
+  };
+
+  /// @brief Is this entry a long file name entry, or a short name entry?
+  ///
+  /// @return True if a long name entry, false otherwise.
+  bool is_long_fn_entry()
+  {
+    return (this->attributes_raw == 0x0F);
   };
 };
 static_assert(sizeof(fat_dir_entry) == 32, "Sizeof fat_dir_entry wrong.");
@@ -168,7 +222,32 @@ static_assert(sizeof(fat_dir_entry) == 32, "Sizeof FAT entry is wrong");
 ///
 enum class FAT_TYPE
 {
-  FAT12,
-  FAT16,
-  FAT32,
+  FAT12, ///< FAT12
+  FAT16, ///< FAT16
+  FAT32, ///< FAT32
+};
+
+class ISystemTreeLeaf;
+
+/// @brief Structure for storing details of the children of FAT directories.
+///
+/// This is intended to avoid having to read them from disk every time they are needed.
+struct fat_object_details
+{
+  /// @brief Long filename of this child object.
+  ///
+  /// May be "" if there is no associated long name.
+  std::string long_fn;
+
+  /// @brief Short filename of this child object.
+  std::string short_fn;
+
+  /// @brief The index of the directory entry for this child within the directory's list.
+  uint32_t fde_index;
+
+  /// @brief Weak pointer to the child object.
+  std::weak_ptr<ISystemTreeLeaf> child_object;
+
+  /// @brief Copy of the basic directory entry for this child object.
+  fat_dir_entry fde;
 };

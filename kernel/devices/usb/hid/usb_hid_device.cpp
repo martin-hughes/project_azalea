@@ -14,6 +14,8 @@
 #include "usb_hid_mouse.h"
 #include "usb_hid_keyboard.h"
 
+#include "devices/device_monitor.h"
+
 #include <klib/klib.h>
 
 namespace usb
@@ -73,7 +75,7 @@ hid_device::hid_device(std::shared_ptr<generic_core> core, uint16_t interface_nu
     rt.direction = 1;
     rt.recipient = 1;
 
-    raw_class_descriptor =std::unique_ptr<uint8_t[]>(new uint8_t[interface_hid_descriptor.report_descriptor_length]);
+    raw_class_descriptor = std::unique_ptr<uint8_t[]>(new uint8_t[interface_hid_descriptor.report_descriptor_length]);
     success = core->get_descriptor(interface_hid_descriptor.report_descriptor_type,
                                    0,
                                    device_interface_num,
@@ -94,7 +96,7 @@ hid_device::hid_device(std::shared_ptr<generic_core> core, uint16_t interface_nu
 
   if (success)
   {
-    success = usb::hid::parse_descriptor(raw_class_descriptor.get(),
+    success = usb::hid::parse_descriptor(raw_class_descriptor,
                                          interface_hid_descriptor.report_descriptor_length,
                                          report_descriptor);
 
@@ -126,14 +128,35 @@ hid_device::hid_device(std::shared_ptr<generic_core> core, uint16_t interface_nu
     success = device_core->device_request(rt, HID_DEVICE_REQUESTS::SET_PROTOCOL, 1, device_interface_num, 0, nullptr);
   }
 
-  if (success)
+  if (!success)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to start HID device\n");
+    set_device_status(DEV_STATUS::FAILED);
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Ready, stopped\n");
+    set_device_status(DEV_STATUS::STOPPED);
+  }
+
+  KL_TRC_EXIT;
+}
+
+bool hid_device::start()
+{
+  bool result{true};
+  bool success{false};
+
+  KL_TRC_ENTRY;
+
+  if (get_device_status() == DEV_STATUS::STOPPED)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Set report mode, schedule a transfer (", report_packet_size, " bytes) and begin!\n");
 
     decode_buffer = std::unique_ptr<int64_t[]>(new int64_t[report_descriptor.input_fields.size()]);
-    current_transfer = std::make_shared<normal_transfer>(this,
-                                                         std::unique_ptr<uint8_t[]>(new uint8_t[report_packet_size]),
-                                                         report_packet_size);
+    current_transfer = normal_transfer::create(self_weak_ptr.lock(),
+                                               std::unique_ptr<uint8_t[]>(new uint8_t[report_packet_size]),
+                                               report_packet_size);
     success = device_core->queue_transfer(interrupt_in_endpoint_num,
                                           true,
                                           current_transfer);
@@ -142,22 +165,53 @@ hid_device::hid_device(std::shared_ptr<generic_core> core, uint16_t interface_nu
   if (success)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Started device OK\n");
-    current_dev_status = DEV_STATUS::OK;
+    set_device_status(DEV_STATUS::OK);
   }
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to start HID device.\n");
-    current_dev_status = DEV_STATUS::FAILED;
+    set_device_status(DEV_STATUS::FAILED);
   }
 
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
+
+  return result;
+}
+
+bool hid_device::stop()
+{
+  bool result{true};
+
+  KL_TRC_ENTRY;
+
+  INCOMPLETE_CODE("HID device stop()");
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+bool hid_device::reset()
+{
+  bool result{true};
+
+  KL_TRC_ENTRY;
+
+  INCOMPLETE_CODE("HID device reset()");
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
 }
 
 /// @brief Retrieve and store the HID descriptor associated with the interface being used for this device.
 ///
 /// @param[out] storage The HID descriptor, if found, will be copied here.
 ///
-/// @return True if the HID descriptor was succesfully copied, false otherwise.
+/// @return True if the HID descriptor was successfully copied, false otherwise.
 bool hid_device::read_hid_descriptor(hid_descriptor &storage)
 {
   bool result = false;
@@ -180,7 +234,7 @@ bool hid_device::read_hid_descriptor(hid_descriptor &storage)
     if (hdr->descriptor_type == DESCRIPTOR_TYPES::HID)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "HID Descriptor found\n");
-      kl_memcpy(hdr, &storage, sizeof(storage));
+      memcpy(&storage, hdr, sizeof(storage));
       result = true;
       break;
     }
@@ -231,9 +285,9 @@ void hid_device::transfer_completed(normal_transfer *complete_transfer)
     }
 
     // Queue up a new transfer.
-    current_transfer = std::make_shared<normal_transfer>(this,
-                                                         std::unique_ptr<uint8_t[]>(new uint8_t[report_packet_size]),
-                                                         report_packet_size);
+    current_transfer = normal_transfer::create(self_weak_ptr.lock(),
+                                               std::unique_ptr<uint8_t[]>(new uint8_t[report_packet_size]),
+                                               report_packet_size);
     success = device_core->queue_transfer(interrupt_in_endpoint_num,
                                           true,
                                           current_transfer);
@@ -265,17 +319,24 @@ void hid_device::create_specialisation()
     {
     case hid::USAGE::MOUSE:
       KL_TRC_TRACE(TRC_LVL::FLOW, "Found mouse specialisation!\n");
-      child_specialisation = std::make_unique<hid::mouse>();
+      child_specialisation = std::make_shared<hid::mouse>();
       break;
 
     case hid::USAGE::KEYBOARD:
       KL_TRC_TRACE(TRC_LVL::FLOW, "Found keyboard specialisation!\n");
-      child_specialisation = std::make_unique<hid::keyboard>();
+      child_specialisation = std::make_shared<hid::keyboard>();
       break;
 
     default:
       KL_TRC_TRACE(TRC_LVL::FLOW, "No known specialisation\n");
     }
+  }
+
+  if (child_specialisation)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Register child device\n");
+    std::shared_ptr<IDevice> gen_dev = child_specialisation;
+    dev::monitor::register_device(gen_dev);
   }
 
   KL_TRC_EXIT;

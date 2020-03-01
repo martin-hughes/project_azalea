@@ -73,12 +73,12 @@ void mem_x64_pml4_allocate(process_x64_data &new_proc_data)
   new_pte = new uint8_t[PML4_LENGTH];
   KL_TRC_TRACE(TRC_LVL::EXTRA, "New PML4 Virtual Address", new_pte, "\n");
   ASSERT(((uint64_t)new_pte) % PML4_LENGTH == 0);
-  kl_memset((void *)new_pte, 0, PML4_LENGTH);
+  memset((void *)new_pte, 0, PML4_LENGTH);
 
   // Copy a kernel PML4 into this one. All the others should be the same, just pick the first one off of the list.
   existing_pte = (uint8_t *)((process_x64_data *)pml4_table_list.head->item)->pml4_virt_addr;
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Copying PML4 from", existing_pte, "\n");
-  kl_memcpy(existing_pte + (PML4_LENGTH / 2), new_pte + (PML4_LENGTH / 2), PML4_LENGTH / 2);
+  memcpy(new_pte + (PML4_LENGTH / 2), existing_pte + (PML4_LENGTH / 2), PML4_LENGTH / 2);
 
   // Compute the physical address. Start off by figuring out which virtual page it's in, which allows the mapping to
   // physical pages to be computed. The physical address of the PML4 is at the same offset as in the virtual page.
@@ -142,13 +142,14 @@ void mem_x64_pml4_synchronize(void *updated_pml4_table)
                (uint64_t)updated_kernel_section, "\n");
 
   klib_synch_spinlock_lock(pml4_copylock);
-  kl_memcpy((void *)updated_kernel_section, (void *)pml4_copy_buffer, PML4_LENGTH / 2);
+  memcpy((void *)pml4_copy_buffer, (void *)updated_kernel_section, PML4_LENGTH / 2);
 
   for(list_item = pml4_table_list.head; list_item != nullptr; list_item = list_item->next)
   {
     proc_data = (process_x64_data *)list_item->item;
     pml4_destination = (uint8_t *)(proc_data->pml4_virt_addr + PML4_LENGTH / 2);
-    kl_memcpy((void *)pml4_copy_buffer, (void *)pml4_destination, PML4_LENGTH / 2);
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Copying from ", pml4_copy_buffer, " to ", pml4_destination, "\n");
+    memcpy((void *)pml4_destination, (void *)pml4_copy_buffer, PML4_LENGTH / 2);
 
     updated_pml4s++;
   }

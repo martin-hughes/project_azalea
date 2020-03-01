@@ -11,6 +11,7 @@
 #include <azalea/messages.h>
 #include <azalea/syscall.h>
 #include <azalea/system_properties.h>
+#include <azalea/terminals.h>
 
 // Parts of the API executed in user mode.
 #include <azalea/processes.h>

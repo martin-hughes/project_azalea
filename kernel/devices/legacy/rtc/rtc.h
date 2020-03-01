@@ -11,8 +11,12 @@
 namespace timing
 {
 
+/// @brief Common CMOS register values.
+///
+/// The details are undocumented as they are standardised.
 enum class CMOS_RTC_REGISTERS : uint16_t
 {
+/// @cond
   SECONDS = 0,
   MINUTES = 2,
   HOURS = 4,
@@ -23,6 +27,7 @@ enum class CMOS_RTC_REGISTERS : uint16_t
   STATUS_A = 10,
   STATUS_B = 11,
   CENTURY = 50,
+/// @endcond
 };
 
 /// @brief Driver for a common type of CMOS-based RTC
@@ -38,6 +43,11 @@ public:
 
   // Overrides from IGenericClock
   virtual bool get_current_time(time_expanded &time) override;
+
+  // Overrides from IDevice
+  bool start() override;
+  bool stop() override;
+  bool reset() override;
 
 protected:
   uint16_t cmos_base_port{0x70}; ///< The CMOS port to use when reading values for this RTC.

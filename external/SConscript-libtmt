@@ -1,0 +1,9 @@
+# Libtmt library.
+
+files = [
+  "libtmt/tmt.c",
+        ]
+
+Import('env')
+obj = env.Library("azalea-tmt", files)
+Return ("obj")

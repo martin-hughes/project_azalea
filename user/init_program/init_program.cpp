@@ -19,7 +19,7 @@ int main (int argc, char **argv, char **env_p)
   while (1)
   {
     SC_DEBUG_MSG("Start shell\n");
-    if (exec_file("root\\shell", 11, &proc_handle, nullptr, nullptr) != ERR_CODE::NO_ERROR)
+    if (exec_file("\\root\\shell", 11, &proc_handle, nullptr, nullptr) != ERR_CODE::NO_ERROR)
     {
       SC_DEBUG_MSG("Failed to execute shell\n");
       break;
@@ -27,7 +27,7 @@ int main (int argc, char **argv, char **env_p)
     else
     {
       SC_DEBUG_MSG("Done\n");
-      syscall_wait_for_object(proc_handle);
+      syscall_wait_for_object(proc_handle, SC_MAX_WAIT);
       syscall_close_handle(proc_handle);
       SC_DEBUG_MSG("Shell terminated - restart.\n");
     }

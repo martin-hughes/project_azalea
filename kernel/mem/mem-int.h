@@ -1,9 +1,13 @@
-#ifndef _MEM_INTERNAL_H
-#define _MEM_INTERNAL_H
+/// @file
+/// @brief Functions internal to the memory manager.
+
+#pragma once
 
 #include <stdint.h>
 #include "mem.h"
 
+/// @brief The maximum number of physical pages supported by the kernel.
+///
 const uint64_t MEM_MAX_SUPPORTED_PAGES = 2048;
 
 /// @brief The number of pages the kernel image requires in RAM.
@@ -37,5 +41,3 @@ void mem_vmm_free_proc_data(task_process *process);
 // Allow the whole memory manager to access the data about task 0 (the kernel),
 // to make it easier to feed it into other parts of the system later.
 extern mem_process_info task0_entry;
-
-#endif

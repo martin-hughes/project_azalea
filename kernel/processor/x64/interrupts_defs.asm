@@ -50,7 +50,58 @@ end_of_irq_ack_fn_wrapper:
 
     ALIGN_STACK_AND_SAVE
 
-    mov rdi, %2
+    mov rdi, %2 ; Save numeric argument
+    call %1
+
+    call end_of_irq_ack_fn_wrapper
+
+    RESTORE_ORIG_STACK
+
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rbp
+    pop rdi
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    popf
+    iretq
+%endmacro
+
+; A default handler for interrupts. Simply calls a named function with the numerical argument given.
+%macro DEF_EXCEPTION_HANDLER 2
+    cli
+    pushf
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+    push rbp
+    push r8
+    push r9
+    push r10
+    push r11
+    push r12
+    push r13
+    push r14
+    push r15
+    mov rdi, [rsp + 128] ; Save RIP
+    mov rsi, [rsp + 152] ; Save RSP
+
+    ALIGN_STACK_AND_SAVE
+
+    mov rdx, %2 ; Save numeric argument
+    mov rcx, r12 ; Copy address of stack as a parameter
     call %1
 
     call end_of_irq_ack_fn_wrapper
@@ -94,10 +145,13 @@ end_of_irq_ack_fn_wrapper:
     push r13
     push r14
     push r15
-    mov rdi, [rsp + 128]
-    mov rsi, [rsp + 136]
+    mov rdi, [rsp + 136] ; Save RIP
+    mov rsi, [rsp + 160] ; Save RSP
+    mov rdx, [rsp + 128] ; Save error code
 
     ALIGN_STACK_AND_SAVE
+
+    mov rcx, r12 ; Copy address of stack as a parameter
 
     call %1
 

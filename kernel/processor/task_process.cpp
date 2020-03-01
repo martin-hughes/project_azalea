@@ -14,7 +14,7 @@
 /// @brief Create a new process
 ///
 /// Creates a new process, with an associated thread starting at entry_point. The process remains suspended until
-/// deliberately started.
+/// deliberately started. This should not be called directly - use the static create() function.
 ///
 /// @param entry_point The entry point for the process's main thread.
 ///
@@ -23,10 +23,9 @@
 /// @param mem_info If known, this field provides pre-populated memory manager information about this process. For all
 ///                 processes except the initial kernel start procedure, this should be NULL.
 task_process::task_process(ENTRY_PROC entry_point, bool kernel_mode, mem_process_info *mem_info) :
-  kernel_mode(kernel_mode),
-  accepts_msgs(false),
-  being_destroyed(false),
-  has_ever_started(false)
+  kernel_mode{kernel_mode},
+  being_destroyed{false},
+  has_ever_started{false}
 {
   KL_TRC_ENTRY;
 
@@ -47,6 +46,16 @@ task_process::task_process(ENTRY_PROC entry_point, bool kernel_mode, mem_process
   KL_TRC_EXIT;
 }
 
+/// @brief Create a new process.
+///
+/// @param entry_point Pointer to the first instruction that should be executed in this process.
+///
+/// @param kernel_mode Should this be a kernel-mode process?
+///
+/// @param mem_info If there is a pre-defined mem_process_info for this process then it should be provided here,
+///                 otherwise use nullptr.
+///
+/// @return A shared_ptr to the new process.
 std::shared_ptr<task_process> task_process::create(ENTRY_PROC entry_point,
                                                    bool kernel_mode,
                                                    mem_process_info *mem_info)
@@ -64,7 +73,7 @@ std::shared_ptr<task_process> task_process::create(ENTRY_PROC entry_point,
   // Add it to the "proc" tree of processes.
   std::shared_ptr<ISystemTreeLeaf> branch_ptr;
   std::shared_ptr<proc_fs_root_branch> proc_fs_root_ptr;
-  system_tree()->get_child("proc", branch_ptr);
+  system_tree()->get_child("\\proc", branch_ptr);
   proc_fs_root_ptr = std::dynamic_pointer_cast<proc_fs_root_branch>(branch_ptr);
   ASSERT(proc_fs_root_ptr);
   proc_fs_root_ptr->add_process(new_proc);
@@ -79,24 +88,24 @@ std::shared_ptr<task_process> task_process::create(ENTRY_PROC entry_point,
     KL_TRC_TRACE(TRC_LVL::FLOW, "Not in initial startup, look for stdio pipes\n");
 
     // If the current process has stdout, stdin or stderr pipes, use those for the newly created process too.
-    if (system_tree()->get_child("proc\\0\\stdout", leaf_ptr) == ERR_CODE::NO_ERROR)
+    if (system_tree()->get_child("\\proc\\0\\stdout", leaf_ptr) == ERR_CODE::NO_ERROR)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Copy stdout from parent to child\n");
-      snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "proc\\%p\\stdout", new_proc.get());
+      snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "\\proc\\%p\\stdout", new_proc.get());
       system_tree()->add_child(proc_path_ptr_buffer, leaf_ptr);
     }
 
-    if (system_tree()->get_child("proc\\0\\stdin", leaf_ptr) == ERR_CODE::NO_ERROR)
+    if (system_tree()->get_child("\\proc\\0\\stdin", leaf_ptr) == ERR_CODE::NO_ERROR)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Copy stdin from parent to child\n");
-      snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "proc\\%p\\stdin", new_proc.get());
+      snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "\\proc\\%p\\stdin", new_proc.get());
       system_tree()->add_child(proc_path_ptr_buffer, leaf_ptr);
     }
 
-    if (system_tree()->get_child("proc\\0\\stderr", leaf_ptr) == ERR_CODE::NO_ERROR)
+    if (system_tree()->get_child("\\proc\\0\\stderr", leaf_ptr) == ERR_CODE::NO_ERROR)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Copy stderr from parent to child\n");
-      snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "proc\\%p\\stderr", new_proc.get());
+      snprintf(proc_path_ptr_buffer, sizeof(proc_path_ptr_buffer), "\\proc\\%p\\stderr", new_proc.get());
       system_tree()->add_child(proc_path_ptr_buffer, leaf_ptr);
     }
   }
@@ -136,7 +145,7 @@ void task_process::destroy_process()
 
     std::shared_ptr<ISystemTreeLeaf> branch_ptr;
     std::shared_ptr<proc_fs_root_branch> proc_fs_root_ptr;
-    system_tree()->get_child("proc", branch_ptr);
+    system_tree()->get_child("\\proc", branch_ptr);
     proc_fs_root_ptr = std::dynamic_pointer_cast<proc_fs_root_branch>(branch_ptr);
     ASSERT(proc_fs_root_ptr);
     proc_fs_root_ptr->remove_process(shared_from_this());
@@ -252,6 +261,36 @@ void task_process::thread_ending(task_thread *thread)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "No more threads\n");
     this->destroy_process();
+  }
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Stores messages for retrieval by a user-mode process.
+///
+/// This is unlike other objects where messages are handled directly by this handler - we don't have a facility to call
+/// directly back to user mode code yet. As such, we just take the message from the global queue and add it to our
+/// internal queue.
+///
+/// Only "basic" messages can be sent to processes at the moment.
+///
+/// @param message The message to be handled by the process.
+void task_process::handle_message(std::unique_ptr<msg::root_msg> &message)
+{
+  msg::basic_msg *msg_ptr;
+
+  KL_TRC_ENTRY;
+
+  msg_ptr = dynamic_cast<msg::basic_msg *>(message.get());
+  if (msg_ptr && this->messaging.accepts_msgs)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Found a basic message, queue it for later handling\n");
+    message.release();
+    std::unique_ptr<msg::basic_msg> msg_u_ptr(msg_ptr);
+
+    klib_synch_spinlock_lock(this->messaging.message_lock);
+    this->messaging.message_queue.push(std::move(msg_u_ptr));
+    klib_synch_spinlock_unlock(this->messaging.message_lock);
   }
 
   KL_TRC_EXIT;

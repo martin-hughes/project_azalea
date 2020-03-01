@@ -1,138 +1,127 @@
 /// @file
-/// @brief Implements a terrible terminal. One day this will implement virtual terminals as actual objects.
+/// @brief Implements a terrible generic terminal.
+//
+// Known defects: (amongst others!)
+// - The command buffer size is ridiculous
+// - We don't deal well with backspaces at the beginning of a line if they're part of a command that has run past the
+//   end of the previous line.
+// - stdin_writer is never checked for non-null
+// - Message based reading of stdout_reader is not tested.
 
 //#define ENABLE_TRACING
 
 #include "klib/klib.h"
 #include "gen_terminal.h"
+#include "devices/terminals/vga_terminal.h"
 #include "system_tree/system_tree.h"
 #include "system_tree/fs/pipe/pipe_fs.h"
 
-extern bool wait_for_term;
-
-void enable_cursor();
-void disable_cursor();
-void set_cursor_pos(uint8_t x, uint8_t y);
-
-/// @brief A simple text based terminal outputting on the main display.
+/// @brief Construct a terminal.
 ///
-void simple_terminal()
+/// @param keyboard_pipe Pipe that the terminal will write processsed keypresses in to (e.g. for stdin).
+terms::generic::generic(std::shared_ptr<IWritable> keyboard_pipe) :
+  terms::generic{keyboard_pipe, "term"}
 {
-  KL_TRC_ENTRY;
 
-  std::shared_ptr<ISystemTreeLeaf> leaf;
-  std::shared_ptr<IReadable> reader;
-  std::shared_ptr<IWritable> stdin_writer;
-  const uint64_t buffer_size = 10;
-  char buffer[buffer_size];
-  uint64_t bytes_read;
-  klib_message_hdr msg_header;
-  keypress_msg *key_msg;
-
-
-  // Set up the output pipe - the one that correlates to stdout/stderr.
-  std::shared_ptr<ISystemTreeBranch> pipes_br = std::make_shared<system_tree_simple_branch>();
-  ASSERT(pipes_br != nullptr);
-  ASSERT(system_tree() != nullptr);
-  ASSERT(system_tree()->add_child("pipes", pipes_br) == ERR_CODE::NO_ERROR);
-  ASSERT(pipes_br->add_child("terminal-output", pipe_branch::create()) == ERR_CODE::NO_ERROR);
-  ASSERT(system_tree()->get_child("pipes\\terminal-output\\read", leaf) == ERR_CODE::NO_ERROR);
-  reader = std::dynamic_pointer_cast<IReadable>(leaf);
-  ASSERT(reader != nullptr);
-
-  // Set up an input pipe (which maps to stdin)
-  ASSERT(pipes_br->add_child("terminal-input", pipe_branch::create()) == ERR_CODE::NO_ERROR);
-  ASSERT(system_tree()->get_child("pipes\\terminal-input\\write", leaf) == ERR_CODE::NO_ERROR);
-  stdin_writer = std::dynamic_pointer_cast<IWritable>(leaf);
-  ASSERT(stdin_writer != nullptr);
-
-  generic_terminal output_term(stdin_writer);
-
-  msg_register_process(task_get_cur_thread()->parent_process.get());
-
-  wait_for_term = false;
-
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Beginning terminal\n");
-  while(1)
-  {
-    // Write any pending output data.
-    if (reader->read_bytes(0, buffer_size, reinterpret_cast<uint8_t *>(buffer), buffer_size, bytes_read) ==
-        ERR_CODE::NO_ERROR)
-    {
-      if (bytes_read != 0)
-      {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Write output\n");
-        output_term.write_string(buffer, bytes_read);
-      }
-    }
-    else
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to read\n");
-    }
-
-    // Grab any keyboard messages, and send them to the stdin pipe.
-    if (msg_retrieve_next_msg(msg_header) == ERR_CODE::NO_ERROR)
-    {
-      //KL_TRC_TRACE(TRC_LVL::FLOW, "Got keyboard message. ");
-      switch (msg_header.msg_id)
-      {
-        case SM_KEYDOWN:
-          break;
-
-        case SM_KEYUP:
-          break;
-
-        case SM_PCHAR:
-          if (msg_header.msg_length != sizeof(key_char_msg))
-          {
-            KL_TRC_TRACE(TRC_LVL::FLOW, "Wrong sized keyboard message\n");
-          }
-          else
-          {
-            key_msg = reinterpret_cast<keypress_msg *>(msg_header.msg_contents);
-            char pc = (char)key_msg->key_pressed;
-
-            output_term.handle_keypress(pc);
-          }
-          break;
-
-        default:
-          break;
-      }
-      //KL_TRC_TRACE(TRC_LVL::FLOW, "\n");
-
-      msg_msg_complete(msg_header);
-    }
-  }
-
-  KL_TRC_EXIT;
 }
 
 /// @brief Construct a terminal.
 ///
-/// @param keyboard_pipe Pipe that the terminal will read keypresses from.
-generic_terminal::generic_terminal(std::shared_ptr<IWritable> keyboard_pipe) :
-  IDevice{"Generic Terminal"}
+/// @param keyboard_pipe Pipe that the terminal will write processsed keypresses in to (e.g. for stdin).
+///
+/// @param root_name The root part of a device name for this terminal (defaults to "term" in the other constructor)
+terms::generic::generic(std::shared_ptr<IWritable> keyboard_pipe, std::string root_name) :
+  IDevice{"Generic Terminal", root_name, true}
 {
   KL_TRC_ENTRY;
 
-  current_dev_status = DEV_STATUS::OK;
-
   stdin_writer = keyboard_pipe;
-  // Map and then clear the display
-  display_ptr = reinterpret_cast<unsigned char *>(mem_allocate_virtual_range(1));
-  mem_map_range(nullptr, display_ptr, 1);
-  display_ptr += 0xB8000;
 
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Clearing screen\n");
-  for (int i = 0; i < width * height * bytes_per_char; i += 2)
+  KL_TRC_EXIT;
+}
+
+bool terms::generic::start()
+{
+  bool result{true};
+
+  KL_TRC_ENTRY;
+
+  set_device_status(DEV_STATUS::OK);
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+bool terms::generic::stop()
+{
+  bool result{true};
+
+  KL_TRC_ENTRY;
+
+  set_device_status(DEV_STATUS::STOPPED);
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+bool terms::generic::reset()
+{
+  bool result{true};
+
+  KL_TRC_ENTRY;
+
+  set_device_status(DEV_STATUS::RESET);
+
+  // Reset terminal options to defaults.
+  filters = terminal_opts();
+
+  set_device_status(DEV_STATUS::STOPPED);
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+void terms::generic::handle_private_msg(std::unique_ptr<msg::root_msg> &message)
+{
+  KL_TRC_ENTRY;
+
+  if ((message->message_id == SM_PIPE_NEW_DATA) && (this->stdout_reader))
   {
-    display_ptr[i] = 0;
-    display_ptr[i + 1] = 0x0f;
-  }
+    const uint64_t buffer_size = 10;
+    char buffer[buffer_size];
+    uint64_t bytes_read;
 
-  enable_cursor();
-  set_cursor_pos(0, 0);
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Passing data from pipe to screen\n");
+
+    while(1)
+    {
+      if (stdout_reader->read_bytes(0, buffer_size, reinterpret_cast<uint8_t *>(buffer), buffer_size, bytes_read) ==
+          ERR_CODE::NO_ERROR)
+      {
+        if (bytes_read != 0)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Write output\n");
+          this->write_string(buffer, bytes_read);
+        }
+        else
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Stop reading as end of stream\n");
+          break;
+        }
+      }
+      else
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Stop reading due error\n");
+        break;
+      }
+    }
+  }
 
   KL_TRC_EXIT;
 }
@@ -140,143 +129,220 @@ generic_terminal::generic_terminal(std::shared_ptr<IWritable> keyboard_pipe) :
 /// @brief Handle a keypress
 ///
 /// @param key The ASCII code for the pressed key.
-void generic_terminal::handle_keypress(char key)
+void terms::generic::handle_character(char key)
 {
+  uint64_t bytes_written{0};
+
   KL_TRC_ENTRY;
 
-  uint64_t bytes_written;
-  command_buffer[command_buffer_pos] = key;
-  command_buffer[command_buffer_pos + 1] = 0;
-  command_buffer_pos++;
-
-  write_char(key);
-
-  if ((key == '\n') || (command_buffer_pos == (command_buffer_size - 1)))
+  if (get_device_status() != DEV_STATUS::OK)
   {
-    if (stdin_writer->write_bytes(0, command_buffer_pos, command_buffer, command_buffer_size, bytes_written)
-        != ERR_CODE::NO_ERROR)
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to dump command\n");
-    }
-
-    command_buffer_pos = 0;
-  }
-
-  update_cursor();
-
-  KL_TRC_EXIT;
-}
-
-/// @brief Write a string onto the terminal.
-///
-/// @param out_string The string to write. All characters, including null characters, will be output on the display.
-///
-/// @param num_chars The number of characters to write.
-void generic_terminal::write_string(char *out_string, uint16_t num_chars)
-{
-  KL_TRC_ENTRY;
-
-  for (int i = 0; i < num_chars; i++)
-  {
-    write_char(out_string[i]);
-  }
-
-  update_cursor();
-
-  KL_TRC_EXIT;
-}
-
-/// @brief Write a single character on to the terminal.
-///
-/// @param c The character to write.
-void generic_terminal::write_char(char c)
-{
-  if (c != '\n')
-  {
-    display_ptr[((cur_y * width) + cur_x) * 2] =c;
-    cur_x++;
-    if (cur_x >= width)
-    {
-      cur_x = 0;
-      cur_y++;
-    }
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Ignore inputs when not running\n");
   }
   else
   {
-    cur_x = 0;
-    cur_y++;
-  }
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Handle input\n");
 
-  if (cur_y >= height)
-  {
-    // Move everything up one line.
-    for (uint16_t cur_offset = 0; cur_offset < (width * (height - 1) * 2); cur_offset++)
+    if ((key == '\r') && filters.input_return_is_newline)
     {
-      display_ptr[cur_offset] = display_ptr[cur_offset + (width * 2)];
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Input carriage return translation\n");
+      key = '\n';
     }
 
-    // Set the bottom line to empty, and reset the colour to bright white on black.
-    for (uint16_t cur_offset = (width * (height - 1) * 2); cur_offset < (width * height * 2); cur_offset += 2)
+    if (filters.line_discipline)
     {
-      display_ptr[cur_offset] = 0;
-      display_ptr[cur_offset + 1] = 0x0f;
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Treat key in line discipline mode.\n");
+
+      switch (key)
+      {
+      case '\b':
+        if (command_buffer_pos > 0)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Backspace pressed\n");
+          command_buffer_pos--;
+          command_buffer[command_buffer_pos] = 0;
+          // This is weird, but it's how to overwrite the previous character and have the cursor in the correct place.
+          write_string("\b \b", 3);
+        }
+        else
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Backspace pressed in first column\n");
+        }
+
+        break;
+
+      case 0x7f:
+        if (filters.char_7f_is_backspace)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Reinterpret char 127\n");
+          handle_character('\b');
+        }
+        else
+        {
+          // If not backspace, drop this character.
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Ignore odd delete key\n");
+        }
+        break;
+
+      default:
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Normal key\n");
+        command_buffer[command_buffer_pos] = key;
+        command_buffer[command_buffer_pos + 1] = 0;
+        command_buffer_pos++;
+
+        write_string(&key, 1);
+
+        break;
+      }
+
+      if ((key == '\n') || (command_buffer_pos == (command_buffer_size - 1)))
+      {
+        if (stdin_writer &&
+            (stdin_writer->write_bytes(0, command_buffer_pos, command_buffer, command_buffer_size, bytes_written)
+             != ERR_CODE::NO_ERROR))
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to dump command\n");
+        }
+
+        command_buffer_pos = 0;
+      }
     }
-
-    cur_y = height - 1;
+    else if (stdin_writer)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Direct key pass through\n");
+      stdin_writer->write_bytes(0, 1, reinterpret_cast<uint8_t *>(&key), 1, bytes_written);
+    }
   }
+
+  KL_TRC_EXIT;
 }
 
-/// @brief Move the terminal to the position of the next output character.
-void generic_terminal::update_cursor()
+/// @brief Set this terminal's input and output filters.
+///
+/// @param[in] opts Structure containing the options selected for filtering input and output from this terminal. See
+///                 that structure's documentation for more information.
+void terms::generic::set_filtering_opts(terminal_opts &opts)
 {
-  set_cursor_pos(cur_x, cur_y);
-}
+  KL_TRC_ENTRY;
 
-// The following functions were adapted from the code on the page https://wiki.osdev.org/Text_Mode_Cursor.
-
-/// @brief Enable the VGA text mode cursor
-///
-void enable_cursor()
-{
-  uint8_t x;
-
-  proc_write_port(0x3D4, 0x0A, 8);
-  x = proc_read_port(0x3D5, 8);
-  x = x & 0xC0;
-  x = x | 13;
-  proc_write_port(0x3D5, x, 8);
-
-  proc_write_port(0x3D4, 0x0B, 8);
-  x = proc_read_port(0x3D5, 8);
-  x = x & 0xE0;
-  x = x | 15;
-  proc_write_port(0x3D5, x, 8);
-}
-
-/// @brief Disable the VGA text mode cursor
-///
-void disable_cursor()
-{
-	proc_write_port(0x3D4, 0x0A, 8);
-	proc_write_port(0x3D5, 0x20, 8);
-}
-
-/// @brief Set the position of the VGA text mode cursor
-///
-/// Values of x and y that do not map to the display will cause this function to do nothing.
-///
-/// @param x The horizontal position of the cursor (0 on the left, 79 on the right)
-///
-/// @param y The vertical position of the cursor (0 at the top, 24 at the bottom)
-void set_cursor_pos(uint8_t x, uint8_t y)
-{
-  if ((x < 80) && (y < 25))
+  if (opts.line_discipline != filters.line_discipline)
   {
-    uint16_t pos = y * 80 + x;
-
-    proc_write_port(0x3D4, 0x0F, 8);
-    proc_write_port(0x3D5, (uint8_t) (pos & 0xFF), 8);
-    proc_write_port(0x3D4, 0x0E, 8);
-    proc_write_port(0x3D5, (uint8_t) ((pos >> 8) & 0xFF), 8);
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Reset line discipline\n");
+    command_buffer_pos = 0;
   }
+
+  this->filters = opts;
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Read this terminal's input and output filters.
+///
+/// @param[out] opts Structure containing the options selected for filtering input and output from this terminal. See
+///                  that structure's documentation for more information.
+void terms::generic::read_filtering_opts(terminal_opts &opts)
+{
+  KL_TRC_ENTRY;
+
+  opts = this->filters;
+
+  KL_TRC_EXIT;
+}
+
+ERR_CODE terms::generic::write_bytes(uint64_t start,
+                                     uint64_t length,
+                                     const uint8_t *buffer,
+                                     uint64_t buffer_length,
+                                     uint64_t &bytes_written)
+{
+  uint64_t true_num_bytes = std::min(length, buffer_length);
+
+  KL_TRC_ENTRY;
+
+  write_string(reinterpret_cast<const char *>(buffer), true_num_bytes);
+  bytes_written = true_num_bytes;
+
+  KL_TRC_EXIT;
+
+  return ERR_CODE::NO_ERROR;
+}
+
+void terms::generic::write_string(const char *out_string, uint16_t num_chars)
+{
+  KL_TRC_ENTRY;
+
+  if (get_device_status() != DEV_STATUS::OK)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Ignore request while stopped\n");
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Handle request while running\n");
+    for (uint16_t c = 0; c < num_chars; c++, out_string++)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Write character: ", static_cast<uint8_t>(*out_string), "\n");
+
+      if ((*out_string == '\n') && (filters.output_newline == term_newline_mode::LF_TO_CRLF))
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Newline translation - \n to \r\n");
+        write_raw_string("\r", 1);
+      }
+
+      write_raw_string(out_string, 1);
+
+      if ((*out_string == '\r') && (filters.output_newline == term_newline_mode::CR_TO_CRLF))
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Newline translation - \r to \r\n");
+        write_raw_string("\n", 1);
+      }
+    }
+  }
+
+  KL_TRC_EXIT;
+}
+
+bool terms::generic::get_options_struct(void *struct_ptr, uint64_t buffer_length)
+{
+  bool result {true};
+
+  KL_TRC_ENTRY;
+
+  if ((struct_ptr != nullptr) && (buffer_length >= sizeof(terminal_opts)))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Acceptable buffer\n");
+    read_filtering_opts(*reinterpret_cast<terminal_opts *>(struct_ptr));
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Unacceptable buffer\n");
+    result = false;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+bool terms::generic::save_options_struct(void *struct_ptr, uint64_t buffer_length)
+{
+  bool result {true};
+
+  KL_TRC_ENTRY;
+
+  if ((struct_ptr != nullptr) && (buffer_length >= sizeof(terminal_opts)))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Acceptable buffer\n");
+    set_filtering_opts(*reinterpret_cast<terminal_opts *>(struct_ptr));
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Unacceptable buffer\n");
+    result = false;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
 }

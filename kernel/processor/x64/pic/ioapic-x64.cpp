@@ -1,4 +1,5 @@
-// Provides an interface for controlling I/O APIC controllers.
+/// @file
+/// @brief Provides an interface for controlling I/O APIC controllers.
 
 //#define ENABLE_TRACING
 
@@ -6,9 +7,9 @@
 #include "ioapic-x64.h"
 #include "acpi/acpi_if.h"
 
-static uint64_t ioapic_count = 0;
+static uint64_t ioapic_count = 0; ///< Number of IO APICs in the system.
 
-const uint8_t SUBTABLE_IOAPIC_TYPE = 1;
+const uint8_t SUBTABLE_IOAPIC_TYPE = 1; ///< Indicates this APIC table is for an IOAPIC.
 
 /// @brief Stores data about one IO APIC attached to the system.
 ///
@@ -24,12 +25,14 @@ struct ioapic_data
   uint32_t gs_interrupt_base; ///< The BaseIRQ number for this IO APIC.
 };
 
-static klib_list<ioapic_data *> ioapic_list;
+static klib_list<ioapic_data *> ioapic_list; ///< List of known IO APICs
 
 void proc_x64_ioapic_add_ioapic(acpi_madt_io_apic *table);
 
 void proc_x64_ioapic_set_redir_tab(ioapic_data *ioapic, uint8_t num_in, uint8_t vector_out, uint8_t apic_id);
 
+/// @brief Find data about all IO APICs in the system and complete basic configuration.
+///
 void proc_x64_ioapic_load_data()
 {
   KL_TRC_ENTRY;
@@ -61,6 +64,9 @@ void proc_x64_ioapic_load_data()
   KL_TRC_EXIT;
 }
 
+/// @brief Return the number of known IO APICs in the system
+///
+/// @return The number of known IO APICs in the system
 uint64_t proc_x64_ioapic_get_count()
 {
   KL_TRC_ENTRY;
@@ -70,6 +76,9 @@ uint64_t proc_x64_ioapic_get_count()
   return ioapic_count;
 }
 
+/// @brief Add details of a new IO APIC to the list of IO APICs.
+///
+/// @param table ACPI-generated details of a single APIC.
 void proc_x64_ioapic_add_ioapic(acpi_madt_io_apic *table)
 {
   KL_TRC_ENTRY;
@@ -108,7 +117,15 @@ void proc_x64_ioapic_add_ioapic(acpi_madt_io_apic *table)
   KL_TRC_EXIT;
 }
 
-// Remap an IO APICs inputs to interrupts starting from the vector number at base_int.
+/// @brief Remap an IO APICs inputs to interrupts starting from the vector number at base_int.
+///
+/// Use this to ensure APICs do not clash with each other or with the processor exception interrupts.
+///
+/// @param ioapic_num System IO APIC number for the device to remap
+///
+/// @param base_int Start interrupts from this IO APIC at this numer
+///
+/// @param apic_id Send interrupts to this APIC (or processor)
 void proc_x64_ioapic_remap_interrupts(uint32_t ioapic_num, uint8_t base_int, uint8_t apic_id)
 {
   KL_TRC_ENTRY;
@@ -142,7 +159,15 @@ void proc_x64_ioapic_remap_interrupts(uint32_t ioapic_num, uint8_t base_int, uin
   KL_TRC_EXIT;
 }
 
-// Remap an IO APIC's single input to a specified vector at the CPU
+/// @brief Remap an IO APIC's single input to a specified vector at a specified CPU
+///
+/// @param ioapic The IO APIC to do the remapping for
+///
+/// @param num_in The interrupt number on this APIC to remap
+///
+/// @param vector_out The interrupt number after remapping
+///
+/// @param apic_id The APIC target for this interrupt (usually a processor)
 void proc_x64_ioapic_set_redir_tab(ioapic_data *ioapic, uint8_t num_in, uint8_t vector_out, uint8_t apic_id)
 {
   KL_TRC_ENTRY;

@@ -4,10 +4,13 @@ Import('env')
 obj = env.Library("dev-pci",
                   [
                     "pci.cpp",
-                    "pci_root.cpp",
-                    "generic_device/pci_generic_device.cpp",
-                    "generic_device/pci_generic_device_msi.cpp",
+
                     "pci_generic_bus.cpp",
                     "pci_legacy_interrupts.cpp",
+                    "pci_root.cpp",
+
+                    "generic_device/pci_generic_device.cpp",
+                    "generic_device/pci_generic_device_bm.cpp",
+                    "generic_device/pci_generic_device_msi.cpp",
                   ])
 Return ("obj")

@@ -1,8 +1,10 @@
-// ACPI OS Services Layer for Project Azalea.
+/// @file
+/// @brief ACPI OS Services Layer for Project Azalea.
 
 //#define ENABLE_TRACING
 
 #include <stdint.h>
+#include <string.h>
 
 #include "klib/klib.h"
 
@@ -31,12 +33,12 @@ public:
   AcpiIrqHandler(ACPI_OSD_HANDLER irq_handler, void *irq_context);
   virtual ~AcpiIrqHandler() { };
 
-  virtual bool handle_interrupt_fast(uint8_t irq_number);
-  virtual void handle_interrupt_slow(uint8_t irq_number) { };
+  virtual bool handle_interrupt_fast(uint8_t irq_number) override;
+  virtual void handle_interrupt_slow(uint8_t irq_number) override { };
 
 private:
-  ACPI_OSD_HANDLER _irq_handler;
-  void *_irq_context;
+  ACPI_OSD_HANDLER _irq_handler; ///< Stored handler.
+  void *_irq_context; ///< Stored context.
 };
 
 namespace
@@ -559,7 +561,7 @@ ACPI_STATUS AcpiOsWriteMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 Value, UINT3
   KL_TRC_ENTRY;
   uint64_t *mem = (uint64_t *)AcpiOsMapMemory(Address, Width / 8);
 
-  kl_memcpy(&Value, (void *)mem, Width / 8);
+  memcpy((void *)mem, &Value, Width / 8);
 
   AcpiOsUnmapMemory((void *)mem, Width / 8);
   KL_TRC_EXIT;
@@ -621,6 +623,7 @@ ACPI_STATUS AcpiOsReadPciConfiguration(ACPI_PCI_ID *PciId, UINT32 Reg, UINT64 *V
   }
 
   KL_TRC_EXIT;
+
   return AE_OK;
 }
 
@@ -678,6 +681,7 @@ ACPI_STATUS AcpiOsWritePciConfiguration(ACPI_PCI_ID *PciId, UINT32 Reg, UINT64 V
   }
 
   KL_TRC_EXIT;
+
   return AE_OK;
 }
 
@@ -745,7 +749,7 @@ void AcpiOsVprintf(const char *Format, va_list Args)
     return;
   }
 
-  kl_memset(exception_message_buf, 0, 1000);
+  memset(exception_message_buf, 0, 1000);
   vsnprintf(exception_message_buf, em_buf_len, Format, Args);
 
   kl_trc_trace(TRC_LVL::EXTRA, (const char *)exception_message_buf);
@@ -882,6 +886,11 @@ void AcpiOsTracePoint(ACPI_TRACE_EVENT_TYPE Type, BOOLEAN Begin, UINT8 *Aml, cha
 
 /// @endcond
 
+/// @brief Create an object to handle IRQs from ACPI.
+///
+/// @param irq_handler Pointer to the ACPI handler for this interrupt.
+///
+/// @param irq_context The context to provide to the handler.
 AcpiIrqHandler::AcpiIrqHandler(ACPI_OSD_HANDLER irq_handler, void *irq_context) :
   _irq_handler(irq_handler),
   _irq_context(irq_context)

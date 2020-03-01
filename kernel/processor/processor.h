@@ -1,8 +1,7 @@
 /// @file
 /// @brief Main processor control interface.
 
-#ifndef PROCESSOR_H_
-#define PROCESSOR_H_
+#pragma once
 
 #include <stdint.h>
 
@@ -11,15 +10,16 @@
 #include "mem/mem.h"
 #include "object_mgr/object_mgr.h"
 #include "system_tree/system_tree_leaf.h"
-#include "klib/data_structures/string.h"
-#include "klib/synch/kernel_messages.h"
 #include "processor/synch_objects.h"
+#include "processor/work_queue.h"
 
 #include "devices/device_interface.h"
 
+#include <queue>
+
 // Main kernel interface to processor specific functions. Includes the task management system.
 
-// Definition of a possible entry point:
+/// @brief Definition of a possible entry point:
 typedef void (* ENTRY_PROC)();
 
 // Forward declare task_thread since task_process and task_thread refer to each other in a cycle.
@@ -27,7 +27,10 @@ class task_thread;
 
 /// Structure to hold information about a process. All information is stored here, to be accessed by the various
 /// components as needed. This removes the need for per-component lookup tables for each process.
-class task_process : public IHandledObject, public WaitForFirstTriggerObject, public std::enable_shared_from_this<task_process>
+class task_process : public IHandledObject,
+                     public WaitForFirstTriggerObject,
+                     public std::enable_shared_from_this<task_process>,
+                     public work::message_receiver
 {
 protected:
   task_process(ENTRY_PROC entry_point, bool kernel_mode = false, mem_process_info *mem_info = nullptr);
@@ -42,8 +45,10 @@ public:
   void stop_process();
   void destroy_process();
 
+  virtual void handle_message(std::unique_ptr<msg::root_msg> &message) override;
+
 protected:
-  friend task_thread;
+  friend task_thread; ///< This is just a convenience really.
   void add_new_thread(std::shared_ptr<task_thread> new_thread);
   void thread_ending(task_thread *thread);
 
@@ -58,24 +63,18 @@ public:
   /// Is the process running in kernel mode?
   bool kernel_mode;
 
-  /// The process's queue of waiting messages.
-  msg_msg_queue message_queue;
+  struct
+  {
+    /// Does this process accept messages? Messages can't be sent to the process unless this flag is true. Accepting
+    /// messages is optional as not all processes will need the capability to receive messages.
+    bool accepts_msgs{false};
 
-  /// Does this process accept messages? Messages can't be sent to the process unless this flag is true. Accepting
-  /// messages is optional as not all processes will need the capability to receive messages.
-  bool accepts_msgs;
+    /// Lock to control the message queue.
+    kernel_spinlock message_lock{0};
 
-  /// Lock to control the message queue.
-  kernel_spinlock message_lock;
-
-  /// The message currently being handled by the process. Invalid if no message is being handled.
-  klib_message_hdr cur_msg;
-
-  /// Is a message currently being handled by the receiving process?
-  bool msg_outstanding;
-
-  /// The number of messages currently waiting for this process.
-  uint64_t msg_queue_len;
+    /// Stores messages for retrieval by the process.
+    std::queue<std::unique_ptr<msg::basic_msg>> message_queue;
+  } messaging; ///< All variables related to the work queue/messaging system.
 
   /// Is this process currently being destroyed?
   bool being_destroyed;
@@ -144,6 +143,19 @@ public:
   /// possible number of active threads, so if this thread is a work queue thread then it may be stopped after this
   /// work item completes.
   bool is_worker_thread;
+
+  /// If this value is set to non-zero, and the thread is sleeping, and the system timer is greater than this value,
+  /// then the scheduler will wake this thread and start it running again. This is an absolute value in nanoseconds.
+  uint64_t wake_thread_after{0};
+
+  /// The number of TLS slots provided per thread in the kernel.
+  static const uint8_t MAX_TLS_KEY = 16;
+
+  /// @brief Slots for thread local storage.
+  ///
+  /// These slots are for thread local storage within the kernel only. User-mode thread local storage is dealt with in
+  /// user-mode by the user's preferred library.
+  void *thread_local_storage_slot[MAX_TLS_KEY];
 
 #ifdef AZALEA_TEST_CODE
   friend void test_only_reset_task_mgr();
@@ -218,8 +230,8 @@ void task_yield();
 // Multiple processor control functions
 uint32_t proc_mp_proc_count();
 uint32_t proc_mp_this_proc_id();
-void proc_mp_signal_processor(uint32_t proc_id, PROC_IPI_MSGS msg);
-void proc_mp_signal_all_processors(PROC_IPI_MSGS msg);
+void proc_mp_signal_processor(uint32_t proc_id, PROC_IPI_MSGS msg, bool must_complete);
+void proc_mp_signal_all_processors(PROC_IPI_MSGS msg, bool exclude_self, bool wait_for_complete);
 void proc_mp_receive_signal(PROC_IPI_MSGS msg);
 
 // Force the scheduler to re-schedule this thread continually, or allow it to schedule normally. This allows a thread
@@ -231,6 +243,7 @@ uint64_t proc_read_port(const uint64_t port_id, const uint8_t width);
 void proc_write_port(const uint64_t port_id, const uint64_t value, const uint8_t width);
 
 // Allow drivers to handle IRQs and normal interrupts.
+class IInterruptReceiver; // defined in device_interface.h
 void proc_register_irq_handler(uint8_t irq_number, IInterruptReceiver *receiver);
 void proc_unregister_irq_handler(uint8_t irq_number, IInterruptReceiver *receiver);
 void proc_register_interrupt_handler(uint8_t interrupt_number, IInterruptReceiver *receiver);
@@ -238,8 +251,10 @@ void proc_unregister_interrupt_handler(uint8_t interrupt_number, IInterruptRecei
 
 bool proc_request_interrupt_block(uint8_t num_interrupts, uint8_t &start_vector);
 
+// Stack control functions
+void *proc_allocate_stack(bool kernel_mode, task_process *proc = nullptr);
+void proc_deallocate_stack(void *stack_ptr);
+
 #ifdef AZALEA_TEST_CODE
 void test_only_reset_task_mgr();
 #endif
-
-#endif /* PROCESSOR_H_ */

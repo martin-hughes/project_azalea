@@ -1,3 +1,6 @@
+/// @file
+/// @brief Declare types corresponding to xHCI controller registers.
+
 #pragma once
 
 #include "stdint.h"

@@ -10,6 +10,7 @@
 #include "mem/mem.h"
 #include "mem/mem-int.h"
 #include "mem/x64/mem-x64-int.h"
+#include "processor/processor.h"
 
 /// @brief Returns a mem_info block that is created at compile time, to avoid allocating one during system startup.
 ///

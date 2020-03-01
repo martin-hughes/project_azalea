@@ -1,5 +1,9 @@
-#ifndef ST_FS_PROC_HEADER
-#define ST_FS_PROC_HEADER
+/// @file
+/// @brief Declare the 'proc' pseudo filesystem.
+
+#pragma once
+
+#include <string>
 
 #include "klib/klib.h"
 
@@ -21,9 +25,9 @@ public:
   proc_fs_root_branch();
   virtual ~proc_fs_root_branch();
 
-  virtual ERR_CODE add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
-  virtual ERR_CODE rename_child(const kl_string &old_name, const kl_string &new_name) override;
-  virtual ERR_CODE delete_child(const kl_string &name) override;
+  virtual ERR_CODE add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
+  virtual ERR_CODE rename_child(const std::string &old_name, const std::string &new_name) override;
+  virtual ERR_CODE delete_child(const std::string &name) override;
 
   virtual ERR_CODE add_process(std::shared_ptr<task_process> new_process);
   virtual ERR_CODE remove_process(std::shared_ptr<task_process> old_process);
@@ -47,8 +51,8 @@ public:
     virtual ~proc_fs_proc_branch();
 
   protected:
-    std::shared_ptr<task_process> _related_proc;
-    std::shared_ptr<mem_fs_leaf> _id_file;
+    std::shared_ptr<task_process> _related_proc; ///< The process this branch contains details for.
+    std::shared_ptr<mem_fs_leaf> _id_file; ///< A file containing the process ID of this process.
   };
 
 protected:
@@ -63,20 +67,21 @@ protected:
     proc_fs_zero_proxy_branch(std::shared_ptr<proc_fs_root_branch> parent);
     virtual ~proc_fs_zero_proxy_branch();
 
-    virtual ERR_CODE get_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
-    virtual ERR_CODE add_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
-    virtual ERR_CODE rename_child(const kl_string &old_name, const kl_string &new_name) override;
-    virtual ERR_CODE delete_child(const kl_string &name) override;
-    virtual ERR_CODE create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+    virtual ERR_CODE get_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+    virtual ERR_CODE add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
+    virtual ERR_CODE rename_child(const std::string &old_name, const std::string &new_name) override;
+    virtual ERR_CODE delete_child(const std::string &name) override;
+    virtual ERR_CODE create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+    virtual std::pair<ERR_CODE, uint64_t> num_children() override;
+    virtual std::pair<ERR_CODE, std::vector<std::string>>
+      enum_children(std::string start_from, uint64_t max_count) override;
 
   protected:
     std::shared_ptr<ISystemTreeBranch> get_current_proc_branch();
 
-    std::weak_ptr<proc_fs_root_branch> _parent;
+    std::weak_ptr<proc_fs_root_branch> _parent; ///< The parent proc_fs_root_branch.
   };
 
-  // This branch is given the name "0", and always refers to the current process.
+  /// This branch is given the name "0", and always refers to the current process.
   std::shared_ptr<proc_fs_zero_proxy_branch> _zero_proxy;
 };
-
-#endif

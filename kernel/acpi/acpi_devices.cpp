@@ -1,14 +1,20 @@
 /// @file
 /// @brief ACPI Device enumeration and control
 ///
+// Known defects:
+// - time_register_clock_source should be subsumed by the dev_monitor system.
 
 //#define ENABLE_TRACING
+
+#include <string>
 
 #include "klib/klib.h"
 #include "acpi_if.h"
 
 #include "devices/pci/pci_int_link_device.h"
 #include "devices/legacy/rtc/rtc.h"
+#include "devices/legacy/serial/serial.h"
+#include "devices/device_monitor.h"
 
 namespace
 {
@@ -83,7 +89,10 @@ ACPI_STATUS acpi_create_device_handler (ACPI_HANDLE ObjHandle,
 }
 
 /// @cond
-#define IS_DEV_HID(y) (kl_strcmp(dev_info.HardwareId.String, dev_info.HardwareId.Length, (y), sizeof(y)) == 0)
+#define IS_DEV_HID(y) \
+  (strncmp(dev_info.HardwareId.String, \
+           (y), \
+           std::min(static_cast<uint16_t>(dev_info.HardwareId.Length), static_cast<uint16_t>(sizeof(y)))) == 0)
 /// @endcond
 
 /// @brief Create a single device driver for a device that has been enumerated.
@@ -95,7 +104,8 @@ ACPI_STATUS acpi_create_device_handler (ACPI_HANDLE ObjHandle,
 /// @param dev_info ACPI device information for the device. This object is deleted after this function completes.
 void acpi_create_one_device(const char *dev_path, ACPI_HANDLE obj_handle, ACPI_DEVICE_INFO &dev_info)
 {
-  kl_string pathname;
+  std::string pathname;
+  std::shared_ptr<IDevice> empty;
 
   KL_TRC_ENTRY;
 
@@ -118,12 +128,19 @@ void acpi_create_one_device(const char *dev_path, ACPI_HANDLE obj_handle, ACPI_D
       std::shared_ptr<timing::rtc> clock = timing::rtc::create(obj_handle);
       time_register_clock_source(clock);
     }
+    else if (IS_DEV_HID("PNP0501"))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "16550A-compatible serial port\n");
+      std::shared_ptr<serial_port> s_port;
+      dev::create_new_device(s_port, empty, obj_handle);
+    }
     else
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Unknown device HID: ", (const char *)dev_info.HardwareId.String, "\n");
     }
 
   }
+
 
   KL_TRC_EXIT;
 }

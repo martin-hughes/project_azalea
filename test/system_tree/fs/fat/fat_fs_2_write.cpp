@@ -29,7 +29,7 @@ namespace
 
   test_file_details test_list[] = {
     { "TESTWRIT.TXT", true, ERR_CODE::NO_ERROR, "This is a test.", "This is a decent string to write." },
-    { "SHORTDIR\\TESTWRIT.txt", true, ERR_CODE::NO_ERROR, "This file is in a directory.", "shortish string."},
+    { "SHORTDIR\\TESTWRIT.TXT", true, ERR_CODE::NO_ERROR, "This file is in a directory.", "shortish string."},
     { "Long file name - write.txt", true, ERR_CODE::NO_ERROR, "This file has a long name.", "A String the same length.."},
     { "Long directory\\Long child name - write.txt", true, ERR_CODE::NO_ERROR, "This file has a long path.", "Not that worried about this string"},
   };
@@ -71,6 +71,7 @@ protected:
     uint32_t write_blocks;
 
     memset(sector_buffer.get(), 0, 512);
+    ASSERT_TRUE(backing_storage->start());
     ASSERT_EQ(ERR_CODE::NO_ERROR, backing_storage->read_blocks(0, 1, sector_buffer.get(), 512)) << "Virt. disk failed";
 
     // Confirm that we've loaded a valid MBR
@@ -83,6 +84,7 @@ protected:
 
     proxy = make_shared<block_proxy_device>(backing_storage.get(), start_sector, sector_count);
 
+    ASSERT_TRUE(proxy->start());
     ASSERT_EQ(DEV_STATUS::OK, proxy->get_device_status());
 
     // Initialise the filesystem based on that information
@@ -100,6 +102,7 @@ protected:
     {
       cout << "Not removing temporary file: " << image_temp_name << endl;
     }
+    test_only_reset_name_counts();
   };
 };
 
@@ -113,7 +116,7 @@ TEST_P(FatFsWriteTests, BasicWriting)
   shared_ptr<ISystemTreeLeaf> basic_leaf;
   shared_ptr<IBasicFile> input_file;
   auto [test_details, disk_image_name] = GetParam();
-  const kl_string filename = test_details.filename;
+  const std::string filename = test_details.filename;
   const char *expected_text = test_details.expected_contents;
   const uint32_t expected_file_size = strlen(expected_text);
   uint32_t new_string_len = strlen(test_details.string_to_write);

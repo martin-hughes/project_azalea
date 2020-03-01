@@ -17,32 +17,62 @@ def main_build_script(linux_build, config_env):
     kernel_env.Install(ui_folder, headers)
     kernel_env.Install(ui_folder, user_headers)
 
+    main_compile_flags = [ # Flags for all C-like builds
+      '-Wall',
+      '-nostdinc',
+      '-nostdlib',
+      '-nodefaultlibs',
+      '-mcmodel=large',
+      '-ffreestanding',
+      '-fno-exceptions',
+      '-funwind-tables',
+      '-U _LINUX',
+      '-U __linux__',
+      '-D __AZALEA__',
+      '-D KL_TRACE_BY_SERIAL_PORT',
+
+      # Uncomment this define to include a serial port based terminal as well as the normal VGA/keyboard one. This is
+      # normally disabled as the locking in the kernel isn't great at the moment so it's a bit unstable.
+      #'-D INC_SERIAL_TERM',
+    ]
+
+    cxx_flags = [ # Flags specific to C++ builds
+      '-nostdinc++',
+      '-std=c++17',
+      '-D _LIBCPP_NO_EXCEPTIONS',
+    ]
+
     # Main kernel part
-    kernel_env['CXXFLAGS'] = '-Wall -mno-red-zone -nostdinc++ -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=c++17 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT -D _LIBCPP_NO_EXCEPTIONS'
-    kernel_env['CFLAGS'] = '-Wall -mno-red-zone -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
+    kernel_env['CXXFLAGS'] = ' '.join(main_compile_flags + cxx_flags)
+    kernel_env['CFLAGS'] = ' '.join(main_compile_flags)
     kernel_env['LINKFLAGS'] = "-T build_support/kernel_stage.ld --start-group "
-    kernel_env['LINK'] = 'ld -gc-sections -Map output/kernel_map.map'
+    kernel_env['LINK'] = 'ld -gc-sections -Map output/kernel_map.map --eh-frame-hdr'
     kernel_env['LIBPATH'] = [paths.libcxx_lib_folder,
                              paths.acpica_lib_folder,
                              paths.libc_lib_folder,
+                             paths.libunwind_lib_folder,
+                             paths.libcxxabi_lib_folder,
                             ]
-    kernel_env['LIBS'] = [ 'acpica', 'azalea_libc_kernel', 'c++', 'thread_adapter' ]
+    kernel_env['LIBS'] = [ 'acpica', 'azalea_libc_kernel', 'c++', 'thread_adapter', 'unwind', 'c++abi' ]
     kernel_env.AppendENVPath('CPATH', '#/kernel')
     kernel_env.AppendENVPath('CPATH', os.path.join(paths.libcxx_headers_folder, 'c++/v1'))
     kernel_env.AppendENVPath('CPATH', paths.acpica_headers_folder)
     kernel_env.AppendENVPath('CPATH', paths.libc_headers_folder)
     kernel_env.AppendENVPath('CPATH', paths.kernel_headers_folder)
+    kernel_env.AppendENVPath('CPATH', paths.libunwind_headers_folder)
     kernel_obj = default_build_script(dependencies.kernel, "kernel64.sys", kernel_env, "kernel")
     kernel_install_obj = kernel_env.Install(paths.sys_image_root, kernel_obj)
     kernel_env.AddPostAction(kernel_obj, disasm_action)
 
     # User mode API and programs environment
     user_mode_env = build_default_env(linux_build)
-    user_mode_env['CXXFLAGS'] = '-Wall -mno-red-zone -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=c++17 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
-    user_mode_env['CFLAGS'] = '-Wall -mno-red-zone -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
+    user_mode_env['CXXFLAGS'] = '-Wall -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=c++17 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
+    user_mode_env['CFLAGS'] = '-Wall -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
     user_mode_env['LIBPATH'] = [paths.libc_lib_folder,
+                                # Uncomment to build ncurses test program.
+                                #os.path.join(paths.developer_root, "ncurses", "lib"),
                                ]
-    user_mode_env['LINK'] = 'ld'
+    user_mode_env['LINK'] = 'ld -Map ${TARGET}.map'
 
     # User mode part of the API
     api_lib_env = user_mode_env.Clone()
@@ -52,18 +82,22 @@ def main_build_script(linux_build, config_env):
     user_api_obj = default_build_script(dependencies.user_mode_api, "azalea", api_lib_env, "api_library", False)
     api_install_obj = api_lib_env.Install(paths.kernel_lib_folder, user_api_obj)
 
-    user_mode_env['LIBS'] = [ 'azalea_libc', user_api_obj]
+    user_mode_env['LIBS'] = [
+      #'ncurses', # Uncomment to build ncurses test program.
+      'azalea_linux_shim',
+      'azalea_libc',
+      user_api_obj]
 
     user_mode_env.AppendENVPath('CPATH', paths.libc_headers_folder)
     user_mode_env.AppendENVPath('CPATH', paths.kernel_headers_folder)
+    user_mode_env.AppendENVPath('CPATH', os.path.join(paths.developer_root, "ncurses", "include"))
 
-    # Init program
+    # User mode programs
     init_deps = dependencies.init_program
     init_prog_obj = default_build_script(init_deps, "initprog", user_mode_env, "init_program")
     init_install_obj = user_mode_env.Install(paths.sys_image_root, init_prog_obj)
     user_mode_env.AddPostAction(init_prog_obj, disasm_action)
 
-    # Simple shell program
     shell_deps = dependencies.shell_program
     shell_prog_obj = default_build_script(shell_deps, "shell", user_mode_env, "simple_shell")
     shell_install_obj = user_mode_env.Install(paths.sys_image_root, shell_prog_obj)
@@ -72,12 +106,23 @@ def main_build_script(linux_build, config_env):
     echo_prog_obj = default_build_script(echo_deps, "echo", user_mode_env, "echo_prog")
     echo_install_obj = user_mode_env.Install(paths.sys_image_root, echo_prog_obj)
 
+    list_deps = dependencies.list_program
+    list_prog_obj = default_build_script(list_deps, "list", user_mode_env, "list_prog")
+    list_install_obj = user_mode_env.Install(paths.sys_image_root, list_prog_obj)
+
+    # Uncomment to build ncurses test program
+    #ncurses_deps = dependencies.ncurses_program
+    #ncurses_prog_obj = default_build_script(ncurses_deps, "ncurses", user_mode_env, "ncurses_prog")
+    #ncurses_install_obj = user_mode_env.Install(paths.sys_image_root, ncurses_prog_obj)
+
     # Install and other simple targets
     kernel_env.Alias('install-headers', ui_folder)
     Default(kernel_install_obj)
     Default(init_install_obj)
     Default(shell_install_obj)
     Default(echo_install_obj)
+    Default(list_install_obj)
+    #Default(ncurses_install_obj)
     Default(api_install_obj)
 
   # Unit test program
@@ -220,6 +265,13 @@ class path_builder:
     # Azalea libc++
     self.libcxx_headers_folder = os.path.join(self.developer_root, "libcxx-kernel", "include")
     self.libcxx_lib_folder = os.path.join(self.developer_root, "libcxx-kernel", "lib")
+
+    # Azalea libcxxabi
+    self.libcxxabi_lib_folder = os.path.join(self.developer_root, "libcxxabi-kernel", "lib")
+
+    # Azalea libunwind
+    self.libunwind_headers_folder = os.path.join(self.developer_root, "libunwind-kernel", "include")
+    self.libunwind_lib_folder = os.path.join(self.developer_root, "libunwind-kernel", "lib")
 
     # Azalea ACPICA
     self.acpica_headers_folder = os.path.join(self.developer_root, "acpica", "include")

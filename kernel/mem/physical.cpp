@@ -36,6 +36,8 @@ namespace
 /// @brief Initialise the physical memory management subsystem.
 ///
 /// **This function must only be called once**
+///
+/// @param e820_ptr Pointer to the system's e820 table.
 void mem_init_gen_phys_sys(e820_pointer *e820_ptr)
 {
   KL_TRC_ENTRY;
@@ -53,7 +55,7 @@ void mem_init_gen_phys_sys(e820_pointer *e820_ptr)
     mem_clear_bitmap_page_bit(i * MEM_PAGE_SIZE, true);
   }
 
-  kl_memcpy(phys_pages_alloc_bitmap, phys_pages_exist_bitmap, sizeof(phys_pages_alloc_bitmap));
+  memcpy(phys_pages_exist_bitmap, phys_pages_alloc_bitmap, sizeof(phys_pages_alloc_bitmap));
 
   // Count up the number of free pages.
   for(int i = 0; i < BITMAP_SIZE; i++)

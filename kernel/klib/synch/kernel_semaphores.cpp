@@ -6,6 +6,8 @@
 
 // #define ENABLE_TRACING
 
+#include "processor/processor.h"
+#include "processor/timing/timing.h"
 #include "klib/klib.h"
 
 /// @brief Initialize a semaphore object.
@@ -45,7 +47,7 @@ void klib_synch_semaphore_init(klib_semaphore &semaphore, uint64_t max_users, ui
 ///
 /// @param semaphore The semaphore to acquire.
 ///
-/// @param max_wait The maximum time to wait in milliseconds. If max_wait is set to SEMAPHORE_MAX_WAIT then the caller
+/// @param max_wait The maximum time to wait in microseconds. If max_wait is set to SEMAPHORE_MAX_WAIT then the caller
 ///                 waits indefinitely. If set to zero, this function does not block. Timed waits other than zero or
 ///                 SEMAPHORE_MAX_WAIT are not currently supported.
 ///
@@ -74,9 +76,7 @@ SYNC_ACQ_RESULT klib_synch_semaphore_wait(klib_semaphore &semaphore, uint64_t ma
   }
   else
   {
-    ASSERT(max_wait == SEMAPHORE_MAX_WAIT);
-
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Semaphore full, indefinite wait.\n");
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Semaphore full, timed or indefinite wait.\n");
 
     // Wait for the semaphore to become free. Add this thread to the list of waiting threads, then suspend this thread.
     task_thread *this_thread = task_get_cur_thread();
@@ -94,6 +94,14 @@ SYNC_ACQ_RESULT klib_synch_semaphore_wait(klib_semaphore &semaphore, uint64_t ma
     task_continue_this_thread();
     this_thread->stop_thread();
 
+    // If there is a period to wait then specify it to the scheduler now. The scheduler won't react until after
+    // scheduling is resumed.
+    if (max_wait != SEMAPHORE_MAX_WAIT)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Set thread wakeup time\n");
+      this_thread->wake_thread_after = time_get_system_timer_count(true) + (1000 * max_wait);
+    }
+
     // Freeing the lock means that we could immediately become the owner thread. That's OK, we'll check once we come
     // back to this code after yielding.
     klib_synch_spinlock_unlock(semaphore.access_lock);
@@ -104,10 +112,37 @@ SYNC_ACQ_RESULT klib_synch_semaphore_wait(klib_semaphore &semaphore, uint64_t ma
     task_resume_scheduling();
     task_yield();
 
-    // We've been scheduled again! We've been signalled past the semaphore.
+    // We've been scheduled again! Perhaps we've been signalled past the semaphore?
     klib_synch_spinlock_lock(semaphore.access_lock);
 
-    res = SYNC_ACQ_ACQUIRED;
+    // If this thread still appears in the waiting threads list then we've simply timed out.
+    if (!klib_list_item_is_in_any_list(this_thread->synch_list_item))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Successfully acquired\n");
+      res = SYNC_ACQ_ACQUIRED;
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Simply timed out.\n");
+      res = SYNC_ACQ_TIMEOUT;
+
+      item = semaphore.waiting_threads_list.head;
+      while (item)
+      {
+        if (item->item == this_thread->synch_list_item->item)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Found this thread in the waiting list\n");
+          klib_list_remove(item);
+          delete item;
+          item = nullptr;
+        }
+        else
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Move to next item\n");
+          item = item->next;
+        }
+      }
+    }
   }
 
   klib_synch_spinlock_unlock(semaphore.access_lock);

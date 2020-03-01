@@ -5,25 +5,26 @@
 
 #include "devices/device_interface.h"
 #include "user_interfaces/error_codes.h"
-#include "klib/data_structures/string.h"
 #include "devices/legacy/ps2/ps2_device.h"
 
-const uint16_t PS2_DATA_PORT = 0x60;
-const uint16_t PS2_COMMAND_PORT = 0x64;
+const uint16_t PS2_DATA_PORT = 0x60; ///< Standard PS/2 data I/O port
+const uint16_t PS2_COMMAND_PORT = 0x64; ///< Standard PS/2 command I/O port
 
+/// @brief Known PS/2 device types.
 enum class PS2_DEV_TYPE
 {
-  NONE_CONNECTED,
-  UNKNOWN,
+  NONE_CONNECTED, ///< No device connected.
+  UNKNOWN, ///< A device not supported by Azalea.
 
-  MOUSE_STANDARD,
-  MOUSE_WITH_WHEEL,
-  MOUSE_5_BUTTON,
+  MOUSE_STANDARD, ///< Standard 2 button mouse.
+  MOUSE_WITH_WHEEL, ///< Mouse with scroll wheel.
+  MOUSE_5_BUTTON, ///< 5-button mouse.
 
-  KEYBOARD_MF2,
+  KEYBOARD_MF2, ///< Standard keyboard.
 };
 
 // Constants useful to any PS/2 device.
+/// @cond
 namespace PS2_CONST
 {
   // Controller command and response constants.
@@ -55,6 +56,7 @@ namespace PS2_CONST
 
   const uint8_t DEV_SELF_TEST_OK = 0xAA;
 }
+/// @endcond
 
 /// @brief Driver for a generic PS/2 controller.
 ///
@@ -64,6 +66,11 @@ public:
   // Generic device management functions.
   gen_ps2_controller_device();
   virtual ~gen_ps2_controller_device();
+
+  // Overrides of IDevice
+  bool start() override;
+  bool stop() override;
+  bool reset() override;
 
   // Types used throughout.
 
@@ -126,18 +133,19 @@ public:
   ERR_CODE send_byte(uint8_t data, bool second_channel = false);
   ERR_CODE read_byte(uint8_t &data);
 
-  gen_ps2_device *chan_1_dev;
-  gen_ps2_device *chan_2_dev;
-
-
 protected:
-  bool _dual_channel;
+  bool _dual_channel; ///< Is this a dual channel controller? (Or a single-channel one)
 
-  PS2_DEV_TYPE _chan_1_dev_type;
-  PS2_DEV_TYPE _chan_2_dev_type;
+public: // TEMP - Need to develop device registration a bit further first.
+  std::shared_ptr<gen_ps2_device> chan_1_dev; ///< The device on the first (or only) channel.
+  std::shared_ptr<gen_ps2_device> chan_2_dev; ///< The device on the second channel.
 
+  PS2_DEV_TYPE _chan_1_dev_type; ///< The type of device on the first (or only) channel.
+  PS2_DEV_TYPE _chan_2_dev_type; ///< If a two-channel controller, the type of device on the second channel.
+
+protected: // TEMP - Need to develop device registration a bit further first.
   PS2_DEV_TYPE identify_device(bool second_channel);
-  gen_ps2_device *instantiate_device(bool second_channel, PS2_DEV_TYPE dev_type);
+  void instantiate_device(std::shared_ptr<gen_ps2_device> &dev, bool second_channel, PS2_DEV_TYPE dev_type);
 };
 
 static_assert(sizeof(gen_ps2_controller_device::ps2_status_register) == 1, "Incorrect packing of ps2_status_register");

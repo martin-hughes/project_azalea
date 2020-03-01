@@ -6,6 +6,7 @@
 #include "processor/processor-int.h"
 #include "system_tree/system_tree.h"
 #include "test/test_core/test.h"
+#include "klib/klib.h"
 
 #include "gtest/gtest.h"
 

@@ -1,7 +1,9 @@
 /// @file
-/// @brief
+/// @brief Define the common interface for all block devices
 
 #pragma once
+
+#include <string>
 
 #include "devices/device_interface.h"
 #include "user_interfaces/error_codes.h"
@@ -12,7 +14,13 @@
 class IBlockDevice : public IDevice
 {
 public:
-  IBlockDevice(const kl_string name) : IDevice{name} { };
+  /// @brief Simple constructor
+  ///
+  /// @param human_name The name of this device.
+  ///
+  /// @param dev_name The device name for this device.
+  IBlockDevice(const std::string human_name, const std::string dev_name) : IDevice{human_name, dev_name, true} { };
+
   virtual ~IBlockDevice() = default;
 
   /// @brief How many blocks (e.g. sectors) are there on this device?

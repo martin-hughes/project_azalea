@@ -9,6 +9,7 @@
 #include "syscall/syscall_kernel-int.h"
 #include "mem/mem.h"
 #include "object_mgr/object_mgr.h"
+#include "processor/processor.h"
 
 // Known defects:
 // - It isn't possible to deallocate virtual memory, since the kernel doesn't really track the allocations properly
@@ -17,6 +18,7 @@
 // - Attempting to double-map a virtual range causes a kernel panic.
 // - The way that VMM requires power-of-two sizes might cause trouble one day.
 // - mem_vmm_allocate_specific_range can trigger an ASSERT if a duplicate allocation is made.
+// - There's no locking to ensure consistency between processes.
 
 /// @brief Back a virtual address range in the calling process with physical RAM.
 ///

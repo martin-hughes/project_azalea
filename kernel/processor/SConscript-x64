@@ -24,6 +24,7 @@ files = ["timing/timing.cpp",
          "x64/pic/apic.cpp",
          "x64/pic/ioapic-x64.cpp",
          "multi_processor.cpp",
+         "x64/proc_stacks-x64.cpp",
         ]
 obj = env.Library("processor_x64", files)
 Return ("obj")

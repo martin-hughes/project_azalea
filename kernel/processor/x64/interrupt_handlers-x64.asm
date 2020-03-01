@@ -26,10 +26,18 @@ asm_proc_page_fault_handler:
     push r13
     push r14
     push r15
-    mov rdi, [rsp + 128]
-    mov rsi, cr2
-    mov rdx, [rsp + 136]
+    mov rdi, [rsp + 128] ; Save error code
+    mov rsi, cr2         ; Save fault address
+    mov rdx, [rsp + 136] ; Save RIP
+    mov rcx, [rsp + 160] ; Save RSP
+
+    ALIGN_STACK_AND_SAVE
+    mov r8, r12 ; Copy address of kernel stack as a parameter
+
     call proc_page_fault_handler
+
+    RESTORE_ORIG_STACK
+
     pop r15
     pop r14
     pop r13
@@ -121,49 +129,49 @@ asm_proc_handle_irq_15:
 GLOBAL asm_proc_div_by_zero_fault_handler
 EXTERN proc_div_by_zero_fault_handler
 asm_proc_div_by_zero_fault_handler:
-    DEF_INT_HANDLER proc_div_by_zero_fault_handler, 0
+    DEF_EXCEPTION_HANDLER proc_div_by_zero_fault_handler, 0
 
 ; Exception 1
 GLOBAL asm_proc_debug_fault_handler
 EXTERN proc_debug_fault_handler
 asm_proc_debug_fault_handler:
-    DEF_INT_HANDLER proc_debug_fault_handler, 0
+    DEF_EXCEPTION_HANDLER proc_debug_fault_handler, 0
 
 ; Exception 2 - NMIs are used for inter-processor control messages.
 GLOBAL asm_proc_nmi_int_handler
 EXTERN proc_mp_x64_receive_signal_int
 asm_proc_nmi_int_handler:
-    DEF_INT_HANDLER proc_mp_x64_receive_signal_int, 0
+    DEF_EXCEPTION_HANDLER proc_mp_x64_receive_signal_int, 0
 
 ; Exception 3
 GLOBAL asm_proc_brkpt_trap_handler
 EXTERN proc_brkpt_trap_handler
 asm_proc_brkpt_trap_handler:
-    DEF_INT_HANDLER proc_brkpt_trap_handler, 0
+    DEF_EXCEPTION_HANDLER proc_brkpt_trap_handler, 0
 
 ; Exception 4
 GLOBAL asm_proc_overflow_trap_handler
 EXTERN proc_overflow_trap_handler
 asm_proc_overflow_trap_handler:
-    DEF_INT_HANDLER proc_overflow_trap_handler, 0
+    DEF_EXCEPTION_HANDLER proc_overflow_trap_handler, 0
 
 ; Exception 5
 GLOBAL asm_proc_bound_range_fault_handler
 EXTERN proc_bound_range_fault_handler
 asm_proc_bound_range_fault_handler:
-    DEF_INT_HANDLER proc_bound_range_fault_handler, 0
+    DEF_EXCEPTION_HANDLER proc_bound_range_fault_handler, 0
 
 ; Exception 6
 GLOBAL asm_proc_invalid_opcode_fault_handler
 EXTERN proc_invalid_opcode_fault_handler
 asm_proc_invalid_opcode_fault_handler:
-    DEF_INT_HANDLER proc_invalid_opcode_fault_handler, 0
+    DEF_EXCEPTION_HANDLER proc_invalid_opcode_fault_handler, 0
 
 ; Exception 7
 GLOBAL asm_proc_device_not_avail_fault_handler
 EXTERN proc_device_not_avail_fault_handler
 asm_proc_device_not_avail_fault_handler:
-    DEF_INT_HANDLER proc_device_not_avail_fault_handler, 0
+    DEF_EXCEPTION_HANDLER proc_device_not_avail_fault_handler, 0
 
 ; Exception 8
 GLOBAL asm_proc_double_fault_abort_handler
@@ -199,7 +207,7 @@ asm_proc_gen_prot_fault_handler:
 GLOBAL asm_proc_fp_except_fault_handler
 EXTERN proc_fp_except_fault_handler
 asm_proc_fp_except_fault_handler:
-    DEF_INT_HANDLER proc_fp_except_fault_handler, 0
+    DEF_EXCEPTION_HANDLER proc_fp_except_fault_handler, 0
 
 ; Exception 17
 GLOBAL asm_proc_align_check_fault_handler
@@ -211,20 +219,20 @@ asm_proc_align_check_fault_handler:
 GLOBAL asm_proc_machine_check_abort_handler
 EXTERN proc_machine_check_abort_handler
 asm_proc_machine_check_abort_handler:
-    DEF_INT_HANDLER proc_machine_check_abort_handler, 0
+    DEF_EXCEPTION_HANDLER proc_machine_check_abort_handler, 0
 
 ; Exception 19
 GLOBAL asm_proc_simd_fpe_fault_handler
 EXTERN proc_simd_fpe_fault_handler
 asm_proc_simd_fpe_fault_handler:
-    DEF_INT_HANDLER proc_simd_fpe_fault_handler, 0
+    DEF_EXCEPTION_HANDLER proc_simd_fpe_fault_handler, 0
 
 
 ; Exception 20
 GLOBAL asm_proc_virt_except_fault_handler
 EXTERN proc_virt_except_fault_handler
 asm_proc_virt_except_fault_handler:
-    DEF_INT_HANDLER proc_virt_except_fault_handler, 0
+    DEF_EXCEPTION_HANDLER proc_virt_except_fault_handler, 0
 
 ; Exception 30
 GLOBAL asm_proc_security_fault_handler

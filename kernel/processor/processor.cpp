@@ -25,6 +25,10 @@ namespace
   bool interrupt_table_cfgd = false;
 }
 
+/// @brief A list of dead threads still to be tidied.
+///
+/// Dead threads are those that are scheduled to exit. Structures associated with them are destroyed asynchronously,
+/// and this is a list of threads that still need to be destroyed.
 klib_list<std::shared_ptr<task_thread>> dead_thread_list;
 
 /// @brief Configure the kernel's interrupt data table.
@@ -302,6 +306,8 @@ void proc_interrupt_slowpath_thread()
   proc_interrupt_handler *item;
   ASSERT(interrupt_table_cfgd);
   uint32_t interrupt_num;
+
+  task_get_cur_thread()->is_worker_thread = true;
 
   while(1)
   {

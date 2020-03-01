@@ -1,8 +1,15 @@
+/** @file
+ *  @brief Declare the values of error codes in the Azalea kernel.
+ */
+
 #ifndef __ERROR_CODES_H
 #define __ERROR_CODES_H
 
 #include "./macros.h"
 
+/**
+ * @brief All possible error codes in the Azalea kernel
+ */
 enum AZALEA_ENUM_CLASS ERR_CODE_T
 {
   /**
@@ -105,7 +112,11 @@ enum AZALEA_ENUM_CLASS ERR_CODE_T
   OUT_OF_RANGE = 18,
 };
 
+/**
+ * @cond */
 AZALEA_RENAME_ENUM(ERR_CODE);
+/**
+ * @endcond */
 
 const char *azalea_lookup_err_code(const ERR_CODE ec);
 

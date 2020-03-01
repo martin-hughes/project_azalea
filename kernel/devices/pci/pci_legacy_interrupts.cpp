@@ -12,6 +12,9 @@
 
 //#define ENABLE_TRACING
 
+#include <string>
+#include <map>
+
 #include "acpi/acpi_if.h"
 #include "pci.h"
 #include "pci_int_link_device.h"
@@ -52,14 +55,14 @@ namespace
   /// The key is the path of the object in ACPI.
   ///
   /// The value is the device itself.
-  kl_rb_tree<kl_string, std::shared_ptr<pci_irq_link_device>> *link_devices = nullptr;
+  std::map<std::string, std::shared_ptr<pci_irq_link_device>> *link_devices = nullptr;
 
   /// @brief Stores the mappings between PCI devices and the interrupts they are connected to.
   ///
   /// The key is the address of the PCI device, in ACPI _ADR format.
   ///
   /// The value is the connections the device is connected to.
-  kl_rb_tree<uint32_t, pci_device_interrupts> *pci_int_map = nullptr;
+  std::map<uint32_t, pci_device_interrupts> *pci_int_map = nullptr;
 
   /// @brief Order of preference of IRQs.
   ///
@@ -78,7 +81,7 @@ namespace
 /// @param obj_handle Handle to the object.
 ///
 /// @return Shared pointer to the new device.
-std::shared_ptr<pci_irq_link_device> pci_irq_link_device::create(kl_string &pathname, ACPI_HANDLE obj_handle)
+std::shared_ptr<pci_irq_link_device> pci_irq_link_device::create(std::string &pathname, ACPI_HANDLE obj_handle)
 {
   std::shared_ptr<pci_irq_link_device> new_device;
 
@@ -86,13 +89,13 @@ std::shared_ptr<pci_irq_link_device> pci_irq_link_device::create(kl_string &path
 
   if (!link_devices)
   {
-    link_devices = new kl_rb_tree<kl_string, std::shared_ptr<pci_irq_link_device>>;
+    link_devices = new std::map<std::string, std::shared_ptr<pci_irq_link_device>>;
   }
 
   new_device = std::shared_ptr<pci_irq_link_device>(new pci_irq_link_device(obj_handle));
-  ASSERT(!link_devices->contains(pathname));
+  ASSERT(!map_contains(*link_devices, pathname));
 
-  link_devices->insert(pathname, new_device);
+  link_devices->insert({pathname, new_device});
 
   KL_TRC_EXIT;
 
@@ -162,8 +165,10 @@ pci_irq_link_device::pci_irq_link_device(ACPI_HANDLE dev_handle) : chosen_interr
   KL_TRC_EXIT;
 }
 
+/// @cond
 #define GET_INTERRUPT_CHOICE(idx, size) \
   (bytes_per_int == 1) ? (reinterpret_cast<uint8_t *>(choices))[(idx)] : (reinterpret_cast<uint32_t *>(choices))[(idx)]
+/// @endcond
 
 /// @brief Given a list of possible interrupts, chose our favorite.
 ///
@@ -290,9 +295,9 @@ uint16_t pci_generic_device::compute_irq_for_pin(uint8_t pin)
   address.normal.Function = 0xFFFF;
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Lookup address: ", address.raw, "\n");
-  if (pci_int_map->contains(address.raw))
+  if (map_contains(*pci_int_map, address.raw))
   {
-    result = pci_int_map->search(address.raw).pin_irq[pin];
+    result = pci_int_map->find(address.raw)->second.pin_irq[pin];
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
@@ -315,13 +320,13 @@ void pci_init_int_map()
   uint8_t *raw_ptr;
   ACPI_BUFFER irq_buffer;
   pci_device_interrupts int_table;
-  kl_string link_device_name;
+  std::string link_device_name;
   std::shared_ptr<pci_irq_link_device> link_dev;
   uint16_t pin_interrupt;
 
   KL_TRC_ENTRY;
 
-  pci_int_map = new kl_rb_tree<uint32_t, pci_device_interrupts>;
+  pci_int_map = new std::map<uint32_t, pci_device_interrupts>;
 
   status = AcpiGetHandle(NULL, ACPI_STRING("\\_SB_.PCI0"), &root_dev);
   ASSERT(status == AE_OK);
@@ -347,26 +352,26 @@ void pci_init_int_map()
                  "\n");
 
     // Search for an existing device to update.
-    if (pci_int_map->contains(pci_route->Address))
+    if (map_contains(*pci_int_map, pci_route->Address))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieve existing details\n");
-      int_table = pci_int_map->search(pci_route->Address);
-      pci_int_map->remove(pci_route->Address); // This is a bit awkward, but we dont's support in-place updates yet.
+      int_table = pci_int_map->find(pci_route->Address)->second;
+      pci_int_map->erase(pci_route->Address); // This is a bit awkward, but we dont's support in-place updates yet.
     }
     else
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Create new details\n");
-      kl_memset(&int_table, 0, sizeof(int_table));
+      memset(&int_table, 0, sizeof(int_table));
     }
 
     // If there's a device name, use it. Otherwise, the source index is the IRQ number.
     if (pci_route->Source[0] != 0)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Use device: ", (const char *)pci_route->Source);
-      link_device_name = kl_string(reinterpret_cast<const char *>(pci_route->Source));
+      link_device_name = std::string(reinterpret_cast<const char *>(pci_route->Source));
 
-      ASSERT(link_devices->contains(link_device_name));
-      pin_interrupt = link_devices->search(link_device_name)->get_interrupt();
+      ASSERT(map_contains(*link_devices, link_device_name));
+      pin_interrupt = link_devices->find(link_device_name)->second->get_interrupt();
     }
     else
     {
@@ -379,7 +384,7 @@ void pci_init_int_map()
     // Save details.
     KL_TRC_TRACE(TRC_LVL::FLOW, " to give interrupt: ", pin_interrupt, "\n");
     int_table.pin_irq[pci_route->Pin] = pin_interrupt;
-    pci_int_map->insert(pci_route->Address, int_table);
+    pci_int_map->insert({pci_route->Address, int_table});
 
     // Advance to next route info.
     raw_ptr += pci_route->Length;

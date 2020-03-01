@@ -19,6 +19,8 @@ const uint64_t icr_delivery_status = 0x1000;
 static apic_registers **local_apics = nullptr; ///< Array containing details of local APICs by processor ID.
 
 /// @brief Prepare the system to use APICs on all its processors
+///
+/// @param num_procs How many processors are installed in the system?
 void proc_x64_configure_sys_apic_mode(uint32_t num_procs)
 {
   KL_TRC_ENTRY;
@@ -79,7 +81,7 @@ void proc_x64_configure_local_apic()
   local_apics[this_proc_id] = (apic_registers *)(((uint64_t)virtual_page) + offset);
 
   // Configure a spurious interrupt vector, and using the magic flags, enable the APIC to send interrupts
-  proc_configure_idt_entry(APIC_SPURIOUS_INT_VECTOR, 0, (void *)asm_proc_apic_spurious_interrupt, 0);
+  proc_configure_idt_entry(APIC_SPURIOUS_INT_VECTOR, 0, (void *)asm_proc_apic_spurious_interrupt, 1);
   asm_proc_install_idt();
   local_apics[this_proc_id]->spurious_interrupt_vector = APIC_SIV_FLAGS | APIC_SPURIOUS_INT_VECTOR;
 

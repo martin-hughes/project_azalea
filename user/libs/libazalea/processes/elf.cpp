@@ -5,9 +5,11 @@
 #include <string.h>
 #include <stdio.h>
 
+/// @brief If enabled, output a string using syscall_debug_output.
+///
+#define SC_DEBUG_MSG(string)
 //#define SC_DEBUG_MSG(string) \
 //  syscall_debug_output((string), strlen((string)) )
-#define SC_DEBUG_MSG(string)
 
 /// @brief List of known ELF segment types.
 ///
@@ -22,9 +24,9 @@ namespace ELF_SEG
   const uint32_t PHDR = 6; ///< Not supported.
   const uint32_t LO_PROC = 0x70000000; ///< Not supported.
   const uint32_t HI_PROC = 0x7fffffff; ///< Not supported.
-  const uint32_t GNU_EH_FRAME = 0x6474E550;
-  const uint32_t GNU_STACK = 0x6474E551;
-  const uint32_t GNU_RELRO = 0x6474E552;
+  const uint32_t GNU_EH_FRAME = 0x6474E550; ///< Not supported.
+  const uint32_t GNU_STACK = 0x6474E551; ///< Not supported.
+  const uint32_t GNU_RELRO = 0x6474E552; ///< Not supported.
 };
 
 /// @brief Load the contents of an ELF file into a newly formed process.
@@ -127,7 +129,7 @@ ERR_CODE load_elf_file_in_process(GEN_HANDLE proc_file, GEN_HANDLE process)
 ///
 /// @param proc_file Handle of the ELF file to read.
 ///
-/// @param header[out] Pointer to the header.
+/// @param[out] header Pointer to the header.
 ///
 /// @return ERR_CODE::UNRECOGNISED if the file isn't an ELF file we understand. ERR_CODE::INVALID_PARAM if header ==
 ///         nullptr. ERR_CODE::NO_ERROR if the header was read successfully.
@@ -195,9 +197,9 @@ ERR_CODE proc_read_elf_file_header(GEN_HANDLE proc_file, elf64_file_header *head
 ///
 /// @param proc_file Handle to the ELF file to interrogate.
 ///
-/// @param file_header[in] Pointer to the file header of the ELF file.
+/// @param[in] file_header Pointer to the file header of the ELF file.
 ///
-/// @param prog_header[out] Pointer to storage for the program header to read.
+/// @param[out] prog_header Pointer to storage for the program header to read.
 ///
 /// @param index Which program header to read.
 ///

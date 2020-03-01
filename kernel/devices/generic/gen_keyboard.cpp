@@ -2,6 +2,8 @@
 /// @brief Generic keyboard functions.
 ///
 /// At present these don't form a true driver so they seem a bit misplaced.
+// Known defects:
+// - These functions don't form a true driver so they seem a bit misplaced.
 
 //#define ENABLE_TRACING
 
@@ -10,9 +12,7 @@
 #include "klib/klib.h"
 #include "devices/generic/gen_keyboard.h"
 #include "keyboard_maps.h"
-
-// This is a temporary addition until the device driver system is more developed.
-extern task_process *term_proc;
+#include <mutex>
 
 /// @brief Retrieve the properties of the key that has been pressed.
 ///
@@ -85,6 +85,19 @@ char keyb_translate_key(KEYS key_pressed, special_keys modifiers, const key_prop
   return printable;
 }
 
+/// @brief Set the object keyboard messages should be sent to.
+///
+/// @param new_receiver The object future keyboard messages should be sent to.
+void generic_keyboard::set_receiver(std::shared_ptr<work::message_receiver> &new_receiver)
+{
+  KL_TRC_ENTRY;
+
+  std::scoped_lock<kernel_spinlock_obj> guard(receiver_lock);
+  receiver = new_receiver;
+
+  KL_TRC_EXIT;
+}
+
 /// @brief A key has been pressed, so figure out what it means and send appropriate messages.
 ///
 /// @param key The physical key that was pressed.
@@ -93,51 +106,41 @@ char keyb_translate_key(KEYS key_pressed, special_keys modifiers, const key_prop
 void generic_keyboard::handle_key_down(KEYS key, special_keys specs)
 {
   char printable_char;
-  task_process *proc = this->recipient;
-  klib_message_hdr hdr;
-  keypress_msg *updown_msg;
-  key_char_msg *char_msg;
+  std::shared_ptr<work::message_receiver> recip;
+  {
+    std::scoped_lock<kernel_spinlock_obj> guard(receiver_lock);
+    recip = this->receiver.lock();
+  }
 
   KL_TRC_ENTRY;
-
-  hdr.msg_length = sizeof(keypress_msg);
-  hdr.originating_process = task_get_cur_thread()->parent_process.get();
 
   printable_char = keyb_translate_key(key,
                                       specs,
                                       keyboard_maps[0].mapping_table,
                                       keyboard_maps[0].max_index);
 
-  if (proc == nullptr)
-  {
-    this->recipient = term_proc;
-    proc = this->recipient;
-  }
-
-  if (proc != nullptr)
+  if (recip)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Send keypress to recipient... \n");
-    updown_msg = new keypress_msg;
-    updown_msg->key_pressed = key;
-    updown_msg->modifiers = specs;
-    hdr.msg_contents = reinterpret_cast<char *>(updown_msg);
-    hdr.msg_id = SM_KEYDOWN;
-    hdr.msg_length = sizeof(keypress_msg);
 
-    msg_send_to_process(proc, hdr);
-
-    if (printable_char != 0)
+    std::unique_ptr<msg::basic_msg> msg = std::make_unique<msg::basic_msg>(SM_KEYDOWN);
+    keypress_msg *key_msg = new keypress_msg;
+    key_msg->key_pressed = key;
+    key_msg->modifiers = specs;
+    if (printable_char)
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Send character message\n");
-      char_msg = new key_char_msg;
-      char_msg->pressed_character = printable_char;
-
-      hdr.msg_contents = reinterpret_cast<char *>(char_msg);
-      hdr.msg_id = SM_PCHAR;
-      hdr.msg_length = sizeof(key_char_msg);
-
-      msg_send_to_process(proc, hdr);
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Keypress: ", printable_char, "\n");
+      key_msg->printable = printable_char;
     }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Non printable key press\n");
+      key_msg->printable = 0;
+    }
+    msg->details = std::unique_ptr<uint8_t[]>(reinterpret_cast<uint8_t*>(key_msg));
+    msg->message_length = sizeof(keypress_msg);
+
+    work::queue_message(recip, std::move(msg));
   }
 
   KL_TRC_EXIT;
@@ -151,31 +154,42 @@ void generic_keyboard::handle_key_down(KEYS key, special_keys specs)
 void generic_keyboard::handle_key_up(KEYS key, special_keys specs)
 {
   char printable_char;
-  task_process *proc = this->recipient;
-  klib_message_hdr hdr;
-  keypress_msg *updown_msg;
+  std::shared_ptr<work::message_receiver> recip;
+  {
+    std::scoped_lock<kernel_spinlock_obj> guard(receiver_lock);
+    recip = this->receiver.lock();
+  }
 
   KL_TRC_ENTRY;
-
-  hdr.msg_length = sizeof(keypress_msg);
-  hdr.originating_process = task_get_cur_thread()->parent_process.get();
 
   printable_char = keyb_translate_key(key,
                                       specs,
                                       keyboard_maps[0].mapping_table,
                                       keyboard_maps[0].max_index);
 
-  if (proc != nullptr)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Send keypress to recipient... \n");
-    updown_msg = new keypress_msg;
-    updown_msg->key_pressed = key;
-    updown_msg->modifiers = specs;
-    hdr.msg_contents = reinterpret_cast<char *>(updown_msg);
-    hdr.msg_id = SM_KEYUP;
-    hdr.msg_length = sizeof(keypress_msg);
 
-    msg_send_to_process(proc, hdr);
+  if (recip)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Send keyup to recipient... \n");
+
+    std::unique_ptr<msg::basic_msg> msg = std::make_unique<msg::basic_msg>(SM_KEYUP);
+    keypress_msg *key_msg = new keypress_msg;
+    key_msg->key_pressed = key;
+    key_msg->modifiers = specs;
+    if (printable_char)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Keypress: ", printable_char, "\n");
+      key_msg->printable = printable_char;
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Non printable key press\n");
+      key_msg->printable = 0;
+    }
+    msg->details = std::unique_ptr<uint8_t[]>(reinterpret_cast<uint8_t*>(key_msg));
+    msg->message_length = sizeof(keypress_msg);
+
+    work::queue_message(recip, std::move(msg));
   }
 
   KL_TRC_EXIT;

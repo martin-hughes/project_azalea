@@ -9,27 +9,28 @@ kernel = [
     '#kernel/mem/SConscript-testable',
     '#kernel/klib/c_helpers/SConscript',
     '#kernel/klib/misc/SConscript',
-    '#kernel/klib/data_structures/SConscript',
     '#kernel/klib/tracing/SConscript',
     '#kernel/klib/synch/SConscript',
-    '#kernel/klib/synch/SConscript-messages',
     '#kernel/klib/synch/SConscript-spinlocks',
     '#kernel/syscall/SConscript-kernel',
     '#kernel/syscall/SConscript-kernel-x64',
     '#kernel/acpi/SConscript',
-    '#external/SConscript-libcxxrt',
     '#kernel/object_mgr/SConscript',
     '#kernel/system_tree/SConscript',
     '#kernel/system_tree/process/SConscript',
+    '#external/SConscript-libtmt',
 
     # Devices
+    '#kernel/devices/SConscript',
     '#kernel/devices/block/ata/SConscript',
     '#kernel/devices/block/proxy/SConscript',
     '#kernel/devices/block/ramdisk/SConscript',
     '#kernel/devices/generic/SConscript',
     '#kernel/devices/legacy/ps2/SConscript',
     '#kernel/devices/legacy/rtc/SConscript',
+    '#kernel/devices/legacy/serial/SConscript',
     '#kernel/devices/pci/SConscript',
+    '#kernel/devices/terminals/SConscript',
     '#kernel/devices/usb/SConscript',
 
     # Filesystems
@@ -52,6 +53,14 @@ echo_program = [
     '#user/echo/SConscript',
   ]
 
+list_program = [
+    '#user/list/SConscript',
+  ]
+
+ncurses_program = [
+    '#user/ncurses_test/SConscript',
+  ]
+
 user_mode_api = [
     '#user/libs/libazalea/SConscript',
     '#kernel/syscall/SConscript-user',
@@ -59,10 +68,8 @@ user_mode_api = [
 
 main_tests = [
     '#kernel/klib/c_helpers/SConscript',
-    '#kernel/klib/data_structures/SConscript',
     '#kernel/klib/memory/SConscript',
     '#kernel/klib/misc/SConscript',
-    '#kernel/klib/synch/SConscript-messages',
     '#kernel/klib/synch/SConscript-spinlocks',
     '#kernel/klib/tracing/SConscript',
     '#kernel/mem/SConscript-testable',
@@ -78,8 +85,10 @@ main_tests = [
     '#external/SConscript-GoogleTest',
 
     # Devices for testing
+    '#kernel/devices/SConscript', # Device Monitor and Core device interfaces.
     '#kernel/devices/block/ramdisk/SConscript',
     '#kernel/devices/block/proxy/SConscript',
+    '#kernel/devices/generic/SConscript',
     '#kernel/system_tree/fs/pipe/SConscript',
     '#kernel/system_tree/fs/fat/SConscript',
     '#kernel/system_tree/fs/proc/SConscript',

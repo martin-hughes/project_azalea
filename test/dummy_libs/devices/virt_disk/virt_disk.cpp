@@ -5,38 +5,58 @@
 
 #include "test/test_core/test.h"
 
-#include <cstring>
-
 #include "virt_disk.h"
 
 using namespace std;
 
 virtual_disk_dummy_device::virtual_disk_dummy_device(const char *filename, uint64_t block_size) :
-  IBlockDevice{"Virtual disk"},
+  IBlockDevice{"Virtual disk", "vd"},
   _block_size{block_size},
-  _num_blocks{0}
+  _num_blocks{0},
+  backing_filename{filename}
 {
   std::string fn(filename);
 
-  current_dev_status = DEV_STATUS::FAILED;
-
-  try
-  {
-    backing_device = std::unique_ptr<virt_disk::virt_disk>(virt_disk::virt_disk::create_virtual_disk(fn));
-  }
-  catch (std::fstream::failure &f)
-  {
-    // The device status has already been initialized as failed, so just bail out.
-    return;
-  }
-
-  _num_blocks = backing_device->get_length() / _block_size;
-  current_dev_status = DEV_STATUS::OK;
+  set_device_status(DEV_STATUS::STOPPED);
 }
 
 virtual_disk_dummy_device::~virtual_disk_dummy_device()
 {
 
+}
+
+bool virtual_disk_dummy_device::start()
+{
+  set_device_status(DEV_STATUS::STARTING);
+
+  try
+  {
+    backing_device =
+      std::unique_ptr<virt_disk::virt_disk>(virt_disk::virt_disk::create_virtual_disk(backing_filename));
+  }
+  catch (std::fstream::failure &f)
+  {
+    // The device status has already been initialized as failed, so just bail out.
+    set_device_status(DEV_STATUS::FAILED);
+    return true;
+  }
+
+  _num_blocks = backing_device->get_length() / _block_size;
+  set_device_status(DEV_STATUS::OK);
+
+  return true;
+}
+
+bool virtual_disk_dummy_device::stop()
+{
+  set_device_status(DEV_STATUS::STOPPED);
+  return true;
+}
+
+bool virtual_disk_dummy_device::reset()
+{
+  set_device_status(DEV_STATUS::STOPPED);
+  return true;
 }
 
 uint64_t virtual_disk_dummy_device::num_blocks()
@@ -63,7 +83,7 @@ ERR_CODE virtual_disk_dummy_device::read_blocks(uint64_t start_block,
   {
     return_val = ERR_CODE::INVALID_PARAM;
   }
-  else if (this->current_dev_status != DEV_STATUS::OK)
+  else if (get_device_status() != DEV_STATUS::OK)
   {
     return_val = ERR_CODE::DEVICE_FAILED;
   }
@@ -98,7 +118,7 @@ ERR_CODE virtual_disk_dummy_device::write_blocks(uint64_t start_block,
   {
     return_val = ERR_CODE::INVALID_PARAM;
   }
-  else if (this->current_dev_status != DEV_STATUS::OK)
+  else if (get_device_status() != DEV_STATUS::OK)
   {
     return_val = ERR_CODE::DEVICE_FAILED;
   }

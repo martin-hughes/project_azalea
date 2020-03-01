@@ -5,6 +5,7 @@
 
 //#define ENABLE_TRACING
 
+#include <string>
 #include <memory>
 #include "klib/klib.h"
 #include "system_tree/system_tree.h"
@@ -12,6 +13,7 @@
 #include "system_tree/process/process.h"
 #include "system_tree/process/process_elf_structs.h"
 
+/// @brief Generic function pointer typedef.
 typedef void (*fn_ptr)();
 
 /// @brief Load an ELF binary file into a new process
@@ -22,10 +24,10 @@ typedef void (*fn_ptr)();
 ///
 /// When this function returns, the process is ready to start, but is suspended.
 ///
-/// param binary_name The System Tree name for an ELF file to load into a new process.
+/// @param binary_name The System Tree name for an ELF file to load into a new process.
 ///
-/// return A task_process control structure for the new process.
-std::shared_ptr<task_process> proc_load_elf_file(kl_string binary_name)
+/// @return A task_process control structure for the new process.
+std::shared_ptr<task_process> proc_load_elf_file(std::string binary_name)
 {
   KL_TRC_ENTRY;
 
@@ -65,6 +67,8 @@ std::shared_ptr<task_process> proc_load_elf_file(kl_string binary_name)
   ASSERT(new_prog_file->read_bytes(0, prog_size, load_buffer, prog_size, bytes_read) == ERR_CODE::NO_ERROR);
   ASSERT(bytes_read == prog_size);
 
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved entire file\n");
+
   // Check that this is a valid ELF64 file.
   file_header = reinterpret_cast<elf64_file_header *>(load_buffer);
   ASSERT((file_header->ident[0] == 0x7f)
@@ -85,6 +89,7 @@ std::shared_ptr<task_process> proc_load_elf_file(kl_string binary_name)
   // Create a task context with the correct entry point - this is needed before we can map pages to copy the image in
   // to.
   fn_ptr start_addr_ptr = reinterpret_cast<fn_ptr>(file_header->entry_addr);
+  KL_TRC_TRACE(TRC_LVL::FLOW, "About to construct new process\n");
   new_proc = task_process::create(start_addr_ptr, false);
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Created new process with entry point ", start_addr_ptr, "\n");
 
@@ -181,7 +186,7 @@ std::shared_ptr<task_process> proc_load_elf_file(kl_string binary_name)
           KL_TRC_TRACE(TRC_LVL::EXTRA, "Write pointer: ", write_ptr, "\n");
           KL_TRC_TRACE(TRC_LVL::EXTRA, "Read pointer: ", read_ptr, "\n");
           KL_TRC_TRACE(TRC_LVL::EXTRA, "Length: ", copy_length, "\n");
-          kl_memcpy(read_ptr, write_ptr, copy_length);
+          memcpy(write_ptr, read_ptr, copy_length);
           bytes_written += copy_length;
           offset += copy_length;
 
@@ -199,7 +204,7 @@ std::shared_ptr<task_process> proc_load_elf_file(kl_string binary_name)
           }
 
           write_ptr = reinterpret_cast<void *>(reinterpret_cast<uint64_t>(kernel_write_window) + offset);
-          kl_memset(write_ptr, 0, bytes_now);
+          memset(write_ptr, 0, bytes_now);
           bytes_to_zero -= bytes_now;
         }
 

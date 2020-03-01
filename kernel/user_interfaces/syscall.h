@@ -1,8 +1,15 @@
+/** @file
+ *  @brief Main Azalea kernel system call interface
+ *
+ * There can be at most 6 arguments to any system call, as we do not support passing arguments via the stack.
+ */
+
 #ifndef __AZALEA_SYSCALL_USER_H
 #define __AZALEA_SYSCALL_USER_H
 
 #include "error_codes.h"
 #include "kernel_types.h"
+#include "macros.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,12 +23,21 @@ ERR_CODE syscall_debug_output(const char *msg, uint64_t length);
 ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *handle, uint32_t flags);
 ERR_CODE syscall_close_handle(GEN_HANDLE handle);
 ERR_CODE syscall_create_obj_and_handle(const char *path, uint64_t path_len, GEN_HANDLE *handle);
-ERR_CODE syscall_rename_object(const char *old_name, const char *new_name);
-ERR_CODE syscall_delete_object(const char *path);
+ERR_CODE syscall_rename_object(const char *old_name,
+                               uint64_t old_name_len,
+                               const char *new_name,
+                               uint64_t new_name_len);
+ERR_CODE syscall_delete_object(const char *path, uint64_t path_len);
 ERR_CODE syscall_get_object_properties(GEN_HANDLE handle,
                                        const char *path,
                                        uint64_t path_length,
                                        struct object_properties *props);
+ERR_CODE syscall_enum_children(GEN_HANDLE handle,
+                               const char *start_from,
+                               uint64_t start_from_len,
+                               uint64_t max_count,
+                               void *buffer,
+                               uint64_t *buffer_size);
 
 /* Data read and write */
 ERR_CODE syscall_read_handle(GEN_HANDLE handle,
@@ -42,13 +58,12 @@ ERR_CODE syscall_seek_handle(GEN_HANDLE handle, int64_t offset, SEEK_OFFSET dir,
 
 /* Message passing. */
 ERR_CODE syscall_register_for_mp();
-ERR_CODE syscall_send_message(uint64_t target_proc_id,
+ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
                               uint64_t message_id,
                               uint64_t message_len,
-                              const char *message_ptr);
-ERR_CODE syscall_receive_message_details(uint64_t *sending_proc_id,
-                                         uint64_t *message_id,
-                                         uint64_t *message_len);
+                              const char *message_ptr,
+                              OPT_STRUCT ssm_output *output);
+ERR_CODE syscall_receive_message_details(uint64_t *message_id, uint64_t *message_len);
 ERR_CODE syscall_receive_message_body(char *message_buffer, uint64_t buffer_size);
 ERR_CODE syscall_message_complete();
 
@@ -81,9 +96,15 @@ ERR_CODE syscall_map_memory(GEN_HANDLE proc_mapping_in,
 ERR_CODE syscall_unmap_memory();
 
 /* Thread synchronization */
-ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle);
+ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle, uint64_t max_wait);
+/** @cond */
 ERR_CODE syscall_futex_wait(volatile int32_t *futex, int32_t req_value);
 ERR_CODE syscall_futex_wake(volatile int32_t *futex);
+/** @endcond */
+ERR_CODE syscall_create_mutex(GEN_HANDLE *mutex_handle);
+ERR_CODE syscall_release_mutex(GEN_HANDLE mutex_handle);
+ERR_CODE syscall_create_semaphore(GEN_HANDLE *semaphore_handle, uint64_t max_users, uint64_t start_users);
+ERR_CODE syscall_signal_semaphore(GEN_HANDLE semaphore_handle);
 
 /* Timing */
 ERR_CODE syscall_get_system_clock(struct time_expanded *buffer);

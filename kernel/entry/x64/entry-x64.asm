@@ -26,6 +26,8 @@ or rax, rbx
 mov rbx, working_table_va_entry_addr
 mov [rbx], rax
 
+mov rbp, 0
+
 ; Call the kernel proper.
 mov rax, main
 call rax

@@ -1,69 +1,72 @@
 /// @file
-/// @brief Header describing the work queueing mechanism in Azalea.
+/// @brief Implements the main message passing queue in Azalea.
 
 #pragma once
 
+#include <stdint.h>
 #include <memory>
-#include "processor/synch_objects.h"
+#include <queue>
+#include "klib/synch/kernel_locks.h"
+#include "processor/common_messages.h"
 
 namespace work
 {
-  /// @brief This object holds the output of any queued work.
-  ///
-  /// The caller can, if desired, wait on this object to be signalled, which will happen when the associated work item
-  /// has been completed.
-  class work_response : protected WaitForFirstTriggerObject
-  {
-  public:
-    work_response();
-    virtual ~work_response() = default;
-
-    virtual void set_response_complete();
-    virtual bool is_response_complete();
-    virtual void wait_for_response();
-
-  protected:
-    /// Has this work item already been marked complete by having set_response_complete() being called? This is only
-    /// really useful as a performance enhancement - if wait_for_response() is called twice, the second time will not
-    /// block.
-    bool response_marked_complete;
-  };
-
-  /// @brief Contains details of a single work item.
-  ///
-  /// This object is provided to the worker_object class that should handle it. It is expected that users of the work
-  /// queue system will create objects that derive from work_item to represent the various tasks they may need to
-  /// perform.
-  class work_item
-  {
-  public:
-    work_item();
-    virtual ~work_item() = default;
-
-    /// This item stores the response to this work item
-    std::shared_ptr<work_response> response_item;
-  };
-
-  /// @brief The base class of any object wishing to use the work queue.
-  ///
-  /// Any object wishing to allow work using that object to be scheduled by the system work queue must inherit from
-  /// this class.
-  class worker_object
-  {
-  public:
-    /// @brief Handle the provided work item.
-    ///
-    /// At the end of handling the item, if a response object is provided, the system work queue thread will signal the
-    /// object to indicate to the calling thread that the work item has been handled.
-    ///
-    /// @param item The item that was put on the work queue for this object to handle.
-    virtual void handle_work_item(std::shared_ptr<work_item> item) = 0;
-  };
-
-  void work_queue_thread();
-  void queue_work_item(std::shared_ptr<worker_object> object, std::shared_ptr<work_item> item);
-};
+  void init_queue();
 
 #ifdef AZALEA_TEST_CODE
-void test_only_reset_work_queue();
+  void test_only_terminate_queue();
 #endif
+
+#ifndef AZALEA_TEST_CODE
+  [[noreturn]]
+#endif
+  void work_queue_thread();
+  void work_queue_one_loop();
+
+  // Forward declarations necessary to create the queue_message function.
+  class message_receiver;
+  struct message_header;
+  void queue_message(std::shared_ptr<message_receiver> receiver, std::unique_ptr<msg::root_msg> msg);
+
+  /// @brief A simple message-receiving class.
+  ///
+  /// Any object that wishes to receive messages from the work queue system must inherit from this base class.
+  class message_receiver
+  {
+  public:
+    virtual ~message_receiver() = 0;
+
+    // Documentation in work_queue.cpp
+    virtual void begin_processing_msgs();
+    virtual bool process_next_message();
+
+  protected:
+    message_receiver();
+
+    /// @brief Receive the message contained in message.
+    ///
+    /// The object should now handle the message contained in msg without blocking. Blocking may cause the system to
+    /// deadlock.
+    ///
+    /// This function will be called by process_next_message(), so should not be called externally.
+    ///
+    /// @param message The message to handle.
+    virtual void handle_message(std::unique_ptr<msg::root_msg> &message) = 0;
+
+  private:
+    // ... the message queue storage and handling.
+
+    /// @cond
+    // doxygen inexplicably wants to document this whole thing all over again...
+    friend
+    void work::queue_message(std::shared_ptr<message_receiver> receiver, std::unique_ptr<msg::root_msg> message);
+    /// @endcond
+    std::queue<std::unique_ptr<msg::root_msg>> message_queue; ///< The queue of messages stored for this object.
+    kernel_spinlock queue_lock; ///< A lock protecting message_queue
+    bool in_process_mode{false}; ///< Are we processing message already?
+
+    /// Has this object already been added to the list of objects awaiting message handling?
+    ///
+    bool is_in_receiver_queue{false};
+  };
+};

@@ -1,4 +1,9 @@
-// KLib Kernel tracing library. In the live version of the kernel, these will do nothing.
+/// @file
+/// @brief KLib Kernel tracing library.
+///
+/// In the release version of the kernel, these will probably do nothing.
+
+#include <string>
 
 #include "tracing.h"
 
@@ -9,7 +14,11 @@
 // - KL_TRACE_BY_STDOUT - traces to stdout. Given that stdout doesn't really exist in the kernel environment it should
 //   be fairly easy to understand that this only works in the test code!
 
+// None of these functions are documented because they're reasonable self-explanatory.
+/// @cond
+
 #include "processor/x64/processor-x64-int.h"
+#include "devices/device_interface.h"
 
 #ifdef KL_TRACE_BY_SERIAL_PORT
 const uint16_t TRC_COM1_BASE_PORT = 0x3F8;
@@ -98,7 +107,7 @@ void kl_trc_output_str_argument(char const *str)
   }
 }
 
-void kl_trc_output_kl_string_argument(kl_string &str)
+void kl_trc_output_std_string_argument(std::string &str)
 {
   for (uint64_t x = 0; x < str.length(); x++)
   {
@@ -121,3 +130,24 @@ void kl_trc_output_err_code_argument(ERR_CODE ec)
     kl_trc_output_int_argument((uint64_t)(ec));
   }
 }
+
+#define DS_LOOKUP(s, n) \
+  case s : \
+    kl_trc_output_str_argument( n ); \
+    break
+
+void kl_trc_output_dev_status_argument(DEV_STATUS ds)
+{
+  switch (ds)
+  {
+  DS_LOOKUP(DEV_STATUS::UNKNOWN, "Unknown");
+  DS_LOOKUP(DEV_STATUS::STOPPED, "Stopped");
+  DS_LOOKUP(DEV_STATUS::STARTING, "Starting");
+  DS_LOOKUP(DEV_STATUS::STOPPING, "Stopping");
+  DS_LOOKUP(DEV_STATUS::OK, "Running OK");
+  DS_LOOKUP(DEV_STATUS::RESET, "Resetting");
+  DS_LOOKUP(DEV_STATUS::FAILED, "Failed");
+  }
+}
+
+/// @endcond

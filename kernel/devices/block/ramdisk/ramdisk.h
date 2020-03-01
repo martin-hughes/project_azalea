@@ -5,7 +5,6 @@
 
 #include "devices/block/block_interface.h"
 #include "user_interfaces/error_codes.h"
-#include "klib/data_structures/string.h"
 
 /// @brief An in-memory disk-like device.
 ///
@@ -14,27 +13,31 @@ class ramdisk_device: public IBlockDevice
 {
 public:
   ramdisk_device(uint64_t num_blocks, uint64_t block_size);
-  virtual ~ramdisk_device();
+  virtual ~ramdisk_device() override;
 
-  virtual DEV_STATUS get_device_status();
-
-  virtual uint64_t num_blocks();
-  virtual uint64_t block_size();
+  // Overrides of IBlockDevice
+  virtual uint64_t num_blocks() override;
+  virtual uint64_t block_size() override;
 
   virtual ERR_CODE read_blocks(uint64_t start_block,
                                uint64_t num_blocks,
                                void *buffer,
-                               uint64_t buffer_length);
+                               uint64_t buffer_length) override;
   virtual ERR_CODE write_blocks(uint64_t start_block,
                                 uint64_t num_blocks,
                                 const void *buffer,
-                                uint64_t buffer_length);
+                                uint64_t buffer_length) override;
+
+  // Overrides of IDevice
+  virtual bool start() override;
+  virtual bool stop() override;
+  virtual bool reset() override;
 
 protected:
-  char *_ramdisk_storage;
+  char *_ramdisk_storage; ///< Storage for this RAM disk.
 
-  const uint64_t _num_blocks;
-  const uint64_t _block_size;
+  const uint64_t _num_blocks; ///< How many virtual blocks are in this disk?
+  const uint64_t _block_size; ///< The number of bytes in a single block of this disk.
 
-  const uint64_t _storage_size;
+  const uint64_t _storage_size; ///< Effectively, _num_blocks * _block_size.
 };

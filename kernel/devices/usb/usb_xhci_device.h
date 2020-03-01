@@ -3,30 +3,23 @@
 
 #pragma once
 
+#include <map>
+
 #include <stdint.h>
 
 #include "devices/usb/usb_gen_device.h"
 #include "devices/usb/controllers/usb_xhci_controller.h"
 
 namespace usb { namespace xhci {
-  /// @brief Possible states for the device core to be in.
-  ///
-  /// We're not that good at tracking these yet.
-  enum class DEV_STATE
-  {
-    UNKNOWN, ///< Unknown, or unplugged state.
-    CREATE_CONTEXT, ///< Awaiting completion of the Create Context command.
-    ENABLED, ///< Enabled but not yet addressed.
-    ADDRESSED, ///< Addressed, but not yet configured.
-    CONFIGURED, ///< Configured and running.
-  };
 
   /// @brief An xHCI device core part.
   ///
   class device_core : public usb::generic_core
   {
-  public:
+  protected:
     device_core(controller *parent, uint8_t port, root_port *parent_port);
+  public:
+    static std::shared_ptr<device_core> create(controller *parent, uint8_t port, root_port *parent_port);
     virtual ~device_core() override;
 
     // Overrides of Generic USB Core functions
@@ -40,21 +33,25 @@ namespace usb { namespace xhci {
     virtual uint16_t get_max_packet_size() override;
     virtual bool set_max_packet_size(uint16_t new_packet_size) override;
     virtual bool configure_device(uint8_t config_num) override;
+    virtual void configuration_set() override;
     virtual bool queue_transfer(uint8_t endpoint_num,
                                 bool is_inwards,
                                 std::shared_ptr<normal_transfer> transfer_item) override;
+
+    // Override of work::message_receiver
+    virtual void handle_message(std::unique_ptr<msg::root_msg> &message) override;
 
     // xHCI-specific functions.
     virtual void handle_slot_enabled(uint8_t slot_id, device_context *new_output_context);
     virtual void handle_addressed();
     virtual uint8_t get_port_num();
     virtual void handle_transfer_event(transfer_event_trb &trb);
+    virtual void endpoints_configured();
 
   protected:
     controller *parent; ///< Pointer to the parent controller device.
     uint8_t port_num; ///< The number of the port this device is connected to.
     root_port *parent_port; ///< Pointer to the port structure this device is connected to.
-    DEV_STATE last_known_state; ///< The last state of this device we decided to calculate.
 
     /// An input context for providing to the xHCI. Maintaining one seems to be easier than continually allocating and
     /// deallocating one. Note that this is for input only, to see the current state of the device, use dev_context.
@@ -72,7 +69,7 @@ namespace usb { namespace xhci {
 
     /// Map the physical addresses of transfer TRBs to work response items, so that the response item can be marked
     /// complete when the relevant transfer event TRB is received.
-    kl_rb_tree<uint64_t, std::shared_ptr<normal_transfer>> current_transfers;
+    std::map<uint64_t, std::shared_ptr<normal_transfer>> current_transfers;
 
     device_context *dev_context; ///< Pointer to the device context, as seen by the xHCI. Do not directly modify.
 

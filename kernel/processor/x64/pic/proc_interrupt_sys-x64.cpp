@@ -15,12 +15,20 @@
 #include "processor/x64/processor-x64-int.h"
 #include "klib/klib.h"
 
-// The various PIC types supported by the Project Azalea kernel.
-enum class APIC_TYPES { LEGACY_PIC, APIC, X2APIC };
+/// @brief The various PIC types recognised by the Project Azalea kernel.
+///
+/// Only APIC is really supported.
+enum class APIC_TYPES
+{
+  LEGACY_PIC, ///< Legacy-type PIC.
+  APIC, ///< Standard APIC.
+  X2APIC ///< X2 APIC.
+};
 
-const uint64_t APIC_PRESENT = 0x0000020000000000;
-const uint64_t X2_APIC_PRESENT = 0x0000000000200000;
+const uint64_t APIC_PRESENT = 0x0000020000000000; ///< Bit flag indicating APIC presence in CPUID result.
+const uint64_t X2_APIC_PRESENT = 0x0000000000200000; ///< Bit flag indicating x2APIC presence in CPUID result.
 
+/// @brief Which PIC mode has the system selected.
 APIC_TYPES selected_pic_mode = APIC_TYPES::LEGACY_PIC;
 
 APIC_TYPES proc_x64_detect_pic_type();
@@ -118,6 +126,8 @@ void proc_configure_global_int_ctrlrs()
 /// @brief Detect which type of PIC is attached to this processor.
 ///
 /// For the time being, it is assumed that all processors have the same type of PIC as this one.
+///
+/// @return The type of APIC in use by this system.
 APIC_TYPES proc_x64_detect_pic_type()
 {
   KL_TRC_ENTRY;

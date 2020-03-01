@@ -131,7 +131,7 @@ void root_port::port_status_change_event()
 
     case PORT_STS::ENABLED:
       KL_TRC_TRACE(TRC_LVL::FLOW, "Now enabled - init device\n");
-      xhci_core = std::make_shared<device_core>(parent, port_id, this);
+      xhci_core = device_core::create(parent, port_id, this);
       break;
 
     case PORT_STS::RESETTING:

@@ -3,6 +3,7 @@
 #include "system_tree/system_tree.h"
 #include "system_tree/fs/mem/mem_fs.h"
 #include "user_interfaces/syscall.h"
+#include "processor/processor.h"
 
 #include "gtest/gtest.h"
 
@@ -29,7 +30,7 @@ protected:
 
     root_branch = mem_fs_branch::create();
 
-    ec = system_tree()->add_child("mem", root_branch);
+    ec = system_tree()->add_child("\\mem", root_branch);
     ASSERT_EQ(ec, ERR_CODE::NO_ERROR);
   };
 
@@ -37,7 +38,7 @@ protected:
   {
     test_only_set_cur_thread(nullptr);
 
-    system_tree()->delete_child("mem");
+    system_tree()->delete_child("\\mem");
 
     root_branch = nullptr;
     sys_proc = nullptr;
@@ -50,7 +51,7 @@ protected:
 TEST_F(MemFsSyscallTests, CreateAndExit)
 {
   ERR_CODE ec;
-  char filename[] = "mem\\new_file";
+  char filename[] = "\\mem\\new_file";
   GEN_HANDLE new_file_handle;
 
   ec = syscall_create_obj_and_handle(filename, strlen(filename), &new_file_handle);
@@ -60,7 +61,7 @@ TEST_F(MemFsSyscallTests, CreateAndExit)
 TEST_F(MemFsSyscallTests, CreateWriteAndRead)
 {
   ERR_CODE ec;
-  char filename[] = "mem\\new_file";
+  char filename[] = "\\mem\\new_file";
   unsigned char test_string[23] = "This is a test string.";
   unsigned char output_buffer[23];
   GEN_HANDLE new_file_handle;
@@ -103,7 +104,7 @@ TEST_F(MemFsSyscallTests, CreateWriteAndRead)
 
 TEST_F(MemFsSyscallTests, FileDoesntExist)
 {
-  char filename[] = "mem\\new_file";
+  char filename[] = "\\mem\\new_file";
   ERR_CODE ec;
   GEN_HANDLE fh = 123;
 

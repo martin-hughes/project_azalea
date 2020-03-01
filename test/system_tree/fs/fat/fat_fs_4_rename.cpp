@@ -28,8 +28,8 @@ namespace
 
   test_file_details test_list[] = {
     { "TESTREAD.TXT", "TESTRENA.TXT", true, ERR_CODE::NO_ERROR, "This is a test." },
-    { "SHORTDIR\\TESTFILE.txt", "SHORTDIR\\Now a long name.txt", true, ERR_CODE::NO_ERROR, "This file is in a directory."},
-    { "Long file name.txt", "SHORT.txt", true, ERR_CODE::NO_ERROR, "This file has a long name."},
+    { "SHORTDIR\\TESTFILE.TXT", "SHORTDIR\\Now a long name.txt", true, ERR_CODE::NO_ERROR, "This file is in a directory."},
+    { "Long file name.txt", "SHORT.TXT", true, ERR_CODE::NO_ERROR, "This file has a long name."},
     { "Long directory\\Long child name.txt", "Now in parent.txt", false, ERR_CODE::INVALID_OP, "This file has a long path."},
     { "BAD.TXT", "Should fail.txt", false, ERR_CODE::NOT_FOUND, ""},
     { "This file really does not exist.blah.no", "OOPS.TXT", false, ERR_CODE::NOT_FOUND, ""},
@@ -72,6 +72,7 @@ protected:
     uint32_t write_blocks;
 
     memset(sector_buffer.get(), 0, 512);
+    ASSERT_TRUE(backing_storage->start());
     ASSERT_EQ(ERR_CODE::NO_ERROR, backing_storage->read_blocks(0, 1, sector_buffer.get(), 512)) << "Virt. disk failed";
 
     // Confirm that we've loaded a valid MBR
@@ -84,6 +85,7 @@ protected:
 
     proxy = make_shared<block_proxy_device>(backing_storage.get(), start_sector, sector_count);
 
+    ASSERT_TRUE(proxy->start());
     ASSERT_EQ(DEV_STATUS::OK, proxy->get_device_status());
 
     // Initialise the filesystem based on that information
@@ -101,6 +103,7 @@ protected:
     {
       cout << "Not removing temporary file: " << image_temp_name << endl;
     }
+    test_only_reset_name_counts();
   };
 };
 
@@ -114,7 +117,7 @@ TEST_P(FatFsRenameTests, BasicRename)
   shared_ptr<ISystemTreeLeaf> basic_leaf;
   shared_ptr<IBasicFile> input_file;
   auto [test_details, disk_image_name] = GetParam();
-  const kl_string filename = test_details.filename;
+  const std::string filename = test_details.filename;
   const char *expected_text = test_details.expected_contents;
   const uint32_t expected_file_size = strlen(expected_text);
   unique_ptr<uint8_t[]> buffer = unique_ptr<uint8_t[]>(new uint8_t[expected_file_size + 1]);

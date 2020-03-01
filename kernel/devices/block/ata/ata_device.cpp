@@ -1,7 +1,10 @@
+/// @file
 /// @brief Simple, generic ATA device driver
 //
 // Known defects:
 // - Amongst many others, does no error checking at all.
+// - By keeping a shared_ptr to the parent controller, there's a pointer cycle - this isn't a problem until
+//   hot-swappable ATA devices are implemented (if ever)
 
 //#define ENABLE_TRACING
 
@@ -24,14 +27,14 @@ using namespace ata;
 ///                    specific meaning and is effectively opaque to this device.
 ///
 /// @param identity_buf Output from an earlier IDENTIFY command used to show that this device existed.
-generic_device::generic_device(generic_controller *parent, uint16_t drive_index, identify_cmd_output &identity_buf) :
-    IBlockDevice{"Generic ATA device"},
+generic_device::generic_device(std::shared_ptr<generic_controller> parent, uint16_t drive_index, identify_cmd_output &identity_buf) :
+    IBlockDevice{"Generic ATA device", "ata"},
     parent_controller{parent},
     controller_index{drive_index}
 {
   KL_TRC_ENTRY;
 
-  kl_memcpy(&identity_buf, &identity, sizeof(identify_cmd_output));
+  memcpy(&identity, &identity_buf, sizeof(identify_cmd_output));
 
   if (identity.lba_48 == 1)
   {
@@ -48,7 +51,7 @@ generic_device::generic_device(generic_controller *parent, uint16_t drive_index,
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Sector count: ", number_of_sectors , "\n");
 
-  current_dev_status = DEV_STATUS::OK;
+  set_device_status(DEV_STATUS::OK);
 
   KL_TRC_EXIT;
 }
@@ -56,6 +59,24 @@ generic_device::generic_device(generic_controller *parent, uint16_t drive_index,
 generic_device::~generic_device()
 {
 
+}
+
+bool generic_device::start()
+{
+  set_device_status(DEV_STATUS::OK);
+  return true;
+}
+
+bool generic_device::stop()
+{
+  set_device_status(DEV_STATUS::STOPPED);
+  return true;
+}
+
+bool generic_device::reset()
+{
+  set_device_status(DEV_STATUS::STOPPED);
+  return true;
 }
 
 uint64_t generic_device::num_blocks()
@@ -106,7 +127,7 @@ ERR_CODE generic_device::read_blocks(uint64_t start_block,
     KL_TRC_TRACE(TRC_LVL::FLOW, "Output buffer too short\n");
     result = ERR_CODE::INVALID_PARAM;
   }
-  else if (this->current_dev_status != DEV_STATUS::OK)
+  else if (get_device_status() != DEV_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Device has failed\n");
     result = ERR_CODE::DEVICE_FAILED;
@@ -167,7 +188,7 @@ ERR_CODE generic_device::write_blocks(uint64_t start_block,
     KL_TRC_TRACE(TRC_LVL::FLOW, "Output buffer too short\n");
     result = ERR_CODE::INVALID_PARAM;
   }
-  else if (this->current_dev_status != DEV_STATUS::OK)
+  else if (get_device_status() != DEV_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Device has failed\n");
     result = ERR_CODE::DEVICE_FAILED;
@@ -219,6 +240,9 @@ bool generic_device::calculate_dma_support()
       result = true;
     }
   }
+
+  // Despite all of that, we can only support DMA transfers if our parent controller also supports them.
+  result = result && parent_controller->dma_transfer_supported();
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
@@ -371,7 +395,7 @@ ERR_CODE generic_device::read_blocks_dma(uint64_t start_block,
       while(blocks_left > 0)
       {
         // 128 is the number of 512-byte sectors in a 64kB transfer.
-        blocks_this_part = blocks_left > 128 ? 128 : blocks_left;
+        blocks_this_part = (blocks_left > 128) ? 128 : blocks_left;
 
         if (!parent_controller->queue_dma_transfer_block(buffer_char_ptr, blocks_this_part * 512))
         {
@@ -382,6 +406,8 @@ ERR_CODE generic_device::read_blocks_dma(uint64_t start_block,
         blocks_left -= blocks_this_part;
         buffer_char_ptr += (blocks_this_part * 512);
       }
+
+      parent_controller->dma_transfer_blocks_queued();
 
       if((blocks_left == 0) && (this->parent_controller->issue_command(this->controller_index,
                                                                        read_cmd,
@@ -458,7 +484,7 @@ ERR_CODE generic_device::write_blocks_dma(uint64_t start_block,
       while(blocks_left > 0)
       {
         // 128 is the number of 512-byte sectors in a 64kB transfer.
-        blocks_this_part = blocks_left > 128 ? 128 : blocks_left;
+        blocks_this_part = (blocks_left > 128) ? 128 : blocks_left;
 
         if (!parent_controller->queue_dma_transfer_block(buffer_char_ptr, blocks_this_part * 512))
         {
@@ -469,6 +495,8 @@ ERR_CODE generic_device::write_blocks_dma(uint64_t start_block,
         blocks_left -= blocks_this_part;
         buffer_char_ptr += (blocks_this_part * 512);
       }
+
+      parent_controller->dma_transfer_blocks_queued();
 
       if((blocks_left == 0) && (this->parent_controller->issue_command(this->controller_index,
                                                                        write_cmd,

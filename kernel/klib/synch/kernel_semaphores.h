@@ -1,15 +1,17 @@
 /// @file
 /// @brief Defines a simple semaphore type.
 
-#ifndef KLIB_SEMAPHORE
-#define KLIB_SEMAPHORE
+#pragma once
 
 #include <stdint.h>
 #include <memory>
 
 #include "klib/synch/kernel_locks.h"
-#include "processor/processor.h"
+#include "klib/data_structures/lists.h"
 
+class task_thread;
+
+/// @brief Flags that a semaphore should wait indefinitely instead of for a specific time.
 const uint64_t SEMAPHORE_MAX_WAIT = 0xFFFFFFFFFFFFFFFF;
 
 /// @brief Defines a semaphore structure.
@@ -39,5 +41,3 @@ struct klib_semaphore
 void klib_synch_semaphore_init(klib_semaphore &semaphore, uint64_t max_users, uint64_t start_users = 0);
 SYNC_ACQ_RESULT klib_synch_semaphore_wait(klib_semaphore &semaphore, uint64_t max_wait);
 void klib_synch_semaphore_clear(klib_semaphore &semaphore);
-
-#endif

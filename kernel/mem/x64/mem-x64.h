@@ -1,6 +1,6 @@
-#ifndef __MEM_X64_H
-#define __MEM_X64_H
+/// @file
+/// @brief x64-specific memory related functions.
+
+#pragma once
 
 void mem_x64_pat_init();
-
-#endif

@@ -24,7 +24,7 @@ namespace
 ///
 /// @param address The PCI address of this xHCI controller.
 controller::controller(pci_address address) :
-  usb_gen_controller{address, "USB XHCI controller"},
+  usb_gen_controller{address, "USB XHCI controller", "usb3"},
   capability_regs{nullptr},
   operational_regs{nullptr},
   command_ring{128},
@@ -43,8 +43,6 @@ controller::controller(pci_address address) :
   // The steps inside these functions are based on the steps in the Intel xHCI Spec, v1.1, section 4.2.
   KL_TRC_ENTRY;
 
-  current_dev_status = DEV_STATUS::NOT_READY;
-
   // Set up the internal pointers to the various memory-mapped register blocks.
   initialize_registers(address);
 
@@ -54,7 +52,8 @@ controller::controller(pci_address address) :
   if (!hardware_ok)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Hardware failed\n");
-    current_dev_status = DEV_STATUS::FAILED;
+    permanently_failed = true;
+    set_device_status(DEV_STATUS::FAILED);
   }
   else
   {
@@ -62,39 +61,15 @@ controller::controller(pci_address address) :
     if (!prepare_control_structures())
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to create control structures\n");
-      current_dev_status = DEV_STATUS::FAILED;
+      permanently_failed = true;
+      set_device_status(DEV_STATUS::FAILED);
     }
     else
     {
       // Initialise interrupts.
       ASSERT(msi_configure(1, ints_granted));
       ASSERT(ints_granted == 1);
-
-      // Start running!
-      if (!msi_enable())
-      {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to enable MSI - interrupts will not be received\n");
-        current_dev_status = DEV_STATUS::FAILED;
-      }
-      else
-      {
-        // Start the controller. It looks a bit odd to set the device status to stopped, but it's an accurate
-        // reflection of the controller's current state before we call start().
-        operational_regs->usb_status.event_interrupt = 0;
-        current_dev_status = DEV_STATUS::STOPPED;
-
-        this->start();
-
-        // Tell all ports that their status may have changed:
-        for (uint32_t i = 0; i < capability_regs->struct_params_1.max_ports; i++)
-        {
-          if (root_ports[i].is_valid_port())
-          {
-            KL_TRC_TRACE(TRC_LVL::FLOW, "Kick port ", i, "\n");
-            root_ports[i].port_status_change_event();
-          }
-        }
-      }
+      set_device_status(DEV_STATUS::STOPPED);
     }
   }
 
@@ -105,7 +80,7 @@ controller::~controller()
 {
   KL_TRC_ENTRY;
 
-  this->stop(true);
+  this->controller_stop();
 
   // Clean up the pages we mapped for scratchpads. Everything else should clean itself up.
   for (int i = 0; i < num_scratchpad_page_ptrs; i++)
@@ -119,25 +94,44 @@ controller::~controller()
   KL_TRC_EXIT;
 }
 
-/// @brief If the controller isn't already in the run state, start it running.
-///
-/// This function will pause for a short duration, if needed, to wait for the controller to start. If the controller
-/// could not be started, the device status will be set to failed.
-///
-/// @return True if the controller was successfully started, false otherwise.
 bool controller::start()
 {
-  bool result = false;
+  bool result{true};
+
   KL_TRC_ENTRY;
 
-  if ((operational_regs) && (current_dev_status == DEV_STATUS::STOPPED))
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Execute start.\n");
-    operational_regs->usb_command.interrupter_enable = 1;
-    operational_regs->usb_command.run_stop = 1;
-    current_dev_status = DEV_STATUS::OK;
+  set_device_status(DEV_STATUS::STARTING);
 
-    result = true;
+  // Start running!
+  if (permanently_failed || !msi_enable())
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Permanently failed, or failed to enable MSI.\n");
+    set_device_status(DEV_STATUS::FAILED);
+  }
+  else
+  {
+    // Start the controller.
+    if(!controller_start())
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Device failed to enter startup\n");
+      set_device_status(DEV_STATUS::FAILED);
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Started OK, kick ports\n");
+
+      set_device_status(DEV_STATUS::OK);
+
+      // Tell all ports that their status may have changed:
+      for (uint32_t i = 0; i < capability_regs->struct_params_1.max_ports; i++)
+      {
+        if (root_ports[i].is_valid_port())
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Kick port ", i, "\n");
+          root_ports[i].port_status_change_event();
+        }
+      }
+    }
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
@@ -146,25 +140,115 @@ bool controller::start()
   return result;
 }
 
-/// @brief If the controller isn't already in the stopped state, stop it now.
+bool controller::stop()
+{
+  bool result{true};
+
+  KL_TRC_ENTRY;
+
+  set_device_status(DEV_STATUS::STOPPING);
+
+  if (controller_stop())
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Successful stop\n");
+    set_device_status(DEV_STATUS::STOPPED);
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to stop\n");
+    set_device_status(DEV_STATUS::FAILED);
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+bool controller::reset()
+{
+  bool result = true;
+
+  KL_TRC_ENTRY;
+
+  set_device_status(DEV_STATUS::RESET);
+
+  if (operational_regs->usb_status.host_ctrlr_halted != 1)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Controller must stop before being reset\n");
+    controller_stop();
+  }
+
+  if (!controller_reset())
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to enter reset correctly\n");
+    set_device_status(DEV_STATUS::FAILED);
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Device reset OK\n");
+    set_device_status(DEV_STATUS::STOPPED);
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+/// @brief If the controller is halted, allow it to run.
+///
+/// Note that this is a separate action to IDevice::start() as the controller may have been paused for, for example, a
+/// configuration change.
+///
+/// This function will pause for a short duration, if needed, to wait for the controller to start. If the controller
+/// could not be started, the device status will be set to failed.
+///
+/// @return True if the controller was successfully started, false otherwise.
+bool controller::controller_start()
+{
+  bool result{true};
+
+  KL_TRC_ENTRY;
+
+  if (operational_regs)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Execute start.\n");
+    operational_regs->usb_status.event_interrupt = 0;
+    operational_regs->usb_command.interrupter_enable = 1;
+    operational_regs->usb_command.run_stop = 1;
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to start as not configured\n");
+    result = false;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+/// @brief Set the controller to not be running.
+///
+/// This is subtly different to IDevice::stop() - this function may be called anytime we want to suspend operation of
+/// the controller, for example to update its configuration, even when this is part of the normal operation.
+/// IDevice::stop() means we want the device to stop semi-permanently.
 ///
 /// This function will pause for a short duration, if needed, to wait for the controller to stop. If the controller
 /// could not be stopped, the device status will be set to failed.
 ///
-/// @param force Whether or not to forcibly set the controller to stopped. If this is true, the appropriate registers
-///              will be written even if the device is not ready or already running. If false, the controller's
-///              registers will only be written if the device is ready to be stopped.
-///
-/// @return True if the controller was successfully stopped, false otherwise.
-bool controller::stop(bool force)
+/// @return True If the controller was stopped successfully. False otherwise.
+bool controller::controller_stop()
 {
-  bool result = false;
+  bool result{true};
   uint64_t start_time;
   uint64_t end_time;
 
   KL_TRC_ENTRY;
 
-  if ((operational_regs) && ((current_dev_status == DEV_STATUS::OK) || force))
+  if (operational_regs)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Stopping\n");
     operational_regs->usb_command.run_stop = 0;
@@ -187,22 +271,17 @@ bool controller::stop(bool force)
     if (operational_regs->usb_status.host_ctrlr_halted == 1)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Controller stopped OK\n");
-
-      // If the controller was known to be in the running state, set it to stopped. Otherwise, let the existing state
-      // code live on - since it's probably FAILED or similar.
-      if (current_dev_status == DEV_STATUS::OK)
-      {
-        current_dev_status = DEV_STATUS::STOPPED;
-      }
-
-      result = true;
     }
     else
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Controller failed to stop\n");
-      current_dev_status = DEV_STATUS::UNKNOWN;
       result = false;
     }
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Controller not configured, unable to stop\n");
+    result = false;
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
@@ -213,19 +292,22 @@ bool controller::stop(bool force)
 
 /// @brief If the controller is stopped, attempt a reset.
 ///
+/// This is independent of IDevice::reset() as there are legitimate reasons to get the controller chip to reset itself
+/// without updating the state of this object - for example, resetting the chip during initialisation of this driver.
+///
 /// This function will pause for a short duration, if needed, to wait for the controller to reset. If the controller
 /// could not be reset, the device status will be set to failed.
 ///
 /// @return True if the controller was successfully reset, false otherwise.
-bool controller::reset()
+bool controller::controller_reset()
 {
-
+  bool result{true};
   uint64_t start_time;
   uint64_t end_time;
-  bool result = true;
 
   KL_TRC_ENTRY;
 
+  ASSERT(operational_regs);
   if (operational_regs->usb_status.host_ctrlr_halted == 1)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "OK to reset\n");
@@ -248,7 +330,7 @@ bool controller::reset()
     if ((operational_regs->usb_status.controller_not_ready != 0) || (operational_regs->usb_command.hc_reset != 0))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Controller failed to reset\n");
-      current_dev_status = DEV_STATUS::UNKNOWN;
+      set_device_status(DEV_STATUS::FAILED);
       result = false;
     }
   }
@@ -372,8 +454,8 @@ bool controller::initial_hardware_check()
     KL_TRC_TRACE(TRC_LVL::FLOW, "Hardware started, check compatibility\n");
 
     // Make sure the controller is stopped before fiddling with it.
-    this->stop(true);
-    this->reset();
+    this->controller_stop();
+    this->controller_reset();
 
     if (caps.msi.supported == false)
     {
@@ -403,21 +485,22 @@ bool controller::prepare_control_structures()
   KL_TRC_ENTRY;
 
   // Set controller to stopped.
-  this->stop(true);
+  this->controller_stop();
 
   // Initialise the Device Context Base Address Array, which is an array of pointers to device contexts. Since no
   // devices are enabled yet, all pointers are set to nullptr. The xHCI must be given the physical address, of course.
   device_ctxt_base_addr_array =
     std::make_unique<device_context *[]>(capability_regs->struct_params_1.max_device_slots + 1);
-  kl_memset(device_ctxt_base_addr_array.get(),
-            0,
-            sizeof(device_context *) * (capability_regs->struct_params_1.max_device_slots + 1));
+  memset(device_ctxt_base_addr_array.get(),
+         0,
+         sizeof(device_context *) * (capability_regs->struct_params_1.max_device_slots + 1));
 
   // At the same time, create an array to allow us to correlate slot numbers to device cores.
-  slot_to_device_obj_map = std::make_unique<device_core *[]>(capability_regs->struct_params_1.max_device_slots + 1);
-  kl_memset(slot_to_device_obj_map.get(),
-            0,
-            sizeof(device_core *) * (capability_regs->struct_params_1.max_device_slots + 1));
+  slot_to_device_obj_map =
+    std::make_unique<std::shared_ptr<device_core>[]>(capability_regs->struct_params_1.max_device_slots + 1);
+  memset(slot_to_device_obj_map.get(),
+         0,
+         sizeof(device_core *) * (capability_regs->struct_params_1.max_device_slots + 1));
 
   // If the controller needs it, add some scratchpad space via the DCBAA.
   num_scratchpads = (capability_regs->struct_params_2.max_scratchpad_bufs_hi << 5) &
@@ -551,13 +634,13 @@ uint64_t controller::generate_scratchpad_array(uint16_t num_scratchpads)
 // Interrupt handlers.
 //----------------------
 
-bool controller::handle_translated_interrupt_fast(unsigned char interrupt_offset, unsigned char raw_interrupt_num)
+bool controller::handle_translated_interrupt_fast(uint8_t interrupt_offset, uint8_t raw_interrupt_num)
 {
   KL_TRC_TRACE(TRC_LVL::FLOW, "xHCI fast interrupt\n");
   return true;
 }
 
-void controller::handle_translated_interrupt_slow(unsigned char interrupt_offset, unsigned char raw_interrupt_num)
+void controller::handle_translated_interrupt_slow(uint8_t interrupt_offset, uint8_t raw_interrupt_num)
 {
   template_trb cur_trb;
   bool received_trb;
@@ -681,7 +764,15 @@ void controller::handle_command_completion(command_completion_event_trb &trb)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Return response data\n");
         cmd_data->response_item->trb = trb;
-        cmd_data->response_item->set_response_complete();
+
+        if (cmd_data->requesting_device)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Send message to requesting device\n");
+          std::unique_ptr<command_complete_msg> msg =
+            std::make_unique<command_complete_msg>(static_cast<uint8_t>(cmd_data->generated_trb.trb_type),
+                                                   static_cast<uint8_t>(trb.completion_code));
+          work::queue_message(cmd_data->requesting_device, std::move(msg));
+        }
       }
       break;
 
@@ -717,7 +808,8 @@ void controller::handle_command_completion(command_completion_event_trb &trb)
 /// @param trb The command completion event TRB corresponding to this command.
 ///
 /// @param requesting_dev The device that requested the slot.
-void controller::handle_enable_slot_completion(command_completion_event_trb &trb, device_core *requesting_dev)
+void controller::handle_enable_slot_completion(command_completion_event_trb &trb,
+                                               std::shared_ptr<device_core> requesting_dev)
 {
   KL_TRC_ENTRY;
 
@@ -730,7 +822,7 @@ void controller::handle_enable_slot_completion(command_completion_event_trb &trb
     KL_TRC_TRACE(TRC_LVL::FLOW, "Raw: ", ((template_trb *)&trb)->reserved_2, "\n");
 
     device_context *out_context = new device_context;
-    kl_memset(out_context, 0, sizeof(device_context));
+    memset(out_context, 0, sizeof(device_context));
 
     device_ctxt_base_addr_array[new_slot] = reinterpret_cast<device_context *>(mem_get_phys_addr(out_context));
     ASSERT(slot_to_device_obj_map[new_slot] == nullptr);
@@ -751,7 +843,8 @@ void controller::handle_enable_slot_completion(command_completion_event_trb &trb
 /// @param trb The command completion event TRB corresponding to this command.
 ///
 /// @param requesting_dev The device that requested addressing.
-void controller::handle_address_device_completion(command_completion_event_trb &trb, device_core *requesting_dev)
+void controller::handle_address_device_completion(command_completion_event_trb &trb,
+                                                  std::shared_ptr<device_core> requesting_dev)
 {
   KL_TRC_ENTRY;
 
@@ -773,12 +866,12 @@ void controller::handle_address_device_completion(command_completion_event_trb &
 /// @param trb The Transfer Event TRB generated by the controller.
 void controller::handle_transfer_event(transfer_event_trb &trb)
 {
-  device_core *core;
+  std::shared_ptr<device_core> core;
   KL_TRC_ENTRY;
 
   core = slot_to_device_obj_map[trb.slot_id];
 
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Transfer complete for device in slot ", trb.slot_id, " - ", core, "\n");
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Transfer complete for device in slot ", trb.slot_id, " - ", core.get(), "\n");
 
   ASSERT(core != nullptr);
   core->handle_transfer_event(trb);
@@ -795,7 +888,7 @@ void controller::handle_transfer_event(transfer_event_trb &trb)
 /// Corresponds to generating an Enable Slot command for this device.
 ///
 /// @param req_dev The device requesting a slot.
-void controller::request_slot(device_core *req_dev)
+void controller::request_slot(std::shared_ptr<device_core> req_dev)
 {
   enable_slot_cmd_trb cmd_trb;
 
@@ -824,7 +917,7 @@ void controller::request_slot(device_core *req_dev)
 /// @param input_ctxt_phys_addr The physical address of the input context of this device.
 ///
 /// @param slot_id The slot ID for the device being addressed.
-void controller::address_device(device_core *req_dev, uint64_t input_ctxt_phys_addr, uint8_t slot_id)
+void controller::address_device(std::shared_ptr<device_core> req_dev, uint64_t input_ctxt_phys_addr, uint8_t slot_id)
 {
   address_device_cmd_trb cmd_trb;
   xhci_command_data *new_cmd = new xhci_command_data; // Deleted by the command completion handler.
@@ -850,7 +943,7 @@ void controller::address_device(device_core *req_dev, uint64_t input_ctxt_phys_a
 /// @param req_dev The requesting device.
 ///
 /// @return True if the command completed successfully, false otherwise.
-bool controller::generic_device_command(template_trb *trb, device_core *req_dev)
+bool controller::generic_device_command(template_trb *trb, std::shared_ptr<device_core> req_dev)
 {
   xhci_command_data *new_cmd = new xhci_command_data; // Deleted by the command completion handler.
   std::shared_ptr<command_response> response = std::make_shared<command_response>();
@@ -862,17 +955,10 @@ bool controller::generic_device_command(template_trb *trb, device_core *req_dev)
   new_cmd->requesting_device = req_dev;
   new_cmd->response_item = response;
 
-  command_ring.queue_command(new_cmd);
+  result = command_ring.queue_command(new_cmd);
   // After here, new_cmd is no longer valid - it is deleted once the command completion handler is called.
   new_cmd = nullptr;
   doorbell_regs[0] = 0;
-
-  response->wait_for_response();
-  if (response->trb.completion_code != C_CODES::SUCCESS)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Command failed with code: ", response->trb.completion_code, "\n");
-    result = false;
-  }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
@@ -891,7 +977,7 @@ bool controller::generic_device_command(template_trb *trb, device_core *req_dev)
 /// @param slot_id The slot ID for the device being addressed.
 ///
 /// @return True if the Evaluate Context command completed successfully, false otherwise.
-bool controller::evaluate_context(device_core *req_dev, uint64_t input_ctxt_phys_addr, uint8_t slot_id)
+bool controller::evaluate_context(std::shared_ptr<device_core> req_dev, uint64_t input_ctxt_phys_addr, uint8_t slot_id)
 {
   bool result = true;
   evaluate_context_cmd_trb cmd_trb;
@@ -920,7 +1006,9 @@ bool controller::evaluate_context(device_core *req_dev, uint64_t input_ctxt_phys
 /// @param slot_id The slot ID for the device being addressed.
 ///
 /// @return True if the endpoint configuration was successful, false otherwise.
-bool controller::configure_endpoints(device_core *req_dev, uint64_t input_ctxt_phys_addr, uint8_t slot_id)
+bool controller::configure_endpoints(std::shared_ptr<device_core> req_dev,
+                                     uint64_t input_ctxt_phys_addr,
+                                     uint8_t slot_id)
 {
   bool result = true;
   configure_endpoint_cmd_trb cmd_trb;
@@ -959,7 +1047,15 @@ void controller::ring_doorbell(uint8_t doorbell_num, uint8_t endpoint_code, uint
   KL_TRC_EXIT;
 }
 
-void controller::handle_work_item(std::shared_ptr<work::work_item> item)
+/// @brief Construct a command completed message to send to the designated receiver.
+///
+/// @param cmd The value of TRB type for the generated command.
+///
+/// @param code The TRB completion code of the completed command.
+command_complete_msg::command_complete_msg(uint8_t cmd, uint8_t code) :
+  msg::root_msg{SM_XHCI_CMD_COMPLETE},
+  generated_command{cmd},
+  completion_code{code}
 {
-  INCOMPLETE_CODE("xhci work item");
+
 }

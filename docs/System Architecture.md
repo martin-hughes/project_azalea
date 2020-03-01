@@ -31,6 +31,12 @@ The Processor component provides control over the system's processors and direct
 - Interrupt handling, including controlling the PICs
 - High precision timing
 - Inter-processor signalling
+- Task scheduling
+
+#### Work queue
+
+The work queue is a dedicated thread that handles messages being passed between objects. More details are available in
+[Work queue.md](./components/Work%20queue.md)
 
 ### Object Manager (object_mgr)
 
@@ -102,7 +108,9 @@ currently only uses the type information and dynamic casting parts of this libra
 
 It can be found [here](https://github.com/pathscale/libcxxrt)
 
-### vsnprintf
+### libtmt
 
-vsnprintf is an implementation of the `sprintf` family of functions. It is provided under a permissive licence, and
-originates from ftp://ftp.jhweiss.de/pub/users/weiss/snprintf/snprintf.c, as of 2016-07-27
+libtmt provides "virtual terminals" that keep an in-memory representation of a simple terminal, and handles ANSI codes
+etc. The rest of the kernel is then responsible for copying this representation on to screen.
+
+The original can be found [here](https://github.com/deadpixi/libtmt), Azalea uses a fork with a few extra fixes.

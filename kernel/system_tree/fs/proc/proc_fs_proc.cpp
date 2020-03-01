@@ -1,5 +1,5 @@
+/// @file
 /// @brief Implementation of the per-process parts of a 'proc'-like filesystem.
-///
 
 //#define ENABLE_TRACING
 
@@ -7,10 +7,16 @@
 #include "system_tree/fs/proc/proc_fs.h"
 #include "system_tree/fs/mem/mem_fs.h"
 
+#include <string.h>
 #include <stdio.h>
 
 using namespace std;
 
+/// @brief Default constructor
+///
+/// This object should be created using the static create() function.
+///
+/// @param related_proc Which process does this branch store details of?
 proc_fs_root_branch::proc_fs_proc_branch::proc_fs_proc_branch(std::shared_ptr<task_process> related_proc) :
   _related_proc(related_proc), _id_file(new mem_fs_leaf(nullptr))
 {
@@ -27,7 +33,7 @@ proc_fs_root_branch::proc_fs_proc_branch::proc_fs_proc_branch(std::shared_ptr<ta
   ASSERT(_id_file != nullptr);
 
   snprintf(id_buffer, 22, "%p", related_proc.get());
-  strl = kl_strlen(id_buffer, 22);
+  strl = strnlen(id_buffer, 22);
 
   ec = _id_file->write_bytes(0, strl + 1, reinterpret_cast<const uint8_t *>(id_buffer), 22, br);
   ASSERT(ec == ERR_CODE::NO_ERROR);
@@ -38,6 +44,11 @@ proc_fs_root_branch::proc_fs_proc_branch::proc_fs_proc_branch(std::shared_ptr<ta
   KL_TRC_EXIT;
 }
 
+/// @brief Create a new proc_fs_proc_branch
+///
+/// @param related_proc Which process does this branch store details of?
+///
+/// @return shared_ptr to a new proc_fs_proc_branch.
 std::shared_ptr<proc_fs_root_branch::proc_fs_proc_branch>
   proc_fs_root_branch::proc_fs_proc_branch::create(std::shared_ptr<task_process> related_proc)
 {

@@ -1,5 +1,7 @@
-#ifndef FS_FILE_INTFACE_H
-#define FS_FILE_INTFACE_H
+/// @file
+/// @brief Declare interfaces common to file-like objects.
+
+#pragma once
 
 #include "user_interfaces/error_codes.h"
 
@@ -103,5 +105,3 @@ public:
   /// @return An appropriate choice from `ERR_CODE`
   virtual ERR_CODE set_file_size(uint64_t file_size) = 0;
 };
-
-#endif

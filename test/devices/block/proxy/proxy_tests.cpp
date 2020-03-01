@@ -18,6 +18,8 @@ TEST(BlockProxyTest, SimpleTests)
   std::unique_ptr<ramdisk_device> device(new ramdisk_device(10, 2));
   std::unique_ptr<char[]> buffer(new char[buffer_len]);
 
+  ASSERT_TRUE(device->start());
+
   ASSERT_EQ(device->num_blocks(), 10);
   ASSERT_EQ(device->block_size(), 2);
   ASSERT_EQ(device->get_device_status(), DEV_STATUS::OK);
@@ -25,6 +27,8 @@ TEST(BlockProxyTest, SimpleTests)
   ASSERT_EQ(device->write_blocks(0, 10, (void * )inbuffer, 20), ERR_CODE::NO_ERROR);
 
   std::unique_ptr<block_proxy_device> proxy(new block_proxy_device(device.get(), 2, 2));
+
+  ASSERT_TRUE(proxy->start());
 
   ASSERT_EQ(proxy->get_device_status(), DEV_STATUS::OK);
 
@@ -47,4 +51,6 @@ TEST(BlockProxyTest, SimpleTests)
 
   ASSERT_EQ(device->read_blocks(0, 10, buffer.get(), buffer_len), ERR_CODE::NO_ERROR);
   ASSERT_EQ(memcmp(buffer.get(), "12347890901234567890", 20), 0);
+
+  test_only_reset_name_counts();
 }

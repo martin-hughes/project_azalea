@@ -6,83 +6,127 @@
 #include "processor/processor.h"
 #include "processor/work_queue.h"
 
-#include <thread>
 #include <iostream>
 
-using namespace std;
-
-/// @brief Unit test response class.
-///
-class WorkQueueTestResponseClass : public work::work_response
+class basic_msg_receiver : public work::message_receiver
 {
 public:
-  uint64_t response_value;
+  basic_msg_receiver() { };
+  virtual ~basic_msg_receiver() { };
+
+  virtual void handle_message(std::unique_ptr<msg::root_msg> &msg);
+
+  bool handled{false};
 };
 
-/// @brief
-class WorkQueueTestWorkItemClass : public work::work_item
+class handled_msg : public msg::root_msg
 {
 public:
-  WorkQueueTestWorkItemClass()
-  {
-    typed_response = std::make_shared<WorkQueueTestResponseClass>();
-    response_item = std::dynamic_pointer_cast<work::work_response>(typed_response);
-
-    if (response_item == nullptr)
-    {
-      throw std::runtime_error("Wrong response type");
-    }
-  }
-
-  uint64_t request_value;
-  std::shared_ptr<WorkQueueTestResponseClass> typed_response;
+  handled_msg() : msg::root_msg{0} { };
+  bool handled{false};
 };
 
-/// @brief Simple work handler class for the unit tests.
-///
-/// The "handling" that occurs here is simply to copy the work item request value to the response.
-class WorkQueueTestHandlerClass : public work::worker_object
+void basic_msg_receiver::handle_message(std::unique_ptr<msg::root_msg> &msg)
 {
-public:
-  virtual void handle_work_item(std::shared_ptr<work::work_item> item) override
-  {
-    std::shared_ptr<WorkQueueTestWorkItemClass> real_item =std::dynamic_pointer_cast<WorkQueueTestWorkItemClass>(item);
-    if (real_item == nullptr)
-    {
-      throw std::runtime_error("Wrong work item type");
-    }
 
-    real_item->typed_response->response_value = real_item->request_value;
-  };
-};
+}
 
-/// @brief The class containing the actual tests.
-///
-class WorkQueueTests : public ::testing::Test
+TEST(WorkQueue2Tests, SingleItemManualProcess)
 {
-  void SetUp() override
+  // Manual setup and teardown.
+  work::init_queue();
+
+  std::unique_ptr<handled_msg> msg_ptr = std::make_unique<handled_msg>();
+
+  auto receiver = std::make_shared<basic_msg_receiver>();
+  work::queue_message(receiver, std::move(msg_ptr));
+
+  bool complete = !receiver->process_next_message();
+  ASSERT_TRUE(complete);
+
+  work::test_only_terminate_queue();
+}
+
+TEST(WorkQueue2Tests, SingleItemAutoProcess)
+{
+  // Manual setup and teardown.
+  work::init_queue();
+
+  std::unique_ptr<handled_msg> msg_ptr = std::make_unique<handled_msg>();
+
+  auto receiver = std::make_shared<basic_msg_receiver>();
+  work::queue_message(receiver, std::move(msg_ptr));
+
+  work::work_queue_one_loop();
+
+  work::test_only_terminate_queue();
+}
+
+TEST(WorkQueue2Tests, ThreeItemManualProcess)
+{
+  // Manual setup and teardown.
+  work::init_queue();
+
+  std::unique_ptr<handled_msg> msg_ptr_a = std::make_unique<handled_msg>();
+  std::unique_ptr<handled_msg> msg_ptr_b = std::make_unique<handled_msg>();
+  std::unique_ptr<handled_msg> msg_ptr_c = std::make_unique<handled_msg>();
+
+  auto receiver = std::make_shared<basic_msg_receiver>();
+  work::queue_message(receiver, std::move(msg_ptr_a));
+  work::queue_message(receiver, std::move(msg_ptr_b));
+  work::queue_message(receiver, std::move(msg_ptr_c));
+
+  bool complete = !receiver->process_next_message();
+  ASSERT_FALSE(complete);
+  complete = !receiver->process_next_message();
+  ASSERT_FALSE(complete);
+  complete = !receiver->process_next_message();
+  ASSERT_TRUE(complete);
+
+  // Make sure processing a message while none is waiting does something sensible.
+  complete = !receiver->process_next_message();
+  ASSERT_TRUE(complete);
+
+  work::test_only_terminate_queue();
+}
+
+TEST(WorkQueue2Tests, ThreeItemAutoProcess)
+{
+  // Manual setup and teardown.
+  work::init_queue();
+
+  std::unique_ptr<handled_msg> msg_ptr_a = std::make_unique<handled_msg>();
+  std::unique_ptr<handled_msg> msg_ptr_b = std::make_unique<handled_msg>();
+  std::unique_ptr<handled_msg> msg_ptr_c = std::make_unique<handled_msg>();
+
+  auto receiver = std::make_shared<basic_msg_receiver>();
+  work::queue_message(receiver, std::move(msg_ptr_a));
+  work::queue_message(receiver, std::move(msg_ptr_b));
+  work::queue_message(receiver, std::move(msg_ptr_c));
+
+  work::work_queue_one_loop();
+  work::work_queue_one_loop();
+  work::work_queue_one_loop();
+  // Make sure the single iteration function returns if no work to be done.
+  work::work_queue_one_loop();
+
+  work::test_only_terminate_queue();
+}
+
+TEST(WorkQueue2Tests, ReceiverDestroyed)
+{
+  // Manual setup and teardown.
+  work::init_queue();
+
+  std::unique_ptr<handled_msg> msg_ptr = std::make_unique<handled_msg>();
+
   {
-    work_queue_thread = new std::thread(work::work_queue_thread);
+    auto receiver = std::make_shared<basic_msg_receiver>();
+    work::queue_message(receiver, std::move(msg_ptr));
   }
 
-  void TearDown() override
-  {
-    test_only_reset_work_queue();
+  // No messages should be handled.
+  work::work_queue_one_loop();
 
-    work_queue_thread->join();
-    delete work_queue_thread;
-    work_queue_thread = nullptr;
-  }
-
-  std::thread *work_queue_thread;
-};
-
-TEST_F(WorkQueueTests, SingleQueuedItem)
-{
-  std::shared_ptr<WorkQueueTestHandlerClass> handler = std::make_shared<WorkQueueTestHandlerClass>();
-  std::shared_ptr<WorkQueueTestWorkItemClass> item = std::make_shared<WorkQueueTestWorkItemClass>();
-
-  item->request_value = 5;
-  work::queue_work_item(handler, item);
-  item->response_item->wait_for_response();
+  work::test_only_terminate_queue();
 }

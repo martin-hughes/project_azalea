@@ -150,13 +150,12 @@ void mem_map_range(void *physical_start,
 
   uint8_t *cur_virt_addr = (uint8_t *)virtual_start;
   uint8_t *cur_phys_addr = (uint8_t *)physical_start;
-  int iterations = (len / MEM_PAGE_SIZE) + (len % MEM_PAGE_SIZE == 0 ? 0 : 1);
 
   ASSERT(((uint64_t)physical_start) % MEM_PAGE_SIZE == 0);
   ASSERT(((uint64_t)virtual_start) % MEM_PAGE_SIZE == 0);
   ASSERT(len > 0);
 
-  for(int i = 0; i < iterations; i++)
+  for(int i = 0; i < len; i++)
   {
     mem_map_virtual_page((uint64_t)cur_virt_addr,
                          (uint64_t)cur_phys_addr,

@@ -1,12 +1,12 @@
 #define ENABLE_TRACING
 
+#include <string>
 #include "test/test_core/test.h"
 #include <iostream>
 #include "gtest/gtest.h"
 
 
 #include "klib/tracing/tracing.h"
-#include "klib/data_structures/string.h"
 
 using namespace std;
 
@@ -22,7 +22,7 @@ TEST(TracingTest, SimpleTracing)
   unsigned int g = 7;
   unsigned long h = 8;
   char const * i = "A string!!";
-  kl_string j("Another string");
+  std::string j("Another string");
   void *k = reinterpret_cast<void *>(9);
 
   cout << "Values should appear below:" << endl;

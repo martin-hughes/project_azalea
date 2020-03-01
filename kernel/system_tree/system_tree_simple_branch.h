@@ -1,10 +1,15 @@
-#ifndef __SYSTEM_TREE_SIMPLE_BRANCH_H
-#define __SYSTEM_TREE_SIMPLE_BRANCH_H
+/// @file
+/// @brief Declare a simple system tree branch that tracks its children in a straightforward way.
+
+#pragma once
+
+#include <string>
+#include <map>
+#include <vector>
+#include <memory>
 
 #include "klib/klib.h"
 #include "system_tree/system_tree_branch.h"
-
-#include <memory>
 
 /// @brief A simple System Tree Branch class that can be used as a basis for others.
 class system_tree_simple_branch : public ISystemTreeBranch
@@ -13,15 +18,18 @@ public:
   system_tree_simple_branch();
   virtual ~system_tree_simple_branch();
 
-  virtual ERR_CODE get_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
-  virtual ERR_CODE add_child (const kl_string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
-  virtual ERR_CODE create_child(const kl_string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
-  virtual ERR_CODE rename_child(const kl_string &old_name, const kl_string &new_name) override;
-  virtual ERR_CODE delete_child(const kl_string &name) override;
+  virtual ERR_CODE get_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+  virtual ERR_CODE add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
+  virtual ERR_CODE create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+  virtual ERR_CODE rename_child(const std::string &old_name, const std::string &new_name) override;
+  virtual ERR_CODE delete_child(const std::string &name) override;
+  virtual std::pair<ERR_CODE, uint64_t> num_children() override;
+  virtual std::pair<ERR_CODE, std::vector<std::string>>
+    enum_children(std::string start_from, uint64_t max_count) override;
 
 protected:
   /// Stores the child leaves of this branch.
-  kl_rb_tree<kl_string, std::shared_ptr<ISystemTreeLeaf>> children;
+  std::map<std::string, std::shared_ptr<ISystemTreeLeaf>> children;
 
   /// @brief Create a child on this branch.
   ///
@@ -49,7 +57,8 @@ protected:
   /// @param name The name of branch to get.
   ///
   /// @return The branch object, if name represents a branch. False otherwise.
-  virtual std::shared_ptr<ISystemTreeBranch> get_child_branch(const kl_string &name);
-};
+  virtual std::shared_ptr<ISystemTreeBranch> get_child_branch(const std::string &name);
 
-#endif
+  /// @brief Lock protecting operations on this branch.
+  kernel_spinlock child_tree_lock;
+};

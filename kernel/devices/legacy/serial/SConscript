@@ -1,0 +1,8 @@
+# Generic serial port device driver.
+
+Import('env')
+obj = env.Library("serial",
+                  [
+                    "serial.cpp",
+                  ])
+Return ("obj")

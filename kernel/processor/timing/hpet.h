@@ -1,5 +1,7 @@
-#ifndef __HPET_H
-#define __HPET_H
+/// @file
+/// @brief HPET structures and functions
+
+#pragma once
 
 #include <stdint.h>
 
@@ -37,18 +39,23 @@ uint64_t time_hpet_compute_wait(uint64_t wait_in_ns);
 
 /// @brief Structure representing the configuration of a single timer within a HPET device.
 ///
+/// The details of this structure are covered by the HPET specification, so are not repeated here.
 struct hpet_timer_cfg
 {
+/// @cond
   uint64_t cfg_and_caps;
   uint64_t comparator_val;
   uint64_t interrupt_route;
   uint64_t reserved;
+/// @endcond
 };
 
 /// @brief Structure representing the configuration of a HPET device in memory-mapped space.
 ///
+/// The details of this structure are covered by the HPET specification, so are not repeated here.
 struct hpet_hardware_cfg_block
 {
+/// @cond
   uint64_t gen_cap_and_id;
   uint64_t reserved_1;
   uint64_t gen_config;
@@ -58,8 +65,11 @@ struct hpet_hardware_cfg_block
   uint64_t main_counter_val;
   uint64_t reserved_4;
   hpet_timer_cfg timer_cfg[32];
+/// @endcond
 };
 #pragma pack(pop)
+
+/// @cond
 
 // Fields in hpet_hardware_cfg_block.gen_cap_and_id
 #define HPET_PERIOD(x) ((x) >> 32)
@@ -97,6 +107,4 @@ const uint64_t hpet_tmr_fsb_int_cap = (1 << 15);
 
 const uint64_t max_period_fs = 0x05F5E100;
 
-
-
-#endif
+/// @endcond

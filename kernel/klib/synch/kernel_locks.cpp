@@ -1,8 +1,14 @@
+/// @file
+/// @brief Implements a basic spinlock.
+
 #include "kernel_locks.h"
 #include "klib/klib.h"
 #include "processor/processor.h"
 #include <atomic>
 
+/// @brief Initialise a kernel spinlock object
+///
+/// @param[in] lock The spinlock to initialise.
 void klib_synch_spinlock_init(kernel_spinlock &lock)
 {
   KL_TRC_ENTRY;
@@ -12,6 +18,11 @@ void klib_synch_spinlock_init(kernel_spinlock &lock)
   KL_TRC_EXIT;
 }
 
+/// @brief Acquire and lock a spinlock
+///
+/// This function will not return until it has locked the spinlock.
+///
+/// @param[in] lock The spinlock object to lock.
 void klib_synch_spinlock_lock(kernel_spinlock &lock)
 {
   KL_TRC_ENTRY;
@@ -27,6 +38,11 @@ void klib_synch_spinlock_lock(kernel_spinlock &lock)
   KL_TRC_EXIT;
 }
 
+/// @brief Unlock a previously locked kernel spinlock.
+///
+/// No checking is performed to ensure the owner is the one doing the unlocking.
+///
+/// @param[in] lock The lock to unlock.
 void klib_synch_spinlock_unlock(kernel_spinlock &lock)
 {
   KL_TRC_ENTRY;
@@ -36,6 +52,11 @@ void klib_synch_spinlock_unlock(kernel_spinlock &lock)
   KL_TRC_EXIT;
 }
 
+/// @brief Try and lock a spinlock, but return immediately.
+///
+/// @param[in] lock The lock to try and lock.
+///
+/// @return True if the spinlock was acquired in this thread. False if it already had another owner.
 bool klib_synch_spinlock_try_lock(kernel_spinlock &lock)
 {
   KL_TRC_ENTRY;
@@ -50,4 +71,51 @@ bool klib_synch_spinlock_try_lock(kernel_spinlock &lock)
   KL_TRC_EXIT;
 
   return res;
+}
+
+/// @brief Basic constructor for kernel spinlock wrapper objects.
+///
+kernel_spinlock_obj::kernel_spinlock_obj()
+{
+  KL_TRC_ENTRY;
+
+  klib_synch_spinlock_init(underlying_lock);
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Default destructor.
+///
+kernel_spinlock_obj::~kernel_spinlock_obj()
+{
+  KL_TRC_ENTRY;
+
+  if(underlying_lock != 0)
+  {
+    klib_synch_spinlock_unlock(underlying_lock);
+  }
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Lock this lock object.
+///
+void kernel_spinlock_obj::lock()
+{
+  KL_TRC_ENTRY;
+
+  klib_synch_spinlock_lock(underlying_lock);
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Unlock this lock object.
+///
+void kernel_spinlock_obj::unlock()
+{
+  KL_TRC_ENTRY;
+
+  klib_synch_spinlock_unlock(underlying_lock);
+
+  KL_TRC_EXIT;
 }

@@ -6,6 +6,8 @@
 
 //#define ENABLE_TRACING
 
+#include <string.h>
+
 #include "klib/klib.h"
 #include "system_tree/fs/fat/fat_fs.h"
 
@@ -18,7 +20,11 @@
 /// @param file_data_record The directory entry corresponding to the short name of the requested file. If
 ///                         root_directory_file is set to true, this need not be a valid structure.
 ///
-/// @param parent The parent file system object (this is stored internally as a weak pointer)
+/// @param fde_index The index of file_data_record in the table of FDE's in the parent directory.
+///
+/// @param folder_parent The parent folder object.
+///
+/// @param fs_parent The parent file system object (this is stored internally as a weak pointer)
 ///
 /// @param root_directory_file Whether or not this object represents the root directory. The root directory requires
 ///                            special handling on FAT12 and FAT16 filesystems, which this object can handle. Default
@@ -59,6 +65,8 @@ fat_filesystem::fat_file::fat_file(fat_dir_entry file_data_record,
       KL_TRC_TRACE(TRC_LVL::FLOW, "Small FAT root dir, re-jig file params\n");
       _file_record.first_cluster_high = 0;
       _file_record.first_cluster_low = 0;
+      KL_TRC_TRACE(TRC_LVL::FLOW, "RDSC: ", fs_parent->root_dir_sector_count, "\n");
+      KL_TRC_TRACE(TRC_LVL::FLOW, "BPS: ", fs_parent->shared_bpb->bytes_per_sec, "\n");
       _file_record.file_size = (fs_parent->root_dir_sector_count * fs_parent->shared_bpb->bytes_per_sec);
     }
     else
@@ -76,6 +84,8 @@ fat_filesystem::fat_file::fat_file(fat_dir_entry file_data_record,
                                fs_parent->shared_bpb->secs_per_cluster *
                                fs_parent->shared_bpb->bytes_per_sec;
     }
+
+    KL_TRC_TRACE(TRC_LVL::FLOW, "New size: ", _file_record.file_size, "\n");
   }
 
   KL_TRC_EXIT;
@@ -94,16 +104,16 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
 {
   KL_TRC_ENTRY;
 
-  uint64_t bytes_read_so_far = 0;
+  uint64_t bytes_read_so_far{0};
   uint64_t read_offset;
-  uint64_t bytes_from_this_sector = 0;
+  uint64_t bytes_from_this_sector{0};
   uint64_t read_sector_num;
+  bool try_read{true};
+  ERR_CODE ec{ERR_CODE::NO_ERROR};
 
-  ERR_CODE ec = ERR_CODE::NO_ERROR;
-
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Start", start, "\n");
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Length", length, "\n");
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "buffer_length", buffer_length, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Start: ", start, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Length: ", length, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "buffer_length: ", buffer_length, "\n");
 
   // Check parameters for correctness.
   if (buffer == nullptr)
@@ -114,27 +124,27 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
 
   if (start > this->_file_record.file_size)
   {
-    KL_TRC_TRACE(TRC_LVL::ERROR, "Start point must be within the file\n");
-    ec = ERR_CODE::INVALID_PARAM;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Start point must be within the file\n");
+    try_read = false;
   }
   if (length > this->_file_record.file_size)
   {
-    KL_TRC_TRACE(TRC_LVL::ERROR, "length must be less than the file size\n");
-    ec = ERR_CODE::INVALID_PARAM;
+    KL_TRC_TRACE(TRC_LVL::FLOW,
+                 "length (", length, ") must be less than the file size (", this->_file_record.file_size, ")\n");
   }
   if ((start + length) > this->_file_record.file_size)
   {
-    KL_TRC_TRACE(TRC_LVL::ERROR, "Read area must be contained completely within file\n");
-    ec = ERR_CODE::INVALID_PARAM;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Read area must be contained completely within file\n");
+    length = this->_file_record.file_size - start;
   }
   if (length > buffer_length)
   {
-    KL_TRC_TRACE(TRC_LVL::ERROR, "Buffer must be sufficiently large\n");
-    ec = ERR_CODE::INVALID_PARAM;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Buffer must be sufficiently large\n");
+    length = buffer_length;
   }
 
   // Compute a starting point for the read.
-  if (ec == ERR_CODE::NO_ERROR)
+  if ((ec == ERR_CODE::NO_ERROR) && try_read)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "No errors so far, attempt read\n");
 
@@ -185,9 +195,9 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
         }
         else
         {
-          kl_memcpy((void *)(((uint8_t *)sector_buffer.get()) + read_offset),
-                    buffer + bytes_read_so_far,
-                    bytes_from_this_sector);
+          memcpy(buffer + bytes_read_so_far,
+                 (void *)(((uint8_t *)sector_buffer.get()) + read_offset),
+                 bytes_from_this_sector);
 
           bytes_read_so_far += bytes_from_this_sector;
           advance_sector_num(read_sector_num, parent_ptr);
@@ -259,9 +269,9 @@ ERR_CODE fat_filesystem::fat_file::read_bytes(uint64_t start,
 
             KL_TRC_TRACE(TRC_LVL::EXTRA, "Bytes now", bytes_from_this_sector, "\n");
 
-            kl_memcpy(reinterpret_cast<void *>(sector_buffer.get()),
-                      buffer + bytes_read_so_far,
-                      bytes_from_this_sector);
+            memcpy(buffer + bytes_read_so_far,
+                   reinterpret_cast<void *>(sector_buffer.get()),
+                   bytes_from_this_sector);
 
             bytes_read_so_far += bytes_from_this_sector;
           }
@@ -383,7 +393,7 @@ ERR_CODE fat_filesystem::fat_file::write_bytes(uint64_t start,
             }
 
             // Copy the relevant amount of data into the buffer, then write it back to disk.
-            kl_memcpy(buffer + bytes_written_so_far, sector_buffer.get() + write_offset, bytes_from_this_sector);
+            memcpy(sector_buffer.get() + write_offset, buffer + bytes_written_so_far, bytes_from_this_sector);
             ec = parent_ptr->_storage->write_blocks(write_sector_num,
                                                     1,
                                                     sector_buffer.get(),
@@ -464,7 +474,7 @@ ERR_CODE fat_filesystem::fat_file::set_file_size(uint64_t file_size)
         uint64_t bw;
         ASSERT(new_bytes > 0);
         std::unique_ptr<uint8_t[]> zero_buffer = std::make_unique<uint8_t[]>(new_bytes);
-        kl_memset(zero_buffer.get(), 0, new_bytes);
+        memset(zero_buffer.get(), 0, new_bytes);
         result = write_bytes(old_file_size, new_bytes, zero_buffer.get(), new_bytes, bw);
 
         if ((result == ERR_CODE::NO_ERROR) && (bw != new_bytes))

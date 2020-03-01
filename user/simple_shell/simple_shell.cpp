@@ -5,6 +5,11 @@
 #include <stdio.h>
 #include <time.h>
 
+extern "C"
+{
+#include <termios.h>
+}
+
 #define SC_DEBUG_MSG(string) \
   syscall_debug_output((string), strlen((string)) )
 
@@ -142,7 +147,7 @@ void execute_command(char *command)
         {
         case ERR_CODE::NO_ERROR:
           //SC_DEBUG_MSG("Program running\n");
-          syscall_wait_for_object(proc_handle);
+          syscall_wait_for_object(proc_handle, SC_MAX_WAIT);
           syscall_close_handle(proc_handle);
           break;
 

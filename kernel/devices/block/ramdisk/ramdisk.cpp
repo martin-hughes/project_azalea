@@ -1,22 +1,32 @@
+/// @file
 /// @brief Implementation for a simple RAM disk block device
 
 //#define ENABLE_TRACING
 
+#include <string.h>
+
 #include "klib/klib.h"
 #include "ramdisk.h"
 
+/// @brief Standard constructor.
+///
+/// @param num_blocks The number of blocks this device should have.
+///
+/// @param block_size The size of a block on this device.
 ramdisk_device::ramdisk_device(uint64_t num_blocks, uint64_t block_size) :
-    IBlockDevice("generic RAM disk"), _num_blocks(num_blocks), _block_size(block_size), _storage_size(num_blocks * block_size)
+    IBlockDevice("generic RAM disk", "ramdisk"), _num_blocks(num_blocks), _block_size(block_size), _storage_size(num_blocks * block_size)
 {
   KL_TRC_ENTRY;
 
   if ((this->_num_blocks == 0) || (this->_block_size == 0))
   {
     _ramdisk_storage = nullptr;
+    set_device_status(DEV_STATUS::FAILED);
   }
   else
   {
     _ramdisk_storage = new char[num_blocks * block_size];
+    set_device_status(DEV_STATUS::STOPPED);
   }
 
   KL_TRC_EXIT;
@@ -35,21 +45,46 @@ ramdisk_device::~ramdisk_device()
   KL_TRC_EXIT;
 }
 
-DEV_STATUS ramdisk_device::get_device_status()
+bool ramdisk_device::start()
 {
   KL_TRC_ENTRY;
 
-  DEV_STATUS ret = DEV_STATUS::OK;
-
-  if (this->_ramdisk_storage == nullptr)
+  if (get_device_status() != DEV_STATUS::FAILED)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "No storage defined\n");
-    ret = DEV_STATUS::FAILED;
+    set_device_status(DEV_STATUS::OK);
   }
 
   KL_TRC_EXIT;
 
-  return ret;
+  return true;
+}
+
+bool ramdisk_device::stop()
+{
+  KL_TRC_ENTRY;
+
+  if (get_device_status() != DEV_STATUS::FAILED)
+  {
+    set_device_status(DEV_STATUS::STOPPED);
+  }
+
+  KL_TRC_EXIT;
+
+  return true;
+}
+
+bool ramdisk_device::reset()
+{
+  KL_TRC_ENTRY;
+
+  if (get_device_status() != DEV_STATUS::FAILED)
+  {
+    set_device_status(DEV_STATUS::STOPPED);
+  }
+
+  KL_TRC_EXIT;
+
+  return true;
 }
 
 uint64_t ramdisk_device::num_blocks()
@@ -78,7 +113,12 @@ ERR_CODE ramdisk_device::read_blocks(uint64_t start_block,
   uint64_t read_start = start_block * this->_block_size;
   uint64_t read_length = num_blocks * this->_block_size;
 
-  if (this->_ramdisk_storage == nullptr)
+  if (get_device_status() != DEV_STATUS::OK)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Device not running\n");
+    ret = ERR_CODE::DEVICE_FAILED;
+  }
+  else if (this->_ramdisk_storage == nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "No storage available\n");
     ret = ERR_CODE::DEVICE_FAILED;
@@ -95,7 +135,7 @@ ERR_CODE ramdisk_device::read_blocks(uint64_t start_block,
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Read should be good to go\n");
-    kl_memcpy((this->_ramdisk_storage + read_start), buffer, read_length);
+    memcpy(buffer, (this->_ramdisk_storage + read_start), read_length);
   }
 
   KL_TRC_EXIT;
@@ -115,7 +155,12 @@ ERR_CODE ramdisk_device::write_blocks(uint64_t start_block,
   uint64_t write_start = start_block * this->_block_size;
   uint64_t write_length = num_blocks * this->_block_size;
 
-  if (this->_ramdisk_storage == nullptr)
+  if (get_device_status() != DEV_STATUS::OK)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Device not running\n");
+    ret = ERR_CODE::DEVICE_FAILED;
+  }
+  else if (this->_ramdisk_storage == nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "No storage available\n");
     ret = ERR_CODE::DEVICE_FAILED;
@@ -132,7 +177,7 @@ ERR_CODE ramdisk_device::write_blocks(uint64_t start_block,
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Write should be good to go\n");
-    kl_memcpy(buffer, (this->_ramdisk_storage + write_start), write_length);
+    memcpy((this->_ramdisk_storage + write_start), buffer, write_length);
   }
 
   KL_TRC_EXIT;

@@ -356,7 +356,7 @@ void mem_vmm_init_proc_data(vmm_process_data &proc_data_ref)
 /// This function is called at process termination. We do this to ensure that physical pages that are now unused are
 /// released.
 ///
-/// @param proc_data_ref The x64 process data of the terminating process.
+/// @param process The process object of the terminating process.
 void mem_vmm_free_proc_data(task_process *process)
 {
   klib_list_item<vmm_range_data *> *cur_item;

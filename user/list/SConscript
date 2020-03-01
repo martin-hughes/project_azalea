@@ -1,0 +1,6 @@
+# Beginnings of a simple ls-like program
+
+Import('env')
+files = [ "list.cpp"]
+obj = env.Object("list", files)
+Return ("obj")

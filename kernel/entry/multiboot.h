@@ -1,13 +1,18 @@
-#ifndef MULTIBOOT_HDR
-#define MULTIBOOT_HDR
+/// @file
+/// @brief Constants and structures to help with multiboot
 
-const unsigned int MULTIBOOT_CONSTANT = 0x2BADB002;
+#pragma once
+
+const unsigned int MULTIBOOT_CONSTANT = 0x2BADB002; ///< Constant indicating a multiboot kernel.
 
 /// @brief The multiboot header, as defined in the multiboot specification.
 ///
 /// The x64 version of Azalea is compiled into a multiboot-compatible binary to be loaded by, e.g. GRUB.
+///
+/// Since the contents of this structure are defined in the multiboot spec, they are not documented again here.
 struct multiboot_hdr
 {
+/// @cond
   unsigned int flags;
 
   unsigned int mem_lower;
@@ -57,8 +62,7 @@ struct multiboot_hdr
   unsigned char framebuffer_bpp;
   unsigned char framebuffer_type;
   unsigned char color_info[6];
+/// @endcond
 } __attribute__((packed));
 
 static_assert(sizeof(multiboot_hdr) == 116, "Multiboot header size wrong");
-
-#endif

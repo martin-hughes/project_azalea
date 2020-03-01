@@ -13,12 +13,14 @@
 
 #define ENABLE_TRACING
 
+#include <string>
 #include <memory>
 #include "klib/klib.h"
 #include "system_tree/system_tree.h"
 #include "system_tree/fs/fs_file_interface.h"
 #include "system_tree/process/process.h"
 
+/// @brief Generic function pointer typedef.
 typedef void (*fn_ptr)();
 
 /// @brief Load a flat binary file into a new process
@@ -28,10 +30,10 @@ typedef void (*fn_ptr)();
 ///
 /// When this function returns, the process is ready to start, but is suspended.
 ///
-/// param binary_name The System Tree name for a binary file to load into a new process.
+/// @param binary_name The System Tree name for a binary file to load into a new process.
 ///
-/// return A task_process control structure for the new process.
-std::shared_ptr<task_process> proc_load_binary_file(kl_string binary_name)
+/// @return A task_process control structure for the new process.
+std::shared_ptr<task_process> proc_load_binary_file(std::string binary_name)
 {
   KL_TRC_ENTRY;
 

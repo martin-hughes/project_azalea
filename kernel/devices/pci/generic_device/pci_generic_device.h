@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <string>
+
 #include "devices/pci/pci_constants.h"
 #include "devices/pci/pci_structures.h"
 #include "devices/pci/pci_functions.h"
@@ -14,23 +16,47 @@
 ///
 /// Contains functions that may be useful to any PCI device. If a PCI device is detected in the system that doesn't
 /// have a more appropriate driver for it, this class will manage it.
-class pci_generic_device : public IDevice, public ISystemTreeLeaf, public IInterruptReceiver
+class pci_generic_device : public IDevice, public IInterruptReceiver
 {
 public:
-  pci_generic_device(pci_address address, const kl_string name);
+  pci_generic_device(pci_address address, const std::string human_name, const std::string dev_name);
   pci_generic_device(pci_address address);
   virtual ~pci_generic_device() override;
+
+  // Overrides of IDevice.
+  bool start() override;
+  bool stop() override;
+  bool reset() override;
 
 protected:
 
   // Interrupt receiver functions
   virtual uint16_t compute_irq_for_pin(uint8_t pin); // Note that this is implemented in pci_legacy_interrupts.cpp.
-  virtual bool handle_interrupt_fast(unsigned char interrupt_number) override;
-  virtual void handle_interrupt_slow(unsigned char interrupt_number) override;
-  virtual bool handle_translated_interrupt_fast(unsigned char interrupt_offset,
-                                                unsigned char raw_interrupt_num) { return false; };
-  virtual void handle_translated_interrupt_slow(unsigned char interrupt_offset,
-                                                unsigned char raw_interrupt_num) { };
+  virtual bool handle_interrupt_fast(uint8_t interrupt_number) override;
+  virtual void handle_interrupt_slow(uint8_t interrupt_number) override;
+
+  /// @brief A version of handle_interrupt_fast() where a translated interrupt number is given.
+  ///
+  /// A translated interrupt number is given relative to the number of the lowest interrupt allocated to this device.
+  ///
+  /// @param interrupt_offset The interrupt number relative to the lowest interrupt allocated to this device.
+  ///
+  /// @param raw_interrupt_num The original interrupt number, untranslated.
+  ///
+  /// @return True if the handler needs to execute the slow path as well, false if no further processing is needed.
+  virtual bool handle_translated_interrupt_fast(uint8_t interrupt_offset,
+                                                uint8_t raw_interrupt_num) { return false; };
+
+
+  /// @brief A version of handle_interrupt_slow() where a translated interrupt number is given.
+  ///
+  /// A translated interrupt number is given relative to the number of the lowest interrupt allocated to this device.
+  ///
+  /// @param interrupt_offset The interrupt number relative to the lowest interrupt allocated to this device.
+  ///
+  /// @param raw_interrupt_num The original interrupt number, untranslated.
+  virtual void handle_translated_interrupt_slow(uint8_t interrupt_offset,
+                                                uint8_t raw_interrupt_num) { };
 
   // Generic capabilities commands.
   void zero_caps_list();
@@ -41,29 +67,34 @@ protected:
   bool msi_enable();
   bool msi_disable();
 
+  // Bus mastering commands.
+  bool bm_enable();
+  bool bm_disable();
+  bool bm_enabled();
+
   // Member variables and structures.
   struct
   {
-    pci::capability<void> pci_power_mgmt;
-    pci::capability<void> agp;
-    pci::capability<void> vital_prod_data;
-    pci::capability<void> slot_ident;
-    pci::capability<void> msi;
-    pci::capability<void> compact_pci_hotswap;
-    pci::capability<void> pci_x;
-    pci::capability<void> hypertransport;
-    pci::capability<void> vendor_specific_cap;
-    pci::capability<void> debug_port;
-    pci::capability<void> compact_pci_crc;
-    pci::capability<void> pci_hotplug;
-    pci::capability<void> pci_bridge_vendor_id;
-    pci::capability<void> agp_8x;
-    pci::capability<void> secure_device;
-    pci::capability<void> pci_express;
-    pci::capability<void> msi_x;
-  } caps;
+    pci::capability<void> pci_power_mgmt; ///< PCI power management capability.
+    pci::capability<void> agp; ///< AGP capability.
+    pci::capability<void> vital_prod_data; ///< Vital product data capability.
+    pci::capability<void> slot_ident; ///< Slot identification capability.
+    pci::capability<void> msi; ///< Message Signalled Interrupt capability.
+    pci::capability<void> compact_pci_hotswap; ///< Compact PCI hotswap capability.
+    pci::capability<void> pci_x; ///< PCI-X capability.
+    pci::capability<void> hypertransport; ///< Hypertransport capability.
+    pci::capability<void> vendor_specific_cap; ///< Vendor-specific capability.
+    pci::capability<void> debug_port; ///< Debug-port capability.
+    pci::capability<void> compact_pci_crc; ///< Compact-PCI CRC capability.
+    pci::capability<void> pci_hotplug; ///< PCI hotplug capability.
+    pci::capability<void> pci_bridge_vendor_id; ///< PCI Bridge capability.
+    pci::capability<void> agp_8x; ///< AGP 8x capability.
+    pci::capability<void> secure_device; ///< Secure device capability.
+    pci::capability<void> pci_express; ///< PCI Express capability.
+    pci::capability<void> msi_x; ///< MSI-X capability.
+  } caps; ///< Capabilities of this device.
 
-  pci_address _address;
+  pci_address _address; ///< The address of this device.
 
   /// The lowest interrupt vector number we will receive. We can use this if we're configured to receive multiple
   /// interrupts to enable the recipient to know which vector we received relative to the lowest one, since most

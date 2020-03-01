@@ -4,8 +4,7 @@
 #pragma once
 
 #include <memory>
-
-class kl_string;
+#include <string>
 
 /// @brief A pseudo-device to help interpret ACPI IRQ mapping tables.
 ///
@@ -19,7 +18,7 @@ protected:
 public:
   virtual ~pci_irq_link_device() = default;
 
-  static std::shared_ptr<pci_irq_link_device> create(kl_string &pathname, ACPI_HANDLE obj_handle);
+  static std::shared_ptr<pci_irq_link_device> create(std::string &pathname, ACPI_HANDLE obj_handle);
 
   uint16_t get_interrupt();
 

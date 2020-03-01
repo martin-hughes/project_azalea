@@ -11,22 +11,17 @@ files = [ "dummy_libs/processor/processor.dummy.cpp",
 
           "devices/block/proxy/proxy_tests.cpp",
           "devices/block/ramdisk/ramdisk_tests.cpp",
+          "devices/dev_monitor.cpp",
 
           "klib/data_structures/ds_1.cpp",
-          "klib/data_structures/ds_2.cpp",
-          "klib/data_structures/ds_3.cpp",
-          "klib/data_structures/ds_4.cpp",
 
           "klib/math/maths_1.cpp",
 
           "klib/memory/memory_1.cpp",
           "klib/memory/memory_2.cpp",
 
-          "klib/misc/misc_1.cpp",
-          "klib/misc/misc_2.cpp",
-
-          "klib/synch/synch_tests.cpp",
           "klib/synch/synch_1.cpp",
+          "klib/synch/synch_2_lock_wrapper.cpp",
 
           "object_mgr/object_mgr_1.cpp",
           "object_mgr/object_mgr_2.cpp",
@@ -34,15 +29,16 @@ files = [ "dummy_libs/processor/processor.dummy.cpp",
           "processor/scheduler/scheduler_1.cpp",
           "processor/scheduler/scheduler_proc_start_exit.cpp",
           "processor/irq_handler.cpp",
+          "processor/process_msg_handling.cpp",
           "processor/synch_objects.cpp",
-          # The following file commented out because the underlying synch object isn't easily tested - we could
-          # do a similar test to synch_objects.cpp in future.
-          # "processor/work_queue.cpp",
+          "processor/work_queue.cpp",
+          "processor/work_queue_mt.cpp",
 
           "system_tree/system_tree_1.cpp",
           "system_tree/system_tree_2.cpp",
           "system_tree/system_tree_3_pipes.cpp",
           "system_tree/system_tree_6_proc.cpp",
+          "system_tree/system_tree_7_enum.cpp",
 
           "system_tree/fs/fat/fat_fs_1_read.cpp",
           "system_tree/fs/fat/fat_fs_2_write.cpp",

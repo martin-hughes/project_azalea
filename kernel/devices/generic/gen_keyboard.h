@@ -1,12 +1,12 @@
 /// @file
 /// @brief Declares a generic keyboard device.
 
-
 #pragma once
 
 #include <stdint.h>
 
 #include "user_interfaces/keyboard.h"
+#include "processor/work_queue.h"
 
 class task_process;
 
@@ -16,9 +16,9 @@ class task_process;
 /// can be converted in to actual input.
 struct key_props
 {
-  bool printable;
-  char normal;
-  char shifted;
+  bool printable; ///< Is this a key that produces a 'printable' character?
+  char normal; ///< If printable, the normal representation of this key.
+  char shifted; ///< If printable, the output of this key in combination with Shift.
 };
 
 key_props keyb_get_key_props(KEYS key_pressed, const key_props *key_props_table, uint32_t tab_len);
@@ -37,7 +37,9 @@ public:
   virtual void handle_key_down(KEYS key, special_keys specs);
   virtual void handle_key_up(KEYS key, special_keys specs);
 
-  /// Process that should receive key press messages. This is only intended to be temporary, until the driver structure
-  /// gets a bit more flesh in it.
-  task_process *recipient{nullptr};
+  void set_receiver(std::shared_ptr<work::message_receiver> &new_receiver);
+
+protected:
+  kernel_spinlock_obj receiver_lock; ///< A lock protecting receiver.
+  std::weak_ptr<work::message_receiver> receiver; ///< An object key press messages should be sent to.
 };
