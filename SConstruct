@@ -47,32 +47,35 @@ def main_build_script(linux_build, config_env):
     kernel_env['CFLAGS'] = ' '.join(main_compile_flags)
     kernel_env['LINKFLAGS'] = "-T build_support/kernel_stage.ld --start-group "
     kernel_env['LINK'] = 'ld -gc-sections -Map output/kernel_map.map --eh-frame-hdr'
-    kernel_env['LIBPATH'] = [paths.libcxx_lib_folder,
+    kernel_env['LIBPATH'] = [paths.libcxx_kernel_lib_folder,
                              paths.acpica_lib_folder,
                              paths.libc_lib_folder,
-                             paths.libunwind_lib_folder,
-                             paths.libcxxabi_lib_folder,
+                             paths.libunwind_kernel_lib_folder,
+                             paths.libcxxabi_kernel_lib_folder,
                             ]
     kernel_env['LIBS'] = [ 'acpica', 'azalea_libc_kernel', 'c++', 'thread_adapter', 'unwind', 'c++abi' ]
     kernel_env.AppendENVPath('CPATH', '#/kernel')
-    kernel_env.AppendENVPath('CPATH', os.path.join(paths.libcxx_headers_folder, 'c++/v1'))
+    kernel_env.AppendENVPath('CPATH', os.path.join(paths.libcxx_kernel_headers_folder, 'c++/v1'))
     kernel_env.AppendENVPath('CPATH', paths.acpica_headers_folder)
     kernel_env.AppendENVPath('CPATH', paths.libc_headers_folder)
     kernel_env.AppendENVPath('CPATH', paths.kernel_headers_folder)
-    kernel_env.AppendENVPath('CPATH', paths.libunwind_headers_folder)
+    kernel_env.AppendENVPath('CPATH', paths.libunwind_kernel_headers_folder)
     kernel_obj = default_build_script(dependencies.kernel, "kernel64.sys", kernel_env, "kernel")
     kernel_install_obj = kernel_env.Install(paths.sys_image_root, kernel_obj)
     kernel_env.AddPostAction(kernel_obj, disasm_action)
 
     # User mode API and programs environment
     user_mode_env = build_default_env(linux_build)
-    user_mode_env['CXXFLAGS'] = '-Wall -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -std=c++17 -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
-    user_mode_env['CFLAGS'] = '-Wall -nostdinc -nostdlib -nodefaultlibs -mcmodel=large -ffreestanding -fno-exceptions -U _LINUX -U __linux__ -D __AZALEA__ -D KL_TRACE_BY_SERIAL_PORT'
+    user_mode_env['CXXFLAGS'] = '-Wall -nostdinc -nostdinc++ -nostdlib -mcmodel=large -std=c++17 -U _LINUX -U __linux__ -D __AZALEA__'
+    user_mode_env['CFLAGS'] = '-Wall -nostdinc -nostdlib -mcmodel=large -U _LINUX -U __linux__ -D __AZALEA__'
     user_mode_env['LIBPATH'] = [paths.libc_lib_folder,
                                 # Uncomment to build ncurses test program.
                                 #os.path.join(paths.developer_root, "ncurses", "lib"),
+                                paths.libcxx_user_lib_folder,
+                                paths.libcxxabi_user_lib_folder,
+                                paths.libunwind_user_lib_folder,
                                ]
-    user_mode_env['LINK'] = 'ld -Map ${TARGET}.map'
+    user_mode_env['LINK'] = 'ld -Map ${TARGET}.map --eh-frame-hdr'
 
     # User mode part of the API
     api_lib_env = user_mode_env.Clone()
@@ -84,10 +87,16 @@ def main_build_script(linux_build, config_env):
 
     user_mode_env['LIBS'] = [
       #'ncurses', # Uncomment to build ncurses test program.
+      'libc++',
+      'libc++abi',
+      'libunwind',
+      'pthread',
       'azalea_linux_shim',
       'azalea_libc',
-      user_api_obj]
+      user_api_obj,
+    ]
 
+    user_mode_env.AppendENVPath('CPATH', os.path.join(paths.libcxx_user_headers_folder, "c++/v1"))
     user_mode_env.AppendENVPath('CPATH', paths.libc_headers_folder)
     user_mode_env.AppendENVPath('CPATH', paths.kernel_headers_folder)
     user_mode_env.AppendENVPath('CPATH', os.path.join(paths.developer_root, "ncurses", "include"))
@@ -263,15 +272,20 @@ class path_builder:
     self.libc_lib_folder = os.path.join(self.developer_root, "libc", "lib")
 
     # Azalea libc++
-    self.libcxx_headers_folder = os.path.join(self.developer_root, "libcxx-kernel", "include")
-    self.libcxx_lib_folder = os.path.join(self.developer_root, "libcxx-kernel", "lib")
+    self.libcxx_kernel_headers_folder = os.path.join(self.developer_root, "libcxx-kernel", "include")
+    self.libcxx_kernel_lib_folder = os.path.join(self.developer_root, "libcxx-kernel", "lib")
+    self.libcxx_user_headers_folder = os.path.join(self.developer_root, "libcxx", "include")
+    self.libcxx_user_lib_folder = os.path.join(self.developer_root, "libcxx", "lib")
 
     # Azalea libcxxabi
-    self.libcxxabi_lib_folder = os.path.join(self.developer_root, "libcxxabi-kernel", "lib")
+    self.libcxxabi_kernel_lib_folder = os.path.join(self.developer_root, "libcxxabi-kernel", "lib")
+    self.libcxxabi_user_lib_folder = os.path.join(self.developer_root, "libcxxabi", "lib")
 
     # Azalea libunwind
-    self.libunwind_headers_folder = os.path.join(self.developer_root, "libunwind-kernel", "include")
-    self.libunwind_lib_folder = os.path.join(self.developer_root, "libunwind-kernel", "lib")
+    self.libunwind_kernel_headers_folder = os.path.join(self.developer_root, "libunwind-kernel", "include")
+    self.libunwind_kernel_lib_folder = os.path.join(self.developer_root, "libunwind-kernel", "lib")
+    self.libunwind_user_headers_folder = os.path.join(self.developer_root, "libunwind", "include")
+    self.libunwind_user_lib_folder = os.path.join(self.developer_root, "libunwind", "lib")
 
     # Azalea ACPICA
     self.acpica_headers_folder = os.path.join(self.developer_root, "acpica", "include")

@@ -97,10 +97,13 @@ ERR_CODE syscall_unmap_memory();
 
 /* Thread synchronization */
 ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle, uint64_t max_wait);
-/** @cond */
-ERR_CODE syscall_futex_wait(volatile int32_t *futex, int32_t req_value);
-ERR_CODE syscall_futex_wake(volatile int32_t *futex);
-/** @endcond */
+ERR_CODE syscall_futex_op(volatile int32_t *futex,
+                          FUTEX_OP op,
+                          int32_t req_value,
+                          uint64_t timeout_ns,
+                          volatile uint32_t *futex_2,
+                          uint32_t v3);
+
 ERR_CODE syscall_create_mutex(GEN_HANDLE *mutex_handle);
 ERR_CODE syscall_release_mutex(GEN_HANDLE mutex_handle);
 ERR_CODE syscall_create_semaphore(GEN_HANDLE *semaphore_handle, uint64_t max_users, uint64_t start_users);

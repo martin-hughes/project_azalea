@@ -23,10 +23,18 @@ const void *syscall_pointers[] =
 
       // Handle management.
       (void *)syscall_open_handle,
+      (void *)syscall_create_obj_and_handle,
       (void *)syscall_close_handle,
+      (void *)syscall_seek_handle,
       (void *)syscall_read_handle,
       (void *)syscall_get_handle_data_len,
+      (void *)syscall_set_handle_data_len,
       (void *)syscall_write_handle,
+      (void *)syscall_rename_object,
+      (void *)syscall_delete_object,
+
+      (void *)syscall_get_object_properties,
+      (void *)syscall_enum_children,
 
       // Message passing.
       (void *)syscall_register_for_mp,
@@ -37,6 +45,7 @@ const void *syscall_pointers[] =
 
       // Process & thread control
       (void *)syscall_create_process,
+      (void *)syscall_set_startup_params,
       (void *)syscall_start_process,
       (void *)syscall_stop_process,
       (void *)syscall_destroy_process,
@@ -58,23 +67,14 @@ const void *syscall_pointers[] =
 
       // Thread synchronization
       (void *)syscall_wait_for_object,
-      (void *)syscall_futex_wait,
-      (void *)syscall_futex_wake,
-
-      // New syscalls:
-      (void *)syscall_create_obj_and_handle,
-      (void *)syscall_set_handle_data_len,
-      (void *)syscall_set_startup_params,
-      (void *)syscall_get_system_clock,
-      (void *)syscall_rename_object,
-      (void *)syscall_delete_object,
-      (void *)syscall_get_object_properties,
-      (void *)syscall_seek_handle,
+      (void *)syscall_futex_op,
       (void *)syscall_create_mutex,
       (void *)syscall_release_mutex,
       (void *)syscall_create_semaphore,
       (void *)syscall_signal_semaphore,
-      (void *)syscall_enum_children,
+
+      // Other syscalls:
+      (void *)syscall_get_system_clock,
     };
 
 /// @brief The number of known system calls.

@@ -2,6 +2,7 @@
 
 Import('env')
 files = [
+          "futexes.cpp",
           "processor.cpp",
           "synch_objects.cpp",
           "task_manager.cpp",

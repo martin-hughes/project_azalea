@@ -103,4 +103,22 @@ struct ssm_output
   uint64_t output_buffer_len;
 };
 
+/**
+ * @brief Possible futex operations
+ *
+ * These are a subset of those provided by Linux.
+ */
+enum AZALEA_ENUM_CLASS FUTEX_OP_T
+{
+  FUTEX_WAIT = 0, /**< Wait on this futex */
+  FUTEX_WAKE = 1, /**< Wake all waiters for this futex */
+  FUTEX_SET_ROBUST_LIST = 2, /**< Setup the robust futext list - see the Linux Robust Futexes docs for more info */
+};
+
+/**
+ * @cond */
+AZALEA_RENAME_ENUM(FUTEX_OP);
+/**
+ * @endcond */
+
 #endif

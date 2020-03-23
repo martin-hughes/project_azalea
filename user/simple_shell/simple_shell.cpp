@@ -5,10 +5,9 @@
 #include <stdio.h>
 #include <time.h>
 
-extern "C"
-{
-#include <termios.h>
-}
+#include <iostream>
+
+using namespace std;
 
 #define SC_DEBUG_MSG(string) \
   syscall_debug_output((string), strlen((string)) )
@@ -31,9 +30,37 @@ bool parse_command(char *command,
                    uint64_t argv_buffer_size);
 bool count_command_details(char *command, uint64_t &num_args, uint64_t &argument_space_reqd);
 
+class dummy
+{
+public:
+  bool c{false};
+  dummy()
+  {
+    SC_DEBUG_MSG("Constructor\n");
+    c = true;
+  };
+
+  void x()
+  {
+    if (c)
+    {
+      SC_DEBUG_MSG("True\n");
+    }
+    else
+    {
+      SC_DEBUG_MSG("False\n");
+    }
+
+  };
+};
+
+dummy x;
+
 int main (int argc, char **argv, char **env_p)
 {
   SC_DEBUG_MSG("Welcome to simple shell\n");
+
+  x.x();
 
   char *command_buffer;
   uint8_t buffer_offset = 0;
@@ -45,6 +72,7 @@ int main (int argc, char **argv, char **env_p)
   ERR_CODE result;
 
   printf("Azalea simple shell. OS Version: %d\n", version);
+  cout << "C++ lib test" << endl;
 
   command_buffer = (char *)malloc(MAX_CMD_LEN + 1);
 

@@ -1,5 +1,5 @@
 /// @file
-/// @brief Synchronization primitives part of the system call interface.
+/// @brief Synchronization primitives part of the system call interface - apart from futexes.
 
 //#define ENABLE_TRACING
 
@@ -56,23 +56,6 @@ extern "C" ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle, uint6
 
   return result;
 }
-
-/// @cond
-// Since these system calls are not yet complete, don't document them yet.
-ERR_CODE syscall_futex_wait(volatile int32_t *futex, int32_t req_value)
-{
-  INCOMPLETE_CODE("futex_wait");
-
-  return ERR_CODE::UNKNOWN;
-}
-
-ERR_CODE syscall_futex_wake(volatile int32_t *futex)
-{
-  INCOMPLETE_CODE("futex_wake");
-
-  return ERR_CODE::UNKNOWN;
-}
-/// @endcond
 
 /// @brief Create a new mutex object
 ///
