@@ -60,7 +60,7 @@ Being a hobby project, there are some fairly specific requirements for this proj
 To compile the full system, you will need the following tools and libraries installed:
 - azalea-libc source code
 - azalea-acpica source code
-- llvm-project source code
+- llvm-project source code. Azalea is tested with release 9.0.1 (git tag: llvmorg-9.0.1)
 - azalea-libcxx builder source code
 - Python 2.6 or later (*)
 - GCC 5.4 or later (no longer tested)
