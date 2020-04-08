@@ -142,7 +142,7 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
     if (completion_semaphore != 0)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Look for semaphore object\n");
-      obj = this_thread->thread_handles.retrieve_handled_object(completion_semaphore);
+      obj = this_thread->parent_process->proc_handles.retrieve_handled_object(completion_semaphore);
       if (obj == nullptr)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Object not found!\n");
@@ -175,7 +175,7 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
     if ((completion_semaphore == 0) || (sem))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Completion semaphore check OK, attempt to send\n");
-      std::shared_ptr<object_data> object = this_thread->thread_handles.retrieve_object(msg_target);
+      std::shared_ptr<object_data> object = this_thread->parent_process->proc_handles.retrieve_object(msg_target);
       std::shared_ptr<work::message_receiver> target_obj =
         std::dynamic_pointer_cast<work::message_receiver>(object->object_ptr);
 

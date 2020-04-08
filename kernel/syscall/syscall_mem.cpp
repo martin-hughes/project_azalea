@@ -216,7 +216,7 @@ ERR_CODE syscall_map_memory(GEN_HANDLE proc_mapping_in,
     if (proc_mapping_in != 0)
     {
       receiving_proc = std::dynamic_pointer_cast<task_process>(
-        cur_thread->thread_handles.retrieve_handled_object(proc_mapping_in));
+        cur_thread->parent_process->proc_handles.retrieve_handled_object(proc_mapping_in));
     }
     else
     {
@@ -227,7 +227,7 @@ ERR_CODE syscall_map_memory(GEN_HANDLE proc_mapping_in,
     if (proc_already_in != 0)
     {
       originating_proc = std::dynamic_pointer_cast<task_process>(
-        cur_thread->thread_handles.retrieve_handled_object(proc_already_in));
+        cur_thread->parent_process->proc_handles.retrieve_handled_object(proc_already_in));
     }
     else
     {

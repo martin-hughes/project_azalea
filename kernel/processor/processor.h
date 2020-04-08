@@ -81,6 +81,9 @@ public:
 
   /// Has this process ever been started?
   bool has_ever_started;
+
+  /// Store handles and the objects they correlate to.
+  object_manager proc_handles;
 };
 
 /// @brief Class to hold information about a thread.
@@ -133,9 +136,6 @@ public:
   /// synchronization primitive. The list itself is owned by that primitive, but this item must be initialized with the
   /// rest of this structure.
   klib_list_item<std::shared_ptr<task_thread>> *synch_list_item;
-
-  /// Store handles and the objects they correlate to.
-  object_manager thread_handles;
 
   /// Has the thread been destroyed? Various operations are not permitted on a destroyed thread. This object will
   /// continue to exist until all references to it have been released.
