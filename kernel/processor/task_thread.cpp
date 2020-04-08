@@ -33,7 +33,7 @@ task_thread::task_thread(ENTRY_PROC entry_point,
   KL_TRC_ENTRY;
   ASSERT(parent_process != nullptr);
 
-  kl_trc_trace(TRC_LVL::EXTRA, "Param: ", param, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Param: ", param, "\n");
 
   this->execution_context = task_int_create_exec_context(entry_point, this, param, stack_ptr);
   KL_TRC_TRACE(TRC_LVL::FLOW, "Context created @ ", this->execution_context,

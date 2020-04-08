@@ -265,3 +265,12 @@ ERR_CODE syscall_signal_semaphore(GEN_HANDLE semaphore_handle)
 
   return result;
 }
+
+void syscall_yield()
+{
+  KL_TRC_ENTRY;
+
+  task_yield();
+
+  KL_TRC_EXIT;
+}

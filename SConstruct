@@ -74,6 +74,7 @@ def main_build_script(linux_build, config_env):
                                 paths.libcxx_user_lib_folder,
                                 paths.libcxxabi_user_lib_folder,
                                 paths.libunwind_user_lib_folder,
+                                paths.libcxxrt_lib_folder,
                                ]
     user_mode_env['LINK'] = 'ld -Map ${TARGET}.map --eh-frame-hdr'
 
@@ -91,6 +92,7 @@ def main_build_script(linux_build, config_env):
       'libc++abi',
       'libunwind',
       'pthread',
+      'libc++start',
       'azalea_linux_shim',
       'azalea_libc',
       user_api_obj,
@@ -276,6 +278,7 @@ class path_builder:
     self.libcxx_kernel_lib_folder = os.path.join(self.developer_root, "libcxx-kernel", "lib")
     self.libcxx_user_headers_folder = os.path.join(self.developer_root, "libcxx", "include")
     self.libcxx_user_lib_folder = os.path.join(self.developer_root, "libcxx", "lib")
+    self.libcxxrt_lib_folder = os.path.join(self.developer_root, "compiler-rt", "lib")
 
     # Azalea libcxxabi
     self.libcxxabi_kernel_lib_folder = os.path.join(self.developer_root, "libcxxabi-kernel", "lib")

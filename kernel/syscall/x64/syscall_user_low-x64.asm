@@ -69,5 +69,9 @@ GENERIC_SYSCALL 37, syscall_release_mutex,
 GENERIC_SYSCALL 38, syscall_create_semaphore,
 GENERIC_SYSCALL 39, syscall_signal_semaphore,
 
-; Other syscalls:
+; Timing
 GENERIC_SYSCALL 40, syscall_get_system_clock,
+GENERIC_SYSCALL 41, syscall_sleep_thread
+
+; Other syscalls:
+GENERIC_SYSCALL 42, syscall_yield

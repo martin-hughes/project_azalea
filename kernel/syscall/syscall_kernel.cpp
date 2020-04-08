@@ -73,8 +73,12 @@ const void *syscall_pointers[] =
       (void *)syscall_create_semaphore,
       (void *)syscall_signal_semaphore,
 
-      // Other syscalls:
+      // Timing syscalls:
       (void *)syscall_get_system_clock,
+      (void *)syscall_sleep_thread,
+
+      // Other syscalls:
+      (void *)syscall_yield,
     };
 
 /// @brief The number of known system calls.

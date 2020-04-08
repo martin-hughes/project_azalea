@@ -42,3 +42,14 @@ ERR_CODE syscall_get_system_clock(time_expanded *buffer)
 
   return result;
 }
+
+ERR_CODE syscall_sleep_thread(uint64_t nanoseconds)
+{
+  KL_TRC_ENTRY;
+
+  time_sleep_process(nanoseconds);
+
+  KL_TRC_EXIT;
+
+  return ERR_CODE::NO_ERROR;
+}

@@ -111,6 +111,10 @@ ERR_CODE syscall_signal_semaphore(GEN_HANDLE semaphore_handle);
 
 /* Timing */
 ERR_CODE syscall_get_system_clock(struct time_expanded *buffer);
+ERR_CODE syscall_sleep_thread(uint64_t nanoseconds);
+
+/* New syscalls */
+void syscall_yield();
 
 #ifdef __cplusplus
 }

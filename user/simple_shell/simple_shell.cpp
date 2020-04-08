@@ -80,7 +80,7 @@ int main (int argc, char **argv, char **env_p)
   ERR_CODE result;
 
   printf("Azalea simple shell. OS Version: %d\n", version);
-  //cout << "C++ lib test" << endl;
+  cout << "C++ lib test" << endl;
 
   command_buffer = (char *)malloc(MAX_CMD_LEN + 1);
 
