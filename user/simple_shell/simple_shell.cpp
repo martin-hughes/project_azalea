@@ -4,6 +4,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include <time.h>
+#include <pthread.h>
 
 #include <iostream>
 
@@ -54,6 +55,13 @@ public:
   };
 };
 
+void *thread_two_fn(void *)
+{
+  SC_DEBUG_MSG("Second thread\n");
+  printf("Second thread\n");
+  return nullptr;
+}
+
 dummy x;
 
 int main (int argc, char **argv, char **env_p)
@@ -72,9 +80,14 @@ int main (int argc, char **argv, char **env_p)
   ERR_CODE result;
 
   printf("Azalea simple shell. OS Version: %d\n", version);
-  cout << "C++ lib test" << endl;
+  //cout << "C++ lib test" << endl;
 
   command_buffer = (char *)malloc(MAX_CMD_LEN + 1);
+
+  pthread_t thread_two;
+  pthread_create(&thread_two, nullptr, thread_two_fn, 0);
+  pthread_join(thread_two, nullptr);
+  SC_DEBUG_MSG("Back to first thread\n");
 
   // Main command loop
   while (1)

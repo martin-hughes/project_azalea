@@ -75,7 +75,7 @@ ERR_CODE syscall_stop_process(GEN_HANDLE proc_handle);
 ERR_CODE syscall_destroy_process(GEN_HANDLE proc_handle);
 void syscall_exit_process();
 
-ERR_CODE syscall_create_thread(void (*entry_point)(), GEN_HANDLE *thread_handle);
+ERR_CODE syscall_create_thread(void (*entry_point)(), GEN_HANDLE *thread_handle, uint64_t param, void *stack_ptr);
 ERR_CODE syscall_start_thread(GEN_HANDLE thread_handle);
 ERR_CODE syscall_stop_thread(GEN_HANDLE thread_handle);
 ERR_CODE syscall_destroy_thread(GEN_HANDLE thread_handle);
@@ -101,7 +101,7 @@ ERR_CODE syscall_futex_op(volatile int32_t *futex,
                           FUTEX_OP op,
                           int32_t req_value,
                           uint64_t timeout_ns,
-                          volatile uint32_t *futex_2,
+                          volatile int32_t *futex_2,
                           uint32_t v3);
 
 ERR_CODE syscall_create_mutex(GEN_HANDLE *mutex_handle);

@@ -53,7 +53,7 @@ ERR_CODE syscall_futex_op(volatile int32_t *futex,
                           FUTEX_OP op,
                           int32_t req_value,
                           uint64_t timeout_ns,
-                          volatile uint32_t *futex_2,
+                          volatile int32_t *futex_2,
                           uint32_t v3)
 {
   ERR_CODE result;
@@ -94,10 +94,8 @@ ERR_CODE syscall_futex_op(volatile int32_t *futex,
       result = futex_wake(phys_addr);
       break;
 
-    case FUTEX_OP::FUTEX_SET_ROBUST_LIST:
-      result = ERR_CODE::INVALID_OP;
-      INCOMPLETE_CODE("Set robust futex list");
-      break;
+    case FUTEX_OP::FUTEX_REQUEUE:
+      INCOMPLETE_CODE("Requeue futex");
 
     default:
       KL_TRC_TRACE(TRC_LVL::FLOW, "Unknown operation\n");

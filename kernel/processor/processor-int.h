@@ -108,7 +108,10 @@ struct proc_interrupt_data
   klib_list<proc_interrupt_handler *> interrupt_handlers; ///< List of handlers for this interrupt.
 };
 
-void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thread);
+void *task_int_create_exec_context(ENTRY_PROC entry_point,
+                                   task_thread *new_thread,
+                                   uint64_t param = 0,
+                                   void *stack_ptr = nullptr);
 void task_int_delete_exec_context(task_thread *old_thread);
 
 task_thread *task_get_next_thread();

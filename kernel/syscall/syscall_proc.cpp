@@ -290,9 +290,15 @@ void syscall_exit_process()
 ///
 /// @param[out] thread_handle A handle to be used when referring to this thread through the system call interface.
 ///
+/// @param[in] param Value to set in the execution context as the first function parameter for the new thread (register
+///                  RDI on x86-64)
+///
+/// @param[in] stack_ptr Optional stack pointer. If provided, RSP will be set to this value. If set to 0, the kernel
+///                      will allocate a new stack for the thread.
+///
 /// @return ERR_CODE::INVALID_PARAM if any parameter is invalid. ERR_CODE::INVALID_OP if the thread could not be
 ///         created for any other reason. ERR_CODE::NO_ERROR if the thread was created successfully.
-ERR_CODE syscall_create_thread(void (*entry_point)(), GEN_HANDLE *thread_handle)
+ERR_CODE syscall_create_thread(void (*entry_point)(), GEN_HANDLE *thread_handle, uint64_t param, void *stack_ptr)
 {
   KL_TRC_ENTRY;
 
@@ -319,7 +325,7 @@ ERR_CODE syscall_create_thread(void (*entry_point)(), GEN_HANDLE *thread_handle)
         (cur_thread->parent_process->kernel_mode == false))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Creating thread with entry point ", entry_point, "\n");
-      new_thread = task_thread::create(entry_point, cur_thread->parent_process);
+      new_thread = task_thread::create(entry_point, cur_thread->parent_process, param, stack_ptr);
     }
 
     if (new_thread != nullptr)

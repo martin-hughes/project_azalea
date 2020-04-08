@@ -37,7 +37,7 @@ namespace
 /// @param new_thread The thread that is having an execution context created for it
 ///
 /// @return A pointer to the execution context. This is opaque to non-x64 code.
-void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thread)
+void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thread, uint64_t param, void *stack_ptr)
 {
   task_x64_exec_context *new_context;
   task_process *parent_process;
@@ -62,6 +62,7 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Exec pointer: ", entry_point, "\n");
   new_context->cr3_value = (void *)memmgr_x64_data->pml4_phys_addr;
   KL_TRC_TRACE(TRC_LVL::EXTRA, "CR3: ", new_context->cr3_value, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Parameter - RDI: ", param, "\n");
 
   memset(new_context->saved_stack.fx_state, 0, sizeof(new_context->saved_stack.fx_state));
 
@@ -74,7 +75,7 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
   new_context->saved_stack.r9 = 0;
   new_context->saved_stack.r8 = 0;
   new_context->saved_stack.rbp = 0;
-  new_context->saved_stack.rdi = 0;
+  new_context->saved_stack.rdi = param;
   new_context->saved_stack.rsi = 0;
   new_context->saved_stack.rdx = 0;
   new_context->saved_stack.rcx = 0;
@@ -97,9 +98,19 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
     new_context->saved_stack.proc_cs = DEF_CS_KERNEL;
     new_context->saved_stack.proc_ss = DEF_SS_KERNEL;
 
-    // The stack is allocated and made ready to use by proc_x64_allocate_stack(). The allocated stacks are 16-byte
-    /// aligned. We deliberately offset a further 8 bytes. This is to simulate a `call` instruction to `entry_point`.
-    stack_long = reinterpret_cast<uint64_t>(proc_allocate_stack(true));
+    if (stack_ptr == nullptr)
+    {
+      // The stack is allocated and made ready to use by proc_x64_allocate_stack(). The allocated stacks are 16-byte
+      // aligned. We deliberately offset a further 8 bytes. This is to simulate a `call` instruction to `entry_point`.
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Allocate stack\n");
+      stack_long = reinterpret_cast<uint64_t>(proc_allocate_stack(true));
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Use provided stack\n");
+      stack_long = reinterpret_cast<uint64_t>(stack_ptr);
+    }
+
     new_context->saved_stack.proc_rsp = stack_long - 8;
 
     KL_TRC_TRACE(TRC_LVL::EXTRA, "Stack pointer:", new_context->saved_stack.proc_rsp, "\n");
@@ -111,8 +122,20 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
     new_context->saved_stack.proc_cs = DEF_CS_USER + 3;
     new_context->saved_stack.proc_ss = DEF_SS_USER + 3;
 
-    new_context->saved_stack.proc_rsp =
-      reinterpret_cast<uint64_t>(proc_allocate_stack(false, parent_process));
+    if (stack_ptr == nullptr)
+    {
+      // The stack is allocated and made ready to use by proc_x64_allocate_stack(). The allocated stacks are 16-byte
+      // aligned. We deliberately offset a further 8 bytes. This is to simulate a `call` instruction to `entry_point`.
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Allocate stack\n");
+      stack_long = reinterpret_cast<uint64_t>(proc_allocate_stack(false, parent_process));
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Use provided stack\n");
+      stack_long = reinterpret_cast<uint64_t>(stack_ptr);
+    }
+
+    new_context->saved_stack.proc_rsp = stack_long;
 
     if (new_context->saved_stack.proc_rsp == 0)
     {

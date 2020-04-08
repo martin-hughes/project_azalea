@@ -93,10 +93,13 @@ public:
 class task_thread : public IHandledObject, public WaitObject
 {
 protected:
-  task_thread(ENTRY_PROC entry_point, std::shared_ptr<task_process> parent);
+  task_thread(ENTRY_PROC entry_point, std::shared_ptr<task_process> parent, uint64_t param, void *stack_ptr);
 
 public:
-  static std::shared_ptr<task_thread> create(ENTRY_PROC entry_point, std::shared_ptr<task_process> parent);
+  static std::shared_ptr<task_thread> create(ENTRY_PROC entry_point,
+                                             std::shared_ptr<task_process> parent,
+                                             uint64_t param = 0,
+                                             void *stack_ptr = nullptr);
   virtual ~task_thread();
 
   bool start_thread();
