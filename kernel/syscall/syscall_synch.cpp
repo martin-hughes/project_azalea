@@ -1,5 +1,5 @@
 /// @file
-/// @brief Synchronization primitives part of the system call interface.
+/// @brief Synchronization primitives part of the system call interface - apart from futexes.
 
 //#define ENABLE_TRACING
 
@@ -38,7 +38,7 @@ extern "C" ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle, uint6
   else
   {
     wait_obj = std::dynamic_pointer_cast<WaitObject>(
-      cur_thread->thread_handles.retrieve_handled_object(wait_object_handle));
+      cur_thread->parent_process->proc_handles.retrieve_handled_object(wait_object_handle));
     if (wait_obj == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Not a wait object\n");
@@ -56,23 +56,6 @@ extern "C" ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle, uint6
 
   return result;
 }
-
-/// @cond
-// Since these system calls are not yet complete, don't document them yet.
-ERR_CODE syscall_futex_wait(volatile int32_t *futex, int32_t req_value)
-{
-  INCOMPLETE_CODE("futex_wait");
-
-  return ERR_CODE::UNKNOWN;
-}
-
-ERR_CODE syscall_futex_wake(volatile int32_t *futex)
-{
-  INCOMPLETE_CODE("futex_wake");
-
-  return ERR_CODE::UNKNOWN;
-}
-/// @endcond
 
 /// @brief Create a new mutex object
 ///
@@ -106,7 +89,7 @@ ERR_CODE syscall_create_mutex(GEN_HANDLE *mutex_handle)
     std::shared_ptr<syscall_mutex_obj> mut = std::make_shared<syscall_mutex_obj>();
 
     new_object.object_ptr = mut;
-    *mutex_handle = cur_thread->thread_handles.store_object(new_object);
+    *mutex_handle = cur_thread->parent_process->proc_handles.store_object(new_object);
 
     // Conceivably a user mode process could quickly change the handle in between the last line and the next one, but
     // it has no significant impact if they do.
@@ -140,7 +123,7 @@ ERR_CODE syscall_release_mutex(GEN_HANDLE mutex_handle)
   }
   else
   {
-    obj = cur_thread->thread_handles.retrieve_handled_object(mutex_handle);
+    obj = cur_thread->parent_process->proc_handles.retrieve_handled_object(mutex_handle);
     if (obj == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Object not found!\n");
@@ -213,7 +196,7 @@ ERR_CODE syscall_create_semaphore(GEN_HANDLE *semaphore_handle, uint64_t max_use
     std::shared_ptr<syscall_semaphore_obj> sem = std::make_shared<syscall_semaphore_obj>(max_users, start_users);
 
     new_object.object_ptr = sem;
-    *semaphore_handle = cur_thread->thread_handles.store_object(new_object);
+    *semaphore_handle = cur_thread->parent_process->proc_handles.store_object(new_object);
 
     // Conceivably a user mode process could quickly change the handle in between the last line and the next one, but
     // it has no significant impact if they do.
@@ -247,7 +230,7 @@ ERR_CODE syscall_signal_semaphore(GEN_HANDLE semaphore_handle)
   }
   else
   {
-    obj = cur_thread->thread_handles.retrieve_handled_object(semaphore_handle);
+    obj = cur_thread->parent_process->proc_handles.retrieve_handled_object(semaphore_handle);
     if (obj == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Object not found!\n");
@@ -281,4 +264,13 @@ ERR_CODE syscall_signal_semaphore(GEN_HANDLE semaphore_handle)
   KL_TRC_EXIT;
 
   return result;
+}
+
+void syscall_yield()
+{
+  KL_TRC_ENTRY;
+
+  task_yield();
+
+  KL_TRC_EXIT;
 }

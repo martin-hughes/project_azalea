@@ -80,7 +80,7 @@ ERR_CODE syscall_read_handle(GEN_HANDLE handle,
   {
     // Parameters check out, try to read.
     KL_TRC_TRACE(TRC_LVL::FLOW, "Looking for handle: ", handle, "\n");
-    std::shared_ptr<object_data> object = cur_thread->thread_handles.retrieve_object(handle);
+    std::shared_ptr<object_data> object = cur_thread->parent_process->proc_handles.retrieve_object(handle);
     if (object != nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Got an object...\n");
@@ -190,7 +190,7 @@ ERR_CODE syscall_write_handle(GEN_HANDLE handle,
   else
   {
     // Parameters check out, try to read.
-    std::shared_ptr<object_data> obj = cur_thread->thread_handles.retrieve_object(handle);
+    std::shared_ptr<object_data> obj = cur_thread->parent_process->proc_handles.retrieve_object(handle);
 
     if (obj)
     {
@@ -265,7 +265,7 @@ ERR_CODE syscall_get_handle_data_len(GEN_HANDLE handle, uint64_t *data_length)
   }
   else
   {
-    std::shared_ptr<object_data> obj = cur_thread->thread_handles.retrieve_object(handle);
+    std::shared_ptr<object_data> obj = cur_thread->parent_process->proc_handles.retrieve_object(handle);
     KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved object data ", obj.get(), " from OM\n");
     if (obj == nullptr)
     {
@@ -316,7 +316,7 @@ ERR_CODE syscall_set_handle_data_len(GEN_HANDLE handle, uint64_t data_length)
 
   if (cur_thread != nullptr)
   {
-    obj = cur_thread->thread_handles.retrieve_object(handle);
+    obj = cur_thread->parent_process->proc_handles.retrieve_object(handle);
     if (obj == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "No object for handle\n");
@@ -387,7 +387,7 @@ ERR_CODE syscall_seek_handle(GEN_HANDLE handle, int64_t offset, SEEK_OFFSET dir,
   }
   else
   {
-    std::shared_ptr<object_data> obj = cur_thread->thread_handles.retrieve_object(handle);
+    std::shared_ptr<object_data> obj = cur_thread->parent_process->proc_handles.retrieve_object(handle);
     KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved object data ", obj.get(), " from OM\n");
     if (obj == nullptr)
     {

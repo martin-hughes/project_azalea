@@ -79,7 +79,7 @@ ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *ha
       KL_TRC_TRACE(TRC_LVL::FLOW, "Successfully got leaf object: ", leaf.get(), "\n");
       std::shared_ptr<IHandledObject> leaf_ptr = std::shared_ptr<IHandledObject>(leaf);
       new_object.object_ptr = leaf_ptr;
-      new_handle = cur_thread->thread_handles.store_object(new_object);
+      new_handle = cur_thread->parent_process->proc_handles.store_object(new_object);
       *handle = new_handle;
 
       KL_TRC_TRACE(TRC_LVL::EXTRA, "Correlated ", path, " to handle ", new_handle, "\n");
@@ -123,7 +123,7 @@ ERR_CODE syscall_close_handle(GEN_HANDLE handle)
   }
   else
   {
-    obj = cur_thread->thread_handles.retrieve_handled_object(handle);
+    obj = cur_thread->parent_process->proc_handles.retrieve_handled_object(handle);
     if (obj == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Object not found!\n");
@@ -134,7 +134,7 @@ ERR_CODE syscall_close_handle(GEN_HANDLE handle)
       KL_TRC_TRACE(TRC_LVL::FLOW, "Found object: ", obj.get(), " - destroying\n");
 
       // Don't delete the object, let the reference counting mechanism take care of it as needed.
-      cur_thread->thread_handles.remove_object(handle);
+      cur_thread->parent_process->proc_handles.remove_object(handle);
       obj = nullptr;
 
       result = ERR_CODE::NO_ERROR;
@@ -191,7 +191,7 @@ ERR_CODE syscall_create_obj_and_handle(const char *path, uint64_t path_len, GEN_
       KL_TRC_TRACE(TRC_LVL::FLOW, "New leaf created!\n");
       new_leaf_ptr = std::dynamic_pointer_cast<IHandledObject>(new_leaf);
       new_object.object_ptr = new_leaf_ptr;
-      new_handle = cur_thread->thread_handles.store_object(new_object);
+      new_handle = cur_thread->parent_process->proc_handles.store_object(new_object);
       *handle = new_handle;
 
       KL_TRC_TRACE(TRC_LVL::EXTRA, "Correlated to handle ", new_handle, "\n");
@@ -335,7 +335,7 @@ ERR_CODE syscall_get_object_properties(GEN_HANDLE handle,
     else
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieve object\n");
-      obj = cur_thread->thread_handles.retrieve_handled_object(handle);
+      obj = cur_thread->parent_process->proc_handles.retrieve_handled_object(handle);
       leaf = std::dynamic_pointer_cast<ISystemTreeLeaf>(obj);
       if (leaf == nullptr)
       {
@@ -422,7 +422,7 @@ ERR_CODE syscall_enum_children(GEN_HANDLE handle,
 
   ASSERT(cur_thread);
 
-  obj = cur_thread->thread_handles.retrieve_object(handle);
+  obj = cur_thread->parent_process->proc_handles.retrieve_object(handle);
 
   if ((!SYSCALL_IS_UM_ADDRESS(start_from) && (start_from != nullptr)) ||
       (!SYSCALL_IS_UM_ADDRESS(buffer) && (buffer != nullptr)) ||

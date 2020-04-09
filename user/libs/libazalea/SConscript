@@ -4,6 +4,7 @@
 
 Import('env')
 files = [
+  "error_codes.cpp",
   "os_version.cpp",
 
   "processes/elf.cpp",

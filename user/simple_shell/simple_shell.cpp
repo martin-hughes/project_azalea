@@ -5,11 +5,6 @@
 #include <stdio.h>
 #include <time.h>
 
-extern "C"
-{
-#include <termios.h>
-}
-
 #define SC_DEBUG_MSG(string) \
   syscall_debug_output((string), strlen((string)) )
 

@@ -35,7 +35,7 @@ void task_platform_init()
   // Nothing to do.
 }
 
-void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thread)
+void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thread, uint64_t param, void *stack_ptr)
 {
   return new char[8];
 }

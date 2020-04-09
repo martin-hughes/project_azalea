@@ -81,6 +81,9 @@ public:
 
   /// Has this process ever been started?
   bool has_ever_started;
+
+  /// Store handles and the objects they correlate to.
+  object_manager proc_handles;
 };
 
 /// @brief Class to hold information about a thread.
@@ -93,10 +96,13 @@ public:
 class task_thread : public IHandledObject, public WaitObject
 {
 protected:
-  task_thread(ENTRY_PROC entry_point, std::shared_ptr<task_process> parent);
+  task_thread(ENTRY_PROC entry_point, std::shared_ptr<task_process> parent, uint64_t param, void *stack_ptr);
 
 public:
-  static std::shared_ptr<task_thread> create(ENTRY_PROC entry_point, std::shared_ptr<task_process> parent);
+  static std::shared_ptr<task_thread> create(ENTRY_PROC entry_point,
+                                             std::shared_ptr<task_process> parent,
+                                             uint64_t param = 0,
+                                             void *stack_ptr = nullptr);
   virtual ~task_thread();
 
   bool start_thread();
@@ -130,9 +136,6 @@ public:
   /// synchronization primitive. The list itself is owned by that primitive, but this item must be initialized with the
   /// rest of this structure.
   klib_list_item<std::shared_ptr<task_thread>> *synch_list_item;
-
-  /// Store handles and the objects they correlate to.
-  object_manager thread_handles;
 
   /// Has the thread been destroyed? Various operations are not permitted on a destroyed thread. This object will
   /// continue to exist until all references to it have been released.
