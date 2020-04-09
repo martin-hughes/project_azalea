@@ -31,44 +31,9 @@ bool parse_command(char *command,
                    uint64_t argv_buffer_size);
 bool count_command_details(char *command, uint64_t &num_args, uint64_t &argument_space_reqd);
 
-class dummy
-{
-public:
-  bool c{false};
-  dummy()
-  {
-    SC_DEBUG_MSG("Constructor\n");
-    c = true;
-  };
-
-  void x()
-  {
-    if (c)
-    {
-      SC_DEBUG_MSG("True\n");
-    }
-    else
-    {
-      SC_DEBUG_MSG("False\n");
-    }
-
-  };
-};
-
-void *thread_two_fn(void *)
-{
-  SC_DEBUG_MSG("Second thread\n");
-  printf("Second thread\n");
-  return nullptr;
-}
-
-dummy x;
-
 int main (int argc, char **argv, char **env_p)
 {
   SC_DEBUG_MSG("Welcome to simple shell\n");
-
-  x.x();
 
   char *command_buffer;
   uint8_t buffer_offset = 0;
@@ -80,14 +45,8 @@ int main (int argc, char **argv, char **env_p)
   ERR_CODE result;
 
   printf("Azalea simple shell. OS Version: %d\n", version);
-  cout << "C++ lib test" << endl;
 
   command_buffer = (char *)malloc(MAX_CMD_LEN + 1);
-
-  pthread_t thread_two;
-  pthread_create(&thread_two, nullptr, thread_two_fn, 0);
-  pthread_join(thread_two, nullptr);
-  SC_DEBUG_MSG("Back to first thread\n");
 
   // Main command loop
   while (1)
