@@ -10,5 +10,5 @@
 
 void futex_maybe_init();
 
-ERR_CODE futex_wait(uint64_t phys_addr, int32_t cur_value, int32_t req_value);
-ERR_CODE futex_wake(uint64_t phys_addr);
+ERR_CODE futex_wait(volatile int32_t *futex, int32_t req_value);
+ERR_CODE futex_wake(volatile int32_t *futex);

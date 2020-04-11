@@ -3,12 +3,15 @@
 ///
 /// See the Linux futex and robust futex documentation for a fuller description of how futexes work.
 
+//#define ENABLE_TRACING
+
 #include "futexes.h"
 #include "processor/processor.h"
 #include "klib/klib.h"
 
 #include <map>
 #include <vector>
+#include <algorithm>
 
 namespace
 {
@@ -46,13 +49,14 @@ void futex_maybe_init()
 /// @param req_value The value of the desired futex state given in the system call.
 ///
 /// @return A suitable error code.
-ERR_CODE futex_wait(uint64_t phys_addr, int32_t cur_value, int32_t req_value)
+ERR_CODE futex_wait(volatile int32_t *futex, int32_t req_value)
 {
   ERR_CODE result{ERR_CODE::NO_ERROR};
+  uint64_t futex_addr_l{reinterpret_cast<uint64_t>(futex)};
 
   KL_TRC_ENTRY;
 
-  if (cur_value == req_value)
+  if (*futex == req_value)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Need to wait\n");
 
@@ -61,16 +65,39 @@ ERR_CODE futex_wait(uint64_t phys_addr, int32_t cur_value, int32_t req_value)
     klib_synch_spinlock_lock(map_ops_lock);
     task_continue_this_thread();
 
-    if(!map_contains(*futex_map, phys_addr))
+    if(!map_contains(*futex_map, futex_addr_l))
     {
-      futex_map->insert({phys_addr, std::vector<task_thread *>()});
+      futex_map->insert({futex_addr_l, std::vector<task_thread *>()});
     }
 
-    std::vector<task_thread *> &v = (*futex_map)[phys_addr];
+    std::vector<task_thread *> &v = (*futex_map)[futex_addr_l];
     v.push_back(task_get_cur_thread());
 
     task_get_cur_thread()->stop_thread();
     klib_synch_spinlock_unlock(map_ops_lock);
+
+    if (*futex != req_value)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Wake this thread, just in case\n");
+      klib_synch_spinlock_lock(map_ops_lock);
+      std::vector<task_thread *>::iterator it = std::find(v.begin(), v.end(), task_get_cur_thread());
+
+      if (it != v.end())
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Thread hasn't been woken externally\n");
+        v.erase(it);
+
+        if (v.empty())
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "No more waits on this mutex\n");
+          futex_map->erase(futex_addr_l);
+        }
+      }
+
+      klib_synch_spinlock_unlock(map_ops_lock);
+      task_get_cur_thread()->start_thread();
+    }
+
     task_resume_scheduling();
     task_yield();
   }
@@ -87,24 +114,25 @@ ERR_CODE futex_wait(uint64_t phys_addr, int32_t cur_value, int32_t req_value)
 /// @param phys_addr Physical address of the futex to wake.
 ///
 /// @return A suitable error code.
-ERR_CODE futex_wake(uint64_t phys_addr)
+ERR_CODE futex_wake(volatile int32_t *futex)
 {
   ERR_CODE result{ERR_CODE::NO_ERROR};
+  uint64_t futex_addr_l{reinterpret_cast<uint64_t>(futex)};
 
   KL_TRC_ENTRY;
 
   klib_synch_spinlock_lock(map_ops_lock);
 
-  if (map_contains(*futex_map, phys_addr))
+  if (map_contains(*futex_map, futex_addr_l))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Found physical address, wake any sleepers\n");
 
-    for(task_thread *sleeper : (*futex_map)[phys_addr])
+    for(task_thread *sleeper : (*futex_map)[futex_addr_l])
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Wake thread with address: ", sleeper, "\n");
       sleeper->start_thread();
     }
-    futex_map->erase(phys_addr);
+    futex_map->erase(futex_addr_l);
   }
   else
   {

@@ -126,6 +126,10 @@ def main_build_script(linux_build, config_env):
     #ncurses_prog_obj = default_build_script(ncurses_deps, "ncurses", user_mode_env, "ncurses_prog")
     #ncurses_install_obj = user_mode_env.Install(paths.sys_image_root, ncurses_prog_obj)
 
+    ot_deps = dependencies.online_tests
+    ot_prog_obj = default_build_script(ot_deps, "online_tests", user_mode_env, "ot_prog")
+    ot_install_obj = user_mode_env.Install(paths.sys_image_root, ot_prog_obj)
+
     # Install and other simple targets
     kernel_env.Alias('install-headers', ui_folder)
     Default(kernel_install_obj)
@@ -135,6 +139,7 @@ def main_build_script(linux_build, config_env):
     Default(list_install_obj)
     #Default(ncurses_install_obj)
     Default(api_install_obj)
+    Default(ot_install_obj)
 
   # Unit test program
   test_script_env = build_default_env(linux_build)

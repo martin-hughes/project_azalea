@@ -94,3 +94,8 @@ main_tests = [
     '#kernel/system_tree/fs/proc/SConscript',
     '#kernel/system_tree/fs/mem/SConscript',
   ]
+
+online_tests = [
+    '#user/online_test/SConscript',
+    '#external/SConscript-GoogleTest',
+]

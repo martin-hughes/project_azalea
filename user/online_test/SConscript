@@ -1,0 +1,20 @@
+# Azalea test suite for tests that can only run on a live kernel.
+
+Import('env')
+
+obj = [ ]
+
+files = [
+  "online_test.cpp",
+
+  "fake_functions.cpp",
+
+  "futex/futex_1.cpp",
+
+  "pthread/pthread_create.cpp",
+]
+
+for f in files:
+  obj = obj + [ env.Object(f) ]
+
+Return ("obj")

@@ -56,8 +56,7 @@ ERR_CODE syscall_futex_op(volatile int32_t *futex,
                           volatile int32_t *futex_2,
                           uint32_t v3)
 {
-  ERR_CODE result;
-  uint64_t phys_addr;
+  ERR_CODE result{ERR_CODE::NO_ERROR};
   int32_t cur_value;
 
   KL_TRC_ENTRY;
@@ -72,9 +71,8 @@ ERR_CODE syscall_futex_op(volatile int32_t *futex,
 
   cur_value = *futex;
   void *futex_v = reinterpret_cast<void *>(const_cast<int32_t *>(futex));
-  phys_addr = reinterpret_cast<uint64_t>(mem_get_phys_addr(futex_v));
 
-  if (!phys_addr)
+  if (!mem_get_phys_addr(futex_v))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Not a mapped physical address\n");
     result = ERR_CODE::INVALID_PARAM;
@@ -87,11 +85,11 @@ ERR_CODE syscall_futex_op(volatile int32_t *futex,
     switch (op)
     {
     case FUTEX_OP::FUTEX_WAIT:
-      result = futex_wait(phys_addr, cur_value, req_value);
+      result = futex_wait(futex, req_value);
       break;
 
     case FUTEX_OP::FUTEX_WAKE:
-      result = futex_wake(phys_addr);
+      result = futex_wake(futex);
       break;
 
     case FUTEX_OP::FUTEX_REQUEUE:

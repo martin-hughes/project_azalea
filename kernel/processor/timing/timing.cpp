@@ -60,7 +60,7 @@ void time_sleep_process(uint64_t wait_in_ns)
   KL_TRC_TRACE(TRC_LVL::FLOW, "Sleep thread ", t, " for ", wait_in_ns, " ns.\n");
   uint64_t cur_time = time_get_system_timer_count(true);
   t->wake_thread_after = cur_time + wait_in_ns;
-  kl_trc_trace(TRC_LVL::FLOW, "Wake after time: ", t->wake_thread_after, "\n");
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Wake after time: ", t->wake_thread_after, "\n");
   t->permit_running = false;
   task_yield();
 
