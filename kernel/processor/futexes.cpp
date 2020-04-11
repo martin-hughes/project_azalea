@@ -42,9 +42,7 @@ void futex_maybe_init()
 
 /// @brief Wait for the requested futex.
 ///
-/// @param phys_addr Physical address of the futex being waited on
-///
-/// @param cur_value Current value of the futex as retrieved by atomic operation
+/// @param futex The futex being waited on
 ///
 /// @param req_value The value of the desired futex state given in the system call.
 ///
@@ -111,7 +109,7 @@ ERR_CODE futex_wait(volatile int32_t *futex, int32_t req_value)
 
 /// @brief Wake the requested futex
 ///
-/// @param phys_addr Physical address of the futex to wake.
+/// @param futex The futex to wake.
 ///
 /// @return A suitable error code.
 ERR_CODE futex_wake(volatile int32_t *futex)
