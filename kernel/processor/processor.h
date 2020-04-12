@@ -84,6 +84,10 @@ public:
 
   /// Store handles and the objects they correlate to.
   object_manager proc_handles;
+
+  kernel_spinlock map_ops_lock{0}; ///< Lock protecting the futex map, below.
+
+  std::map<uint64_t, std::vector<task_thread *>> futex_map; ///< Map of all futexes waiting in this process.
 };
 
 /// @brief Class to hold information about a thread.

@@ -61,8 +61,6 @@ ERR_CODE syscall_futex_op(volatile int32_t *futex,
 
   KL_TRC_ENTRY;
 
-  futex_maybe_init();
-
   if (!SYSCALL_IS_UM_ADDRESS(const_cast<int32_t *>(futex)))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid futex address\n");

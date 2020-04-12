@@ -13,33 +13,6 @@
 #include <vector>
 #include <algorithm>
 
-namespace
-{
-  kernel_spinlock map_ops_lock{0}; ///< Lock protecting the futex map, below.
-  std::map<uint64_t, std::vector<task_thread *>> *futex_map{nullptr}; ///< Map of all futexes known in the system.
-}
-
-/// @brief If needed, initialize the futex system.
-///
-void futex_maybe_init()
-{
-  KL_TRC_ENTRY;
-
-  if(!futex_map)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Maybe construct system futex map\n");
-    klib_synch_spinlock_lock(map_ops_lock);
-    if (!futex_map)
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Really create system futex map\n");
-      futex_map = new std::map<uint64_t, std::vector<task_thread *>>();
-    }
-    klib_synch_spinlock_unlock(map_ops_lock);
-  }
-
-  KL_TRC_EXIT;
-}
-
 /// @brief Wait for the requested futex.
 ///
 /// @param futex The futex being waited on
@@ -51,6 +24,10 @@ ERR_CODE futex_wait(volatile int32_t *futex, int32_t req_value)
 {
   ERR_CODE result{ERR_CODE::NO_ERROR};
   uint64_t futex_addr_l{reinterpret_cast<uint64_t>(futex)};
+  task_thread *cur_thread = task_get_cur_thread();
+  ASSERT(cur_thread);
+  std::shared_ptr<task_process> cur_process{cur_thread->parent_process};
+  ASSERT(cur_process);
 
   KL_TRC_ENTRY;
 
@@ -60,25 +37,25 @@ ERR_CODE futex_wait(volatile int32_t *futex, int32_t req_value)
 
     // This sequence of continuing execution even after calling stop_thread() is similar to that used for mutexes and
     // semaphores.
-    klib_synch_spinlock_lock(map_ops_lock);
+    klib_synch_spinlock_lock(cur_process->map_ops_lock);
     task_continue_this_thread();
 
-    if(!map_contains(*futex_map, futex_addr_l))
+    if(!map_contains(cur_process->futex_map, futex_addr_l))
     {
-      futex_map->insert({futex_addr_l, std::vector<task_thread *>()});
+      cur_process->futex_map.insert({futex_addr_l, std::vector<task_thread *>()});
     }
 
-    std::vector<task_thread *> &v = (*futex_map)[futex_addr_l];
-    v.push_back(task_get_cur_thread());
+    std::vector<task_thread *> &v = cur_process->futex_map[futex_addr_l];
+    v.push_back(cur_thread);
 
-    task_get_cur_thread()->stop_thread();
-    klib_synch_spinlock_unlock(map_ops_lock);
+    cur_thread->stop_thread();
+    klib_synch_spinlock_unlock(cur_process->map_ops_lock);
 
     if (*futex != req_value)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Wake this thread, just in case\n");
-      klib_synch_spinlock_lock(map_ops_lock);
-      std::vector<task_thread *>::iterator it = std::find(v.begin(), v.end(), task_get_cur_thread());
+      klib_synch_spinlock_lock(cur_process->map_ops_lock);
+      std::vector<task_thread *>::iterator it = std::find(v.begin(), v.end(), cur_thread);
 
       if (it != v.end())
       {
@@ -88,12 +65,12 @@ ERR_CODE futex_wait(volatile int32_t *futex, int32_t req_value)
         if (v.empty())
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "No more waits on this mutex\n");
-          futex_map->erase(futex_addr_l);
+          cur_process->futex_map.erase(futex_addr_l);
         }
       }
 
-      klib_synch_spinlock_unlock(map_ops_lock);
-      task_get_cur_thread()->start_thread();
+      klib_synch_spinlock_unlock(cur_process->map_ops_lock);
+      cur_thread->start_thread();
     }
 
     task_resume_scheduling();
@@ -116,21 +93,25 @@ ERR_CODE futex_wake(volatile int32_t *futex)
 {
   ERR_CODE result{ERR_CODE::NO_ERROR};
   uint64_t futex_addr_l{reinterpret_cast<uint64_t>(futex)};
+  task_thread *cur_thread = task_get_cur_thread();
+  ASSERT(cur_thread);
+  std::shared_ptr<task_process> cur_process{cur_thread->parent_process};
+  ASSERT(cur_process);
 
   KL_TRC_ENTRY;
 
-  klib_synch_spinlock_lock(map_ops_lock);
+  klib_synch_spinlock_lock(cur_process->map_ops_lock);
 
-  if (map_contains(*futex_map, futex_addr_l))
+  if (map_contains(cur_process->futex_map, futex_addr_l))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Found physical address, wake any sleepers\n");
 
-    for(task_thread *sleeper : (*futex_map)[futex_addr_l])
+    for(task_thread *sleeper : cur_process->futex_map[futex_addr_l])
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Wake thread with address: ", sleeper, "\n");
       sleeper->start_thread();
     }
-    futex_map->erase(futex_addr_l);
+    cur_process->futex_map.erase(futex_addr_l);
   }
   else
   {
@@ -138,7 +119,7 @@ ERR_CODE futex_wake(volatile int32_t *futex)
     result = ERR_CODE::NOT_FOUND;
   }
 
-  klib_synch_spinlock_unlock(map_ops_lock);
+  klib_synch_spinlock_unlock(cur_process->map_ops_lock);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;

@@ -8,7 +8,5 @@
 #include "stdint.h"
 #include "user_interfaces/error_codes.h"
 
-void futex_maybe_init();
-
 ERR_CODE futex_wait(volatile int32_t *futex, int32_t req_value);
 ERR_CODE futex_wake(volatile int32_t *futex);
