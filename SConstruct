@@ -29,6 +29,7 @@ def main_build_script(linux_build, config_env):
       '-U _LINUX',
       '-U __linux__',
       '-D __AZALEA__',
+      '-D __AZ_KERNEL__',
       '-D KL_TRACE_BY_SERIAL_PORT',
 
       # Uncomment this define to include a serial port based terminal as well as the normal VGA/keyboard one. This is
