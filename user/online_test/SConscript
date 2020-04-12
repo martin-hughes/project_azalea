@@ -12,6 +12,7 @@ files = [
   "futex/futex_1.cpp",
 
   "pthread/pthread_create.cpp",
+  "pthread/pthread_mutex.cpp",
 ]
 
 for f in files:
