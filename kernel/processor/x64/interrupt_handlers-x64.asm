@@ -9,7 +9,6 @@ EXTERN proc_handle_interrupt
 GLOBAL asm_proc_page_fault_handler
 EXTERN proc_page_fault_handler
 asm_proc_page_fault_handler:
-    cli
     pushf
     push rax
     push rbx

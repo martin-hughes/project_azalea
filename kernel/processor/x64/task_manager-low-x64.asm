@@ -16,7 +16,6 @@ extern end_of_irq_ack_fn
 ;
 ; This function should be kept the same as asm_task_switch_interrupt_noirq, below.
 asm_task_switch_interrupt_irq:
-    cli
     push rax
     push rbx
     push rcx
@@ -90,7 +89,6 @@ asm_task_switch_interrupt_irq:
 ; An identical copy of asm_task_switch_interrupt_irq without the IRQ acknowledgement. This function should be kept the
 ; same as the above function
 asm_task_switch_interrupt_noirq:
-    cli
     push rax
     push rbx
     push rcx

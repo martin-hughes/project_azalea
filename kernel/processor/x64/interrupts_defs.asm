@@ -30,7 +30,6 @@ end_of_irq_ack_fn_wrapper:
 
 ; A default handler for interrupts. Simply calls a named function with the numerical argument given.
 %macro DEF_INT_HANDLER 2
-    cli
     pushf
     push rax
     push rbx
@@ -78,7 +77,6 @@ end_of_irq_ack_fn_wrapper:
 
 ; A default handler for interrupts. Simply calls a named function with the numerical argument given.
 %macro DEF_EXCEPTION_HANDLER 2
-    cli
     pushf
     push rax
     push rbx
@@ -128,7 +126,6 @@ end_of_irq_ack_fn_wrapper:
 %endmacro
 
 %macro DEF_ERR_CODE_INT_HANDLER 1
-    cli
     pushf
     push rax
     push rbx
@@ -177,7 +174,6 @@ end_of_irq_ack_fn_wrapper:
 %endmacro
 
 %macro DEF_IRQ_HANDLER 2
-    cli
     pushf
     push rax
     push rbx
