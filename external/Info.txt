@@ -10,17 +10,20 @@ Google Test:
 Provided on GitHub at https://github.com/google/googletest. Permissively licensed - see
 googletest/googletest/LICENSE.txt for details.
 
-GRUB:
------
-
-Parts of GRUB are distributed in binary form contained within the example disk image extras/example_disc_image.vdi.
-GRUB is provided under the terms of the GPL version 3. No changes were made to the code, the source code for GRUB is
-available on the GRUB website at https://www.gnu.org/software/grub/
-
-The full GPLv3 licence can be read at https://www.gnu.org/licenses/gpl.html.
-
 libtmt:
 -------
 
 Provided on github at https://github.com/deadpixi/libtmt and forked at https://github.com/martin-hughes/libtmt. The
 licence is given in the header of each file, and includes a requirement for a copyright notice in binary distributions.
+
+GRUB:
+-----
+
+Parts of GRUB were previously distributed in binary form contained within the now deleted example disk image
+extras/example_disc_image.vdi. This has been replaced by instructions for generating disk images manually, so it is no
+longer necessary to distribute GRUB with this project.
+
+GRUB was provided under the terms of the GPL version 3. No changes were made to the code, the source code for GRUB is
+available on the GRUB website at https://www.gnu.org/software/grub/
+
+The full GPLv3 licence can be read at https://www.gnu.org/licenses/gpl.html.
