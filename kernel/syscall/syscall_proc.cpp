@@ -246,7 +246,7 @@ ERR_CODE syscall_destroy_process(GEN_HANDLE proc_handle)
     else
     {
       cur_thread->parent_process->proc_handles.remove_object(proc_handle);
-      proc_obj->destroy_process();
+      proc_obj->destroy_process(0); // Assume zero.
       result = ERR_CODE::NO_ERROR;
     }
   }
@@ -262,7 +262,10 @@ ERR_CODE syscall_destroy_process(GEN_HANDLE proc_handle)
 /// All threads within the process will be destroyed and process will end immediately. This is not recommended - if any
 /// threads are holding locks they will not be released. The recommended exit strategy is to exit all threads, which
 /// will cause the process to exit automatically.
-void syscall_exit_process()
+///
+/// @param exit_code The return code for this process, which can be read by other processes still holding an open
+///                  handle for this process.
+void syscall_exit_process(uint64_t exit_code)
 {
   KL_TRC_ENTRY;
 
@@ -275,7 +278,7 @@ void syscall_exit_process()
   this_thread = task_get_cur_thread();
   this_proc = this_thread->parent_process.get();
 
-  this_proc->destroy_process();
+  this_proc->destroy_process(exit_code);
 
   // This panic should never hit because destroy_process() should kill this process and never return.
   panic("Reached end of syscall_exit_process!");

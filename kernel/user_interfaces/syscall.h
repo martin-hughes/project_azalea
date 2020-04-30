@@ -73,7 +73,7 @@ ERR_CODE syscall_set_startup_params(GEN_HANDLE proc_handle, uint64_t argc, uint6
 ERR_CODE syscall_start_process(GEN_HANDLE proc_handle);
 ERR_CODE syscall_stop_process(GEN_HANDLE proc_handle);
 ERR_CODE syscall_destroy_process(GEN_HANDLE proc_handle);
-void syscall_exit_process();
+void syscall_exit_process(uint64_t return_code);
 
 ERR_CODE syscall_create_thread(void (*entry_point)(), GEN_HANDLE *thread_handle, uint64_t param, void *stack_ptr);
 ERR_CODE syscall_start_thread(GEN_HANDLE thread_handle);

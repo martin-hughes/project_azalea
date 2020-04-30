@@ -22,20 +22,40 @@ namespace
   /// @param r_rsp Value of RSP in interrupted process.
   void default_handler(uint64_t k_rsp, uint64_t r_rip, uint64_t r_rsp, const char *error_string)
   {
-    task_thread *cur_thread = task_get_cur_thread();
+    KL_TRC_ENTRY;
 
-    if (!cur_thread || cur_thread->parent_process->kernel_mode || (r_rip > 0x8000000000000000ULL))
+    task_thread *cur_thread = task_get_cur_thread();
+    std::shared_ptr<task_process> parent;
+    if (cur_thread)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Save parent process\n");
+      parent = cur_thread->parent_process;
+    }
+
+    if (!cur_thread || parent->kernel_mode || (r_rip > 0x8000000000000000ULL))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Kernel space process fault: ", error_string, "\n");
       KL_TRC_TRACE(TRC_LVL::FLOW, "RIP: ", r_rip, ", RSP: ", r_rsp, "\n");
 
       panic(error_string, true, k_rsp, r_rip, r_rsp);
     }
+    else if (parent)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "User-mode process fault in ", parent.get(), ". Cause: ", error_string, "\n");
+      parent->stop_process();
+      parent->proc_status = OPER_STATUS::FAILED;
+      parent->exit_code = r_rip;
+      parent->add_to_dead_list();
+      task_yield();
+      panic("Failed to abort faulty process");
+    }
     else
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "User-mode process fault: ", error_string, "\n");
-      INCOMPLETE_CODE("User mode process faults\n");
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Unidentified process failure\n");
+      panic("Failure in unknown process", true, k_rsp, r_rip, r_rsp);
     }
+
+    KL_TRC_EXIT;
   }
 }
 

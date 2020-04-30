@@ -47,6 +47,29 @@ struct time_expanded
 };
 
 /**
+ * @brief A list of possible operational statuses.
+ */
+enum AZALEA_ENUM_CLASS OPER_STATUS_T
+{
+  ENUM_TAG(OPER, OK), /**< Object is running correctly. */
+  ENUM_TAG(OPER, FAILED), /**< Device was started but then failed, or cannot be initialised. */
+  /** ENUM_TAG(OPER, NOT_PRESENT), */ /**< Device is not actually present in the system. */
+  ENUM_TAG(OPER, RESET), /**< Device is resetting. */
+  ENUM_TAG(OPER, STOPPED), /**< Device is OK but is deliberately not available. */
+  ENUM_TAG(OPER, STARTING), /**< Device is initialising. */
+  ENUM_TAG(OPER, STOPPING), /**< Device is stopping. */
+  ENUM_TAG(OPER, UNKNOWN), /**< Device has not reported a valid status. */
+};
+
+/**
+ * @cond
+ */
+AZALEA_RENAME_ENUM(OPER_STATUS);
+/**
+ * @endcond
+ */
+
+/**
  * @brief Used to return the properties of an object in System Tree.
  */
 struct object_properties
@@ -56,6 +79,9 @@ struct object_properties
   bool readable; /**< Does the object expose a readable-type interface? */
   bool writable; /**< Does the object expose a writable-type interface? */
   bool is_file; /**< Does the object expose a file-like interface? */
+
+  OPER_STATUS oper_status; /**< Operational status of this object, if known */
+  uint64_t additional_status; /**< An additional status code given by this object, if known */
 };
 
 /**

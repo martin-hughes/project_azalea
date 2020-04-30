@@ -906,14 +906,7 @@ std::pair<ERR_CODE, uint64_t> fat_filesystem::num_children()
   KL_TRC_ENTRY;
 
   KL_TRC_EXIT;
-  if (root_directory)
-  {
-    return root_directory->num_children();
-  }
-  else
-  {
-    return {ERR_CODE::STORAGE_ERROR, 0};
-  }
+  return get_root_directory()->num_children();
 }
 
 std::pair<ERR_CODE, std::vector<std::string>> fat_filesystem::enum_children(std::string start_from, uint64_t max_count)
@@ -922,12 +915,5 @@ std::pair<ERR_CODE, std::vector<std::string>> fat_filesystem::enum_children(std:
   KL_TRC_ENTRY;
 
   KL_TRC_EXIT;
-  if (root_directory)
-  {
-    return root_directory->enum_children(start_from, max_count);
-  }
-  else
-  {
-    return {ERR_CODE::STORAGE_ERROR, std::vector<std::string>() };
-  }
+  return get_root_directory()->enum_children(start_from, max_count);
 }

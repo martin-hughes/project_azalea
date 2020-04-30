@@ -12,6 +12,7 @@ EXTERN asm_ap_x86_entry
 ; startup vector in response to the processor receiving a STARTUP IPI message. It configures a trivial 32-bit GDT and
 ; jumps to 32-bit code ASAP.
 asm_ap_trampoline_start:
+  cli
 
 ; There's no reason why CS should be anything troublesome, but just in case.
   jmp 0:dword begin_set_A20

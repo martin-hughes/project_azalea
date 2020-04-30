@@ -75,6 +75,9 @@ extern "C" uint64_t asm_ap_trampoline_end;
 /// The physical address of the start of the trampoline code given to the AP.
 extern "C" uint64_t asm_ap_trampoline_addr;
 
+/// The address of the next stack to use during AP startup.
+extern "C" uint64_t asm_next_startup_stack;
+
 /// @brief Prepare the system to start multi-processing
 ///
 /// Counts up the others processors and gathers useful information, but doesn't signal them to start just yet.
@@ -96,6 +99,7 @@ void proc_mp_init()
   retval = AcpiGetTable((ACPI_STRING)table_name, 0, (ACPI_TABLE_HEADER **)&madt_table);
   ASSERT(retval == AE_OK);
   ASSERT(madt_table->Header.Length > sizeof(acpi_table_madt));
+  ASSERT(asm_next_startup_stack == 0);
 
   // Assume that the number of processors is equal to the number of LAPIC tables.
   processor_count = 0;
@@ -136,6 +140,11 @@ void proc_mp_init()
       proc_info_block[procs_saved].processor_id = procs_saved;
       proc_info_block[procs_saved].processor_running = false;
       proc_info_block[procs_saved].platform_data.lapic_id = lapic_table->Id;
+      proc_info_block[procs_saved].platform_data.kernel_stack_addr = proc_allocate_stack(true);
+      proc_info_block[procs_saved].platform_data.ist_1_addr = proc_allocate_stack(true);
+      proc_info_block[procs_saved].platform_data.ist_2_addr = proc_allocate_stack(true);
+      proc_info_block[procs_saved].platform_data.ist_3_addr = proc_allocate_stack(true);
+      proc_info_block[procs_saved].platform_data.ist_4_addr = proc_allocate_stack(true);
 
       KL_TRC_TRACE(TRC_LVL::EXTRA, "Our processor ID", procs_saved, "\n");
       KL_TRC_TRACE(TRC_LVL::EXTRA, "ACPI proc ID", (uint64_t)lapic_table->ProcessorId, "\n");
@@ -167,7 +176,7 @@ void proc_mp_init()
   }
 
   // Recreate the GDT so that it is long enough to contain TSS descriptors for all processors
-  proc_recreate_gdt(processor_count);
+  proc_recreate_gdt(processor_count, proc_info_block);
 
   // Copy the real mode startup point to a suitable location = 0x1000 should be good (SIPI vector number 1).
   // Before doing this, remember that there are a couple of absolute JMP instructions that need fixing up. The first
@@ -193,6 +202,9 @@ void proc_mp_init()
     }
     else
     {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Boot processor\n");
+      asm_next_startup_stack = reinterpret_cast<uint64_t>(proc_info_block[i].platform_data.kernel_stack_addr);
+
       // Boot that processor. To do this, send an INIT IPI, wait for 10ms, then send the STARTUP IPI. Make sure it
       // starts within a reasonable timeframe.
       KL_TRC_TRACE(TRC_LVL::FLOW, "Send INIT.\n");
@@ -256,6 +268,7 @@ void proc_mp_ap_startup()
   proc_load_tss(proc_mp_this_proc_id());
   proc_conf_local_int_controller();
 
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Proc num ", proc_num, " started\n");
   proc_info_block[proc_num].processor_running = true;
 
   asm_proc_start_interrupts();
@@ -283,7 +296,7 @@ uint32_t proc_mp_this_proc_id()
 
   lapic_id = proc_x64_apic_get_local_id();
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Looking for LAPIC ID", lapic_id, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Looking for LAPIC ID ", lapic_id, "\n");
 
   if (processor_count > 0)
   {
@@ -306,7 +319,7 @@ uint32_t proc_mp_this_proc_id()
   }
 
   ASSERT(apic_id_found);
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Processor ID", proc_id, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Processor ID: ", proc_id, "\n");
 
   KL_TRC_EXIT;
 

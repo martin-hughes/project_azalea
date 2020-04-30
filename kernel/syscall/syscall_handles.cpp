@@ -308,6 +308,7 @@ ERR_CODE syscall_get_object_properties(GEN_HANDLE handle,
   std::shared_ptr<ISystemTreeLeaf> leaf;
   std::shared_ptr<IHandledObject> obj;
   task_thread *cur_thread = task_get_cur_thread();
+  std::shared_ptr<task_process> proc;
 
   KL_TRC_ENTRY;
 
@@ -337,7 +338,8 @@ ERR_CODE syscall_get_object_properties(GEN_HANDLE handle,
       KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieve object\n");
       obj = cur_thread->parent_process->proc_handles.retrieve_handled_object(handle);
       leaf = std::dynamic_pointer_cast<ISystemTreeLeaf>(obj);
-      if (leaf == nullptr)
+      proc = std::dynamic_pointer_cast<task_process>(obj);
+      if ((leaf == nullptr) && (proc == nullptr))
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid handle\n");
         result = ERR_CODE::INVALID_PARAM;
@@ -358,6 +360,14 @@ ERR_CODE syscall_get_object_properties(GEN_HANDLE handle,
       props->is_leaf = !CONV_TEST(leaf, ISystemTreeBranch);
       props->readable = CONV_TEST(leaf, IReadable);
       props->writable = CONV_TEST(leaf, IWritable);
+      props->oper_status = OPER_STATUS::UNKNOWN;
+      if (proc)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Get additional status for processes\n");
+
+        props->oper_status = proc->proc_status;
+        props->additional_status = proc->exit_code;
+      }
       break;
 
     case ERR_CODE::NOT_FOUND:

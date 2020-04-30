@@ -92,7 +92,7 @@ TEST(ProcessorTests, WaitObjects)
   proc_a->stop_process();
   task_get_next_thread();
   test_only_set_cur_thread(nullptr);
-  proc_a->destroy_process();
+  proc_a->destroy_process(0);
 
   proc_a = nullptr;
   sys_proc = nullptr;

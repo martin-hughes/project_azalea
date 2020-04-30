@@ -6,13 +6,9 @@ SEGMENT .pretext
 EXTERN proc_mp_ap_startup
 GLOBAL asm_proc_mp_ap_startup
 asm_proc_mp_ap_startup:
-  ; Set up a suitable stack, then call the main code.
-  mov rax, temp_64_bit_stack_end
-  and rax, qword 0xFFFFFFFFFFFFFFF0
-
-  ; Make sure stack pointer is actually in top half, since bottom half will be unmapped shortly.
-  mov rbx, qword 0xFFFFFFFF00000000
-  add rax, rbx
+  ; Set up a suitable stack, then call the main code. Remember that this is linked lower-half, but the main kernel code
+  ; is linked higher half, so this value will not be accessible after the lower-half is unmapped.
+  mov rax, [asm_next_startup_stack]
   mov rsp, rax
 
   mov rbp, 0
@@ -25,12 +21,6 @@ return_pt:
   jmp return_pt
 
 ALIGN 16
-temp_64_bit_stack:
-  ; This only needs to be small - it is needed for as long as it takes to finish proc_mp_ap_startup, since after that
-  ; the stack will either be the one in use when an interrupt hits, or the one given by the TR.
-
-  times 4096 db 0
-
-ALIGN 16
-temp_64_bit_stack_end:
-  times 16 db 0
+GLOBAL asm_next_startup_stack
+asm_next_startup_stack:
+  times 8 db 0

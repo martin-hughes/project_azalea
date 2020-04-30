@@ -168,7 +168,7 @@ void kernel_start() throw ()
 
   ASSERT(system_tree()->get_child("\\root", leaf) == ERR_CODE::NO_ERROR);
 
-  initial_proc = proc_load_elf_file("\\root\\initprog");
+  initial_proc = proc_load_elf_file("\\root\\INITPROG");
   setup_task_parameters(initial_proc.get());
   ASSERT(initial_proc != nullptr);
 

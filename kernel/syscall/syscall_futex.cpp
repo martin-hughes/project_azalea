@@ -2,11 +2,7 @@
 /// @brief Synchronization primitives part of the system call interface.
 //
 // Known defects:
-// - All memory is currently RW, but when RO mappings become a thing we need to check for it before doing futex ops on
-//   it.
-// - This file uses task_thread * so what happens if the thread is deleted in the meantime?
-// - The 'robust futex' concept isn't included yet, so what happens if a physical address is unused?
-// - Is the way I retrieve the futex value and then wait a while really the correct way?
+// - None at present
 
 //#define ENABLE_TRACING
 

@@ -132,6 +132,18 @@ void task_thread::destroy_thread()
       task_thread_cycle_remove(this);
     }
 
+    if (this->parent_process->in_dead_list)
+    {
+      // This flag means the parent process has hit a fault and is about to be asynchronously terminated. It cannot
+      // have been set in this thread, since we'd never reach this point in the code, as the thread would have
+      // terminated. So we're attempting to destroy a thread object that not the thread currently executing. If this
+      // flag is set, and we've managed to acquire the cycle lock then we know the process must already be in the dead
+      // process list, so just let that procedure take over.
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Await natural thread termination\n");
+      KL_TRC_EXIT;
+      return;
+    }
+
     this->parent_process->thread_ending(this);
     ASSERT(this->synch_list_item->item != nullptr);
     this->process_list_item->item = nullptr;

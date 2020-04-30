@@ -97,6 +97,7 @@ bool is_command_char(char c)
 void execute_command(char *command)
 {
   GEN_HANDLE proc_handle;
+  object_properties props;
 
 #ifdef OUTPUT_PARSE_RESULTS
   printf("Execute: %s\n", command);
@@ -143,6 +144,15 @@ void execute_command(char *command)
         case ERR_CODE::NO_ERROR:
           //SC_DEBUG_MSG("Program running\n");
           syscall_wait_for_object(proc_handle, SC_MAX_WAIT);
+
+          if (syscall_get_object_properties(proc_handle, nullptr, 0, &props) == ERR_CODE::NO_ERROR)
+          {
+            printf("Exit code: %lu\n", props.additional_status);
+          }
+          else
+          {
+            printf("Didn't receive exit code\n");
+          }
           syscall_close_handle(proc_handle);
           break;
 

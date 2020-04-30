@@ -2,6 +2,7 @@
 /// @brief x64-specific part of the task manager
 
 //#define ENABLE_TRACING
+//#define TASK_SWAP_SANITY_CHECKS
 
 #include "klib/klib.h"
 
@@ -25,6 +26,7 @@ namespace
 
   // Setting one const equal to another of a different size seems to confuse the linker...!
   const uint32_t TM_INTERRUPT_NUM = 32; //(const uint32_t) PROC_IRQ_BASE;
+  const uint32_t TM_INT_INTERRUPT_NUM = 48; ///< A copy of the task mananger interrupt without the IRQ acknowledgement.
 }
 
 /// @brief Create a new x64 execution context
@@ -266,6 +268,24 @@ task_x64_exec_context *task_int_swap_task(uint64_t stack_addr, uint64_t cr3_valu
 
     current_context->fs_base = proc_read_msr(PROC_X64_MSRS::IA32_FS_BASE);
     current_context->gs_base = proc_read_msr(PROC_X64_MSRS::IA32_GS_BASE);
+
+#ifdef TASK_SWAP_SANITY_CHECKS
+    ASSERT((reinterpret_cast<uint64_t>(current_context->cr3_value) & 0xFFFFFFFF00000000) == 0);
+    ASSERT(current_context->saved_stack.proc_cs < 100);
+    ASSERT(current_context->saved_stack.proc_ss < 100);
+    if (current_thread->parent_process->kernel_mode)
+    {
+      ASSERT((current_context->fs_base == 0) || (current_context->fs_base > 0xFFFFFFFF00000000));
+      ASSERT((current_context->gs_base == 0) || (current_context->gs_base > 0xFFFFFFFF00000000));
+      ASSERT(current_context->saved_stack.proc_rip > 0xFFFFFFFF00000000);
+      ASSERT(current_context->saved_stack.proc_rsp > 0xFFFFFFFF00000000);
+    }
+    else
+    {
+      ASSERT((current_context->fs_base == 0) || (current_context->fs_base < 0xFFFFFFFF00000000));
+      ASSERT((current_context->gs_base == 0) || (current_context->gs_base < 0xFFFFFFFF00000000));
+    }
+#endif
   }
   else
   {
@@ -318,7 +338,8 @@ void task_install_task_switcher()
 {
   KL_TRC_ENTRY;
 
-  proc_configure_idt_entry(TM_INTERRUPT_NUM, 0, (void *)asm_task_switch_interrupt, 3);
+  proc_configure_idt_entry(TM_INTERRUPT_NUM, 0, (void *)asm_task_switch_interrupt_irq, 3);
+  proc_configure_idt_entry(TM_INT_INTERRUPT_NUM, 0, (void *)asm_task_switch_interrupt_noirq, 4);
   asm_proc_install_idt();
 
   KL_TRC_EXIT;
@@ -342,8 +363,9 @@ void task_yield()
   KL_TRC_ENTRY;
 
   // Signal ourselves with a task-switching interrupt and that'll allow the task manager to select a new thread to run
-  // (which might be this one)
-  proc_send_ipi(0, PROC_IPI_SHORT_TARGET::SELF, PROC_IPI_INTERRUPT::FIXED, TM_INTERRUPT_NUM, true);
+  // (which might be this one).
+  static_assert(TM_INT_INTERRUPT_NUM == 0x30, "Check task manager interrupt");
+  asm("int $0x30");
 
   KL_TRC_EXIT;
 }
@@ -374,12 +396,3 @@ task_thread *task_get_cur_thread()
 
   return ret_thread;
 }
-
-
-
-
-
-
-
-
-

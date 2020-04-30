@@ -13,6 +13,21 @@ struct processor_info_x64
   /// The ID of the local APIC for this processor. This allows the system to determine which processor it is running
   /// on, and is also used as the address when signalling other processors.
   uint32_t lapic_id;
+
+  /// Starting addresses of the kernel stack
+  void *kernel_stack_addr;
+
+  /// Starting address of the stack used for interrupts handled by interrupt stack table entry 1.
+  void *ist_1_addr;
+
+  /// Starting address of the stack used for interrupts handled by interrupt stack table entry 2.
+  void *ist_2_addr;
+
+  /// Starting address of the stack used for interrupts handled by interrupt stack table entry 3.
+  void *ist_3_addr;
+
+  /// Starting address of the stack used for interrupts handled by interrupt stack table entry 4.
+  void *ist_4_addr;
 };
 
 typedef processor_info_generic<processor_info_x64> processor_info; ///< Processor info block on x64

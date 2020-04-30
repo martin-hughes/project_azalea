@@ -143,8 +143,8 @@ TEST_F(IPCTests, InterprocessMessages1)
 
   test_only_set_cur_thread(nullptr);
 
-  proc_a->destroy_process();
-  proc_b->destroy_process();
+  proc_a->destroy_process(0);
+  proc_b->destroy_process(0);
 
   delete[] buffer;
   delete[] rcv_buffer;

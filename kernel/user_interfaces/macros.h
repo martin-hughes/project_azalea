@@ -13,6 +13,7 @@
 #define AZALEA_RENAME_ENUM(X) typedef X ## _T X
 #define INIT(x) { x }
 #define OPT_STRUCT
+#define ENUM_TAG(x, y) y
 
 #else
 
@@ -20,6 +21,7 @@
 #define AZALEA_RENAME_ENUM(X) typedef enum X ## _T X
 #define INIT(x)
 #define OPT_STRUCT struct
+#define ENUM_TAG(x, y) x ## y
 
 #endif
 
