@@ -258,6 +258,7 @@ void terms::vga::handle_private_msg(std::unique_ptr<msg::root_msg> &message)
 void terms::vga::handle_keyboard_msg(uint64_t msg_id, keypress_msg &key_msg)
 {
   char pc;
+  char offset{0};
   KL_TRC_ENTRY;
 
   ASSERT((msg_id == SM_KEYDOWN) || (msg_id == SM_KEYUP));
@@ -287,10 +288,16 @@ void terms::vga::handle_keyboard_msg(uint64_t msg_id, keypress_msg &key_msg)
         KL_TRC_TRACE(TRC_LVL::FLOW, "Send special key sequence\n");
         ASSERT(map_e.char_ptr != nullptr);
 
+        if ((map_e.num_chars == 1) && (key_msg.modifiers.left_control || key_msg.modifiers.right_control))
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Do basic ctrl-character encoding.\n");
+          offset = 64;
+        }
+
         for (uint8_t i = 0; i < map_e.num_chars; i++)
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "Send another char\n");
-          this->handle_character(map_e.char_ptr[i]);
+          this->handle_character(map_e.char_ptr[i] - offset);
         }
       }
     }
