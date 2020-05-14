@@ -90,6 +90,10 @@ int az_translate_error_code(ERR_CODE ec)
     r = EINVAL;
     break;
 
+  case ERR_CODE::TIMED_OUT:
+    r = ETIMEDOUT;
+    break;
+
   default:
     r = EINVAL;
     break;

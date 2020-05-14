@@ -20,7 +20,7 @@ public:
   WaitObject();
   virtual ~WaitObject();
 
-  virtual void wait_for_signal(uint64_t max_wait);
+  virtual bool wait_for_signal(uint64_t max_wait);
   virtual void cancel_waiting_thread(task_thread *thread);
 
   virtual uint64_t threads_waiting();
@@ -46,7 +46,7 @@ public:
   WaitForFirstTriggerObject();
   virtual ~WaitForFirstTriggerObject();
 
-  virtual void wait_for_signal(uint64_t max_wait) override;
+  virtual bool wait_for_signal(uint64_t max_wait) override;
 
 protected:
   virtual void trigger_next_thread(const bool should_lock = true) override;
@@ -63,7 +63,7 @@ public:
   syscall_mutex_obj();
   virtual ~syscall_mutex_obj();
 
-  virtual void wait_for_signal(uint64_t max_wait) override;
+  virtual bool wait_for_signal(uint64_t max_wait) override;
   virtual bool release();
 
 protected:
@@ -81,7 +81,7 @@ public:
   syscall_semaphore_obj(uint64_t max_users, uint64_t start_users);
   virtual ~syscall_semaphore_obj();
 
-  virtual void wait_for_signal(uint64_t max_wait) override;
+  virtual bool wait_for_signal(uint64_t max_wait) override;
   virtual bool signal();
 
 protected:

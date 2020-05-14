@@ -30,6 +30,8 @@ extern "C" ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle, uint6
   std::shared_ptr<WaitObject> wait_obj;
   task_thread *cur_thread = task_get_cur_thread();
 
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Attempt to wait for handle: ", wait_object_handle, " for ", max_wait, "ms\n");
+
   if (cur_thread == nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't identify current thread\n");
@@ -46,8 +48,21 @@ extern "C" ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle, uint6
     }
     else
     {
-      wait_obj->wait_for_signal(max_wait);
-      result = ERR_CODE::NO_ERROR;
+      if (max_wait < (SC_MAX_WAIT >> 10))
+      {
+        // The multiplication is to take milliseconds from the syscall interface to microseconds internally.
+        max_wait *= 1000;
+      }
+      if (wait_obj->wait_for_signal(max_wait))
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Wait and no timeout\n");
+        result = ERR_CODE::NO_ERROR;
+      }
+      else
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Wait had timeout\n");
+        result = ERR_CODE::TIMED_OUT;
+      }
     }
   }
 

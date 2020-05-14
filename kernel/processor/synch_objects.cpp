@@ -35,11 +35,15 @@ WaitObject::~WaitObject()
 /// @brief Cause this thread to wait until the WaitObject is triggered, at which point it will resume.
 ///
 /// @param max_wait The approximate maximum time to wait for the object to be signalled, in microseconds.
-void WaitObject::wait_for_signal(uint64_t max_wait)
+///
+/// @return True if the object was waited for and signalled, false if the wait timed out.
+bool WaitObject::wait_for_signal(uint64_t max_wait)
 {
+  bool still_in_wait_list{false};
+  task_thread *cur_thread = task_get_cur_thread();
+
   KL_TRC_ENTRY;
 
-  task_thread *cur_thread = task_get_cur_thread();
   ASSERT(cur_thread);
   ASSERT(!cur_thread->is_worker_thread);
   klib_list_item<task_thread *> *list_item = new klib_list_item<task_thread *>;
@@ -66,7 +70,38 @@ void WaitObject::wait_for_signal(uint64_t max_wait)
   // reasonable to just carry on.
   task_yield();
 
+#ifndef AZALEA_TEST_CODE
+  // Don't include this section in the unit tests because they don't support task_yield() or timed based resumption of
+  // threads which means they get very confused.
+
+  klib_synch_spinlock_lock(this->_list_lock);
+  // Do any of the list items contain this thread? If so, we've been resumed without a call to trigger_next_thread - so
+  // the wait timed out. Note that if trigger_next_thread *was* called, then it will have freed list_item.
+  list_item = this->_waiting_threads.head;
+  while (list_item != nullptr)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Examine item at ", list_item, "\n");
+
+    if (list_item->item == cur_thread)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Found ourselves!\n");
+      klib_list_remove(list_item);
+      delete list_item;
+      list_item = nullptr;
+      still_in_wait_list = true;
+
+      break;
+    }
+
+    list_item = list_item->next;
+  }
+  klib_synch_spinlock_unlock(this->_list_lock);
+#endif
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Timed out? ", still_in_wait_list, "\n");
   KL_TRC_EXIT;
+
+  return !still_in_wait_list;
 }
 
 /// @brief Cause the parameter thread to resume immediately.
@@ -192,11 +227,13 @@ WaitForFirstTriggerObject::~WaitForFirstTriggerObject()
   KL_TRC_EXIT;
 }
 
-void WaitForFirstTriggerObject::wait_for_signal(uint64_t max_wait)
+bool WaitForFirstTriggerObject::wait_for_signal(uint64_t max_wait)
 {
+  task_thread *cur_thread = task_get_cur_thread();
+  bool still_in_wait_list{false};
+
   KL_TRC_ENTRY;
 
-  task_thread *cur_thread = task_get_cur_thread();
   ASSERT(cur_thread);
   ASSERT(!cur_thread->is_worker_thread);
   klib_list_item<task_thread *> *list_item = new klib_list_item<task_thread *>;
@@ -226,6 +263,33 @@ void WaitForFirstTriggerObject::wait_for_signal(uint64_t max_wait)
     // It is possible that the thread was signalled between the list being unlocked above and here, in which case it is
     // reasonable to just carry on.
     task_yield();
+
+#ifndef AZALEA_TEST_CODE
+    // Don't include this section in the unit tests because they don't support task_yield() or timed based resumption
+    // of threads which means they get very confused.
+    klib_synch_spinlock_lock(this->_list_lock);
+    // Do any of the list items contain this thread? If so, we've been resumed without a call to trigger_next_thread -
+    // so the wait timed out. Note that if trigger_next_thread *was* called, then it will have freed list_item.
+    list_item = this->_waiting_threads.head;
+    while (list_item != nullptr)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Examine item at ", list_item, "\n");
+
+      if (list_item->item == cur_thread)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Found ourselves!\n");
+        klib_list_remove(list_item);
+        delete list_item;
+        list_item = nullptr;
+        still_in_wait_list = true;
+
+        break;
+      }
+
+      list_item = list_item->next;
+    }
+    klib_synch_spinlock_unlock(this->_list_lock);
+#endif
   }
   else
   {
@@ -233,7 +297,10 @@ void WaitForFirstTriggerObject::wait_for_signal(uint64_t max_wait)
     klib_synch_spinlock_unlock(this->_list_lock);
   }
 
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Timed out? ", still_in_wait_list, "\n");
   KL_TRC_EXIT;
+
+  return !still_in_wait_list;
 }
 
 void WaitForFirstTriggerObject::trigger_next_thread(const bool should_lock)
@@ -305,13 +372,19 @@ syscall_mutex_obj::~syscall_mutex_obj()
   KL_TRC_EXIT;
 }
 
-void syscall_mutex_obj::wait_for_signal(uint64_t max_wait)
+bool syscall_mutex_obj::wait_for_signal(uint64_t max_wait)
 {
+  bool success;
+  SYNC_ACQ_RESULT acq_res;
   KL_TRC_ENTRY;
 
-  klib_synch_mutex_acquire(base_mutex, max_wait);
+  acq_res = klib_synch_mutex_acquire(base_mutex, max_wait);
+  success = (acq_res != SYNC_ACQ_RESULT::SYNC_ACQ_TIMEOUT);
 
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", success, "\n");
   KL_TRC_EXIT;
+
+  return success;
 }
 
 /// @brief Release the mutex.
@@ -374,13 +447,19 @@ syscall_semaphore_obj::~syscall_semaphore_obj()
   KL_TRC_EXIT;
 }
 
-void syscall_semaphore_obj::wait_for_signal(uint64_t max_wait)
+bool syscall_semaphore_obj::wait_for_signal(uint64_t max_wait)
 {
+  bool success;
+  SYNC_ACQ_RESULT acq_res;
   KL_TRC_ENTRY;
 
-  klib_synch_semaphore_wait(base_semaphore, max_wait);
+  acq_res = klib_synch_semaphore_wait(base_semaphore, max_wait);
+  success = (acq_res != SYNC_ACQ_RESULT::SYNC_ACQ_TIMEOUT);
 
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", success, "\n");
   KL_TRC_EXIT;
+
+  return success;
 }
 
 /// @brief Signal this semaphore.

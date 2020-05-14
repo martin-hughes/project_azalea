@@ -38,6 +38,7 @@ const char *azalea_lookup_err_code(const ERR_CODE ec)
     EC_CASE(ERR_CODE::UNRECOGNISED, "Unrecognised data format");
     EC_CASE(ERR_CODE::OUT_OF_RANGE, "Out of range");
     EC_CASE(ERR_CODE::TRANSFER_TOO_LARGE, "Transfer too large");
+    EC_CASE(ERR_CODE::TIMED_OUT, "Timed out");
   }
 
   return nullptr;

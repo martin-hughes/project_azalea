@@ -110,6 +110,11 @@ enum AZALEA_ENUM_CLASS ERR_CODE_T
    *  Part of the operation was outside of the acceptable ranges.
    */
   OUT_OF_RANGE = 18,
+
+  /**
+   *  The operation timed out
+   */
+  TIMED_OUT = 19,
 };
 
 /**
