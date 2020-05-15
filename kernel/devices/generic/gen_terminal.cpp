@@ -148,6 +148,11 @@ void terms::generic::handle_character(char key)
       KL_TRC_TRACE(TRC_LVL::FLOW, "Input carriage return translation\n");
       key = '\n';
     }
+    else if ((key == '\n') && filters.input_newline_is_return)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Input newline to carriage return\n");
+      key = '\r';
+    }
 
     if (filters.line_discipline)
     {
@@ -284,7 +289,7 @@ void terms::generic::write_string(const char *out_string, uint16_t num_chars)
 
       if ((*out_string == '\n') && (filters.output_newline == term_newline_mode::LF_TO_CRLF))
       {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Newline translation - \n to \r\n");
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Newline translation - \\n to \\r\\n\n");
         write_raw_string("\r", 1);
       }
 
@@ -292,7 +297,7 @@ void terms::generic::write_string(const char *out_string, uint16_t num_chars)
 
       if ((*out_string == '\r') && (filters.output_newline == term_newline_mode::CR_TO_CRLF))
       {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Newline translation - \r to \r\n");
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Newline translation - \\r to \\r\\n\n");
         write_raw_string("\n", 1);
       }
     }

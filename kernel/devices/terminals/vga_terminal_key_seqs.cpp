@@ -25,8 +25,8 @@ terms::vga_term_keymap_entry terms::vga_keymap[static_cast<int>(KEYS::MAX_KNOWN)
   { 0, nullptr }, // 7 - Nothing assigned
   { 1, "\b" }, // 8 - backspace
   { 1, "\t" }, // 9 - tab
-  { 1, "\n" }, // 10 - enter
-  { 1, "\n" }, // 11 - return
+  { 1, "\r" }, // 10 - enter
+  { 1, "\r" }, // 11 - return
   { 0, nullptr }, // 12 - Nothing assigned
   { 0, nullptr }, // 13 - Nothing assigned
   { 0, nullptr }, // 14 - Nothing assigned
