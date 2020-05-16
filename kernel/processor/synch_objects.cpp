@@ -12,7 +12,10 @@
 #include "processor/synch_objects.h"
 #include "processor/timing/timing.h"
 
-WaitObject::WaitObject()
+/// @brief Create a WaitObject using a lock provided by the caller.
+///
+/// @param lock_override Lock provided by the caller that protects all sleep / wake operations.
+WaitObject::WaitObject(kernel_spinlock &lock_override) : _list_lock{lock_override}
 {
   KL_TRC_ENTRY;
 
@@ -20,6 +23,11 @@ WaitObject::WaitObject()
   klib_synch_spinlock_init(this->_list_lock);
 
   KL_TRC_EXIT;
+}
+
+/// @brief Create a normal WaitObject.
+WaitObject::WaitObject() : WaitObject(internal_lock)
+{
 }
 
 WaitObject::~WaitObject()
@@ -57,46 +65,37 @@ bool WaitObject::wait_for_signal(uint64_t max_wait)
   klib_list_add_tail(&this->_waiting_threads, list_item);
   klib_synch_spinlock_unlock(this->_list_lock);
 
-  if (max_wait != WaitObject::MAX_WAIT)
+  if (should_still_sleep())
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Set maximum waiting time");
-    cur_thread->wake_thread_after = time_get_system_timer_count() + (max_wait * 1000);
-  }
-
-  task_resume_scheduling();
-
-  // Having added ourselves to the list we should not pass through task_yield() until the thread is re-awakened below.
-  // It is possible that the thread was signalled between the list being unlocked above and here, in which case it is
-  // reasonable to just carry on.
-  task_yield();
-
-#ifndef AZALEA_TEST_CODE
-  // Don't include this section in the unit tests because they don't support task_yield() or timed based resumption of
-  // threads which means they get very confused.
-
-  klib_synch_spinlock_lock(this->_list_lock);
-  // Do any of the list items contain this thread? If so, we've been resumed without a call to trigger_next_thread - so
-  // the wait timed out. Note that if trigger_next_thread *was* called, then it will have freed list_item.
-  list_item = this->_waiting_threads.head;
-  while (list_item != nullptr)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Examine item at ", list_item, "\n");
-
-    if (list_item->item == cur_thread)
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Continue with sleep\n");
+    if (max_wait != WaitObject::MAX_WAIT)
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Found ourselves!\n");
-      klib_list_remove(list_item);
-      delete list_item;
-      list_item = nullptr;
-      still_in_wait_list = true;
-
-      break;
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Set maximum waiting time");
+      cur_thread->wake_thread_after = time_get_system_timer_count() + (max_wait * 1000);
     }
 
-    list_item = list_item->next;
-  }
-  klib_synch_spinlock_unlock(this->_list_lock);
+    task_resume_scheduling();
+
+    // Having added ourselves to the list we should not pass through task_yield() until the thread is re-awakened below.
+    // It is possible that the thread was signalled between the list being unlocked above and here, in which case it is
+    // reasonable to just carry on.
+    task_yield();
+
+#ifndef AZALEA_TEST_CODE
+    // Don't include this section in the unit tests because they don't support task_yield() or timed based resumption
+    // of threads which means they get very confused.
+    still_in_wait_list = cancel_waiting_thread(cur_thread);
 #endif
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOw, "Abort sleep\n");
+
+    cur_thread->start_thread();
+    task_resume_scheduling();
+
+    cancel_waiting_thread(cur_thread);
+  }
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Timed out? ", still_in_wait_list, "\n");
   KL_TRC_EXIT;
@@ -111,8 +110,12 @@ bool WaitObject::wait_for_signal(uint64_t max_wait)
 /// @param thread The thread to resume
 ///
 /// There is no indication to the thread that it has resumed prematurely.
-void WaitObject::cancel_waiting_thread(task_thread *thread)
+///
+/// @return True if the thread was found in the list and cancelled. False if the thread was not actually waiting.
+bool WaitObject::cancel_waiting_thread(task_thread *thread)
 {
+  bool found{false};
+
   KL_TRC_ENTRY;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Looking for thread ", thread, "\n");
@@ -136,11 +139,16 @@ void WaitObject::cancel_waiting_thread(task_thread *thread)
     list_item = nullptr;
 
     thread->start_thread();
+
+    found = true;
   }
 
   klib_synch_spinlock_unlock(this->_list_lock);
 
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", found, "\n");
   KL_TRC_EXIT;
+
+  return found;
 }
 
 /// @brief Return a count of how many threads are waiting on this WaitObject.
@@ -176,6 +184,8 @@ void WaitObject::trigger_next_thread(const bool should_lock)
     klib_synch_spinlock_lock(this->_list_lock);
   }
 
+  before_wake_cb();
+
   klib_list_item<task_thread *> *list_item = this->_waiting_threads.head;
   if (list_item != nullptr)
   {
@@ -204,11 +214,39 @@ void WaitObject::trigger_all_threads()
   KL_TRC_TRACE(TRC_LVL::FLOW, "Triggering from object: ", this, "\n");
 
   klib_synch_spinlock_lock(this->_list_lock);
+
+  before_wake_cb();
+
   while(klib_list_get_length(&this->_waiting_threads) != 0)
   {
     trigger_next_thread(false);
   }
   klib_synch_spinlock_unlock(this->_list_lock);
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Should this WaitObject continue to sleep?
+///
+/// This function is called after all the preparation for going to sleep has been completed. It provides child classes
+/// a last opportunity to decide whether they still want to go to sleep from within the protection of this WaitObject's
+/// main lock.
+///
+/// It is useful for providing WaitObjects with slight variations on their sleeping behaviour.
+///
+/// @return true if the object should still sleep. False otherwise.
+bool WaitObject::should_still_sleep()
+{
+  return true;
+}
+
+/// @brief Called before waking a waiting thread.
+///
+/// This allows child classes to extend WaitObjects. It is called once the WaitObject's lock has been acquired. It is
+/// called once or possibly twice for each thread being woken.
+void WaitObject::before_wake_cb()
+{
+  KL_TRC_ENTRY;
 
   KL_TRC_EXIT;
 }
@@ -227,128 +265,16 @@ WaitForFirstTriggerObject::~WaitForFirstTriggerObject()
   KL_TRC_EXIT;
 }
 
-bool WaitForFirstTriggerObject::wait_for_signal(uint64_t max_wait)
+bool WaitForFirstTriggerObject::should_still_sleep()
 {
-  task_thread *cur_thread = task_get_cur_thread();
-  bool still_in_wait_list{false};
-
-  KL_TRC_ENTRY;
-
-  ASSERT(cur_thread);
-  ASSERT(!cur_thread->is_worker_thread);
-  klib_list_item<task_thread *> *list_item = new klib_list_item<task_thread *>;
-  klib_list_item_initialize(list_item);
-  list_item->item = cur_thread;
-
-  klib_synch_spinlock_lock(this->_list_lock);
-
-  if (!this->already_triggered)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Not yet triggered, wait. (", this, ")\n");
-    task_continue_this_thread();
-
-    cur_thread->stop_thread();
-    klib_list_add_tail(&this->_waiting_threads, list_item);
-    klib_synch_spinlock_unlock(this->_list_lock);
-
-    if (max_wait != WaitObject::MAX_WAIT)
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Set maximum waiting time");
-      cur_thread->wake_thread_after = time_get_system_timer_count() + (max_wait * 1000);
-    }
-
-    task_resume_scheduling();
-
-    // Having added ourselves to the list we should not pass through task_yield() until the thread is re-awakened below.
-    // It is possible that the thread was signalled between the list being unlocked above and here, in which case it is
-    // reasonable to just carry on.
-    task_yield();
-
-#ifndef AZALEA_TEST_CODE
-    // Don't include this section in the unit tests because they don't support task_yield() or timed based resumption
-    // of threads which means they get very confused.
-    klib_synch_spinlock_lock(this->_list_lock);
-    // Do any of the list items contain this thread? If so, we've been resumed without a call to trigger_next_thread -
-    // so the wait timed out. Note that if trigger_next_thread *was* called, then it will have freed list_item.
-    list_item = this->_waiting_threads.head;
-    while (list_item != nullptr)
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Examine item at ", list_item, "\n");
-
-      if (list_item->item == cur_thread)
-      {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Found ourselves!\n");
-        klib_list_remove(list_item);
-        delete list_item;
-        list_item = nullptr;
-        still_in_wait_list = true;
-
-        break;
-      }
-
-      list_item = list_item->next;
-    }
-    klib_synch_spinlock_unlock(this->_list_lock);
-#endif
-  }
-  else
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Triggered, continue. (", this, ")\n");
-    klib_synch_spinlock_unlock(this->_list_lock);
-  }
-
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Timed out? ", still_in_wait_list, "\n");
-  KL_TRC_EXIT;
-
-  return !still_in_wait_list;
+  return !already_triggered;
 }
 
-void WaitForFirstTriggerObject::trigger_next_thread(const bool should_lock)
+void WaitForFirstTriggerObject::before_wake_cb()
 {
   KL_TRC_ENTRY;
-
-  if (should_lock)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "locking\n");
-    klib_synch_spinlock_lock(this->_list_lock);
-  }
-
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Setting triggered to true.\n");
-  already_triggered = true;
-
-  klib_list_item<task_thread *> *list_item = this->_waiting_threads.head;
-  if (list_item != nullptr)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Starting thread ", list_item->item, "\n");
-    klib_list_remove (list_item);
-    list_item->item->start_thread();
-    delete list_item;
-    list_item = nullptr;
-  }
-
-  if (should_lock)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Unlocking\n");
-    klib_synch_spinlock_unlock(this->_list_lock);
-  }
-
-  KL_TRC_EXIT;
-}
-
-void WaitForFirstTriggerObject::trigger_all_threads()
-{
-  KL_TRC_ENTRY;
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Triggering from object: ", this, "\n");
-
-  klib_synch_spinlock_lock(this->_list_lock);
 
   this->already_triggered = true;
-  while(klib_list_get_length(&this->_waiting_threads) != 0)
-  {
-    trigger_next_thread(false);
-  }
-
-  klib_synch_spinlock_unlock(this->_list_lock);
 
   KL_TRC_EXIT;
 }

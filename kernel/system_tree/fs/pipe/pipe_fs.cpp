@@ -29,7 +29,7 @@ namespace
 /// @brief Standard constructor
 ///
 /// New pipe branches should be created using the static create() function.
-pipe_branch::pipe_branch() : _buffer(new uint8_t[NORMAL_BUFFER_SIZE])
+pipe_branch::pipe_branch() : WaitObject(_pipe_lock), _buffer(new uint8_t[NORMAL_BUFFER_SIZE])
 {
   KL_TRC_ENTRY;
 
@@ -121,27 +121,14 @@ void pipe_branch::set_msg_receiver(std::shared_ptr<work::message_receiver> &new_
   KL_TRC_EXIT;
 }
 
-bool pipe_branch::wait_for_signal(uint64_t max_wait)
+bool pipe_branch::should_still_sleep()
 {
+  bool result;
   uint64_t rp;
   uint64_t wp;
   uint64_t avail_length;
-  bool still_in_wait_list{false};
-  task_thread *cur_thread = task_get_cur_thread();
 
   KL_TRC_ENTRY;
-
-  KL_TRC_ENTRY;
-
-  ASSERT(cur_thread);
-  ASSERT(!cur_thread->is_worker_thread);
-  klib_list_item<task_thread *> *list_item = new klib_list_item<task_thread *>;
-  klib_list_item_initialize(list_item);
-  list_item->item = cur_thread;
-
-  klib_synch_spinlock_lock(_pipe_lock);
-  klib_synch_spinlock_lock(this->_list_lock);
-  task_continue_this_thread();
 
   // If there's data in the pipe, no need to wait.
   rp = reinterpret_cast<uint64_t>(_read_ptr);
@@ -157,69 +144,12 @@ bool pipe_branch::wait_for_signal(uint64_t max_wait)
   }
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Available bytes to read: ", avail_length, "\n");
 
-  if (avail_length > 0)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "No need to wait for data")
-    still_in_wait_list = false;
-    klib_synch_spinlock_unlock(this->_list_lock);
-    klib_synch_spinlock_unlock(_pipe_lock);
-    task_resume_scheduling();
-  }
-  else
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Definitely stop\n");
-    cur_thread->stop_thread();
-    klib_list_add_tail(&this->_waiting_threads, list_item);
+  result = (avail_length == 0);
 
-    klib_synch_spinlock_unlock(this->_list_lock);
-    klib_synch_spinlock_unlock(_pipe_lock);
-
-    if (max_wait != WaitObject::MAX_WAIT)
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Set maximum waiting time");
-      cur_thread->wake_thread_after = time_get_system_timer_count() + (max_wait * 1000);
-    }
-
-    task_resume_scheduling();
-
-    // Having added ourselves to the list we should not pass through task_yield() until the thread is re-awakened below.
-    // It is possible that the thread was signalled between the list being unlocked above and here, in which case it is
-    // reasonable to just carry on.
-    task_yield();
-
-#ifndef AZALEA_TEST_CODE
-    // Don't include this section in the unit tests because they don't support task_yield() or timed based resumption
-    // of threads which means they get very confused.
-
-    klib_synch_spinlock_lock(this->_list_lock);
-    // Do any of the list items contain this thread? If so, we've been resumed without a call to trigger_next_thread -
-    // so the wait timed out. Note that if trigger_next_thread *was* called, then it will have freed list_item.
-    list_item = this->_waiting_threads.head;
-    while (list_item != nullptr)
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Examine item at ", list_item, "\n");
-
-      if (list_item->item == cur_thread)
-      {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Found ourselves!\n");
-        klib_list_remove(list_item);
-        delete list_item;
-        list_item = nullptr;
-        still_in_wait_list = true;
-
-        break;
-      }
-
-      list_item = list_item->next;
-    }
-    klib_synch_spinlock_unlock(this->_list_lock);
-#endif
-  }
-
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Timed out? ", still_in_wait_list, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
 
-  return !still_in_wait_list;
+  return result;
 }
 
 /// @brief Standard constructor
@@ -372,18 +302,23 @@ bool pipe_branch::pipe_read_leaf::wait_for_signal(uint64_t max_wait)
   return result;
 }
 
-void pipe_branch::pipe_read_leaf::cancel_waiting_thread(task_thread *thread)
+bool pipe_branch::pipe_read_leaf::cancel_waiting_thread(task_thread *thread)
 {
+  bool result{false};
+
   KL_TRC_ENTRY;
 
   std::shared_ptr<pipe_branch> parent_branch = this->_parent.lock();
   if (parent_branch)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Cancel thread\n");
-    parent_branch->cancel_waiting_thread(thread);
+    result = parent_branch->cancel_waiting_thread(thread);
   }
 
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
+
+  return result;
 }
 
 uint64_t pipe_branch::pipe_read_leaf::threads_waiting()
@@ -502,9 +437,9 @@ ERR_CODE pipe_branch::pipe_write_leaf::write_bytes(uint64_t start,
       work::queue_message(rcv, std::move(msg));
     }
 
-    parent_branch->trigger_all_threads();
-
     klib_synch_spinlock_unlock(parent_branch->_pipe_lock);
+
+    parent_branch->trigger_all_threads();
 
     ret = ERR_CODE::NO_ERROR;
   }

@@ -37,7 +37,7 @@ public:
   virtual void set_msg_receiver(std::shared_ptr<work::message_receiver> &new_handler);
 
   // Overrides of WaitObject
-  virtual bool wait_for_signal(uint64_t max_wait) override;
+  virtual bool should_still_sleep() override;
 
   /// @brief The read-only output leaf of a pipe branch.
   ///
@@ -57,7 +57,7 @@ public:
 
     // Overrides of WaitObject
     virtual bool wait_for_signal(uint64_t max_wait) override;
-    virtual void cancel_waiting_thread(task_thread *thread) override;
+    virtual bool cancel_waiting_thread(task_thread *thread) override;
 
     virtual uint64_t threads_waiting() override;
 
