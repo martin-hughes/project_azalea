@@ -1,5 +1,5 @@
 /// @file
-/// @brief Synchronization primitives part of the system call interface.
+/// @brief Synchronization primitives part of the system call interface - apart from futexes.
 
 //#define ENABLE_TRACING
 
@@ -30,6 +30,8 @@ extern "C" ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle, uint6
   std::shared_ptr<WaitObject> wait_obj;
   task_thread *cur_thread = task_get_cur_thread();
 
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Attempt to wait for handle: ", wait_object_handle, " for ", max_wait, "ms\n");
+
   if (cur_thread == nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Couldn't identify current thread\n");
@@ -38,7 +40,7 @@ extern "C" ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle, uint6
   else
   {
     wait_obj = std::dynamic_pointer_cast<WaitObject>(
-      cur_thread->thread_handles.retrieve_handled_object(wait_object_handle));
+      cur_thread->parent_process->proc_handles.retrieve_handled_object(wait_object_handle));
     if (wait_obj == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Not a wait object\n");
@@ -46,8 +48,21 @@ extern "C" ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle, uint6
     }
     else
     {
-      wait_obj->wait_for_signal(max_wait);
-      result = ERR_CODE::NO_ERROR;
+      if (max_wait < (SC_MAX_WAIT >> 10))
+      {
+        // The multiplication is to take milliseconds from the syscall interface to microseconds internally.
+        max_wait *= 1000;
+      }
+      if (wait_obj->wait_for_signal(max_wait))
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Wait and no timeout\n");
+        result = ERR_CODE::NO_ERROR;
+      }
+      else
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Wait had timeout\n");
+        result = ERR_CODE::TIMED_OUT;
+      }
     }
   }
 
@@ -56,23 +71,6 @@ extern "C" ERR_CODE syscall_wait_for_object(GEN_HANDLE wait_object_handle, uint6
 
   return result;
 }
-
-/// @cond
-// Since these system calls are not yet complete, don't document them yet.
-ERR_CODE syscall_futex_wait(volatile int32_t *futex, int32_t req_value)
-{
-  INCOMPLETE_CODE("futex_wait");
-
-  return ERR_CODE::UNKNOWN;
-}
-
-ERR_CODE syscall_futex_wake(volatile int32_t *futex)
-{
-  INCOMPLETE_CODE("futex_wake");
-
-  return ERR_CODE::UNKNOWN;
-}
-/// @endcond
 
 /// @brief Create a new mutex object
 ///
@@ -106,7 +104,7 @@ ERR_CODE syscall_create_mutex(GEN_HANDLE *mutex_handle)
     std::shared_ptr<syscall_mutex_obj> mut = std::make_shared<syscall_mutex_obj>();
 
     new_object.object_ptr = mut;
-    *mutex_handle = cur_thread->thread_handles.store_object(new_object);
+    *mutex_handle = cur_thread->parent_process->proc_handles.store_object(new_object);
 
     // Conceivably a user mode process could quickly change the handle in between the last line and the next one, but
     // it has no significant impact if they do.
@@ -140,7 +138,7 @@ ERR_CODE syscall_release_mutex(GEN_HANDLE mutex_handle)
   }
   else
   {
-    obj = cur_thread->thread_handles.retrieve_handled_object(mutex_handle);
+    obj = cur_thread->parent_process->proc_handles.retrieve_handled_object(mutex_handle);
     if (obj == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Object not found!\n");
@@ -213,7 +211,7 @@ ERR_CODE syscall_create_semaphore(GEN_HANDLE *semaphore_handle, uint64_t max_use
     std::shared_ptr<syscall_semaphore_obj> sem = std::make_shared<syscall_semaphore_obj>(max_users, start_users);
 
     new_object.object_ptr = sem;
-    *semaphore_handle = cur_thread->thread_handles.store_object(new_object);
+    *semaphore_handle = cur_thread->parent_process->proc_handles.store_object(new_object);
 
     // Conceivably a user mode process could quickly change the handle in between the last line and the next one, but
     // it has no significant impact if they do.
@@ -247,7 +245,7 @@ ERR_CODE syscall_signal_semaphore(GEN_HANDLE semaphore_handle)
   }
   else
   {
-    obj = cur_thread->thread_handles.retrieve_handled_object(semaphore_handle);
+    obj = cur_thread->parent_process->proc_handles.retrieve_handled_object(semaphore_handle);
     if (obj == nullptr)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Object not found!\n");
@@ -281,4 +279,15 @@ ERR_CODE syscall_signal_semaphore(GEN_HANDLE semaphore_handle)
   KL_TRC_EXIT;
 
   return result;
+}
+
+/// @brief Yields the current thread's execution.
+///
+void syscall_yield()
+{
+  KL_TRC_ENTRY;
+
+  task_yield();
+
+  KL_TRC_EXIT;
 }

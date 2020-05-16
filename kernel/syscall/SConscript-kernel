@@ -2,6 +2,7 @@
 
 Import('env')
 files = [
+         "syscall_futex.cpp",
          "syscall_handles.cpp",
          "syscall_kernel.cpp",
          "syscall_mem.cpp",

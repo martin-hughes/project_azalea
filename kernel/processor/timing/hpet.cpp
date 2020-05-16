@@ -274,14 +274,21 @@ uint64_t time_hpet_cur_value(bool output_in_ns)
   uint64_t val;
   KL_TRC_ENTRY;
 
-  ASSERT(hpet_inited);
-
-  val = hpet_config->main_counter_val;
-  if (output_in_ns)
+  if (hpet_inited)
   {
-    // Do two divisions by 1000 in case the Period is close to 1,000,000
-    val = val * (HPET_PERIOD(hpet_config->gen_cap_and_id) / 1000);
-    val = val / 1000;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Get HPET value\n");
+    val = hpet_config->main_counter_val;
+    if (output_in_ns)
+    {
+      // Do two divisions by 1000 in case the Period is close to 1,000,000
+      val = val * (HPET_PERIOD(hpet_config->gen_cap_and_id) / 1000);
+      val = val / 1000;
+    }
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Not yet inited, return 0");
+    val = 0;
   }
 
   KL_TRC_EXIT;

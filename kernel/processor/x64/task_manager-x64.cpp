@@ -2,6 +2,7 @@
 /// @brief x64-specific part of the task manager
 
 //#define ENABLE_TRACING
+//#define TASK_SWAP_SANITY_CHECKS
 
 #include "klib/klib.h"
 
@@ -25,6 +26,7 @@ namespace
 
   // Setting one const equal to another of a different size seems to confuse the linker...!
   const uint32_t TM_INTERRUPT_NUM = 32; //(const uint32_t) PROC_IRQ_BASE;
+  const uint32_t TM_INT_INTERRUPT_NUM = 48; ///< A copy of the task mananger interrupt without the IRQ acknowledgement.
 }
 
 /// @brief Create a new x64 execution context
@@ -36,8 +38,13 @@ namespace
 ///
 /// @param new_thread The thread that is having an execution context created for it
 ///
+/// @param param Optional parameter to pass to the newly created thread.
+///
+/// @param stack_ptr Optional stack pointer for the thread to use. If none provided, the kernel allocates a stack. It
+///                  is the caller's responsibility to deallocate this stack.
+///
 /// @return A pointer to the execution context. This is opaque to non-x64 code.
-void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thread)
+void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thread, uint64_t param, void *stack_ptr)
 {
   task_x64_exec_context *new_context;
   task_process *parent_process;
@@ -62,6 +69,7 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Exec pointer: ", entry_point, "\n");
   new_context->cr3_value = (void *)memmgr_x64_data->pml4_phys_addr;
   KL_TRC_TRACE(TRC_LVL::EXTRA, "CR3: ", new_context->cr3_value, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Parameter - RDI: ", param, "\n");
 
   memset(new_context->saved_stack.fx_state, 0, sizeof(new_context->saved_stack.fx_state));
 
@@ -74,7 +82,7 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
   new_context->saved_stack.r9 = 0;
   new_context->saved_stack.r8 = 0;
   new_context->saved_stack.rbp = 0;
-  new_context->saved_stack.rdi = 0;
+  new_context->saved_stack.rdi = param;
   new_context->saved_stack.rsi = 0;
   new_context->saved_stack.rdx = 0;
   new_context->saved_stack.rcx = 0;
@@ -97,9 +105,19 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
     new_context->saved_stack.proc_cs = DEF_CS_KERNEL;
     new_context->saved_stack.proc_ss = DEF_SS_KERNEL;
 
-    // The stack is allocated and made ready to use by proc_x64_allocate_stack(). The allocated stacks are 16-byte
-    /// aligned. We deliberately offset a further 8 bytes. This is to simulate a `call` instruction to `entry_point`.
-    stack_long = reinterpret_cast<uint64_t>(proc_allocate_stack(true));
+    if (stack_ptr == nullptr)
+    {
+      // The stack is allocated and made ready to use by proc_x64_allocate_stack(). The allocated stacks are 16-byte
+      // aligned. We deliberately offset a further 8 bytes. This is to simulate a `call` instruction to `entry_point`.
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Allocate stack\n");
+      stack_long = reinterpret_cast<uint64_t>(proc_allocate_stack(true));
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Use provided stack\n");
+      stack_long = reinterpret_cast<uint64_t>(stack_ptr);
+    }
+
     new_context->saved_stack.proc_rsp = stack_long - 8;
 
     KL_TRC_TRACE(TRC_LVL::EXTRA, "Stack pointer:", new_context->saved_stack.proc_rsp, "\n");
@@ -111,8 +129,20 @@ void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thre
     new_context->saved_stack.proc_cs = DEF_CS_USER + 3;
     new_context->saved_stack.proc_ss = DEF_SS_USER + 3;
 
-    new_context->saved_stack.proc_rsp =
-      reinterpret_cast<uint64_t>(proc_allocate_stack(false, parent_process));
+    if (stack_ptr == nullptr)
+    {
+      // The stack is allocated and made ready to use by proc_x64_allocate_stack(). The allocated stacks are 16-byte
+      // aligned. We deliberately offset a further 8 bytes. This is to simulate a `call` instruction to `entry_point`.
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Allocate stack\n");
+      stack_long = reinterpret_cast<uint64_t>(proc_allocate_stack(false, parent_process));
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Use provided stack\n");
+      stack_long = reinterpret_cast<uint64_t>(stack_ptr);
+    }
+
+    new_context->saved_stack.proc_rsp = stack_long;
 
     if (new_context->saved_stack.proc_rsp == 0)
     {
@@ -243,6 +273,24 @@ task_x64_exec_context *task_int_swap_task(uint64_t stack_addr, uint64_t cr3_valu
 
     current_context->fs_base = proc_read_msr(PROC_X64_MSRS::IA32_FS_BASE);
     current_context->gs_base = proc_read_msr(PROC_X64_MSRS::IA32_GS_BASE);
+
+#ifdef TASK_SWAP_SANITY_CHECKS
+    ASSERT((reinterpret_cast<uint64_t>(current_context->cr3_value) & 0xFFFFFFFF00000000) == 0);
+    ASSERT(current_context->saved_stack.proc_cs < 100);
+    ASSERT(current_context->saved_stack.proc_ss < 100);
+    if (current_thread->parent_process->kernel_mode)
+    {
+      ASSERT((current_context->fs_base == 0) || (current_context->fs_base > 0xFFFFFFFF00000000));
+      ASSERT((current_context->gs_base == 0) || (current_context->gs_base > 0xFFFFFFFF00000000));
+      ASSERT(current_context->saved_stack.proc_rip > 0xFFFFFFFF00000000);
+      ASSERT(current_context->saved_stack.proc_rsp > 0xFFFFFFFF00000000);
+    }
+    else
+    {
+      ASSERT((current_context->fs_base == 0) || (current_context->fs_base < 0xFFFFFFFF00000000));
+      ASSERT((current_context->gs_base == 0) || (current_context->gs_base < 0xFFFFFFFF00000000));
+    }
+#endif
   }
   else
   {
@@ -295,7 +343,8 @@ void task_install_task_switcher()
 {
   KL_TRC_ENTRY;
 
-  proc_configure_idt_entry(TM_INTERRUPT_NUM, 0, (void *)asm_task_switch_interrupt, 3);
+  proc_configure_idt_entry(TM_INTERRUPT_NUM, 0, (void *)asm_task_switch_interrupt_irq, 3);
+  proc_configure_idt_entry(TM_INT_INTERRUPT_NUM, 0, (void *)asm_task_switch_interrupt_noirq, 4);
   asm_proc_install_idt();
 
   KL_TRC_EXIT;
@@ -319,8 +368,9 @@ void task_yield()
   KL_TRC_ENTRY;
 
   // Signal ourselves with a task-switching interrupt and that'll allow the task manager to select a new thread to run
-  // (which might be this one)
-  proc_send_ipi(0, PROC_IPI_SHORT_TARGET::SELF, PROC_IPI_INTERRUPT::FIXED, TM_INTERRUPT_NUM, true);
+  // (which might be this one).
+  static_assert(TM_INT_INTERRUPT_NUM == 0x30, "Check task manager interrupt");
+  asm("int $0x30");
 
   KL_TRC_EXIT;
 }
@@ -351,12 +401,3 @@ task_thread *task_get_cur_thread()
 
   return ret_thread;
 }
-
-
-
-
-
-
-
-
-

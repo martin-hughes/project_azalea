@@ -139,6 +139,7 @@ void task_gen_init()
   continue_this_thread = new bool[number_of_procs];
   idle_threads = new task_thread *[number_of_procs];
   klib_list_initialize(&dead_thread_list);
+  dead_processes = nullptr;
 
   for (uint32_t i = 0; i < number_of_procs; i++)
   {
@@ -465,7 +466,7 @@ void test_only_reset_task_mgr()
   if (system_proc != nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Destroying system proc\n");
-    system_proc->destroy_process();
+    system_proc->destroy_process(0);
   }
 
   delete[] current_threads;

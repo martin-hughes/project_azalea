@@ -56,7 +56,7 @@ TEST(SchedulerTest, ProcessStartOneThreadAndExitProcess)
 
   new_proc->start_process();
 
-  new_proc->destroy_process();
+  new_proc->destroy_process(0);
 
   new_proc = nullptr;
   child_thread = nullptr;

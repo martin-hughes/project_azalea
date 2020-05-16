@@ -18,10 +18,11 @@ class WaitObject
 {
 public:
   WaitObject();
+  WaitObject(kernel_spinlock &lock_override);
   virtual ~WaitObject();
 
-  virtual void wait_for_signal(uint64_t max_wait);
-  virtual void cancel_waiting_thread(task_thread *thread);
+  virtual bool wait_for_signal(uint64_t max_wait);
+  virtual bool cancel_waiting_thread(task_thread *thread);
 
   virtual uint64_t threads_waiting();
 
@@ -32,8 +33,12 @@ protected:
   virtual void trigger_next_thread(const bool should_lock = true);
   virtual void trigger_all_threads();
 
+  virtual bool should_still_sleep();
+  virtual void before_wake_cb();
+
   klib_list<task_thread *> _waiting_threads; ///< List of threads waiting for this WaitObject to be signalled.
-  kernel_spinlock _list_lock; ///< Lock protecting _waiting_threads.
+  kernel_spinlock &_list_lock; ///< Lock protecting _waiting_threads.
+  kernel_spinlock internal_lock; ///< Lock to use for _list_lock if no other lock provided.
 };
 
 /// @brief This class is identical in operation to WaitObject, except it will only wait the first time.
@@ -46,11 +51,14 @@ public:
   WaitForFirstTriggerObject();
   virtual ~WaitForFirstTriggerObject();
 
-  virtual void wait_for_signal(uint64_t max_wait) override;
+  /*virtual bool wait_for_signal(uint64_t max_wait) override;*/
 
 protected:
-  virtual void trigger_next_thread(const bool should_lock = true) override;
-  virtual void trigger_all_threads() override;
+  /*virtual void trigger_next_thread(const bool should_lock = true) override;
+  virtual void trigger_all_threads() override;*/
+
+  virtual bool should_still_sleep() override;
+  virtual void before_wake_cb() override;
 
   volatile bool already_triggered; ///< Has this wait object already had at least one thread be triggered?
 };
@@ -63,7 +71,7 @@ public:
   syscall_mutex_obj();
   virtual ~syscall_mutex_obj();
 
-  virtual void wait_for_signal(uint64_t max_wait) override;
+  virtual bool wait_for_signal(uint64_t max_wait) override;
   virtual bool release();
 
 protected:
@@ -81,7 +89,7 @@ public:
   syscall_semaphore_obj(uint64_t max_users, uint64_t start_users);
   virtual ~syscall_semaphore_obj();
 
-  virtual void wait_for_signal(uint64_t max_wait) override;
+  virtual bool wait_for_signal(uint64_t max_wait) override;
   virtual bool signal();
 
 protected:

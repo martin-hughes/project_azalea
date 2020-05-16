@@ -23,19 +23,18 @@ int main()
   refresh();
   //notimeout(stdscr, TRUE);
 
+  nodelay(stdscr, FALSE);
   char buf[50];
   int k = -1;
-  for (int i = 0; i < 5; i++)
+  int i = 0;
+  while(i < 5)
   {
     k = wgetch(stdscr);
     if (k != -1)
     {
       snprintf(buf, 50, "Key pressed: %d\n", k);
       SC_DEBUG_MSG(buf);
-    }
-    else
-    {
-      i--;
+      i++;
     }
   }
   SC_DEBUG_MSG("Getch() returned\n");

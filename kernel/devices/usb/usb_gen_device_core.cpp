@@ -355,6 +355,8 @@ void generic_core::got_config_descriptor()
 /// @brief Interpret a newly read config desciptor
 ///
 /// @param config_num The configuration index to interpret
+///
+/// @return True if the descriptor could be interpreted successfully, false otherwise.
 bool generic_core::interpret_raw_descriptor(uint64_t config_num)
 {
   device_config &config{configurations[config_num]};

@@ -15,7 +15,8 @@ extern "C" void proc_page_fault_handler(uint64_t fault_code,
                                         uint64_t fault_instruction,
                                         uint64_t rsp,
                                         uint64_t k_rsp);
-extern "C" void asm_task_switch_interrupt();
+extern "C" void asm_task_switch_interrupt_irq();
+extern "C" void asm_task_switch_interrupt_noirq();
 
 // IRQ handlers
 extern "C" void asm_proc_handle_irq_0();

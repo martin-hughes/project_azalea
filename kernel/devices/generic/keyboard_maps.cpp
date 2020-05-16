@@ -25,7 +25,7 @@ key_props default_keyb_props[default_keyb_props_tab_len] =
   UNPRINTABLE, // 7
   UNPRINTABLE, // BACKSPACE = 8,
   { true, '\t', '\t' }, // TAB = 9,
-  { true, '\n', '\n' }, // ENTER = 10,
+  { true, '\r', '\r' }, // ENTER = 10,
   UNPRINTABLE, // 11
   UNPRINTABLE, // 12
   UNPRINTABLE, // 13

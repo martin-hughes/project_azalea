@@ -16,7 +16,15 @@
 /// @param entry_point The point that the thread will begin executing from.
 ///
 /// @param parent The process this thread is part of.
-task_thread::task_thread(ENTRY_PROC entry_point, std::shared_ptr<task_process> parent) :
+///
+/// @param param Parameter to send to the new thread - put in RDI on x86-64.
+///
+/// @param stack_ptr If set to nullptr, the kernel allocates the new thread a stack. Otherwise, use this value as the
+///                  stack pointer.
+task_thread::task_thread(ENTRY_PROC entry_point,
+                         std::shared_ptr<task_process> parent,
+                         uint64_t param,
+                         void *stack_ptr) :
   permit_running{false},
   parent_process{parent},
   thread_destroyed{false},
@@ -25,7 +33,9 @@ task_thread::task_thread(ENTRY_PROC entry_point, std::shared_ptr<task_process> p
   KL_TRC_ENTRY;
   ASSERT(parent_process != nullptr);
 
-  this->execution_context = task_int_create_exec_context(entry_point, this);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Param: ", param, "\n");
+
+  this->execution_context = task_int_create_exec_context(entry_point, this, param, stack_ptr);
   KL_TRC_TRACE(TRC_LVL::FLOW, "Context created @ ", this->execution_context,
                               ", for entry point: ", reinterpret_cast<void *>(entry_point), "\n");
   this->process_list_item = new klib_list_item<std::shared_ptr<task_thread>>();
@@ -59,12 +69,20 @@ task_thread::task_thread(ENTRY_PROC entry_point, std::shared_ptr<task_process> p
 ///
 /// @param parent The process this thread is part of.
 ///
+/// @param param Parameter to send to the new thread - put in RDI on x86-64.
+///
+/// @param stack_ptr If set to nullptr, the kernel allocates the new thread a stack. Otherwise, use this value as the
+///                  stack pointer.
+///
 /// @return shared_ptr to the new thread.
-std::shared_ptr<task_thread> task_thread::create(ENTRY_PROC entry_point, std::shared_ptr<task_process> parent)
+std::shared_ptr<task_thread> task_thread::create(ENTRY_PROC entry_point,
+                                                 std::shared_ptr<task_process> parent,
+                                                 uint64_t param,
+                                                 void *stack_ptr)
 {
   KL_TRC_ENTRY;
 
-  std::shared_ptr<task_thread> new_thread = std::shared_ptr<task_thread>(new task_thread(entry_point, parent));
+  std::shared_ptr<task_thread> new_thread = std::shared_ptr<task_thread>(new task_thread(entry_point, parent, param, stack_ptr));
 
   new_thread->synch_list_item->item = new_thread;
   new_thread->process_list_item->item = new_thread;
@@ -112,6 +130,18 @@ void task_thread::destroy_thread()
       this->stop_thread();
       klib_synch_spinlock_lock(this->cycle_lock);
       task_thread_cycle_remove(this);
+    }
+
+    if (this->parent_process->in_dead_list)
+    {
+      // This flag means the parent process has hit a fault and is about to be asynchronously terminated. It cannot
+      // have been set in this thread, since we'd never reach this point in the code, as the thread would have
+      // terminated. So we're attempting to destroy a thread object that not the thread currently executing. If this
+      // flag is set, and we've managed to acquire the cycle lock then we know the process must already be in the dead
+      // process list, so just let that procedure take over.
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Await natural thread termination\n");
+      KL_TRC_EXIT;
+      return;
     }
 
     this->parent_process->thread_ending(this);

@@ -16,7 +16,7 @@
 /// @brief A system tree branch that implements a pipe using two leaves.
 ///
 /// One leaf is a read-only leaf representing the output of the pipe, the other is a write-only 'input' leaf.
-class pipe_branch: public ISystemTreeBranch, public std::enable_shared_from_this<pipe_branch>
+class pipe_branch: public ISystemTreeBranch, public std::enable_shared_from_this<pipe_branch>, public WaitObject
 {
 protected:
   pipe_branch();
@@ -36,9 +36,12 @@ public:
 
   virtual void set_msg_receiver(std::shared_ptr<work::message_receiver> &new_handler);
 
+  // Overrides of WaitObject
+  virtual bool should_still_sleep() override;
+
   /// @brief The read-only output leaf of a pipe branch.
   ///
-  class pipe_read_leaf: public IReadable, public ISystemTreeLeaf
+  class pipe_read_leaf: public IReadable, public ISystemTreeLeaf, public WaitObject
   {
   public:
     pipe_read_leaf(std::shared_ptr<pipe_branch> parent);
@@ -51,6 +54,12 @@ public:
                                 uint64_t &bytes_read) override;
 
     virtual void set_block_on_read(bool block);
+
+    // Overrides of WaitObject
+    virtual bool wait_for_signal(uint64_t max_wait) override;
+    virtual bool cancel_waiting_thread(task_thread *thread) override;
+
+    virtual uint64_t threads_waiting() override;
 
   protected:
     std::weak_ptr<pipe_branch> _parent; ///< Parent pipe branch.

@@ -52,7 +52,7 @@ ERR_CODE syscall_create_process(void *entry_point_addr, GEN_HANDLE *proc_handle)
 
     std::shared_ptr<IHandledObject> proc_ptr = std::dynamic_pointer_cast<IHandledObject>(new_process);
     new_object.object_ptr = proc_ptr;
-    *proc_handle = cur_thread->thread_handles.store_object(new_object);
+    *proc_handle = cur_thread->parent_process->proc_handles.store_object(new_object);
     KL_TRC_TRACE(TRC_LVL::FLOW, "New process (", new_process.get(), ") created, handle: ", *proc_handle, "\n");
 
     result = ERR_CODE::NO_ERROR;
@@ -93,7 +93,7 @@ ERR_CODE syscall_set_startup_params(GEN_HANDLE proc_handle, uint64_t argc, uint6
   else
   {
     proc_obj = std::dynamic_pointer_cast<task_process>(
-      cur_thread->thread_handles.retrieve_handled_object(proc_handle));
+      cur_thread->parent_process->proc_handles.retrieve_handled_object(proc_handle));
 
     if (proc_obj == nullptr)
     {
@@ -144,7 +144,7 @@ ERR_CODE syscall_start_process(GEN_HANDLE proc_handle)
   else
   {
     proc_obj = std::dynamic_pointer_cast<task_process>(
-      cur_thread->thread_handles.retrieve_handled_object(proc_handle));
+      cur_thread->parent_process->proc_handles.retrieve_handled_object(proc_handle));
 
     if (proc_obj == nullptr)
     {
@@ -191,7 +191,7 @@ ERR_CODE syscall_stop_process(GEN_HANDLE proc_handle)
   else
   {
     proc_obj = std::dynamic_pointer_cast<task_process>(
-      cur_thread->thread_handles.retrieve_handled_object(proc_handle));
+      cur_thread->parent_process->proc_handles.retrieve_handled_object(proc_handle));
 
     if (proc_obj == nullptr)
     {
@@ -236,7 +236,7 @@ ERR_CODE syscall_destroy_process(GEN_HANDLE proc_handle)
   else
   {
     proc_obj = std::dynamic_pointer_cast<task_process>(
-      cur_thread->thread_handles.retrieve_handled_object(proc_handle));
+      cur_thread->parent_process->proc_handles.retrieve_handled_object(proc_handle));
 
     if (proc_obj == nullptr)
     {
@@ -245,8 +245,8 @@ ERR_CODE syscall_destroy_process(GEN_HANDLE proc_handle)
     }
     else
     {
-      cur_thread->thread_handles.remove_object(proc_handle);
-      proc_obj->destroy_process();
+      cur_thread->parent_process->proc_handles.remove_object(proc_handle);
+      proc_obj->destroy_process(0); // Assume zero.
       result = ERR_CODE::NO_ERROR;
     }
   }
@@ -262,7 +262,10 @@ ERR_CODE syscall_destroy_process(GEN_HANDLE proc_handle)
 /// All threads within the process will be destroyed and process will end immediately. This is not recommended - if any
 /// threads are holding locks they will not be released. The recommended exit strategy is to exit all threads, which
 /// will cause the process to exit automatically.
-void syscall_exit_process()
+///
+/// @param exit_code The return code for this process, which can be read by other processes still holding an open
+///                  handle for this process.
+void syscall_exit_process(uint64_t exit_code)
 {
   KL_TRC_ENTRY;
 
@@ -275,7 +278,7 @@ void syscall_exit_process()
   this_thread = task_get_cur_thread();
   this_proc = this_thread->parent_process.get();
 
-  this_proc->destroy_process();
+  this_proc->destroy_process(exit_code);
 
   // This panic should never hit because destroy_process() should kill this process and never return.
   panic("Reached end of syscall_exit_process!");
@@ -290,9 +293,15 @@ void syscall_exit_process()
 ///
 /// @param[out] thread_handle A handle to be used when referring to this thread through the system call interface.
 ///
+/// @param[in] param Value to set in the execution context as the first function parameter for the new thread (register
+///                  RDI on x86-64)
+///
+/// @param[in] stack_ptr Optional stack pointer. If provided, RSP will be set to this value. If set to 0, the kernel
+///                      will allocate a new stack for the thread.
+///
 /// @return ERR_CODE::INVALID_PARAM if any parameter is invalid. ERR_CODE::INVALID_OP if the thread could not be
 ///         created for any other reason. ERR_CODE::NO_ERROR if the thread was created successfully.
-ERR_CODE syscall_create_thread(void (*entry_point)(), GEN_HANDLE *thread_handle)
+ERR_CODE syscall_create_thread(void (*entry_point)(), GEN_HANDLE *thread_handle, uint64_t param, void *stack_ptr)
 {
   KL_TRC_ENTRY;
 
@@ -319,14 +328,14 @@ ERR_CODE syscall_create_thread(void (*entry_point)(), GEN_HANDLE *thread_handle)
         (cur_thread->parent_process->kernel_mode == false))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Creating thread with entry point ", entry_point, "\n");
-      new_thread = task_thread::create(entry_point, cur_thread->parent_process);
+      new_thread = task_thread::create(entry_point, cur_thread->parent_process, param, stack_ptr);
     }
 
     if (new_thread != nullptr)
     {
       object_data new_object;
       new_object.object_ptr = new_thread;
-      *thread_handle = cur_thread->thread_handles.store_object(new_object);
+      *thread_handle = cur_thread->parent_process->proc_handles.store_object(new_object);
       KL_TRC_TRACE(TRC_LVL::FLOW, "New thread (", new_thread.get(), ") created, handle: ", *thread_handle, "\n");
 
       result = ERR_CODE::NO_ERROR;
@@ -369,7 +378,7 @@ ERR_CODE syscall_start_thread(GEN_HANDLE thread_handle)
   else
   {
     thread_obj = std::dynamic_pointer_cast<task_thread>(
-      cur_thread->thread_handles.retrieve_handled_object(thread_handle));
+      cur_thread->parent_process->proc_handles.retrieve_handled_object(thread_handle));
 
     if (thread_obj == nullptr)
     {
@@ -423,7 +432,7 @@ ERR_CODE syscall_stop_thread(GEN_HANDLE thread_handle)
   else
   {
     thread_obj = std::dynamic_pointer_cast<task_thread>(
-      cur_thread->thread_handles.retrieve_handled_object(thread_handle));
+      cur_thread->parent_process->proc_handles.retrieve_handled_object(thread_handle));
 
     if (thread_obj == nullptr)
     {
@@ -468,7 +477,7 @@ ERR_CODE syscall_destroy_thread(GEN_HANDLE thread_handle)
   else
   {
     thread_obj = std::dynamic_pointer_cast<task_thread>(
-      cur_thread->thread_handles.retrieve_handled_object(thread_handle));
+      cur_thread->parent_process->proc_handles.retrieve_handled_object(thread_handle));
 
     if (thread_obj == nullptr)
     {
@@ -478,7 +487,7 @@ ERR_CODE syscall_destroy_thread(GEN_HANDLE thread_handle)
     else
     {
       // This also releases the handle's reference to the thread.
-      cur_thread->thread_handles.remove_object(thread_handle);
+      cur_thread->parent_process->proc_handles.remove_object(thread_handle);
       thread_obj->destroy_thread();
       result = ERR_CODE::NO_ERROR;
     }

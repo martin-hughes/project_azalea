@@ -63,7 +63,7 @@ TEST_F(IPCTests, InterprocessMessages1)
   std::shared_ptr<IHandledObject> proc_ptr = std::shared_ptr<IHandledObject>(proc_b);
   new_object.object_ptr = proc_ptr;
 
-  GEN_HANDLE proc_b_handle = thread_a->thread_handles.store_object(new_object);
+  GEN_HANDLE proc_b_handle = thread_a->parent_process->proc_handles.store_object(new_object);
 
   // Process B is always the running process - messages are theoretically sent A->B. The code doesn't actually care
   // that process B is the one running when the message is sent.
@@ -143,8 +143,8 @@ TEST_F(IPCTests, InterprocessMessages1)
 
   test_only_set_cur_thread(nullptr);
 
-  proc_a->destroy_process();
-  proc_b->destroy_process();
+  proc_a->destroy_process(0);
+  proc_b->destroy_process(0);
 
   delete[] buffer;
   delete[] rcv_buffer;

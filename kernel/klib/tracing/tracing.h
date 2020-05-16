@@ -9,7 +9,7 @@
 #include <type_traits>
 #include "user_interfaces/error_codes.h"
 
-enum class DEV_STATUS;
+enum class OPER_STATUS_T;
 
 //#define ENABLE_TRACING
 
@@ -60,7 +60,7 @@ void kl_trc_output_str_argument(char const *str);
 void kl_trc_output_int_argument(uint64_t value);
 void kl_trc_output_std_string_argument(std::string &str);
 void kl_trc_output_err_code_argument(ERR_CODE ec);
-void kl_trc_output_dev_status_argument(DEV_STATUS ds);
+void kl_trc_output_dev_status_argument(OPER_STATUS_T ds);
 
 // Template to output integral types
 template<typename T = uint64_t, typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
@@ -106,8 +106,8 @@ T kl_trc_output_single_arg(T param)
   return param;
 }
 
-// Template to output DEV_STATUS results
-template<typename T, typename = typename std::enable_if<std::is_same<T, DEV_STATUS>::value>::type,
+// Template to output OPER_STATUS_T results
+template<typename T, typename = typename std::enable_if<std::is_same<T, OPER_STATUS_T>::value>::type,
     typename B = void, typename C = void, typename D = void, typename E = void, typename F = void, typename G = void>
 T kl_trc_output_single_arg(T param)
 {

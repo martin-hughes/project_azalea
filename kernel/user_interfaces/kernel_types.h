@@ -47,6 +47,29 @@ struct time_expanded
 };
 
 /**
+ * @brief A list of possible operational statuses.
+ */
+enum AZALEA_ENUM_CLASS OPER_STATUS_T
+{
+  ENUM_TAG(OPER, OK), /**< Object is running correctly. */
+  ENUM_TAG(OPER, FAILED), /**< Device was started but then failed, or cannot be initialised. */
+  /** ENUM_TAG(OPER, NOT_PRESENT), */ /**< Device is not actually present in the system. */
+  ENUM_TAG(OPER, RESET), /**< Device is resetting. */
+  ENUM_TAG(OPER, STOPPED), /**< Device is OK but is deliberately not available. */
+  ENUM_TAG(OPER, STARTING), /**< Device is initialising. */
+  ENUM_TAG(OPER, STOPPING), /**< Device is stopping. */
+  ENUM_TAG(OPER, UNKNOWN), /**< Device has not reported a valid status. */
+};
+
+/**
+ * @cond
+ */
+AZALEA_RENAME_ENUM(OPER_STATUS);
+/**
+ * @endcond
+ */
+
+/**
  * @brief Used to return the properties of an object in System Tree.
  */
 struct object_properties
@@ -56,6 +79,9 @@ struct object_properties
   bool readable; /**< Does the object expose a readable-type interface? */
   bool writable; /**< Does the object expose a writable-type interface? */
   bool is_file; /**< Does the object expose a file-like interface? */
+
+  OPER_STATUS oper_status; /**< Operational status of this object, if known */
+  uint64_t additional_status; /**< An additional status code given by this object, if known */
 };
 
 /**
@@ -102,5 +128,23 @@ struct ssm_output
    */
   uint64_t output_buffer_len;
 };
+
+/**
+ * @brief Possible futex operations
+ *
+ * These are a subset of those provided by Linux.
+ */
+enum AZALEA_ENUM_CLASS FUTEX_OP_T
+{
+  FUTEX_WAIT = 0, /**< Wait on this futex */
+  FUTEX_WAKE = 1, /**< Wake all waiters for this futex */
+  FUTEX_REQUEUE = 2, /**< Requeue a number of waiters on one futex to another futex */
+};
+
+/**
+ * @cond */
+AZALEA_RENAME_ENUM(FUTEX_OP);
+/**
+ * @endcond */
 
 #endif

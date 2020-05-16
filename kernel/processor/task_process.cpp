@@ -116,7 +116,7 @@ std::shared_ptr<task_process> task_process::create(ENTRY_PROC entry_point,
 
 task_process::~task_process()
 {
-  // Make sure the proces was destroyed via destroy_process.
+  // Make sure the process was destroyed via destroy_process.
   ASSERT(this->being_destroyed);
 
   // Free all memory associated with this process. This is safe because this destructor is never run in the context of
@@ -128,7 +128,9 @@ task_process::~task_process()
 /// @brief Final destruction of a process.
 ///
 /// Destroys all threads and then signals anyone waiting for this process to finish.
-void task_process::destroy_process()
+///
+/// @param exit_code The exit code to assign to this process.
+void task_process::destroy_process(uint64_t exit_code)
 {
   KL_TRC_ENTRY;
 
@@ -140,6 +142,15 @@ void task_process::destroy_process()
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Destroying process\n");
     this->being_destroyed = true;
+
+    this->exit_code = exit_code;
+
+    // This allows other parts of the system to set a failed status, if needed.
+    if (this->proc_status == OPER_STATUS::OK)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Set status to stopped\n");
+      this->proc_status = OPER_STATUS::STOPPED;
+    }
 
     this->trigger_all_threads();
 
@@ -170,6 +181,7 @@ void task_process::destroy_process()
 
       list_item = next_item;
     }
+
 
     if (skipped_this_thread)
     {
@@ -260,7 +272,7 @@ void task_process::thread_ending(task_thread *thread)
   if (klib_list_get_length(&this->child_threads) == 0)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "No more threads\n");
-    this->destroy_process();
+    this->destroy_process(0); // In this case, we haven't been provided with an exit code, so just assume.
   }
 
   KL_TRC_EXIT;
@@ -292,6 +304,23 @@ void task_process::handle_message(std::unique_ptr<msg::root_msg> &message)
     this->messaging.message_queue.push(std::move(msg_u_ptr));
     klib_synch_spinlock_unlock(this->messaging.message_lock);
   }
+
+  KL_TRC_EXIT;
+}
+
+void task_process::add_to_dead_list()
+{
+  task_process *old_head;
+  KL_TRC_ENTRY;
+
+  this->in_dead_list = true;
+
+  old_head = dead_processes;
+
+  do
+  {
+    this->next_defunct_process = old_head;
+  } while (!std::atomic_compare_exchange_weak(&dead_processes, &old_head, this));
 
   KL_TRC_EXIT;
 }

@@ -39,6 +39,12 @@ struct terminal_opts
    */
   bool input_return_is_newline INIT(true);
 
+  /** @brief Should a \\n character be interpreted as a \\r?
+   *
+   * Azalea uses \\n to delimit new lines, many terminals use \\r.
+   */
+  bool input_newline_is_return INIT(false);
+
   /** @brief Is line discipline enabled?
    *
    * Unlike Linux, Azalea only supports two modes - fully enabled and relevant keys translated, or off.

@@ -43,7 +43,7 @@ public:
 
   void start_process();
   void stop_process();
-  void destroy_process();
+  void destroy_process(uint64_t exit_code);
 
   virtual void handle_message(std::unique_ptr<msg::root_msg> &message) override;
 
@@ -81,6 +81,37 @@ public:
 
   /// Has this process ever been started?
   bool has_ever_started;
+
+  /// Store handles and the objects they correlate to.
+  object_manager proc_handles;
+
+  kernel_spinlock map_ops_lock{0}; ///< Lock protecting the futex map, below.
+
+  std::map<uint64_t, std::vector<task_thread *>> futex_map; ///< Map of all futexes waiting in this process.
+
+  uint64_t exit_code{0}; ///< Code provided when the process is exiting.
+
+  OPER_STATUS proc_status{OPER_STATUS::OK}; ///< Current process status. Only OK, STOPPED and FAILED are valid.
+
+  /// @brief Add this process to the list of dead processes maintained in processor.cpp
+  ///
+  /// The process is then destroyed asynchronously. Other, synchronous, destruction attempts are inhibited after this
+  /// function is called.
+  void add_to_dead_list();
+
+  /// @brief Points to another process that has died.
+  ///
+  /// This pointer is used to form a stack of processes that have died due to hitting an exception handler. They are
+  /// then tidied by proc_tidyup_thread. This stack is pushed by an exception handler, and popped by
+  /// proc_tidyup_thread.
+  task_process *next_defunct_process{nullptr};
+
+  /// @brief Prevent this process being destroyed if it's in the dead thread list.
+  ///
+  /// This flag is set immediately before adding this process to the defunct process list. If a thread attempts to
+  /// destroy the process while this flag is set then the attempt is ignored - this means pointers in the defunct
+  /// process list will always be valid.
+  bool in_dead_list{false};
 };
 
 /// @brief Class to hold information about a thread.
@@ -93,10 +124,13 @@ public:
 class task_thread : public IHandledObject, public WaitObject
 {
 protected:
-  task_thread(ENTRY_PROC entry_point, std::shared_ptr<task_process> parent);
+  task_thread(ENTRY_PROC entry_point, std::shared_ptr<task_process> parent, uint64_t param, void *stack_ptr);
 
 public:
-  static std::shared_ptr<task_thread> create(ENTRY_PROC entry_point, std::shared_ptr<task_process> parent);
+  static std::shared_ptr<task_thread> create(ENTRY_PROC entry_point,
+                                             std::shared_ptr<task_process> parent,
+                                             uint64_t param = 0,
+                                             void *stack_ptr = nullptr);
   virtual ~task_thread();
 
   bool start_thread();
@@ -130,9 +164,6 @@ public:
   /// synchronization primitive. The list itself is owned by that primitive, but this item must be initialized with the
   /// rest of this structure.
   klib_list_item<std::shared_ptr<task_thread>> *synch_list_item;
-
-  /// Store handles and the objects they correlate to.
-  object_manager thread_handles;
 
   /// Has the thread been destroyed? Various operations are not permitted on a destroyed thread. This object will
   /// continue to exist until all references to it have been released.

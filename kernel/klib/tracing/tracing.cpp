@@ -136,17 +136,17 @@ void kl_trc_output_err_code_argument(ERR_CODE ec)
     kl_trc_output_str_argument( n ); \
     break
 
-void kl_trc_output_dev_status_argument(DEV_STATUS ds)
+void kl_trc_output_dev_status_argument(OPER_STATUS_T ds)
 {
   switch (ds)
   {
-  DS_LOOKUP(DEV_STATUS::UNKNOWN, "Unknown");
-  DS_LOOKUP(DEV_STATUS::STOPPED, "Stopped");
-  DS_LOOKUP(DEV_STATUS::STARTING, "Starting");
-  DS_LOOKUP(DEV_STATUS::STOPPING, "Stopping");
-  DS_LOOKUP(DEV_STATUS::OK, "Running OK");
-  DS_LOOKUP(DEV_STATUS::RESET, "Resetting");
-  DS_LOOKUP(DEV_STATUS::FAILED, "Failed");
+  DS_LOOKUP(OPER_STATUS::UNKNOWN, "Unknown");
+  DS_LOOKUP(OPER_STATUS::STOPPED, "Stopped");
+  DS_LOOKUP(OPER_STATUS::STARTING, "Starting");
+  DS_LOOKUP(OPER_STATUS::STOPPING, "Stopping");
+  DS_LOOKUP(OPER_STATUS::OK, "Running OK");
+  DS_LOOKUP(OPER_STATUS::RESET, "Resetting");
+  DS_LOOKUP(OPER_STATUS::FAILED, "Failed");
   }
 }
 

@@ -106,9 +106,14 @@ struct proc_interrupt_data
   bool is_irq; ///< Is this interrupt number actually an IRQ interrupt?
 
   klib_list<proc_interrupt_handler *> interrupt_handlers; ///< List of handlers for this interrupt.
+
+  kernel_spinlock list_lock; ///< Lock to protect interrupt_handlers.
 };
 
-void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thread);
+void *task_int_create_exec_context(ENTRY_PROC entry_point,
+                                   task_thread *new_thread,
+                                   uint64_t param = 0,
+                                   void *stack_ptr = nullptr);
 void task_int_delete_exec_context(task_thread *old_thread);
 
 task_thread *task_get_next_thread();
@@ -142,4 +147,5 @@ extern const uint16_t PROC_NUM_IRQS;
 extern proc_interrupt_data proc_interrupt_data_table[];
 
 extern klib_list<std::shared_ptr<task_thread>> dead_thread_list;
+extern std::atomic<task_process *> dead_processes;
 /// @endcond

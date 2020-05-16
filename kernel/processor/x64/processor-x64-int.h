@@ -4,6 +4,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "processor-x64.h"
 
 enum class PROC_IPI_MSGS;
 
@@ -60,7 +61,7 @@ void proc_load_tss(uint32_t proc_num);
 ///
 /// @param gdt_offset The number of bytes from the start of the GDT for the TSS to load.
 extern "C" void asm_proc_load_tss(uint64_t gdt_offset);
-void proc_recreate_gdt(uint32_t num_procs);
+void proc_recreate_gdt(uint32_t num_procs, processor_info *proc_details);
 
 // Interrupt setup and handling
 extern "C" void asm_proc_stop_interrupts(); ///< @brief Stop interrupts on this processor.

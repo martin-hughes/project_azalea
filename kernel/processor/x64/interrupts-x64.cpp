@@ -135,7 +135,7 @@ void proc_configure_idt_entry(uint32_t interrupt_num, int req_priv_lvl, void *fn
   uint16_t mid_bytes;
   uint32_t high_bytes;
   uint16_t segment_selector = 0x0008;
-  uint16_t type_field = 0x8F00;
+  uint16_t type_field = 0x8E00;
 
   ASSERT((req_priv_lvl == 0) || (req_priv_lvl == 3))
   if (req_priv_lvl)

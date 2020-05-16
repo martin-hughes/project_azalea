@@ -4,6 +4,8 @@
 // Known defects:
 // - block_on_read is untested
 // - message send on write is untested.
+// - non-blocking mode is ignored by wait_for_signal()
+// - Wait for data may wait or not wait inaccurately if readers are used in multiple threads.
 
 //#define ENABLE_TRACING
 
@@ -13,6 +15,7 @@
 #include "klib/klib.h"
 #include "system_tree/fs/pipe/pipe_fs.h"
 #include "processor/processor.h"
+#include "processor/timing/timing.h"
 
 using namespace std;
 
@@ -26,7 +29,7 @@ namespace
 /// @brief Standard constructor
 ///
 /// New pipe branches should be created using the static create() function.
-pipe_branch::pipe_branch() : _buffer(new uint8_t[NORMAL_BUFFER_SIZE])
+pipe_branch::pipe_branch() : WaitObject(_pipe_lock), _buffer(new uint8_t[NORMAL_BUFFER_SIZE])
 {
   KL_TRC_ENTRY;
 
@@ -116,6 +119,37 @@ void pipe_branch::set_msg_receiver(std::shared_ptr<work::message_receiver> &new_
   new_data_handler = new_handler;
 
   KL_TRC_EXIT;
+}
+
+bool pipe_branch::should_still_sleep()
+{
+  bool result;
+  uint64_t rp;
+  uint64_t wp;
+  uint64_t avail_length;
+
+  KL_TRC_ENTRY;
+
+  // If there's data in the pipe, no need to wait.
+  rp = reinterpret_cast<uint64_t>(_read_ptr);
+  wp = reinterpret_cast<uint64_t>(_write_ptr);
+
+  if (wp >= rp)
+  {
+    avail_length = wp - rp;
+  }
+  else
+  {
+    avail_length = (NORMAL_BUFFER_SIZE + wp) - rp;
+  }
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Available bytes to read: ", avail_length, "\n");
+
+  result = (avail_length == 0);
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
 }
 
 /// @brief Standard constructor
@@ -230,6 +264,7 @@ ERR_CODE pipe_branch::pipe_read_leaf::read_bytes(uint64_t start,
     ret = ERR_CODE::NO_ERROR;
   }
 
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", ret, "\n");
   KL_TRC_EXIT;
 
   return ret;
@@ -246,6 +281,63 @@ void pipe_branch::pipe_read_leaf::set_block_on_read(bool block)
   KL_TRC_TRACE(TRC_LVL::FLOW, "New blocking state: ", block, "\n");
   this->block_on_read = block;
   KL_TRC_EXIT;
+}
+
+bool pipe_branch::pipe_read_leaf::wait_for_signal(uint64_t max_wait)
+{
+  bool result{false};
+  KL_TRC_ENTRY;
+
+  std::shared_ptr<pipe_branch> parent_branch = this->_parent.lock();
+  if (parent_branch)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Wait for signal\n");
+    result = parent_branch->wait_for_signal(max_wait);
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Done\n");
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+bool pipe_branch::pipe_read_leaf::cancel_waiting_thread(task_thread *thread)
+{
+  bool result{false};
+
+  KL_TRC_ENTRY;
+
+  std::shared_ptr<pipe_branch> parent_branch = this->_parent.lock();
+  if (parent_branch)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Cancel thread\n");
+    result = parent_branch->cancel_waiting_thread(thread);
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+uint64_t pipe_branch::pipe_read_leaf::threads_waiting()
+{
+  uint64_t result{0};
+
+  KL_TRC_ENTRY;
+
+  std::shared_ptr<pipe_branch> parent_branch = this->_parent.lock();
+  if (parent_branch)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Count threads");
+    result = parent_branch->threads_waiting();
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
 }
 
 /// @brief Standard constructor
@@ -290,7 +382,7 @@ ERR_CODE pipe_branch::pipe_write_leaf::write_bytes(uint64_t start,
   }
   else
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Try to write from the pipe\n");
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Try to write to the pipe\n");
     klib_synch_spinlock_lock(parent_branch->_pipe_lock);
 
     rp = reinterpret_cast<uint64_t>(parent_branch->_read_ptr);
@@ -346,6 +438,8 @@ ERR_CODE pipe_branch::pipe_write_leaf::write_bytes(uint64_t start,
     }
 
     klib_synch_spinlock_unlock(parent_branch->_pipe_lock);
+
+    parent_branch->trigger_all_threads();
 
     ret = ERR_CODE::NO_ERROR;
   }

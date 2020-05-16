@@ -23,6 +23,7 @@ extern "C"
 #endif
 
   int azalea_version();
+  int az_translate_error_code(ERR_CODE ec);
 
 #ifdef __cplusplus
 };

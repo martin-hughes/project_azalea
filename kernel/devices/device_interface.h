@@ -81,19 +81,10 @@ namespace dev
   bool create_new_device(std::shared_ptr<t> &new_dev, std::shared_ptr<IDevice> &parent, Args... args);
 };
 
-/// @brief A list of possible device statuses.
+/// @brief Map OPER_STATUS to the old DEV_STATUS
 ///
-enum class DEV_STATUS
-{
-  OK, ///< Device is running correctly.
-  FAILED, ///< Device was started but then failed, or cannot be initialised.
-  //NOT_PRESENT, ///< Device is not actually present in the system.
-  RESET, ///< Device is resetting.
-  STOPPED, ///< Device is OK but is deliberately not available.
-  STARTING, ///< Device is initialising.
-  STOPPING, ///< Device is stopping.
-  UNKNOWN, ///< Device has not reported a valid status.
-};
+/// DEV_STATUS is the old name, used in too many places to make it worth changing at the moment.
+typedef OPER_STATUS DEV_STATUS;
 
 /// @brief The interface that all device drivers must inherit from.
 ///

@@ -59,7 +59,7 @@ TEST(SystemTreeTest, ProcFsOneProcessIdFile)
   ASSERT_EQ(strncmp(read_buffer, expected_buffer, 22), 0);
 
   test_only_set_cur_thread(nullptr);
-  proc->destroy_process();
+  proc->destroy_process(0);
   proc = nullptr;
 
   test_only_reset_task_mgr();

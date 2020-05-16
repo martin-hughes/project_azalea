@@ -75,7 +75,7 @@ void pci_root_device::scan_for_devices()
     for (int i = 0; i < 8; i++)
     {
       dev0_reg0.raw = pci_read_raw_reg(0, 0, i, PCI_REGS::DEV_AND_VENDOR_ID);
-      if (dev0_reg0.vendor_id != PCI_INVALID_VENDOR)
+      if (dev0_reg0.vendor_id == PCI_INVALID_VENDOR)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Examine bus ", i, "\n");
         ASSERT(dev::create_new_device(new_bus, this_ptr, i, std::dynamic_pointer_cast<pci_root_device>(this_ptr)));
@@ -91,6 +91,7 @@ void pci_root_device::scan_for_devices()
   }
   else
   {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Construct PCI single bus\n");
     ASSERT(dev::create_new_device(new_bus, this_ptr, 0, std::dynamic_pointer_cast<pci_root_device>(this_ptr)));
     ASSERT(this->add_child("bus000", new_bus) == ERR_CODE::NO_ERROR);
   }

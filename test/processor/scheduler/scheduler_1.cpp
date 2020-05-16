@@ -113,8 +113,8 @@ TEST(SchedulerTest, SimpleTests)
 
   ASSERT_EQ(idle_thread_a, task_get_next_thread());
 
-  proc_a->destroy_process();
-  proc_b->destroy_process();
+  proc_a->destroy_process(0);
+  proc_b->destroy_process(0);
   proc_a = nullptr;
   proc_b = nullptr;
 

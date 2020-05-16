@@ -28,7 +28,8 @@ void proc_generate_tss(uint8_t *tss_descriptor,
                        void *kernel_stack_loc,
                        void *ist1_stack_loc,
                        void *ist2_stack_loc,
-                       void *ist3_stack_loc);
+                       void *ist3_stack_loc,
+                       void *ist4_stack_loc);
 uint16_t proc_calc_tss_desc_offset(uint32_t proc_num);
 
 /// @brief Recreate the GDT
@@ -38,7 +39,9 @@ uint16_t proc_calc_tss_desc_offset(uint32_t proc_num);
 /// it, allocate enough space for all those TSS descriptors.
 ///
 /// @param num_procs The number of processors in the system.
-void proc_recreate_gdt(uint32_t num_procs)
+///
+/// @param proc_details Processor information block for the processor to recreate the GDT for.
+void proc_recreate_gdt(uint32_t num_procs, processor_info *proc_details)
 {
   KL_TRC_ENTRY;
 
@@ -70,10 +73,11 @@ void proc_recreate_gdt(uint32_t num_procs)
   {
     offset = proc_calc_tss_desc_offset(i);
     proc_generate_tss(&system_gdt[offset],
-                      proc_allocate_stack(true),
-                      proc_allocate_stack(true),
-                      proc_allocate_stack(true),
-                      proc_allocate_stack(true));
+                      proc_details[i].platform_data.kernel_stack_addr,
+                      proc_details[i].platform_data.ist_1_addr,
+                      proc_details[i].platform_data.ist_2_addr,
+                      proc_details[i].platform_data.ist_3_addr,
+                      proc_details[i].platform_data.ist_4_addr);
   }
 
   proc_gdt_populate_pointer(main_gdt_pointer, reinterpret_cast<uint64_t>(system_gdt), length_of_gdt);
@@ -157,12 +161,16 @@ void proc_init_tss()
 ///                       mechanism. Initially, this is just the NMI handler.
 ///
 /// @param ist3_stack_loc A pointer to a stack to use for interrupts using entry 2 of the IST. Currently, this is only
-///                       the task switching interrupt.
+///                       the external timer generated task switching interrupt.
+///
+/// @param ist4_stack_loc A pointer to a stack to use for interrupts using entry 4 of the IST. Currently, this is only
+///                       the internal task switching interrupt.
 void proc_generate_tss(uint8_t *tss_descriptor,
                        void *kernel_stack_loc,
                        void *ist1_stack_loc,
                        void *ist2_stack_loc,
-                       void *ist3_stack_loc)
+                       void *ist3_stack_loc,
+                       void *ist4_stack_loc)
 {
   KL_TRC_ENTRY;
 
@@ -183,8 +191,8 @@ void proc_generate_tss(uint8_t *tss_descriptor,
   // Fill in TSS segment descriptor //
   ////////////////////////////////////
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Filling in TSS GDT entry at", tss_gdt_entry, "\n");
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "To point at TSS at", tss_segment, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Filling in TSS GDT entry at: ", tss_gdt_entry, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "To point at TSS at: ", tss_segment, "\n");
 
   // These two bytes define the length of the segment.
   tss_descriptor[0] = (uint8_t)(TSS_SEG_LENGTH - 1);
@@ -234,6 +242,7 @@ void proc_generate_tss(uint8_t *tss_descriptor,
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Set IST1 stack to ", ist1_stack_loc, "\n");
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Set IST2 stack to ", ist2_stack_loc, "\n");
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Set IST3 stack to ", ist3_stack_loc, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Set IST4 stack to ", ist4_stack_loc, "\n");
 
   // Next, fill in IST1
   ist_entry = reinterpret_cast<uint64_t *>(tss_segment + 36);
@@ -246,6 +255,9 @@ void proc_generate_tss(uint8_t *tss_descriptor,
   // Next IST3.
   ist_entry = reinterpret_cast<uint64_t *>(tss_segment + 52);
   *ist_entry = reinterpret_cast<uint64_t>(ist3_stack_loc);
+
+  ist_entry = reinterpret_cast<uint64_t *>(tss_segment + 60);
+  *ist_entry = reinterpret_cast<uint64_t>(ist4_stack_loc);
 
   KL_TRC_EXIT;
 }
@@ -260,9 +272,9 @@ void proc_load_tss(uint32_t proc_num)
 {
   KL_TRC_ENTRY;
 
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Processor number: ", proc_num, "\n");
   uint64_t offset = proc_calc_tss_desc_offset(proc_num);
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Processor number: ", proc_num, "\n");
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Offset: ", offset, "\n");
 
   asm_proc_load_tss(offset);
@@ -284,7 +296,7 @@ uint16_t proc_calc_tss_desc_offset(uint32_t proc_num)
   // Reasoning is as per proc_gdt_calc_req_len
   result = 48 + (16 * proc_num);
 
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Proc num: ", proc_num, " - result: ", result, "\n");
   KL_TRC_EXIT;
 
   return result;
