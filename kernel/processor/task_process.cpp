@@ -128,6 +128,8 @@ task_process::~task_process()
 /// @brief Final destruction of a process.
 ///
 /// Destroys all threads and then signals anyone waiting for this process to finish.
+///
+/// @param exit_code The exit code to assign to this process.
 void task_process::destroy_process(uint64_t exit_code)
 {
   KL_TRC_ENTRY;

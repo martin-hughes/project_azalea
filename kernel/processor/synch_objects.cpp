@@ -463,6 +463,8 @@ bool syscall_semaphore_obj::wait_for_signal(uint64_t max_wait)
 }
 
 /// @brief Signal this semaphore.
+///
+/// @return Always returns true.
 bool syscall_semaphore_obj::signal()
 {
   KL_TRC_ENTRY;

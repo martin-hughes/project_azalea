@@ -281,6 +281,8 @@ ERR_CODE syscall_signal_semaphore(GEN_HANDLE semaphore_handle)
   return result;
 }
 
+/// @brief Yields the current thread's execution.
+///
 void syscall_yield()
 {
   KL_TRC_ENTRY;

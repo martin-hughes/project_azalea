@@ -43,6 +43,11 @@ ERR_CODE syscall_get_system_clock(time_expanded *buffer)
   return result;
 }
 
+/// @brief Sleeps the current thread for the required time.
+///
+/// @param nanoseconds The thread will sleep for at least this many nanoseconds.
+///
+/// @return Always returns ERR_CODE::NO_ERROR.
 ERR_CODE syscall_sleep_thread(uint64_t nanoseconds)
 {
   KL_TRC_ENTRY;

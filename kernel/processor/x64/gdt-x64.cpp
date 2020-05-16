@@ -39,6 +39,8 @@ uint16_t proc_calc_tss_desc_offset(uint32_t proc_num);
 /// it, allocate enough space for all those TSS descriptors.
 ///
 /// @param num_procs The number of processors in the system.
+///
+/// @param proc_details Processor information block for the processor to recreate the GDT for.
 void proc_recreate_gdt(uint32_t num_procs, processor_info *proc_details)
 {
   KL_TRC_ENTRY;

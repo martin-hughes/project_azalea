@@ -38,6 +38,11 @@ namespace
 ///
 /// @param new_thread The thread that is having an execution context created for it
 ///
+/// @param param Optional parameter to pass to the newly created thread.
+///
+/// @param stack_ptr Optional stack pointer for the thread to use. If none provided, the kernel allocates a stack. It
+///                  is the caller's responsibility to deallocate this stack.
+///
 /// @return A pointer to the execution context. This is opaque to non-x64 code.
 void *task_int_create_exec_context(ENTRY_PROC entry_point, task_thread *new_thread, uint64_t param, void *stack_ptr)
 {

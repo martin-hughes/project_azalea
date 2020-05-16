@@ -50,6 +50,8 @@ normal_transfer::normal_transfer(std::shared_ptr<work::message_receiver> receive
 /// @param buffer The buffer to send or receive to/from.
 ///
 /// @param length The number of bytes to transfer. It is assumed that buffer is greater in size that this.
+///
+/// @return Shared pointer to a transfer object.
 std::shared_ptr<normal_transfer> normal_transfer::create(std::shared_ptr<work::message_receiver> receiver,
                                                          std::unique_ptr<uint8_t[]> buffer,
                                                          uint32_t length)

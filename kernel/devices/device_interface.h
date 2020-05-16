@@ -81,6 +81,9 @@ namespace dev
   bool create_new_device(std::shared_ptr<t> &new_dev, std::shared_ptr<IDevice> &parent, Args... args);
 };
 
+/// @brief Map OPER_STATUS to the old DEV_STATUS
+///
+/// DEV_STATUS is the old name, used in too many places to make it worth changing at the moment.
 typedef OPER_STATUS DEV_STATUS;
 
 /// @brief The interface that all device drivers must inherit from.
