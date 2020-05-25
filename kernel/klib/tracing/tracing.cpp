@@ -20,6 +20,11 @@
 #include "processor/x64/processor-x64-int.h"
 #include "devices/device_interface.h"
 
+namespace
+{
+  bool trc_output_enabled{true}; ///< Is tracing output enabled or not?
+}
+
 #ifdef KL_TRACE_BY_SERIAL_PORT
 const uint16_t TRC_COM1_BASE_PORT = 0x3F8;
 #endif
@@ -43,6 +48,11 @@ bool kl_trc_serial_port_ready()
 
 void kl_trc_char(unsigned char c)
 {
+  if (!trc_output_enabled)
+  {
+    return;
+  }
+
 #ifdef KL_TRACE_BY_SERIAL_PORT
   while (!kl_trc_serial_port_ready())
   {
@@ -75,10 +85,25 @@ void kl_trc_init_tracing()
 #endif
 }
 
+void kl_trc_enable_output()
+{
+  trc_output_enabled = true;
+}
+
+void kl_trc_disable_output()
+{
+  trc_output_enabled = false;
+}
+
 void kl_trc_output_int_argument(uint64_t value)
 {
   char buf[19] = "0x0000000000000000";
   char temp = 0;
+
+  if (!trc_output_enabled)
+  {
+    return;
+  }
 
   for (int i = 0; i < 16; i++)
   {
@@ -100,6 +125,11 @@ void kl_trc_output_int_argument(uint64_t value)
 
 void kl_trc_output_str_argument(char const *str)
 {
+  if (!trc_output_enabled)
+  {
+    return;
+  }
+
   while (*str != 0)
   {
     kl_trc_char(*str);
@@ -109,6 +139,11 @@ void kl_trc_output_str_argument(char const *str)
 
 void kl_trc_output_std_string_argument(std::string &str)
 {
+  if (!trc_output_enabled)
+  {
+    return;
+  }
+
   for (uint64_t x = 0; x < str.length(); x++)
   {
     kl_trc_char(str[x]);
@@ -117,6 +152,11 @@ void kl_trc_output_std_string_argument(std::string &str)
 
 void kl_trc_output_err_code_argument(ERR_CODE ec)
 {
+  if (!trc_output_enabled)
+  {
+    return;
+  }
+
   const char *msg = nullptr;
   msg = azalea_lookup_err_code(ec);
 

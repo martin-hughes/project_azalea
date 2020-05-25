@@ -35,7 +35,6 @@ fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
   ERR_CODE r;
 
   if ((this->_storage == nullptr)
-      || (this->_storage->get_device_status() != DEV_STATUS::OK)
       || (this->_storage->num_blocks() == 0))
   {
     _status = DEV_STATUS::FAILED;

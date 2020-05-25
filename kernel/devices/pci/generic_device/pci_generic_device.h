@@ -4,6 +4,7 @@
 #pragma once
 
 #include <string>
+#include <list>
 
 #include "devices/pci/pci_constants.h"
 #include "devices/pci/pci_structures.h"
@@ -61,6 +62,7 @@ protected:
   // Generic capabilities commands.
   void zero_caps_list();
   void scan_caps();
+  virtual bool read_capability_block(pci::capability<void> &cap, void *buffer, uint16_t buffer_length);
 
   // MSI control commands.
   bool msi_configure(uint8_t interrupts_requested, uint8_t &interrupts_granted);
@@ -83,7 +85,6 @@ protected:
     pci::capability<void> compact_pci_hotswap; ///< Compact PCI hotswap capability.
     pci::capability<void> pci_x; ///< PCI-X capability.
     pci::capability<void> hypertransport; ///< Hypertransport capability.
-    pci::capability<void> vendor_specific_cap; ///< Vendor-specific capability.
     pci::capability<void> debug_port; ///< Debug-port capability.
     pci::capability<void> compact_pci_crc; ///< Compact-PCI CRC capability.
     pci::capability<void> pci_hotplug; ///< PCI hotplug capability.
@@ -92,6 +93,8 @@ protected:
     pci::capability<void> secure_device; ///< Secure device capability.
     pci::capability<void> pci_express; ///< PCI Express capability.
     pci::capability<void> msi_x; ///< MSI-X capability.
+
+    std::list<pci::capability<void>> vendor_specific; ///< Vendor-specific capabilities.
   } caps; ///< Capabilities of this device.
 
   pci_address _address; ///< The address of this device.

@@ -23,7 +23,7 @@
 ///
 /// @param num_blocks How many blocks long is this proxy?
 block_proxy_device::block_proxy_device(IBlockDevice *parent, uint64_t start_block, uint64_t num_blocks) :
-    IBlockDevice("Generic block device", "proxy"), _parent(parent), _start_block(start_block), _num_blocks(num_blocks)
+    IDevice{"Generic block device", "proxy", true}, _parent(parent), _start_block(start_block), _num_blocks(num_blocks)
 {
   KL_TRC_ENTRY;
 
@@ -103,12 +103,6 @@ DEV_STATUS block_proxy_device::get_device_status()
   KL_TRC_ENTRY;
 
   DEV_STATUS ret = IDevice::get_device_status();
-
-  if (ret == DEV_STATUS::OK)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Check parent device\n");
-    ret = this->_parent->get_device_status();
-  }
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Status: ", ret, "\n");
 

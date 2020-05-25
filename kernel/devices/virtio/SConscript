@@ -1,0 +1,12 @@
+# Generic virtio drivers.
+
+Import('env')
+obj = env.Library("dev-virtio",
+                  [
+                    "virtio.cpp",
+                    "virtio_block.cpp",
+                    "virtio_generic.cpp",
+                    "virtio_queue.cpp",
+                  ]
+                 )
+Return ("obj")

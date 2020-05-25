@@ -14,7 +14,10 @@
 ///
 /// @param block_size The size of a block on this device.
 ramdisk_device::ramdisk_device(uint64_t num_blocks, uint64_t block_size) :
-    IBlockDevice("generic RAM disk", "ramdisk"), _num_blocks(num_blocks), _block_size(block_size), _storage_size(num_blocks * block_size)
+    IDevice{"generic RAM disk", "ramdisk", true},
+    _num_blocks{num_blocks},
+    _block_size{block_size},
+    _storage_size{num_blocks * block_size}
 {
   KL_TRC_ENTRY;
 

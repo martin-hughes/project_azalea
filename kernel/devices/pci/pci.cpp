@@ -18,6 +18,7 @@
 #include "devices/device_monitor.h"
 #include "devices/usb/usb.h"
 #include "devices/block/ata/controller/ata_pci_controller.h"
+#include "devices/virtio/virtio.h"
 
 /// @brief Read a 32-bit register from the PCI configuration space.
 ///
@@ -59,7 +60,7 @@ uint32_t pci_read_raw_reg (pci_address address)
 ///
 /// @param address The PCI address to query. Only the bus, slot and function fields are required.
 ///
-/// @param reg PCI register number. Valid values are 0-63, inclusive.
+/// @param reg PCI register number. Valid values are 0-63, inclusive. Each register is 4 bytes wide.
 ///
 /// @return The value read from the given PCI address.
 uint32_t pci_read_raw_reg (pci_address address, PCI_REGS reg)
@@ -80,7 +81,7 @@ uint32_t pci_read_raw_reg (pci_address address, PCI_REGS reg)
 ///
 /// @param address The PCI address to query. Only the bus, slot and function fields are required.
 ///
-/// @param reg PCI register number. Valid values are 0-63, inclusive.
+/// @param reg PCI register number. Valid values are 0-63, inclusive. Each register is 4 bytes wide.
 ///
 /// @return The value read from the given PCI address.
 uint32_t pci_read_raw_reg (pci_address address, uint8_t reg)
@@ -105,7 +106,7 @@ uint32_t pci_read_raw_reg (pci_address address, uint8_t reg)
 ///
 /// @param func PCI device function number. Valid values are 0-7, inclusive.
 ///
-/// @param reg PCI register number. Valid values are 0-63, inclusive.
+/// @param reg PCI register number. Valid values are 0-63, inclusive. Each register is 4 bytes wide.
 ///
 /// @return The value read from the given PCI address.
 uint32_t pci_read_raw_reg (uint8_t bus, uint8_t slot, uint8_t func, uint8_t reg)
@@ -225,7 +226,7 @@ void pci_write_raw_reg (pci_address address, uint8_t reg, uint32_t value)
 ///
 /// @param func PCI device function number. Valid values are 0-7, inclusive.
 ///
-/// @param reg PCI register number. Valid values are 0-63, inclusive.
+/// @param reg PCI register number. Valid values are 0-63, inclusive. Each register is 4 bytes wide.
 ///
 /// @param value The value to write into the register
 void pci_write_raw_reg (uint8_t bus, uint8_t slot, uint8_t func, uint8_t reg, uint32_t value)
@@ -306,13 +307,35 @@ std::shared_ptr<pci_generic_device> pci_instantiate_device(uint8_t bus,
   KL_TRC_TRACE(TRC_LVL::FLOW, "Class: ", dev_reg2.class_code, ", Subclass: ", dev_reg2.subclass, "\n");
 
   // First, look at the device and vendor IDs to see if there's a specific driver to load.
-
-  // ... except that, at present, there are no specific drivers.
-
-  // If we get this far, we don't have a device specific driver, so try a generic one.
-
-  switch (dev_reg2.class_code)
+  switch (dev_reg0.vendor_id)
   {
+  case virtio::VENDOR_ID:
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Virtio device\n");
+
+    if (((dev_reg0.device_id >= 0x1000) && (dev_reg0.device_id <= 0x1009)) ||
+        ((dev_reg0.device_id >= 0x1041) && (dev_reg0.device_id <= 0x1058)))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Found valid device ID: ", dev_reg0.device_id, "\n");
+      new_device = virtio::instantiate_virtio_device(parent, new_dev_addr, dev_reg0.vendor_id, dev_reg0.device_id);
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid virtio device ID found, fallback to generic devices\n");
+    }
+    break;
+
+  default:
+    KL_TRC_TRACE(TRC_LVL::FLOw, "Not found by vendor ID\n");
+    break;
+  }
+
+  // If we didn't find a device specific driver, try looking for a generic one.
+  if (!new_device)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "No vendor specific driver, continue with generic choices\n");
+
+    switch (dev_reg2.class_code)
+    {
     case PCI_CLASS::MASS_STORE_CONTR:
       KL_TRC_TRACE(TRC_LVL::FLOW, "Mass storage controller\n");
       switch(dev_reg2.subclass)
@@ -368,6 +391,7 @@ std::shared_ptr<pci_generic_device> pci_instantiate_device(uint8_t bus,
 
     default:
       break;
+    }
   }
 
   // Finally, fall back on the generic PCI device driver.
@@ -389,4 +413,40 @@ std::shared_ptr<pci_generic_device> pci_instantiate_device(uint8_t bus,
   KL_TRC_EXIT;
 
   return new_device;
+}
+
+/// @brief Read a PCI Base Address Register.
+///
+/// This function is basically a shorthand around a pair of pci_read_raw_reg calls. It takes into account both 32- and
+/// 64-bit Base Address Registers.
+///
+/// @param address PCI address of the device to query. The register number is ignored.
+///
+/// @param bar The number of the BAR to examine.
+///
+/// @return The address contained within the BAR. For 32-bit BARs, the upper 32-bits of the return value will be set to
+///         zero. The type and prefetch fields are not masked - they are passed to the caller.
+uint64_t pci_read_base_addr_reg(pci_address address, uint8_t bar)
+{
+  uint8_t reg;
+  uint64_t addr{0};
+  uint64_t part;
+
+  KL_TRC_ENTRY;
+
+  reg = static_cast<uint8_t>(PCI_REGS::BAR_0) + bar;
+  addr = pci_read_raw_reg(address, reg);
+  if (((addr & 0x000000004) == 4) && ((addr & 0x00000001) == 0))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "64-bit address register\n");
+    part = pci_read_raw_reg(address, reg + 1);
+    part <<= 32;
+
+    addr |= part;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", addr, "\n");
+  KL_TRC_EXIT;
+
+  return addr;
 }

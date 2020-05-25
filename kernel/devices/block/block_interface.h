@@ -11,15 +11,12 @@
 /// @brief Interface common to all block devices.
 ///
 /// The most likely and common example of this type of device is a disk drive.
-class IBlockDevice : public IDevice
+class IBlockDevice
 {
 public:
   /// @brief Simple constructor
   ///
-  /// @param human_name The name of this device.
-  ///
-  /// @param dev_name The device name for this device.
-  IBlockDevice(const std::string human_name, const std::string dev_name) : IDevice{human_name, dev_name, true} { };
+  IBlockDevice() { };
 
   virtual ~IBlockDevice() = default;
 

@@ -193,6 +193,8 @@ _Noreturn void __assert_fail(const char *expr, const char *file, int line, const
     }
   }
 
+  KL_TRC_ENABLE_OUTPUT();
+
   // Print a simple message on the screen.
   panic_clear_screen();
   panic_print("KERNEL PANIC", 0);

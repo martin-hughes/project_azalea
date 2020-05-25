@@ -142,6 +142,7 @@ void AcpiOsDeleteLock(ACPI_SPINLOCK Handle)
 ACPI_CPU_FLAGS AcpiOsAcquireLock(ACPI_SPINLOCK Handle)
 {
   KL_TRC_ENTRY;
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Acquire lock: ", Handle, "\n");
   kernel_spinlock *lock = (kernel_spinlock *)Handle;
   ASSERT(lock != nullptr);
   klib_synch_spinlock_lock(*lock);
@@ -153,6 +154,7 @@ ACPI_CPU_FLAGS AcpiOsAcquireLock(ACPI_SPINLOCK Handle)
 void AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags)
 {
   KL_TRC_ENTRY;
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Release lock: ", Handle, "\n");
   kernel_spinlock *lock = (kernel_spinlock *)Handle;
   ASSERT(lock != nullptr);
   klib_synch_spinlock_unlock(*lock);
@@ -269,8 +271,11 @@ ACPI_STATUS AcpiOsAcquireMutex(ACPI_MUTEX Handle, UINT16 Timeout)
   SYNC_ACQ_RESULT res;
   ASSERT(mutex != nullptr);
 
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Acquire mutex: ", mutex, ". Timeout: ", Timeout, "\n");
+
   if (wait == 0xFFFF)
   {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Max wait\n");
     wait = MUTEX_MAX_WAIT;
   }
 
@@ -279,14 +284,18 @@ ACPI_STATUS AcpiOsAcquireMutex(ACPI_MUTEX Handle, UINT16 Timeout)
   switch (res)
   {
     case SYNC_ACQ_ACQUIRED:
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Acq\n");
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Acquired\n");
       retval = AE_OK;
       break;
 
     case SYNC_ACQ_TIMEOUT:
       retval = AE_TIME;
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Timeout!");
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Timeout!\n");
       break;
+
+    case SYNC_ACQ_ALREADY_OWNED:
+      retval = AE_OK;
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Already owned\n");
 
     default:
       panic("Unknown mutex result");
@@ -302,6 +311,7 @@ void AcpiOsReleaseMutex(ACPI_MUTEX Handle)
   KL_TRC_ENTRY;
   klib_mutex *mutex = (klib_mutex *)Handle;
   ASSERT(mutex != nullptr);
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Release mutex: ", Handle, "\n");
 
   klib_synch_mutex_release(*mutex, false);
   KL_TRC_EXIT;
@@ -312,14 +322,22 @@ void AcpiOsReleaseMutex(ACPI_MUTEX Handle)
  */
 void *AcpiOsAllocate(ACPI_SIZE Size)
 {
+  void *ret;
   KL_TRC_ENTRY;
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Allocate ", Size, " bytes.\n");
+
+  ret = (void *)(new char[Size]);
+  memset(ret, 0, Size);
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", ret, "\n");
   KL_TRC_EXIT;
-  return (void *)(new char[Size]);
+  return ret;
 }
 
 void AcpiOsFree(void * Memory)
 {
   KL_TRC_ENTRY;
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Release ", Memory, "\n");
   ASSERT(Memory != nullptr);
   delete[] (char *)Memory;
   KL_TRC_EXIT;
@@ -461,6 +479,8 @@ ACPI_THREAD_ID AcpiOsGetThreadId(void)
   {
     thread_id = 1;
   }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", thread_id, "\n");
   KL_TRC_EXIT;
 
   return thread_id;
@@ -713,6 +733,7 @@ UINT64 AcpiOsGetTimer(void)
   KL_TRC_ENTRY;
 
   timer_val = time_get_system_timer_count(true) / 100;
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Timer val: ", timer_val, "\n");
   KL_TRC_EXIT;
 
   return timer_val;

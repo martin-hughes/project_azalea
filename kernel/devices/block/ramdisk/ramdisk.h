@@ -9,7 +9,7 @@
 /// @brief An in-memory disk-like device.
 ///
 /// This device acts like a normal block device, except that all of its storage is in RAM.
-class ramdisk_device: public IBlockDevice
+class ramdisk_device: public IBlockDevice, public IDevice
 {
 public:
   ramdisk_device(uint64_t num_blocks, uint64_t block_size);

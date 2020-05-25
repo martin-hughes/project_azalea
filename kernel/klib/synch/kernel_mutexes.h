@@ -20,7 +20,7 @@ const uint64_t MUTEX_MAX_WAIT = 0xFFFFFFFFFFFFFFFF; ///< Constant defining an in
 struct klib_mutex
 {
   bool mutex_locked{false}; ///<Is the mutex locked by any process?
-  task_thread *owner_thread{nullptr}; ///< Which process has locked the thread?
+  volatile task_thread *owner_thread{nullptr}; ///< Which process has locked the thread?
 
   /// Which processes are waiting to grab this mutex?
   ///

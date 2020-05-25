@@ -28,7 +28,7 @@ using namespace ata;
 ///
 /// @param identity_buf Output from an earlier IDENTIFY command used to show that this device existed.
 generic_device::generic_device(std::shared_ptr<generic_controller> parent, uint16_t drive_index, identify_cmd_output &identity_buf) :
-    IBlockDevice{"Generic ATA device", "ata"},
+    IDevice{"Generic ATA device", "ata", true},
     parent_controller{parent},
     controller_index{drive_index}
 {

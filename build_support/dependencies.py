@@ -32,6 +32,7 @@ kernel = [
     '#kernel/devices/pci/SConscript',
     '#kernel/devices/terminals/SConscript',
     '#kernel/devices/usb/SConscript',
+    "#kernel/devices/virtio/SConscript",
 
     # Filesystems
     '#kernel/system_tree/fs/fat/SConscript',

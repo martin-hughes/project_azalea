@@ -6,6 +6,7 @@
 //   e.g. multiple APICs so interrupt number might be more helpful then.
 // - This file is fundamentally single threaded. This is acceptable for the time being, because so is the ACPI
 //   enumeration process that drives it.
+// - The Bochs 'cheat mode' for choosing PCI IRQs ignores LNKS that is used for a power management device.
 
 // This file starts of with an object to manage a single PCI device-IRQ link. It then has functions that initialise and
 // manage a mapping of device address to IRQ connections.
@@ -20,6 +21,8 @@
 #include "pci_int_link_device.h"
 #include "generic_device/pci_generic_device.h"
 #include "klib/klib.h"
+
+extern bool is_bochs_machine;
 
 namespace
 {
@@ -94,6 +97,8 @@ std::shared_ptr<pci_irq_link_device> pci_irq_link_device::create(std::string &pa
 
   new_device = std::shared_ptr<pci_irq_link_device>(new pci_irq_link_device(obj_handle));
   ASSERT(!map_contains(*link_devices, pathname));
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Added new device with pathname: ", pathname, "\n");
 
   link_devices->insert({pathname, new_device});
 
@@ -285,19 +290,54 @@ uint16_t pci_generic_device::compute_irq_for_pin(uint8_t pin)
 
   ASSERT(pin < 4);
 
-  if (pci_int_map == nullptr)
+  if (is_bochs_machine)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieve PCI Legacy Interrupt map\n");
-    pci_init_int_map();
+    KL_TRC_TRACE(TRC_LVL::FLOW, "This is a Bochs machine, so cheat\n");
+
+    // First index is slot % 4, second is pin - 1.
+    uint16_t lnk_a_int;
+    uint16_t lnk_b_int;
+    uint16_t lnk_c_int;
+    uint16_t lnk_d_int;
+
+    ASSERT(map_contains(*link_devices, "\\_SB_.LNKA"));
+    ASSERT(map_contains(*link_devices, "\\_SB_.LNKB"));
+    ASSERT(map_contains(*link_devices, "\\_SB_.LNKC"));
+    ASSERT(map_contains(*link_devices, "\\_SB_.LNKD"));
+
+    lnk_a_int = link_devices->find("\\_SB_.LNKA")->second->get_interrupt();
+    lnk_b_int = link_devices->find("\\_SB_.LNKB")->second->get_interrupt();
+    lnk_c_int = link_devices->find("\\_SB_.LNKC")->second->get_interrupt();
+    lnk_d_int = link_devices->find("\\_SB_.LNKD")->second->get_interrupt();
+    KL_TRC_TRACE(TRC_LVL::FLOW, "A: ", lnk_a_int, ", B:", lnk_b_int, ", C:", lnk_c_int, ", D:", lnk_d_int, "\n");
+
+    uint16_t irq_table[4][4] = {
+      { lnk_a_int, lnk_b_int, lnk_c_int, lnk_d_int },
+      { lnk_b_int, lnk_c_int, lnk_d_int, lnk_a_int },
+      { lnk_c_int, lnk_d_int, lnk_a_int, lnk_b_int },
+      { lnk_d_int, lnk_a_int, lnk_b_int, lnk_c_int },
+    };
+
+    result = irq_table[address.normal.Device % 4][pin];
   }
-
-  address = acpi_addr_from_pci_addr(_address);
-  address.normal.Function = 0xFFFF;
-
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Lookup address: ", address.raw, "\n");
-  if (map_contains(*pci_int_map, address.raw))
+  else
   {
-    result = pci_int_map->find(address.raw)->second.pin_irq[pin];
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Not a Bochs machine, use longhand\n");
+
+    if (pci_int_map == nullptr)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieve PCI Legacy Interrupt map\n");
+      pci_init_int_map();
+    }
+
+    address = acpi_addr_from_pci_addr(_address);
+    address.normal.Function = 0xFFFF;
+
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Lookup address: ", address.raw, "\n");
+    if (map_contains(*pci_int_map, address.raw))
+    {
+      result = pci_int_map->find(address.raw)->second.pin_irq[pin];
+    }
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");

@@ -93,7 +93,6 @@ void pci_generic_device::zero_caps_list()
   caps.compact_pci_hotswap = {false, 0, nullptr};
   caps.pci_x = {false, 0, nullptr};
   caps.hypertransport = {false, 0, nullptr};
-  caps.vendor_specific_cap = {false, 0, nullptr};
   caps.debug_port = {false, 0, nullptr};
   caps.compact_pci_crc = {false, 0, nullptr};
   caps.pci_hotplug = {false, 0, nullptr};
@@ -102,6 +101,7 @@ void pci_generic_device::zero_caps_list()
   caps.secure_device = {false, 0, nullptr};
   caps.pci_express = {false, 0, nullptr};
   caps.msi_x = {false, 0, nullptr};
+  caps.vendor_specific = std::list<pci::capability<void>>();
 
   KL_TRC_EXIT;
 }
@@ -114,6 +114,7 @@ void pci_generic_device::scan_caps()
   uint16_t next_offset = 0;
 
   KL_TRC_ENTRY;
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Scan caps\n");
 
   status_reg.raw = pci_read_raw_reg(_address, PCI_REGS::STATUS_AND_COMMAND);
   if (status_reg.new_caps_list)
@@ -152,7 +153,6 @@ void pci_generic_device::scan_caps()
     SET_CAP_SUPPORTED(COMPACT_PCI_HOTSWAP, caps.compact_pci_hotswap, "Compact PCI hotswap\n");
     SET_CAP_SUPPORTED(PCI_X, caps.pci_x, "PCI-X capability");
     SET_CAP_SUPPORTED(HYPERTRANSPORT, caps.hypertransport, "Hypertransport capability");
-    SET_CAP_SUPPORTED(VENDOR_SPECIFIC_CAP, caps.vendor_specific_cap, "Vendor-specific capability");
     SET_CAP_SUPPORTED(DEBUG_PORT, caps.debug_port, "Debug port capability");
     SET_CAP_SUPPORTED(COMPACT_PCI_CRC, caps.compact_pci_crc, "Compact PCI CRC capability");
     SET_CAP_SUPPORTED(PCI_HOTPLUG, caps.pci_hotplug, "PCI Hotplug capability");
@@ -161,6 +161,16 @@ void pci_generic_device::scan_caps()
     SET_CAP_SUPPORTED(SECURE_DEVICE, caps.secure_device, "Secure Device capability");
     SET_CAP_SUPPORTED(PCI_EXPRESS, caps.pci_express, "PCI Express capability");
     SET_CAP_SUPPORTED(MSI_X, caps.msi_x, "MSI-X capability");
+
+    case VENDOR_SPECIFIC_CAP:
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Vendor-specific capability found @ ", next_offset, "\n");
+        pci::capability<void> cap;
+        cap.supported = true;
+        cap.offset = next_offset;
+        caps.vendor_specific.push_back(cap);
+      }
+      break;
 
     default:
       KL_TRC_TRACE(TRC_LVL::FLOW, "Unknown capability ID: ", cap_hdr.cap_label, "\n");
@@ -188,4 +198,56 @@ void pci_generic_device::handle_interrupt_slow(uint8_t interrupt_number)
   handle_translated_interrupt_slow(interrupt_number - _base_interrupt_vector, interrupt_number);
 
   KL_TRC_EXIT;
+}
+
+/// @brief Read the entire PCI capability block into a buffer
+///
+/// @param cap The capability to read
+///
+/// @param buffer Pointer to the buffer to read the block in to.
+///
+/// @param buffer_length The length of the buffer given.
+///
+/// @return True if the capability block was read successfully, false otherwise.
+bool pci_generic_device::read_capability_block(pci::capability<void> &cap, void *buffer, uint16_t buffer_length)
+{
+  bool result{true};
+  uint16_t bytes_read{0};
+  uint32_t *buffer_32{reinterpret_cast<uint32_t *>(buffer)};
+  uint8_t offset{cap.offset};
+  uint32_t val;
+  uint16_t bytes_left{buffer_length};
+
+  KL_TRC_ENTRY;
+
+  if (((buffer_length / 4) + cap.offset) > 256)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Request extends beyond PCI config space\n");
+    result = false;
+  }
+  else if (buffer_32)
+  {
+    while (bytes_read < buffer_length)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Read from offset: ", offset, "\n");
+      val = pci_read_raw_reg(this->_address, offset / 4);
+
+      memcpy(buffer_32, &val, (bytes_left > 4) ? 4 : bytes_left);
+
+      offset+=4;
+      bytes_read += 4;
+      bytes_left -= 4;
+      buffer_32++;
+    }
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid buffer\n");
+    result = false;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
 }

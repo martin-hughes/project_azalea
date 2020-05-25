@@ -16,7 +16,7 @@ namespace ata
 /// @brief A generic ATA device.
 ///
 /// Will provide most common required functionality such as reading and writing.
-class generic_device: public IBlockDevice
+class generic_device: public IBlockDevice, public IDevice
 {
 public:
   generic_device(std::shared_ptr<generic_controller> parent, uint16_t drive_index, identify_cmd_output &identity_buf);

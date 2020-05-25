@@ -31,13 +31,19 @@ enum class TRC_LVL
 
 #ifdef ENABLE_TRACING
 #define KL_TRC_INIT_TRACING kl_tr_init_tracing
+#define KL_TRC_ENABLE_OUTPUT kl_trc_enable_output
+#define KL_TRC_DISABLE_OUTPUT kl_trc_disable_output
+
 #define KL_TRC_TRACE(...) kl_trc_trace(__VA_ARGS__)
 
 #define KL_TRC_ENTRY kl_trc_trace(TRC_LVL::FLOW, "ENTRY ", __FUNCTION__, " { \n")
 #define KL_TRC_EXIT kl_trc_trace(TRC_LVL::FLOW, "EXIT ", __FUNCTION__, " } \n")
 
 #else
-#define KL_TRC_INIT_TRACING
+#define KL_TRC_INIT_TRACING()
+#define KL_TRC_ENABLE_OUTPUT()
+#define KL_TRC_DISABLE_OUTPUT()
+
 #define KL_TRC_TRACE(...)
 
 #define KL_TRC_ENTRY
@@ -48,6 +54,9 @@ enum class TRC_LVL
 // Function declarations. These should - largely - never be called directly, to
 // allow for compile-time removal of tracing calls in the release build.
 void kl_trc_init_tracing();
+
+void kl_trc_enable_output();
+void kl_trc_disable_output();
 
 template<typename ... args_t> void kl_trc_trace(TRC_LVL lvl, args_t ... params);
 template<typename p, typename ... args_t> void kl_trc_output_arguments(p param, args_t ... params);

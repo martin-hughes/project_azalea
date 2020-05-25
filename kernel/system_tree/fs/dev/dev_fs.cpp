@@ -23,6 +23,7 @@
 #include "system_tree/system_tree.h"
 #include "devices/block/proxy/block_proxy.h"
 #include "devices/block/ata/ata_device.h"
+#include "devices/virtio/virtio_block.h"
 std::shared_ptr<fat_filesystem> setup_initial_fs(std::shared_ptr<ata::generic_device> first_hdd);
 
 /// @cond
@@ -151,6 +152,37 @@ void dev_root_branch::scan_for_devices()
   }
 
   ASSERT(ready);
+
+#if 0
+  std::shared_ptr<virtio::block_device> virt_dev;
+  start_time = time_get_system_timer_count(true);
+  end_time = start_time + (10ULL * 1000 * 1000 * 1000); // i.e. max wait of 10 seconds.
+  while(1)
+  {
+    if (system_tree()->get_child("\\dev\\all\\virtio-blk1", hdd_leaf) == ERR_CODE::NO_ERROR)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Got device leaf\n");
+      virt_dev = std::dynamic_pointer_cast<virtio::block_device> (hdd_leaf);
+      if (virt_dev)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Got device object\n");
+        while ((virt_dev->get_device_status() != DEV_STATUS::OK) &&
+               (time_get_system_timer_count(true) < end_time))
+        {
+          // Just spin
+        }
+
+        if (virt_dev->get_device_status() == DEV_STATUS::OK)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Started virtdev OK\n");
+          char buf[512];
+          virt_dev->read_blocks(0, 1, buf, 512);
+          break;
+        }
+      }
+    }
+  }
+#endif
 
   std::shared_ptr<fat_filesystem> first_fs = setup_initial_fs(hdd_dev);
   ASSERT(first_fs != nullptr);

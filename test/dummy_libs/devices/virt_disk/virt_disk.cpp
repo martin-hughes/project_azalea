@@ -10,7 +10,7 @@
 using namespace std;
 
 virtual_disk_dummy_device::virtual_disk_dummy_device(const char *filename, uint64_t block_size) :
-  IBlockDevice{"Virtual disk", "vd"},
+  IDevice{"Virtual disk", "vd", true},
   _block_size{block_size},
   _num_blocks{0},
   backing_filename{filename}

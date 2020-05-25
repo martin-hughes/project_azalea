@@ -13,6 +13,15 @@
 #include "acpi_if.h"
 #endif
 
+extern bool is_bochs_machine;
+bool is_bochs_machine{false}; ///< Is this machine a Bochs-like emulator (includes Qemu)
+
+static_assert(sizeof(UINT8) == 1, "ACPI size error");
+static_assert(sizeof(UINT16) == 2, "ACPI size error");
+static_assert(sizeof(UINT32) == 4, "ACPI size error");
+static_assert(sizeof(UINT64) == 8, "ACPI size error");
+static_assert(sizeof(ACPI_TABLE_HEADER) == 36, "ACPI size error");
+
 /// @brief Phase 1 of initialising the ACPI system.
 ///
 /// This phase will allow access to the ACPI tables, but not any of the dynamic functionality.
@@ -23,10 +32,12 @@ void acpi_init_table_system()
   KL_TRC_ENTRY;
 
   AcpiGbl_EnableInterpreterSlack = true;
-  AcpiGbl_CopyDsdtLocally = true;
+  AcpiGbl_CopyDsdtLocally = false;
   AcpiGbl_UseDefaultRegisterWidths = true;
   AcpiGbl_EnableAmlDebugObject = false;
   AcpiGbl_TruncateIoAddresses = true;
+  AcpiDbgLevel = 0;
+  AcpiGbl_MaxLoopIterations = 1;
 
   if (AcpiInitializeSubsystem() != AE_OK)
   {
@@ -35,7 +46,7 @@ void acpi_init_table_system()
 
   KL_TRC_TRACE(TRC_LVL::IMPORTANT, "ACPI Subsystem initialized\n");
 
-  if (AcpiInitializeTables((ACPI_TABLE_DESC*) nullptr, 0, FALSE) != AE_OK)
+  if (AcpiInitializeTables((ACPI_TABLE_DESC*) nullptr, 16, FALSE) != AE_OK)
   {
     panic("Failed to initialize ACPI tables");
   }
@@ -52,6 +63,10 @@ void acpi_init_table_system()
   KL_TRC_EXIT;
 }
 
+#ifdef AZ_ACPI_DUMP_TABLES
+int acpi_dump_all_tables (void);
+#endif
+
 /// @brief Phase 2 of initialising the ACPI system.
 ///
 /// This will allow access to all ACPI functionality.
@@ -61,6 +76,8 @@ void acpi_init_table_system()
 void acpi_finish_init()
 {
   ACPI_STATUS status;
+  ACPI_TABLE_HEADER *dsdt_table;
+  char table_name[] = "DSDT";
 
   KL_TRC_ENTRY;
 
@@ -70,6 +87,21 @@ void acpi_finish_init()
 
   status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
   ASSERT(status == AE_OK);
+
+  // Look at the OEM of the DSDT to see if this machine is based on Bochs. If it is, then the PCI IRQ lookup is very
+  // slow, so that code can avoid attempting it.
+  status = AcpiGetTable(table_name, 0, (ACPI_TABLE_HEADER **)&dsdt_table);
+  ASSERT(status == AE_OK);
+
+  if (memcmp(dsdt_table->OemId, "BOCHS", 5) == 0)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Machine based on Bochs!\n");
+    is_bochs_machine = true;
+  }
+
+#ifdef AZ_ACPI_DUMP_TABLES
+  acpi_dump_all_tables();
+#endif
 
   KL_TRC_EXIT;
 }

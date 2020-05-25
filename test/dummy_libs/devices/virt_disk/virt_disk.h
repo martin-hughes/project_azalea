@@ -9,7 +9,7 @@
 #include <memory>
 #include <cstring>
 
-class virtual_disk_dummy_device: public IBlockDevice
+class virtual_disk_dummy_device: public IBlockDevice, public IDevice
 {
 public:
   virtual_disk_dummy_device(const char *filename, uint64_t block_size);
