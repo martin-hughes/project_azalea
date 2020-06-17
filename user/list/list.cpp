@@ -14,17 +14,17 @@ int main (int argc, char **argv)
   {
     printf("%s: ", argv[i]);
 
-    ec = syscall_open_handle(argv[i], strlen(argv[i]), &folder_handle, 0);
+    ec = az_open_handle(argv[i], strlen(argv[i]), &folder_handle, 0);
     if (ec == ERR_CODE::NO_ERROR)
     {
       uint64_t num_reqd{0};
       printf("Found.\n");
 
-      ec = syscall_enum_children(folder_handle, nullptr, 0, 0, nullptr, &num_reqd);
+      ec = az_enum_children(folder_handle, nullptr, 0, 0, nullptr, &num_reqd);
       if (ec == ERR_CODE::NO_ERROR)
       {
         char *buf = reinterpret_cast<char *>(malloc(num_reqd));
-        ec = syscall_enum_children(folder_handle, nullptr, 0, 0, buf, &num_reqd);
+        ec = az_enum_children(folder_handle, nullptr, 0, 0, buf, &num_reqd);
         if (ec == ERR_CODE::NO_ERROR)
         {
           char **ptr_table = reinterpret_cast<char **>(buf);
@@ -58,7 +58,7 @@ int main (int argc, char **argv)
     {
       printf("ERROR.\n");
     }
-    syscall_close_handle(folder_handle);
+    az_close_handle(folder_handle);
   }
   printf("\n");
 

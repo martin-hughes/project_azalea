@@ -1,7 +1,8 @@
 /// @file
 /// @brief Declare a virtual terminal.
 
-#include "devices/generic/gen_terminal.h"
+#include "gen_terminal.h"
+
 extern "C"
 {
 #include "external/libtmt/tmt.h"

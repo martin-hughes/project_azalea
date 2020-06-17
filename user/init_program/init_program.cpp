@@ -6,7 +6,7 @@
 #include <string.h>
 
 #define SC_DEBUG_MSG(string) \
-  syscall_debug_output((string), strlen((string)) )
+  az_debug_output((string), strlen((string)) )
 
 extern "C" int main (int argc, char **argv, char **env_p);
 
@@ -27,8 +27,8 @@ int main (int argc, char **argv, char **env_p)
     else
     {
       SC_DEBUG_MSG("Done\n");
-      syscall_wait_for_object(proc_handle, SC_MAX_WAIT);
-      syscall_close_handle(proc_handle);
+      az_wait_for_object(proc_handle, SC_MAX_WAIT);
+      az_close_handle(proc_handle);
       SC_DEBUG_MSG("Shell terminated - restart.\n");
     }
   }

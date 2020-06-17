@@ -6,8 +6,8 @@
 #include <stdint.h>
 #include <list>
 #include <vector>
-#include "devices/pci/pci.h"
-#include "devices/pci/generic_device/pci_generic_device.h"
+#include "../pci/pci.h"
+#include "../pci/generic_device/pci_generic_device.h"
 
 namespace virtio
 {
@@ -62,7 +62,7 @@ enum class CONFIG_STRUCTURE_TYPES : uint8_t
 };
 
 /// @brief Virtio defined device status bits.
-namespace DEV_STATUS_BITS
+namespace OPER_STATUS_BITS
 {
   const uint8_t ACKNOWLEDGE = 1; ///< Acknowledge the presence of the device.
   const uint8_t DRIVER = 2; ///< The driver knows how to drive this device.
@@ -130,7 +130,7 @@ struct pci_common_cfg
   volatile uint32_t driver_feature; ///< Driver-selected feature bits. read-write.
   volatile uint16_t msix_config; ///< MSI-X configuration. Not used in Azalea. read-write.
   volatile uint16_t num_queues; ///< Number of queues used by this device. read-only.
-  volatile uint8_t device_status; ///< Device status. Uses bits from DEV_STATUS_BITS. read-write.
+  volatile uint8_t device_status; ///< Device status. Uses bits from OPER_STATUS_BITS. read-write.
   volatile uint8_t config_generation; ///< Configuration gen number, changed when device updates config. read-only.
 
   /* About a specific virtqueue. */
@@ -228,7 +228,7 @@ protected:
   used_ring_element *used_ring; ///< Used ring entries.
   uint16_t *used_ring_avail_event; ///< Not used in Azalea.
 
-  kernel_spinlock_obj queue_lock; ///< Lock protecting queue elements.
+  ipc::spinlock queue_lock; ///< Lock protecting queue elements.
 
   uint16_t last_used_ring_idx{0}; ///< Where the device will write the next element in the used ring.
 

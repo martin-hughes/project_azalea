@@ -3,82 +3,76 @@
 
 //#define ENABLE_TRACING
 
-#include "user_interfaces/syscall.h"
-#include "syscall/syscall_kernel.h"
-#include "syscall/syscall_kernel-int.h"
-#include "klib/klib.h"
-#include "system_tree/system_tree.h"
-#include "system_tree/fs/fs_file_interface.h"
-#include "object_mgr/object_mgr.h"
-#include "processor/x64/processor-x64.h"
-
 #include <memory>
 #include <cstring>
+
+#include "kernel_all.h"
+#include "syscall_kernel-int.h"
 
 // The indicies of the pointers in this table MUST match the indicies given in syscall_user_low-x64.asm!
 /// @brief Main system call table.
 ///
 const void *syscall_pointers[] =
-    { (void *)syscall_debug_output,
+    { (void *)az_debug_output,
 
       // Handle management.
-      (void *)syscall_open_handle,
-      (void *)syscall_create_obj_and_handle,
-      (void *)syscall_close_handle,
-      (void *)syscall_seek_handle,
-      (void *)syscall_read_handle,
-      (void *)syscall_get_handle_data_len,
-      (void *)syscall_set_handle_data_len,
-      (void *)syscall_write_handle,
-      (void *)syscall_rename_object,
-      (void *)syscall_delete_object,
+      (void *)az_open_handle,
+      (void *)az_create_obj_and_handle,
+      (void *)az_close_handle,
+      (void *)az_seek_handle,
+      (void *)az_read_handle,
+      (void *)az_get_handle_data_len,
+      (void *)az_set_handle_data_len,
+      (void *)az_write_handle,
+      (void *)az_rename_object,
+      (void *)az_delete_object,
 
-      (void *)syscall_get_object_properties,
-      (void *)syscall_enum_children,
+      (void *)az_get_object_properties,
+      (void *)az_enum_children,
 
       // Message passing.
-      (void *)syscall_register_for_mp,
-      (void *)syscall_send_message,
-      (void *)syscall_receive_message_details,
-      (void *)syscall_receive_message_body,
-      (void *)syscall_message_complete,
+      (void *)az_register_for_mp,
+      (void *)az_send_message,
+      (void *)az_receive_message_details,
+      (void *)az_receive_message_body,
+      (void *)az_message_complete,
 
       // Process & thread control
-      (void *)syscall_create_process,
-      (void *)syscall_set_startup_params,
-      (void *)syscall_start_process,
-      (void *)syscall_stop_process,
-      (void *)syscall_destroy_process,
-      (void *)syscall_exit_process,
+      (void *)az_create_process,
+      (void *)az_set_startup_params,
+      (void *)az_start_process,
+      (void *)az_stop_process,
+      (void *)az_destroy_process,
+      (void *)az_exit_process,
 
-      (void *)syscall_create_thread,
-      (void *)syscall_start_thread,
-      (void *)syscall_stop_thread,
-      (void *)syscall_destroy_thread,
-      (void *)syscall_exit_thread,
+      (void *)az_create_thread,
+      (void *)az_start_thread,
+      (void *)az_stop_thread,
+      (void *)az_destroy_thread,
+      (void *)az_exit_thread,
 
-      (void *)syscall_thread_set_tls_base,
+      (void *)az_thread_set_tls_base,
 
       // Memory control,
-      (void *)syscall_allocate_backing_memory,
-      (void *)syscall_release_backing_memory,
-      (void *)syscall_map_memory,
-      (void *)syscall_unmap_memory,
+      (void *)az_allocate_backing_memory,
+      (void *)az_release_backing_memory,
+      (void *)az_map_memory,
+      (void *)az_unmap_memory,
 
       // Thread synchronization
-      (void *)syscall_wait_for_object,
-      (void *)syscall_futex_op,
-      (void *)syscall_create_mutex,
-      (void *)syscall_release_mutex,
-      (void *)syscall_create_semaphore,
-      (void *)syscall_signal_semaphore,
+      (void *)az_wait_for_object,
+      (void *)az_futex_op,
+      (void *)az_create_mutex,
+      (void *)az_release_mutex,
+      (void *)az_create_semaphore,
+      (void *)az_signal_semaphore,
 
       // Timing syscalls:
-      (void *)syscall_get_system_clock,
-      (void *)syscall_sleep_thread,
+      (void *)az_get_system_clock,
+      (void *)az_sleep_thread,
 
       // Other syscalls:
-      (void *)syscall_yield,
+      (void *)az_yield,
     };
 
 /// @brief The number of known system calls.
@@ -97,7 +91,7 @@ const uint64_t syscall_max_idx = (sizeof(syscall_pointers) / sizeof(void *)) - 1
 ///
 /// @return ERR_CODE::INVALID_PARAM if either of the parameters isn't valid.
 ///         ERR_CODE::NO_ERROR otherwise (even if no output was actually made).
-ERR_CODE syscall_debug_output(const char *msg, uint64_t length)
+ERR_CODE az_debug_output(const char *msg, uint64_t length)
 {
   KL_TRC_ENTRY;
 
@@ -138,7 +132,7 @@ ERR_CODE syscall_debug_output(const char *msg, uint64_t length)
 /// @param value The value to load into the base of the required register.
 ///
 /// @return ERR_CODE::INVALID_PARAM if either reg isn't valid, or value either isn't canonical or in user-space.
-ERR_CODE syscall_thread_set_tls_base(TLS_REGISTERS reg, uint64_t value)
+ERR_CODE az_thread_set_tls_base(TLS_REGISTERS reg, uint64_t value)
 {
   KL_TRC_ENTRY;
 
@@ -154,13 +148,8 @@ ERR_CODE syscall_thread_set_tls_base(TLS_REGISTERS reg, uint64_t value)
     switch(reg)
     {
     case TLS_REGISTERS::FS:
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Setting FS base to ", value, "\n");
-      proc_write_msr (PROC_X64_MSRS::IA32_FS_BASE, value);
-      break;
-
     case TLS_REGISTERS::GS:
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Writing GS base to ", value, "\n");
-      proc_write_msr (PROC_X64_MSRS::IA32_GS_BASE, value);
+      proc_set_tls_register(reg, value);
       break;
 
     default:

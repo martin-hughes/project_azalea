@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "klib/klib.h"
+#include "kernel_all.h"
 #include "pci_generic_device.h"
 
 using namespace PCI_CAPABILITY_IDS;
@@ -63,19 +63,19 @@ pci_generic_device::~pci_generic_device()
 
 bool pci_generic_device::start()
 {
-  set_device_status(DEV_STATUS::OK);
+  set_device_status(OPER_STATUS::OK);
   return true;
 }
 
 bool pci_generic_device::stop()
 {
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
   return true;
 }
 
 bool pci_generic_device::reset()
 {
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
   return true;
 }
 

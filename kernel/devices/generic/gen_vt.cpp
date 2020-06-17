@@ -3,9 +3,10 @@
 
 //#define ENABLE_TRACING
 
-#include "gen_vt.h"
-
 #include <string.h>
+
+#include "gen_vt.h"
+#include "kernel_all.h"
 
 void callback(tmt_msg_t m, TMT *vt, const void *a, void *p);
 
@@ -45,11 +46,11 @@ bool terms::vt::start()
 
   KL_TRC_ENTRY;
 
-  set_device_status(DEV_STATUS::STARTING);
+  set_device_status(OPER_STATUS::STARTING);
 
   tmt_reset(inner_vt);
 
-  set_device_status(DEV_STATUS::OK);
+  set_device_status(OPER_STATUS::OK);
 
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
@@ -64,7 +65,7 @@ bool terms::vt::stop()
 
   KL_TRC_ENTRY;
 
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
@@ -78,14 +79,14 @@ bool terms::vt::reset()
 
   KL_TRC_ENTRY;
 
-  set_device_status(DEV_STATUS::RESET);
+  set_device_status(OPER_STATUS::RESET);
 
   tmt_reset(inner_vt);
 
   // Reset terminal options to defaults.
   filters = terminal_opts();
 
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
@@ -108,7 +109,7 @@ bool terms::vt::reset()
 void callback(tmt_msg_t m, TMT *vt, const void *a, void *p)
 {
   terms::vt *term{reinterpret_cast<terms::vt *>(p)};
-  DEV_STATUS s;
+  OPER_STATUS s;
 
   KL_TRC_ENTRY;
 
@@ -119,9 +120,9 @@ void callback(tmt_msg_t m, TMT *vt, const void *a, void *p)
 
   // Don't forward messages if the device is failed, stopped or not fully created - it might still be mid-construction,
   // in which case tmt_callback may not point at the desired function!
-  if ((s != DEV_STATUS::FAILED) &&
-      (s != DEV_STATUS::UNKNOWN) &&
-      (s != DEV_STATUS::STOPPED))
+  if ((s != OPER_STATUS::FAILED) &&
+      (s != OPER_STATUS::UNKNOWN) &&
+      (s != OPER_STATUS::STOPPED))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Forward message\n");
     term->tmt_callback(m, vt, a);
@@ -201,7 +202,7 @@ void terms::vt::write_raw_string(const char *out_string, uint16_t num_chars)
 {
   KL_TRC_ENTRY;
 
-  if (get_device_status() == DEV_STATUS::OK)
+  if (get_device_status() == OPER_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Handle request while running\n");
     tmt_write(inner_vt, out_string, num_chars);

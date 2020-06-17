@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include "devices/block/block_interface.h"
-#include "user_interfaces/error_codes.h"
+#include "../block_interface.h"
+#include "azalea/error_codes.h"
 
 /// @brief An in-memory disk-like device.
 ///

@@ -1,9 +1,0 @@
-# Core test library.
-
-Import('env')
-obj = env.Library("test-core", 
-                  [ 
-                    "test.cpp",
-                    "win_mem_leak.cpp",
-                  ])
-Return ("obj")

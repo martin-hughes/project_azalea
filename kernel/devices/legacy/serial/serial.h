@@ -3,11 +3,11 @@
 
 #pragma once
 
-#include "devices/device_interface.h"
-#include "system_tree/fs/fs_file_interface.h"
-#include "system_tree/fs/pipe/pipe_fs.h"
-#include "acpi/acpi_if.h"
 #include <memory>
+
+#include "types/device_interface.h"
+#include "../system_tree/fs/fs_file_interface.h"
+#include "../system_tree/fs/pipe/pipe_fs.h"
 
 /// @brief Implements a driver for generic UART driven COM ports
 ///

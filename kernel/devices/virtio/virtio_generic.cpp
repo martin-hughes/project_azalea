@@ -6,11 +6,12 @@
 
 //#define ENABLE_TRACING
 
-#include "virtio.h"
-#include "devices/pci/generic_device/pci_generic_device.h"
-#include "processor/processor.h"
-
 #include <atomic>
+
+#include "virtio.h"
+#include "../devices/pci/generic_device/pci_generic_device.h"
+#include "processor.h"
+
 
 namespace virtio
 {
@@ -32,7 +33,7 @@ generic_device::generic_device(pci_address address, std::string human_name, std:
   if (!read_pci_config())
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to read PCI config\n");
-    set_device_status(DEV_STATUS::FAILED);
+    set_device_status(OPER_STATUS::FAILED);
   }
 
   // Generic setup steps:
@@ -60,7 +61,7 @@ generic_device::generic_device(pci_address address, std::string human_name, std:
   if (!configure_interrupts())
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to configure suitable interrupt system\n");
-    set_device_status(DEV_STATUS::FAILED);
+    set_device_status(OPER_STATUS::FAILED);
   }
 
   // Remaining steps are left for child classes.
@@ -323,12 +324,12 @@ bool generic_device::negotiate_features(uint64_t required_on,
 
     // Check that this is acceptable.
     temp_status = common_cfg->device_status;
-    temp_status |= DEV_STATUS_BITS::FEATURES_OK;
+    temp_status |= OPER_STATUS_BITS::FEATURES_OK;
     std::atomic_thread_fence(std::memory_order_seq_cst);
     common_cfg->device_status = temp_status;
     std::atomic_thread_fence(std::memory_order_seq_cst);
 
-    result = ((common_cfg->device_status & DEV_STATUS_BITS::FEATURES_OK) != 0);
+    result = ((common_cfg->device_status & OPER_STATUS_BITS::FEATURES_OK) != 0);
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
@@ -372,7 +373,7 @@ void generic_device::set_driver_ok()
   KL_TRC_ENTRY;
 
   device_status = common_cfg->device_status;
-  device_status |= DEV_STATUS_BITS::DRIVER_OK;
+  device_status |= OPER_STATUS_BITS::DRIVER_OK;
   common_cfg->device_status = device_status;
   std::atomic_thread_fence(std::memory_order_seq_cst);
 

@@ -3,11 +3,10 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
-#include "devices/usb/controllers/usb_xhci_port.h"
-#include "devices/usb/controllers/usb_xhci_controller.h"
-#include "devices/usb/usb_xhci_device.h"
-#include "devices/usb/usb.h"
+#include "usb_xhci_port.h"
+#include "usb_xhci_controller.h"
+#include "../usb_xhci_device.h"
+#include "../usb.h"
 
 using namespace usb::xhci;
 

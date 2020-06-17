@@ -3,9 +3,9 @@
 
 //#define ENABLE_TRACING
 
+#include "kernel_all.h"
 #include "hid_usages.h"
 #include "usb_hid_keyboard.h"
-#include "klib/klib.h"
 
 namespace usb { namespace hid {
 

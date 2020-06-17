@@ -3,18 +3,13 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
-#include "user_interfaces/syscall.h"
-#include "syscall/syscall_kernel.h"
-#include "syscall/syscall_kernel-int.h"
-#include "mem/mem.h"
-#include "object_mgr/object_mgr.h"
-#include "processor/processor.h"
+#include "kernel_all.h"
+#include "syscall_kernel-int.h"
 
 // Known defects:
 // - It isn't possible to deallocate virtual memory, since the kernel doesn't really track the allocations properly
 //   yet.
-// - Having run out of RAM in syscall_allocate_backing_memory, we should deallocate some rather than just sitting tight.
+// - Having run out of RAM in az_allocate_backing_memory, we should deallocate some rather than just sitting tight.
 // - Attempting to double-map a virtual range causes a kernel panic.
 // - The way that VMM requires power-of-two sizes might cause trouble one day.
 // - mem_vmm_allocate_specific_range can trigger an ASSERT if a duplicate allocation is made.
@@ -34,7 +29,7 @@
 /// @return ERR_CODE::NO_ERROR if the allocated succeeded. ERR_CODE::INVALID_PARAM if the length is zero, or
 ///         `map_addr` does not point to a valid memory range. ERR_CODE::INVALID_OP if this virtual address range is
 ///         already mapped. ERR_CODE::OUT_OF_RESOURCE if the system has run out of physical memory.
-ERR_CODE syscall_allocate_backing_memory(uint64_t pages, void **map_addr)
+ERR_CODE az_allocate_backing_memory(uint64_t pages, void **map_addr)
 {
   ERR_CODE result = ERR_CODE::UNKNOWN;
   uint64_t map_addr_start = reinterpret_cast<uint64_t>(*map_addr);
@@ -118,7 +113,7 @@ ERR_CODE syscall_allocate_backing_memory(uint64_t pages, void **map_addr)
 ///
 /// @return ERR_CODE::INVALID_OP if trying to deallocate kernel space, ERR_CODE::NOT_FOUND if dealloc_ptr doesn't point
 ///         to the beginning of an allocation, and ERR_CODE::NO_ERROR otherwise - the deallocation succeeded.
-ERR_CODE syscall_release_backing_memory(void *dealloc_ptr)
+ERR_CODE az_release_backing_memory(void *dealloc_ptr)
 {
   ERR_CODE result = ERR_CODE::NO_ERROR;
   uint64_t num_pages;
@@ -179,7 +174,7 @@ ERR_CODE syscall_release_backing_memory(void *dealloc_ptr)
 /// @return ERR_CODE::INVALID_PARAM if either process handle or memory address is invalid or if the mapping length is
 ///         not a multiple of the page size. ERR_CODE::INVALID_OP if the memory is already mapped in the receiving
 ///         process. ERR_CODE::NO_ERROR if the mapping succeeded.
-ERR_CODE syscall_map_memory(GEN_HANDLE proc_mapping_in,
+ERR_CODE az_map_memory(GEN_HANDLE proc_mapping_in,
                             void *map_addr,
                             uint64_t length,
                             GEN_HANDLE proc_already_in,
@@ -284,7 +279,7 @@ ERR_CODE syscall_map_memory(GEN_HANDLE proc_mapping_in,
 /// This capability isn't operative yet.
 ///
 /// @return ERR_CODE::INVALID_OP in all cases, until the kernel works better.
-ERR_CODE syscall_unmap_memory()
+ERR_CODE az_unmap_memory()
 {
   KL_TRC_ENTRY;
   KL_TRC_EXIT;

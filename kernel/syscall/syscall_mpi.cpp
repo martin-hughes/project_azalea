@@ -5,18 +5,15 @@
 
 #include <string.h>
 
-#include "user_interfaces/syscall.h"
-#include "syscall/syscall_kernel.h"
-#include "syscall/syscall_kernel-int.h"
-#include "klib/klib.h"
-#include "processor/processor.h"
+#include "kernel_all.h"
+#include "syscall_kernel-int.h"
 
 /// @brief Register the currently running process as able to receive messages.
 ///
 /// Each process can only be registered once, subsequent attempts will fail with an error.
 ///
 /// @return A suitable error code.
-ERR_CODE syscall_register_for_mp()
+ERR_CODE az_register_for_mp()
 {
   KL_TRC_ENTRY;
 
@@ -66,7 +63,7 @@ ERR_CODE syscall_register_for_mp()
 /// @param[in] output Structure containing options for synchronizing with the caller.
 ///
 /// @return A suitable error code.
-ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
+ERR_CODE az_send_message(GEN_HANDLE msg_target,
                               uint64_t message_id,
                               uint64_t message_len,
                               const char *message_ptr,
@@ -77,7 +74,7 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
   ERR_CODE res{ERR_CODE::NO_ERROR};
   task_thread *this_thread = task_get_cur_thread();
   std::shared_ptr<IHandledObject> obj;
-  std::shared_ptr<syscall_semaphore_obj> sem;
+  std::shared_ptr<ipc::semaphore> sem;
   std::shared_ptr<char> kernel_buffer;
 
   GEN_HANDLE completion_semaphore{0};
@@ -151,7 +148,7 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
       else
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Semaphore found\n");
-        sem = std::dynamic_pointer_cast<syscall_semaphore_obj>(obj);
+        sem = std::dynamic_pointer_cast<ipc::semaphore>(obj);
       }
     }
 
@@ -169,7 +166,7 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
 
       ASSERT(!sem);
 
-      sem = std::make_shared<syscall_semaphore_obj>(1, 1);
+      sem = std::make_shared<ipc::semaphore>(1, 1);
     }
 
     if ((completion_semaphore == 0) || (sem))
@@ -215,7 +212,7 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
           ASSERT(sem);
           ASSERT(kernel_buffer);
 
-          sem->wait_for_signal(WaitObject::MAX_WAIT);
+          sem->wait();
           KL_TRC_TRACE(TRC_LVL::FLOW, "DONE.\n");
 
           KL_TRC_TRACE(TRC_LVL::FLOW, "Buffer size: ", output_buffer_len, "\n");
@@ -247,7 +244,7 @@ ERR_CODE syscall_send_message(GEN_HANDLE msg_target,
 /// @param[out] message_len The length of the message buffer required.
 ///
 /// @return A suitable error code.
-ERR_CODE syscall_receive_message_details(uint64_t *message_id, uint64_t *message_len)
+ERR_CODE az_receive_message_details(uint64_t *message_id, uint64_t *message_len)
 {
   ERR_CODE res{ERR_CODE::NO_ERROR};
   task_thread *this_thread = task_get_cur_thread();
@@ -279,7 +276,7 @@ ERR_CODE syscall_receive_message_details(uint64_t *message_id, uint64_t *message
   }
   else
   {
-    klib_synch_spinlock_lock(this_thread->parent_process->messaging.message_lock);
+    ipc_raw_spinlock_lock(this_thread->parent_process->messaging.message_lock);
 
     if (this_thread->parent_process->messaging.message_queue.size() > 0)
     {
@@ -293,7 +290,7 @@ ERR_CODE syscall_receive_message_details(uint64_t *message_id, uint64_t *message
       res = ERR_CODE::SYNC_MSG_QUEUE_EMPTY;
     }
 
-    klib_synch_spinlock_unlock(this_thread->parent_process->messaging.message_lock);
+    ipc_raw_spinlock_unlock(this_thread->parent_process->messaging.message_lock);
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", res, "\n");
@@ -311,7 +308,7 @@ ERR_CODE syscall_receive_message_details(uint64_t *message_id, uint64_t *message
 ///                    silently truncated.
 ///
 /// @return A suitable error code.
-ERR_CODE syscall_receive_message_body(char *message_buffer, uint64_t buffer_size)
+ERR_CODE az_receive_message_body(char *message_buffer, uint64_t buffer_size)
 {
   ERR_CODE res{ERR_CODE::NO_ERROR};
   task_thread *this_thread = task_get_cur_thread();
@@ -346,7 +343,7 @@ ERR_CODE syscall_receive_message_body(char *message_buffer, uint64_t buffer_size
   }
   else
   {
-    klib_synch_spinlock_lock(this_thread->parent_process->messaging.message_lock);
+    ipc_raw_spinlock_lock(this_thread->parent_process->messaging.message_lock);
 
     if (this_thread->parent_process->messaging.message_queue.size() > 0)
     {
@@ -377,7 +374,7 @@ ERR_CODE syscall_receive_message_body(char *message_buffer, uint64_t buffer_size
       res = ERR_CODE::SYNC_MSG_QUEUE_EMPTY;
     }
 
-    klib_synch_spinlock_unlock(this_thread->parent_process->messaging.message_lock);
+    ipc_raw_spinlock_unlock(this_thread->parent_process->messaging.message_lock);
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", res, "\n");
@@ -391,7 +388,7 @@ ERR_CODE syscall_receive_message_body(char *message_buffer, uint64_t buffer_size
 /// The message is no longer available to the application via the syscall interface.
 ///
 /// @return A suitable error code.
-ERR_CODE syscall_message_complete()
+ERR_CODE az_message_complete()
 {
   ERR_CODE res{ERR_CODE::NO_ERROR};
   task_thread *this_thread = task_get_cur_thread();
@@ -415,7 +412,7 @@ ERR_CODE syscall_message_complete()
   }
   else
   {
-    klib_synch_spinlock_lock(this_thread->parent_process->messaging.message_lock);
+    ipc_raw_spinlock_lock(this_thread->parent_process->messaging.message_lock);
 
     if (this_thread->parent_process->messaging.message_queue.size() > 0)
     {
@@ -427,7 +424,7 @@ ERR_CODE syscall_message_complete()
       res = ERR_CODE::SYNC_MSG_QUEUE_EMPTY;
     }
 
-    klib_synch_spinlock_unlock(this_thread->parent_process->messaging.message_lock);
+    ipc_raw_spinlock_unlock(this_thread->parent_process->messaging.message_lock);
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", res, "\n");

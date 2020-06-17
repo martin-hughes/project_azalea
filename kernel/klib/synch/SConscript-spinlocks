@@ -1,8 +1,0 @@
-# Klib Synchronisation library - spinlocks part.
-
-Import('env')
-obj = env.Library("klib-synch-spinlocks", 
-                  [ 
-                    "kernel_locks.cpp",
-                  ])
-Return ("obj") 

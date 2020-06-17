@@ -10,12 +10,12 @@
 #include <map>
 
 // Core includes
-#include "klib/klib.h"
-#include "devices/usb/usb.h"
-#include "devices/device_monitor.h"
+#include "kernel_all.h"
+#include "usb.h"
+#include "device_monitor.h"
 
 // Known USB devices:
-#include "devices/usb/hid/usb_hid_device.h"
+#include "hid/usb_hid_device.h"
 
 namespace
 {
@@ -25,9 +25,9 @@ namespace
   // will be children of a reasonable parent device or controller, which is a child of a PCI device, and so on.
   std::map<uint64_t, std::shared_ptr<usb::generic_device>> *devices = nullptr; ///< TEMPO tree of known devices.
   volatile uint64_t num_devices = 0; ///< TEMPO number of devices previously created.
-  kernel_spinlock tree_lock = 0; ///< Lock protecting the devices tree.
+  ipc::raw_spinlock tree_lock = 0; ///< Lock protecting the devices tree.
 
-  kernel_spinlock factory_create_spinlock = 0;
+  ipc::raw_spinlock factory_create_spinlock = 0;
 
 #ifdef ENABLE_TRACING
   void trace_device_descriptors(std::shared_ptr<usb::generic_core> core);
@@ -45,7 +45,7 @@ void initialise_usb_system()
 {
   KL_TRC_ENTRY;
 
-  klib_synch_spinlock_lock(factory_create_spinlock);
+  ipc_raw_spinlock_lock(factory_create_spinlock);
   if (factory == nullptr)
   {
     factory = new std::shared_ptr<main_factory>;
@@ -53,7 +53,7 @@ void initialise_usb_system()
 
     devices = new std::map<uint64_t, std::shared_ptr<usb::generic_device>>();
   }
-  klib_synch_spinlock_unlock(factory_create_spinlock);
+  ipc_raw_spinlock_unlock(factory_create_spinlock);
 
   KL_TRC_EXIT;
 }
@@ -171,10 +171,10 @@ void main_factory::create_device_handler(std::unique_ptr<create_device_work_item
       }
     }
 
-    klib_synch_spinlock_lock(tree_lock);
+    ipc_raw_spinlock_lock(tree_lock);
     devices->insert({num_devices, new_device});
     num_devices++;
-    klib_synch_spinlock_unlock(tree_lock);
+    ipc_raw_spinlock_unlock(tree_lock);
     break;
 
   default:

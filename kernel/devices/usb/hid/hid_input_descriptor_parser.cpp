@@ -10,9 +10,8 @@
 
 //#define ENABLE_TRACING
 
+#include "kernel_all.h"
 #include "hid_input_reports.h"
-
-#include "klib/klib.h"
 
 using namespace usb::hid;
 

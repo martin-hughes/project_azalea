@@ -2,16 +2,15 @@
 /// @brief PS/2 device drivers header. Provides generic PS/2 device drivers that can be extended as needed by anything
 /// more fancy
 
-#ifndef DEVICE_PS2_DEVICE_HDR
-#define DEVICE_PS2_DEVICE_HDR
+#pragma once
 
 #include <string>
-
-#include "devices/device_interface.h"
-#include "user_interfaces/error_codes.h"
-#include "devices/generic/gen_keyboard.h"
-#include "devices/generic/gen_mouse.h"
 #include <memory>
+
+#include "types/device_interface.h"
+#include "azalea/error_codes.h"
+#include "../devices/generic/gen_keyboard.h"
+#include "../devices/generic/gen_mouse.h"
 
 class gen_ps2_controller_device;
 
@@ -74,5 +73,3 @@ protected:
   bool _next_key_is_special; ///< Is the next input for a special key?
   unsigned int _pause_seq_chars; ///< How many characters of the 'pause' key have been transmitted?
 };
-
-#endif

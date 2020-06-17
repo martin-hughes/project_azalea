@@ -3,11 +3,8 @@
 
 //#define ENABLE_TRACING
 
-#include "user_interfaces/syscall.h"
-#include "syscall/syscall_kernel.h"
-#include "syscall/syscall_kernel-int.h"
-#include "processor/timing/timing.h"
-#include "klib/klib.h"
+#include "kernel_all.h"
+#include "syscall_kernel-int.h"
 
 /// @brief Return the current time in the system clock.
 ///
@@ -15,7 +12,7 @@
 ///
 /// @return ERR_CODE::INVALID_PARAM if buffer is not a suitable pointer, ERR_CODE::DEVICE_FAILED if the time couldn't
 ///         be successfully retrieved. ERR_CODE::NO_ERROR otherwise.
-ERR_CODE syscall_get_system_clock(time_expanded *buffer)
+ERR_CODE az_get_system_clock(time_expanded *buffer)
 {
   ERR_CODE result{ERR_CODE::NO_ERROR};
   bool r;
@@ -48,7 +45,7 @@ ERR_CODE syscall_get_system_clock(time_expanded *buffer)
 /// @param nanoseconds The thread will sleep for at least this many nanoseconds.
 ///
 /// @return Always returns ERR_CODE::NO_ERROR.
-ERR_CODE syscall_sleep_thread(uint64_t nanoseconds)
+ERR_CODE az_sleep_thread(uint64_t nanoseconds)
 {
   KL_TRC_ENTRY;
 

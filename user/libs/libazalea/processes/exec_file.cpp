@@ -3,7 +3,7 @@
 #include <unistd.h>
 
 //#define SC_DEBUG_MSG(string) \
-//  syscall_debug_output((string), strlen((string)) )
+//  az_debug_output((string), strlen((string)) )
 #define SC_DEBUG_MSG(string)
 
 // Known deficiencies:
@@ -54,7 +54,7 @@ ERR_CODE exec_file(const char *filename,
     return ERR_CODE::INVALID_PARAM;
   }
 
-  result = syscall_open_handle(filename, name_length, &file_handle, 0);
+  result = az_open_handle(filename, name_length, &file_handle, 0);
   if (result != ERR_CODE::NO_ERROR)
   {
     return result;
@@ -65,16 +65,16 @@ ERR_CODE exec_file(const char *filename,
   result = proc_read_elf_file_header(file_handle, &file_header);
   if (result != ERR_CODE::NO_ERROR)
   {
-    syscall_close_handle(file_handle);
+    az_close_handle(file_handle);
     return result;
   }
 
   SC_DEBUG_MSG("Headers read\n");
 
-  result = syscall_create_process(reinterpret_cast<void *>(file_header.entry_addr), proc_handle);
+  result = az_create_process(reinterpret_cast<void *>(file_header.entry_addr), proc_handle);
   if (result != ERR_CODE::NO_ERROR)
   {
-    syscall_close_handle(file_handle);
+    az_close_handle(file_handle);
     return result;
   }
   SC_DEBUG_MSG("Process created\n");
@@ -82,14 +82,14 @@ ERR_CODE exec_file(const char *filename,
   result = load_elf_file_in_process(file_handle, *proc_handle);
   if (result != ERR_CODE::NO_ERROR)
   {
-    syscall_close_handle(file_handle);
+    az_close_handle(file_handle);
     return result;
   }
 
   SC_DEBUG_MSG("Contents copied\n");
 
   // We don't *really* care if this fails, it just means a floating handle until this process exits.
-  syscall_close_handle(file_handle);
+  az_close_handle(file_handle);
 
   // Copy arguments and environment into the new process. First, calculate how much space we need. The first argument
   // is always the process name. We also need space for a char pointer, and the null pointer at the end of the pointer
@@ -145,14 +145,14 @@ ERR_CODE exec_file(const char *filename,
 
   SC_DEBUG_MSG("Environment created\n");
 
-  result = syscall_allocate_backing_memory(pages_reqd, &page_ptr);
+  result = az_allocate_backing_memory(pages_reqd, &page_ptr);
   if (result != ERR_CODE::NO_ERROR)
   {
     // Exiting now leaves a partially created process. We should probably delete it.
     return result;
   }
 
-  result = syscall_map_memory(*proc_handle,
+  result = az_map_memory(*proc_handle,
                               reinterpret_cast<void *>(0x000000000F200000),
                               pages_reqd * MEM_PAGE_SIZE,
                               0,
@@ -201,15 +201,15 @@ ERR_CODE exec_file(const char *filename,
 
   SC_DEBUG_MSG("Environment copied\n");
 
-  syscall_release_backing_memory(page_ptr);
+  az_release_backing_memory(page_ptr);
 
-  result = syscall_set_startup_params(*proc_handle, argc, new_prog_argv, new_prog_environ);
+  result = az_set_startup_params(*proc_handle, argc, new_prog_argv, new_prog_environ);
   if (result != ERR_CODE::NO_ERROR)
   {
     return result;
   }
   SC_DEBUG_MSG("About to start.\n");
 
-  result = syscall_start_process(*proc_handle);
+  result = az_start_process(*proc_handle);
   return result;
 }

@@ -3,28 +3,23 @@
 
 //#define ENABLE_TRACING
 
-#include "user_interfaces/syscall.h"
-#include "syscall/syscall_kernel.h"
-#include "syscall/syscall_kernel-int.h"
-#include "processor/processor.h"
-#include "processor/processor-int.h"
-#include "object_mgr/object_mgr.h"
-#include "klib/klib.h"
+#include "kernel_all.h"
+#include "syscall_kernel-int.h"
 
 /// @brief Create a new process
 ///
 /// Creates a new process. The new process contains one thread which will start at `entry_point_addr`. No memory is
 /// mapped apart from a single stack for the initial thread, so it will be necessary to map and populate memory pages
-/// before calling `syscall_start_process`.
+/// before calling `az_start_process`.
 ///
 /// @param[in] entry_point_addr The virtual memory starting address for the new process, in the context of the new
 ///                             process. As noted above, it is necessary to create the memory mappings to fulfil this
-///                             entry point before calling `syscall_start_process`
+///                             entry point before calling `az_start_process`
 ///
 /// @param[out] proc_handle Storage for a handle to the new process.
 ///
 /// @return ERR_CODE::INVALID_PARAM if either parameter contains an invalid address. ERR_CODE::NO_ERROR otherwise.
-ERR_CODE syscall_create_process(void *entry_point_addr, GEN_HANDLE *proc_handle)
+ERR_CODE az_create_process(void *entry_point_addr, GEN_HANDLE *proc_handle)
 {
   ERR_CODE result = ERR_CODE::UNKNOWN;
   std::shared_ptr<task_process> new_process;
@@ -77,7 +72,7 @@ ERR_CODE syscall_create_process(void *entry_point_addr, GEN_HANDLE *proc_handle)
 /// @param environ_ptr Pointer to the traditional environment array.
 ///
 /// @return A suitable error code - ERR_CODE::INVALID_OP if the process is already running.
-ERR_CODE syscall_set_startup_params(GEN_HANDLE proc_handle, uint64_t argc, uint64_t argv_ptr, uint64_t environ_ptr)
+ERR_CODE az_set_startup_params(GEN_HANDLE proc_handle, uint64_t argc, uint64_t argv_ptr, uint64_t environ_ptr)
 {
   ERR_CODE result = ERR_CODE::NO_ERROR;
   std::shared_ptr<task_process> proc_obj;
@@ -128,7 +123,7 @@ ERR_CODE syscall_set_startup_params(GEN_HANDLE proc_handle, uint64_t argc, uint6
 ///
 /// @return ERR_CODE::NOT_FOUND if the handle does not correlate correctly to a process. ERR_CODE::NO_ERROR otherwise -
 ///         the process was started successfully.
-ERR_CODE syscall_start_process(GEN_HANDLE proc_handle)
+ERR_CODE az_start_process(GEN_HANDLE proc_handle)
 {
   KL_TRC_ENTRY;
 
@@ -174,7 +169,7 @@ ERR_CODE syscall_start_process(GEN_HANDLE proc_handle)
 ///
 /// @return ERR_CODE::NOT_FOUND if the handle does not correlate correctly to a process. ERR_CODE::NO_ERROR otherwise -
 ///         the process was stopped successfully.
-ERR_CODE syscall_stop_process(GEN_HANDLE proc_handle)
+ERR_CODE az_stop_process(GEN_HANDLE proc_handle)
 {
   KL_TRC_ENTRY;
 
@@ -220,7 +215,7 @@ ERR_CODE syscall_stop_process(GEN_HANDLE proc_handle)
 ///
 /// @return ERR_CODE::NOT_FOUND if the handle does not refer to a valid process. ERR_CODE::NO_ERROR otherwise - the
 ///         process has been destroyed successfully.
-ERR_CODE syscall_destroy_process(GEN_HANDLE proc_handle)
+ERR_CODE az_destroy_process(GEN_HANDLE proc_handle)
 {
   KL_TRC_ENTRY;
 
@@ -265,7 +260,7 @@ ERR_CODE syscall_destroy_process(GEN_HANDLE proc_handle)
 ///
 /// @param exit_code The return code for this process, which can be read by other processes still holding an open
 ///                  handle for this process.
-void syscall_exit_process(uint64_t exit_code)
+void az_exit_process(uint64_t exit_code)
 {
   KL_TRC_ENTRY;
 
@@ -281,7 +276,7 @@ void syscall_exit_process(uint64_t exit_code)
   this_proc->destroy_process(exit_code);
 
   // This panic should never hit because destroy_process() should kill this process and never return.
-  panic("Reached end of syscall_exit_process!");
+  panic("Reached end of az_exit_process!");
   KL_TRC_EXIT;
 }
 
@@ -301,7 +296,7 @@ void syscall_exit_process(uint64_t exit_code)
 ///
 /// @return ERR_CODE::INVALID_PARAM if any parameter is invalid. ERR_CODE::INVALID_OP if the thread could not be
 ///         created for any other reason. ERR_CODE::NO_ERROR if the thread was created successfully.
-ERR_CODE syscall_create_thread(void (*entry_point)(), GEN_HANDLE *thread_handle, uint64_t param, void *stack_ptr)
+ERR_CODE az_create_thread(void (*entry_point)(), GEN_HANDLE *thread_handle, uint64_t param, void *stack_ptr)
 {
   KL_TRC_ENTRY;
 
@@ -361,7 +356,7 @@ ERR_CODE syscall_create_thread(void (*entry_point)(), GEN_HANDLE *thread_handle,
 ///
 /// @return ERR_CODE::NOT_FOUND if the handle does not correlate correctly to a thread. ERR_CODE::NO_ERROR otherwise -
 ///         the thread was started successfully.
-ERR_CODE syscall_start_thread(GEN_HANDLE thread_handle)
+ERR_CODE az_start_thread(GEN_HANDLE thread_handle)
 {
   KL_TRC_ENTRY;
 
@@ -416,7 +411,7 @@ ERR_CODE syscall_start_thread(GEN_HANDLE thread_handle)
 ///
 /// @return ERR_CODE::NOT_FOUND if the handle does not correlate correctly to a thread. ERR_CODE::NO_ERROR otherwise -
 ///         the thread was stopped successfully, or was stopped already.
-ERR_CODE syscall_stop_thread(GEN_HANDLE thread_handle)
+ERR_CODE az_stop_thread(GEN_HANDLE thread_handle)
 {
   KL_TRC_ENTRY;
 
@@ -461,7 +456,7 @@ ERR_CODE syscall_stop_thread(GEN_HANDLE thread_handle)
 ///
 /// @return ERR_CODE::NOT_FOUND if the handle does not refer to a valid thread. ERR_CODE::NO_ERROR otherwise - the
 ///         thread has been destroyed successfully.
-ERR_CODE syscall_destroy_thread(GEN_HANDLE thread_handle)
+ERR_CODE az_destroy_thread(GEN_HANDLE thread_handle)
 {
   KL_TRC_ENTRY;
 
@@ -502,7 +497,7 @@ ERR_CODE syscall_destroy_thread(GEN_HANDLE thread_handle)
 /// @brief Exit the currently running thread.
 ///
 /// The thread will exit and any threads waiting on it will be signalled.
-void syscall_exit_thread()
+void az_exit_thread()
 {
   KL_TRC_ENTRY;
 
@@ -510,6 +505,6 @@ void syscall_exit_thread()
   this_thread = task_get_cur_thread();
   this_thread->destroy_thread();
 
-  panic("Reached end of syscall_exit_thread!");
+  panic("Reached end of az_exit_thread!");
   KL_TRC_EXIT;
 }

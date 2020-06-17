@@ -3,9 +3,9 @@
 
 //#define ENABLE_TRACING
 
-#include "devices/usb/usb_gen_device.h"
+#include "kernel_all.h"
+#include "usb_gen_device.h"
 #include "usb.h"
-#include "klib/klib.h"
 
 using namespace usb;
 

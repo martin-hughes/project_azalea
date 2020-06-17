@@ -5,13 +5,13 @@
 
 #include <memory>
 
-#include "devices/device_interface.h"
-#include "system_tree/system_tree_simple_branch.h"
+#include "types/device_interface.h"
+#include "types/system_tree_simple_branch.h"
 
-#include "devices/pci/pci_constants.h"
-#include "devices/pci/pci_structures.h"
-#include "devices/pci/pci_functions.h"
-#include "devices/pci/pci_root.h"
+#include "pci_constants.h"
+#include "pci_structures.h"
+#include "pci_functions.h"
+#include "pci_root.h"
 
 /// @brief A generic PCI bus device.
 ///

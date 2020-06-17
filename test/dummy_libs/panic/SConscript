@@ -1,5 +1,0 @@
-# Dummy panic library. Used heavily by the test code.
-
-Import('env')
-obj = env.Library("test-dummy-panic", [ "panic.dummy.cpp" ])
-Return ("obj")

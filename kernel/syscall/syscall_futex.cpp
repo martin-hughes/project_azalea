@@ -6,12 +6,11 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
-#include "user_interfaces/syscall.h"
-#include "syscall/syscall_kernel.h"
-#include "syscall/syscall_kernel-int.h"
-#include "processor/processor.h"
-#include "processor/futexes.h"
+#include "azalea/syscall.h"
+#include "syscall_kernel.h"
+#include "syscall_kernel-int.h"
+#include "processor.h"
+#include "types/futex.h"
 
 #include <map>
 
@@ -45,7 +44,7 @@
 ///         - ERR_CODE::INVALID_PARAM if one or more parameters didn't make sense
 ///
 ///         - ERR_CODE::NOT_FOUND if the futex didn't already exist but was supposed to.
-ERR_CODE syscall_futex_op(volatile int32_t *futex,
+ERR_CODE az_futex_op(volatile int32_t *futex,
                           FUTEX_OP op,
                           int32_t req_value,
                           uint64_t timeout_ns,

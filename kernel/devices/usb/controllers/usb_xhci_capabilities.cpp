@@ -3,8 +3,8 @@
 
 //#define ENABLE_TRACING
 
-#include "devices/usb/controllers/usb_xhci_controller.h"
-#include "devices/usb/controllers/usb_xhci_capabilities.h"
+#include "usb_xhci_controller.h"
+#include "usb_xhci_capabilities.h"
 
 using namespace usb::xhci;
 

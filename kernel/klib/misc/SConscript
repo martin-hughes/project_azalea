@@ -1,9 +1,0 @@
-# Klib Miscellany library.
-
-Import('env')
-obj = env.Library("klib-misc", [
-                                "math_hacks.cpp",
-                                "cpp_support.cpp",
-                                "err_code_names.cpp",
-                               ])
-Return ("obj")

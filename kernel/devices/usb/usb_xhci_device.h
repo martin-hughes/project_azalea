@@ -4,11 +4,10 @@
 #pragma once
 
 #include <map>
-
 #include <stdint.h>
 
-#include "devices/usb/usb_gen_device.h"
-#include "devices/usb/controllers/usb_xhci_controller.h"
+#include "usb_gen_device.h"
+#include "controllers/usb_xhci_controller.h"
 
 namespace usb { namespace xhci {
 
@@ -73,7 +72,7 @@ namespace usb { namespace xhci {
 
     device_context *dev_context; ///< Pointer to the device context, as seen by the xHCI. Do not directly modify.
 
-    kernel_spinlock current_transfers_lock; ///< Lock to protect current_transfers.
+    ipc::raw_spinlock current_transfers_lock; ///< Lock to protect current_transfers.
   };
 
 }; };

@@ -1,5 +1,0 @@
-# Klib Kernel Tracing library.
-
-Import('env')
-obj = env.Library("klib-tracing", [ "tracing.cpp", ])
-Return ("obj") 

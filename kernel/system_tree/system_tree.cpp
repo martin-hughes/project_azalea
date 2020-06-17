@@ -3,9 +3,10 @@
 ///
 /// The System Tree is analogous to Linux's Virtual File System (VFS).
 
-#include "klib/klib.h"
-#include "system_tree/system_tree.h"
-#include "system_tree/system_tree_root.h"
+#include "system_tree.h"
+#include "types/system_tree_root.h"
+#include "panic.h"
+#include "k_assert.h"
 
 namespace
 {

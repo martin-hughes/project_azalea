@@ -3,10 +3,8 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
-#include "mem/mem.h"
-#include "mem/mem-int.h"
-#include "mem/x64/mem-x64-int.h"
+#include "mem.h"
+#include "mem-int.h"
 
 // Known deficiencies
 // - mem_map_virtual_page and mem_map_range have opposite parameter ordering!
@@ -20,7 +18,7 @@ namespace
   uint32_t page_use_counters[MEM_MAX_SUPPORTED_PAGES];
 
   /// A lock to protect the whole counter and release system.
-  kernel_spinlock counter_lock;
+  ipc::raw_spinlock counter_lock;
 }
 
 /// Set the page use counter table to zero, since the only pages currently in use will never be unmapped.
@@ -29,15 +27,15 @@ void mem_map_init_counters()
 {
   KL_TRC_ENTRY;
 
-  klib_synch_spinlock_init(counter_lock);
-  klib_synch_spinlock_lock(counter_lock);
+  ipc_raw_spinlock_init(counter_lock);
+  ipc_raw_spinlock_lock(counter_lock);
 
   for (int i = 0; i < MEM_MAX_SUPPORTED_PAGES; i++)
   {
     page_use_counters[i] = 0;
   }
 
-  klib_synch_spinlock_unlock(counter_lock);
+  ipc_raw_spinlock_unlock(counter_lock);
 
   KL_TRC_EXIT;
 }
@@ -60,9 +58,9 @@ void mem_map_virtual_page(uint64_t virt_addr,
 
   KL_TRC_ENTRY;
 
-  mem_x64_map_virtual_page(virt_addr, phys_addr, context, cache_mode);
+  mem_arch_map_virtual_page(virt_addr, phys_addr, context, cache_mode);
 
-  klib_synch_spinlock_lock(counter_lock);
+  ipc_raw_spinlock_lock(counter_lock);
 
   ASSERT((phys_addr % MEM_PAGE_SIZE) == 0);
   phys_page_num = phys_addr / MEM_PAGE_SIZE;
@@ -73,7 +71,7 @@ void mem_map_virtual_page(uint64_t virt_addr,
     KL_TRC_TRACE(TRC_LVL::FLOW, " to: ", page_use_counters[phys_page_num], "\n");
   }
 
-  klib_synch_spinlock_unlock(counter_lock);
+  ipc_raw_spinlock_unlock(counter_lock);
 
   KL_TRC_EXIT;
 }
@@ -96,11 +94,11 @@ void mem_unmap_virtual_page(uint64_t virt_addr, task_process *context, bool allo
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Considering virt_addr ", virt_addr, "\n");
   phys_addr = reinterpret_cast<uint64_t>(mem_get_phys_addr(reinterpret_cast<void *>(virt_addr), context));
-  mem_x64_unmap_virtual_page(virt_addr, context);
+  mem_arch_unmap_virtual_page(virt_addr, context);
 
   if (phys_addr != 0)
   {
-    klib_synch_spinlock_lock(counter_lock);
+    ipc_raw_spinlock_lock(counter_lock);
     ASSERT((phys_addr % MEM_PAGE_SIZE) == 0);
     phys_page_num = phys_addr / MEM_PAGE_SIZE;
 
@@ -118,7 +116,7 @@ void mem_unmap_virtual_page(uint64_t virt_addr, task_process *context, bool allo
       mem_deallocate_physical_pages(reinterpret_cast<void *>(phys_addr), 1);
     }
 
-    klib_synch_spinlock_unlock(counter_lock);
+    ipc_raw_spinlock_unlock(counter_lock);
   }
 
   KL_TRC_EXIT;

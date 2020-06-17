@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "devices/block/ata/ata_structures.h"
+#include "../ata_structures.h"
 
 namespace ata
 {

@@ -6,11 +6,10 @@
 
 //#define ENABLE_TRACING
 
-#include "devices/usb/controllers/usb_xhci_controller.h"
-#include "devices/usb/usb_xhci_device.h"
-#include "processor/timing/timing.h"
-
-#include "klib/klib.h"
+#include "kernel_all.h"
+#include "usb_xhci_controller.h"
+#include "../usb_xhci_device.h"
+#include "timing.h"
 
 using namespace usb::xhci;
 
@@ -53,7 +52,7 @@ controller::controller(pci_address address) :
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Hardware failed\n");
     permanently_failed = true;
-    set_device_status(DEV_STATUS::FAILED);
+    set_device_status(OPER_STATUS::FAILED);
   }
   else
   {
@@ -62,14 +61,14 @@ controller::controller(pci_address address) :
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to create control structures\n");
       permanently_failed = true;
-      set_device_status(DEV_STATUS::FAILED);
+      set_device_status(OPER_STATUS::FAILED);
     }
     else
     {
       // Initialise interrupts.
       ASSERT(msi_configure(1, ints_granted));
       ASSERT(ints_granted == 1);
-      set_device_status(DEV_STATUS::STOPPED);
+      set_device_status(OPER_STATUS::STOPPED);
     }
   }
 
@@ -100,13 +99,13 @@ bool controller::start()
 
   KL_TRC_ENTRY;
 
-  set_device_status(DEV_STATUS::STARTING);
+  set_device_status(OPER_STATUS::STARTING);
 
   // Start running!
   if (permanently_failed || !msi_enable())
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Permanently failed, or failed to enable MSI.\n");
-    set_device_status(DEV_STATUS::FAILED);
+    set_device_status(OPER_STATUS::FAILED);
   }
   else
   {
@@ -114,13 +113,13 @@ bool controller::start()
     if(!controller_start())
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Device failed to enter startup\n");
-      set_device_status(DEV_STATUS::FAILED);
+      set_device_status(OPER_STATUS::FAILED);
     }
     else
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Started OK, kick ports\n");
 
-      set_device_status(DEV_STATUS::OK);
+      set_device_status(OPER_STATUS::OK);
 
       // Tell all ports that their status may have changed:
       for (uint32_t i = 0; i < capability_regs->struct_params_1.max_ports; i++)
@@ -146,17 +145,17 @@ bool controller::stop()
 
   KL_TRC_ENTRY;
 
-  set_device_status(DEV_STATUS::STOPPING);
+  set_device_status(OPER_STATUS::STOPPING);
 
   if (controller_stop())
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Successful stop\n");
-    set_device_status(DEV_STATUS::STOPPED);
+    set_device_status(OPER_STATUS::STOPPED);
   }
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to stop\n");
-    set_device_status(DEV_STATUS::FAILED);
+    set_device_status(OPER_STATUS::FAILED);
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
@@ -171,7 +170,7 @@ bool controller::reset()
 
   KL_TRC_ENTRY;
 
-  set_device_status(DEV_STATUS::RESET);
+  set_device_status(OPER_STATUS::RESET);
 
   if (operational_regs->usb_status.host_ctrlr_halted != 1)
   {
@@ -182,12 +181,12 @@ bool controller::reset()
   if (!controller_reset())
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to enter reset correctly\n");
-    set_device_status(DEV_STATUS::FAILED);
+    set_device_status(OPER_STATUS::FAILED);
   }
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Device reset OK\n");
-    set_device_status(DEV_STATUS::STOPPED);
+    set_device_status(OPER_STATUS::STOPPED);
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
@@ -330,7 +329,7 @@ bool controller::controller_reset()
     if ((operational_regs->usb_status.controller_not_ready != 0) || (operational_regs->usb_command.hc_reset != 0))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Controller failed to reset\n");
-      set_device_status(DEV_STATUS::FAILED);
+      set_device_status(OPER_STATUS::FAILED);
       result = false;
     }
   }

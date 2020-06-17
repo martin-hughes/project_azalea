@@ -6,12 +6,12 @@
 #include <string>
 #include <list>
 
-#include "devices/pci/pci_constants.h"
-#include "devices/pci/pci_structures.h"
-#include "devices/pci/pci_functions.h"
+#include "../pci_constants.h"
+#include "../pci_structures.h"
+#include "../pci_functions.h"
 
-#include "devices/device_interface.h"
-#include "system_tree/system_tree_leaf.h"
+#include "types/device_interface.h"
+#include "types/handled_obj.h"
 
 /// @brief A generic PCI device
 ///

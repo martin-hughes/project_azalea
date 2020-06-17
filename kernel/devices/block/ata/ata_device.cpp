@@ -10,10 +10,9 @@
 
 #include <stdint.h>
 
-#include "klib/klib.h"
 #include "ata_device.h"
-#include "processor/processor.h"
-#include "processor/timing/timing.h"
+#include "processor.h"
+#include "timing.h"
 
 #include <memory>
 
@@ -51,7 +50,7 @@ generic_device::generic_device(std::shared_ptr<generic_controller> parent, uint1
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Sector count: ", number_of_sectors , "\n");
 
-  set_device_status(DEV_STATUS::OK);
+  set_device_status(OPER_STATUS::OK);
 
   KL_TRC_EXIT;
 }
@@ -63,19 +62,19 @@ generic_device::~generic_device()
 
 bool generic_device::start()
 {
-  set_device_status(DEV_STATUS::OK);
+  set_device_status(OPER_STATUS::OK);
   return true;
 }
 
 bool generic_device::stop()
 {
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
   return true;
 }
 
 bool generic_device::reset()
 {
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
   return true;
 }
 
@@ -127,7 +126,7 @@ ERR_CODE generic_device::read_blocks(uint64_t start_block,
     KL_TRC_TRACE(TRC_LVL::FLOW, "Output buffer too short\n");
     result = ERR_CODE::INVALID_PARAM;
   }
-  else if (get_device_status() != DEV_STATUS::OK)
+  else if (get_device_status() != OPER_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Device has failed\n");
     result = ERR_CODE::DEVICE_FAILED;
@@ -188,7 +187,7 @@ ERR_CODE generic_device::write_blocks(uint64_t start_block,
     KL_TRC_TRACE(TRC_LVL::FLOW, "Output buffer too short\n");
     result = ERR_CODE::INVALID_PARAM;
   }
-  else if (get_device_status() != DEV_STATUS::OK)
+  else if (get_device_status() != OPER_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Device has failed\n");
     result = ERR_CODE::DEVICE_FAILED;

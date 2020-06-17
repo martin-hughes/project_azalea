@@ -7,12 +7,10 @@
 #include <string>
 #include <set>
 
-#include "klib/klib.h"
-
-#include "system_tree/system_tree_branch.h"
-#include "devices/block/block_interface.h"
-#include "system_tree/fs/fs_file_interface.h"
-#include "system_tree/fs/fat/fat_structures.h"
+#include "types/system_tree_branch.h"
+#include "../devices/block/block_interface.h"
+#include "../fs_file_interface.h"
+#include "fat_structures.h"
 
 #include <memory>
 
@@ -27,11 +25,11 @@ public:
   static std::shared_ptr<fat_filesystem> create(std::shared_ptr<IBlockDevice> parent_device);
   virtual ~fat_filesystem();
 
-  virtual ERR_CODE get_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
-  virtual ERR_CODE add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
+  virtual ERR_CODE get_child(const std::string &name, std::shared_ptr<IHandledObject> &child) override;
+  virtual ERR_CODE add_child(const std::string &name, std::shared_ptr<IHandledObject> child) override;
   virtual ERR_CODE rename_child(const std::string &old_name, const std::string &new_name) override;
   virtual ERR_CODE delete_child(const std::string &name) override;
-  virtual ERR_CODE create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+  virtual ERR_CODE create_child(const std::string &name, std::shared_ptr<IHandledObject> &child) override;
   virtual std::pair<ERR_CODE, uint64_t> num_children() override;
   virtual std::pair<ERR_CODE, std::vector<std::string>>
     enum_children(std::string start_from, uint64_t max_count) override;
@@ -42,7 +40,7 @@ public:
   ///
   /// Since directories are basically stored like normal files but with the directory attribute set, this can also read
   /// the contents of directory 'files'.
-  class fat_file: public IBasicFile, public ISystemTreeLeaf
+  class fat_file: public IBasicFile, public IHandledObject
   {
   public:
 
@@ -102,11 +100,11 @@ public:
                                               bool root_directory = false);
     virtual ~fat_folder();
 
-    virtual ERR_CODE get_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
-    virtual ERR_CODE add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
+    virtual ERR_CODE get_child(const std::string &name, std::shared_ptr<IHandledObject> &child) override;
+    virtual ERR_CODE add_child(const std::string &name, std::shared_ptr<IHandledObject> child) override;
     virtual ERR_CODE rename_child(const std::string &old_name, const std::string &new_name) override;
     virtual ERR_CODE delete_child(const std::string &name) override;
-    virtual ERR_CODE create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &leaf) override;
+    virtual ERR_CODE create_child(const std::string &name, std::shared_ptr<IHandledObject> &leaf) override;
     virtual std::pair<ERR_CODE, uint64_t> num_children() override;
     virtual std::pair<ERR_CODE, std::vector<std::string>>
       enum_children(std::string start_from, uint64_t max_count) override;
@@ -150,7 +148,7 @@ public:
 protected:
   std::shared_ptr<IBlockDevice> _storage; ///< The block device containing this filesystem.
   std::unique_ptr<uint8_t[]> _buffer; ///< A buffer to copy sectors in to for manipulation.
-  DEV_STATUS _status; ///< Status of the filesystem.
+  OPER_STATUS _status; ///< Status of the filesystem.
   std::unique_ptr<uint8_t[]> _raw_fat; ///< A copy of the FAT of this filesystem.
 
   /// @brief Stores a pointer to the root directory.
@@ -158,7 +156,7 @@ protected:
   /// Don't use this directly, since it may not have been initialised yet - call get_root_directory() instead.
   std::shared_ptr<fat_folder> root_directory;
 
-  kernel_spinlock gen_lock; ///< A general lock used to synchronise FS accesses.
+  ipc::raw_spinlock gen_lock; ///< A general lock used to synchronise FS accesses.
   uint64_t max_sectors; ///< The number of sectors in this filesystem.
   FAT_TYPE type; ///< The type of FAT in this filesystem.
 

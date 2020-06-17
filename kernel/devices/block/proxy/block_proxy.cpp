@@ -12,8 +12,8 @@
 
 #include <stdint.h>
 
-#include "devices/block/proxy/block_proxy.h"
-#include "klib/klib.h"
+#include "block_proxy.h"
+#include "kernel_all.h"
 
 /// @brief Standard constructor
 ///
@@ -27,22 +27,22 @@ block_proxy_device::block_proxy_device(IBlockDevice *parent, uint64_t start_bloc
 {
   KL_TRC_ENTRY;
 
-  set_device_status(DEV_STATUS::STARTING);
+  set_device_status(OPER_STATUS::STARTING);
 
   if (parent == nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Invalid parent device\n");
-    set_device_status(DEV_STATUS::FAILED);
+    set_device_status(OPER_STATUS::FAILED);
   }
   else if (num_blocks == 0)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Insufficient blocks to proxy\n");
-    set_device_status(DEV_STATUS::FAILED);
+    set_device_status(OPER_STATUS::FAILED);
   }
   else if ((start_block > parent->num_blocks()) || ((start_block + num_blocks) > parent->num_blocks()))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Proxy range incorrect\n");
-    set_device_status(DEV_STATUS::FAILED);
+    set_device_status(OPER_STATUS::FAILED);
   }
 
   KL_TRC_EXIT;
@@ -59,9 +59,9 @@ bool block_proxy_device::start()
 {
   KL_TRC_ENTRY;
 
-  if (get_device_status() != DEV_STATUS::FAILED)
+  if (get_device_status() != OPER_STATUS::FAILED)
   {
-    set_device_status(DEV_STATUS::OK);
+    set_device_status(OPER_STATUS::OK);
   }
 
   KL_TRC_EXIT;
@@ -73,9 +73,9 @@ bool block_proxy_device::stop()
 {
   KL_TRC_ENTRY;
 
-  if (get_device_status() != DEV_STATUS::FAILED)
+  if (get_device_status() != OPER_STATUS::FAILED)
   {
-    set_device_status(DEV_STATUS::STOPPED);
+    set_device_status(OPER_STATUS::STOPPED);
   }
 
   KL_TRC_EXIT;
@@ -87,9 +87,9 @@ bool block_proxy_device::reset()
 {
   KL_TRC_ENTRY;
 
-  if (get_device_status() != DEV_STATUS::FAILED)
+  if (get_device_status() != OPER_STATUS::FAILED)
   {
-    set_device_status(DEV_STATUS::STOPPED);
+    set_device_status(OPER_STATUS::STOPPED);
   }
 
   KL_TRC_EXIT;
@@ -98,11 +98,11 @@ bool block_proxy_device::reset()
 }
 
 
-DEV_STATUS block_proxy_device::get_device_status()
+OPER_STATUS block_proxy_device::get_device_status()
 {
   KL_TRC_ENTRY;
 
-  DEV_STATUS ret = IDevice::get_device_status();
+  OPER_STATUS ret = IDevice::get_device_status();
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Status: ", ret, "\n");
 
@@ -141,7 +141,7 @@ ERR_CODE block_proxy_device::read_blocks(uint64_t start_block,
 
   ERR_CODE ret = ERR_CODE::NO_ERROR;
 
-  if (get_device_status() != DEV_STATUS::OK)
+  if (get_device_status() != OPER_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Device failed\n");
     ret = ERR_CODE::DEVICE_FAILED;
@@ -174,7 +174,7 @@ ERR_CODE block_proxy_device::write_blocks(uint64_t start_block,
 
   ERR_CODE ret = ERR_CODE::NO_ERROR;
 
-  if (get_device_status() != DEV_STATUS::OK)
+  if (get_device_status() != OPER_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Device failed\n");
     ret = ERR_CODE::DEVICE_FAILED;

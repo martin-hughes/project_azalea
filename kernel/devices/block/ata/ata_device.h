@@ -5,8 +5,8 @@
 
 #include <stdint.h>
 
-#include "devices/block/block_interface.h"
-#include "user_interfaces/error_codes.h"
+#include "../block_interface.h"
+#include "azalea/error_codes.h"
 #include "ata_structures.h"
 #include "controller/ata_controller.h"
 

@@ -5,13 +5,12 @@
 
 #include <string>
 
-#include "klib/klib.h"
-#include "devices/pci/pci_root.h"
-#include "devices/pci/pci_constants.h"
-#include "devices/pci/pci_structures.h"
-#include "devices/pci/pci_functions.h"
-#include "devices/pci/pci_generic_bus.h"
-#include "devices/device_monitor.h"
+#include "kernel_all.h"
+#include "pci_root.h"
+#include "pci_constants.h"
+#include "pci_structures.h"
+#include "pci_functions.h"
+#include "pci_generic_bus.h"
 
 #include <stdio.h>
 
@@ -29,7 +28,7 @@ pci_root_device::~pci_root_device()
 
 bool pci_root_device::start()
 {
-  set_device_status(DEV_STATUS::OK);
+  set_device_status(OPER_STATUS::OK);
 
   this->scan_for_devices();
 

@@ -6,13 +6,13 @@
 
 //#define ENABLE_TRACING
 
-#include "device_interface.h"
-#include "user_interfaces/messages.h"
-#include "klib/klib.h"
-
 #include <atomic>
 #include <map>
 #include <stdio.h>
+
+#include "types/device_interface.h"
+#include "azalea/messages.h"
+#include "map_helpers.h"
 
 namespace
 {
@@ -22,11 +22,11 @@ namespace
   std::map<std::string, uint64_t> *name_counts{nullptr};
 
   /// Lock to protect `name_counts`
-  kernel_spinlock name_count_lock{0};
+  ipc::raw_spinlock name_count_lock{0};
 }
 
 IDevice::IDevice(const std::string human_name, const std::string short_name, bool auto_inc_suffix) :
- device_human_name{human_name}, device_short_name{short_name}, current_dev_status{DEV_STATUS::UNKNOWN}
+ device_human_name{human_name}, device_short_name{short_name}, current_dev_status{OPER_STATUS::UNKNOWN}
 {
   uint64_t dev_number{0};
 
@@ -36,7 +36,7 @@ IDevice::IDevice(const std::string human_name, const std::string short_name, boo
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Add automatic suffix number\n");
 
-    klib_synch_spinlock_lock(name_count_lock);
+    ipc_raw_spinlock_lock(name_count_lock);
 
     if (name_counts == nullptr)
     {
@@ -59,7 +59,7 @@ IDevice::IDevice(const std::string human_name, const std::string short_name, boo
     KL_TRC_TRACE(TRC_LVL::FLOW, "Adding suffix - new device name: ", true_short_name, "\n");
     device_short_name = true_short_name;
 
-    klib_synch_spinlock_unlock(name_count_lock);
+    ipc_raw_spinlock_unlock(name_count_lock);
   }
 
   KL_TRC_EXIT;
@@ -112,7 +112,7 @@ void IDevice::handle_message(std::unique_ptr<msg::root_msg> &message)
   KL_TRC_EXIT;
 }
 
-void IDevice::set_device_status(DEV_STATUS new_state)
+void IDevice::set_device_status(OPER_STATUS new_state)
 {
   KL_TRC_ENTRY;
 

@@ -9,10 +9,10 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
+#include "kernel_all.h"
 #include "ps2_controller.h"
-#include "devices/device_monitor.h"
-#include "processor/processor.h"
+#include "device_monitor.h"
+#include "processor.h"
 
 /// @brief Standard constructor.
 gen_ps2_controller_device::gen_ps2_controller_device() :
@@ -60,7 +60,7 @@ bool gen_ps2_controller_device::start()
 
   uint8_t response;
 
-  set_device_status(DEV_STATUS::STARTING);
+  set_device_status(OPER_STATUS::STARTING);
 
   // 1 - Disable both connected devices.
   send_ps2_command(PS2_CONST::DISABLE_DEV_1, false, 0, false, response);
@@ -184,12 +184,12 @@ bool gen_ps2_controller_device::start()
   if (success)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Set device to started\n");
-    set_device_status(DEV_STATUS::OK);
+    set_device_status(OPER_STATUS::OK);
   }
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Set device to failed\n");
-    set_device_status(DEV_STATUS::FAILED);
+    set_device_status(OPER_STATUS::FAILED);
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
@@ -204,11 +204,11 @@ bool gen_ps2_controller_device::stop()
 
   KL_TRC_ENTRY;
 
-  set_device_status(DEV_STATUS::STOPPING);
+  set_device_status(OPER_STATUS::STOPPING);
 
   INCOMPLETE_CODE("PS/2 controller stop");
 
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;

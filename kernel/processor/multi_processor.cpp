@@ -6,12 +6,8 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
 #include "processor.h"
 #include "processor-int.h"
-#include "x64/processor-x64.h"
-#include "x64/processor-x64-int.h"
-#include "x64/pic/apic.h"
 
 extern processor_info *proc_info_block;
 /// Processor information storage for each processor, as an array indexed by processor ID.
@@ -34,33 +30,6 @@ uint32_t proc_mp_proc_count()
   return processor_count;
 }
 
-/// @brief Send a IPI signal to another processor
-///
-/// Inter-processor interrupts are used to signal control messages between processors. Control messages are defined in
-/// PROC_IPI_MSGS.
-///
-/// @param proc_id The processor ID (not APIC ID) to signal.
-///
-/// @param msg The message to be sent.
-///
-/// @param must_complete If set to true, this function will spin until the remote processor has finished handling the
-///                      sent message. This may deadlock, if, for example, the message is to suspend the remote proc.
-///                      If false, this function will return when the remote processor has received the message without
-///                      waiting for it to be handled.
-void proc_mp_signal_processor(uint32_t proc_id, PROC_IPI_MSGS msg, bool must_complete)
-{
-  KL_TRC_ENTRY;
-
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Message to send", static_cast<uint64_t>(msg), "\n");
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Processor to signal", proc_id, "\n");
-
-  ASSERT(proc_id < processor_count);
-
-  proc_mp_x64_signal_proc(proc_id, msg, must_complete);
-
-  KL_TRC_EXIT;
-}
-
 /// @brief Handle an signal sent from another processor to this one
 ///
 /// @param msg The message received by this processor
@@ -73,7 +42,7 @@ void proc_mp_receive_signal(PROC_IPI_MSGS msg)
   switch (msg)
   {
     case PROC_IPI_MSGS::RESUME:
-      asm_proc_start_interrupts();
+      proc_start_interrupts();
       asm("hlt");
       break;
 
@@ -86,7 +55,7 @@ void proc_mp_receive_signal(PROC_IPI_MSGS msg)
       break;
 
     case PROC_IPI_MSGS::RELOAD_IDT:
-      asm_proc_install_idt();
+      proc_install_idt();
       break;
 
     default:

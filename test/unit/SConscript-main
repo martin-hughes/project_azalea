@@ -1,0 +1,59 @@
+# Contains tests that use the "normal" set of required libraries. The various support libraries continue to have their
+# own SConscript files. We do not link the various tests into a static library first because otherwise Google Test
+# loses track of the test cases - the test classes must be visible in the "main" part of the test program.
+
+Import('env')
+
+obj = [ ]
+files = [ "dummy_libs/processor/processor.dummy.cpp",
+          "dummy_libs/processor/timing.dummy.cpp",
+          "dummy_libs/devices/virt_disk/virt_disk.cpp",
+
+          "tests/devices/block/proxy/proxy_tests.cpp",
+          "tests/devices/block/ramdisk/ramdisk_tests.cpp",
+          "tests/devices/dev_monitor.cpp",
+
+          "tests/misc/ds_1.cpp",
+
+          "tests/misc/maths_1.cpp",
+
+          "tests/mem/memory_1.cpp",
+          "tests/mem/memory_2.cpp",
+
+          "tests/ipc/synch_1.cpp",
+          "tests/ipc/synch_2_lock_wrapper.cpp",
+
+          "tests/object_mgr/object_mgr_1.cpp",
+          "tests/object_mgr/object_mgr_2.cpp",
+
+          "tests/processor/scheduler/scheduler_1.cpp",
+          "tests/processor/scheduler/scheduler_proc_start_exit.cpp",
+          "tests/processor/irq_handler.cpp",
+          "tests/processor/process_msg_handling.cpp",
+          "tests/processor/synch_objects.cpp",
+          "tests/processor/work_queue.cpp",
+          "tests/processor/work_queue_mt.cpp",
+
+          "tests/system_tree/system_tree_1.cpp",
+          "tests/system_tree/system_tree_2.cpp",
+          "tests/system_tree/system_tree_3_pipes.cpp",
+          "tests/system_tree/system_tree_6_proc.cpp",
+          "tests/system_tree/system_tree_7_enum.cpp",
+
+          "tests/system_tree/fs/fat/fat_fs_1_read.cpp",
+          "tests/system_tree/fs/fat/fat_fs_2_write.cpp",
+          "tests/system_tree/fs/fat/fat_fs_3_create.cpp",
+          "tests/system_tree/fs/fat/fat_fs_4_rename.cpp",
+          "tests/system_tree/fs/fat/fat_fs_5_delete.cpp",
+          "tests/system_tree/fs/fat/fat_fs_6_large_read.cpp",
+
+          "tests/system_tree/fs/mem/mem_fs_1_basic.cpp",
+          "tests/system_tree/fs/mem/mem_fs_2_syscall.cpp",
+
+          "tests/misc/tracing_1.cpp",
+        ]
+
+for f in files:
+  obj = obj + [ env.Object(f) ]
+
+Return ("obj")

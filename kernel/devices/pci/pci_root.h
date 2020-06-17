@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include "devices/device_interface.h"
-#include "system_tree/system_tree_simple_branch.h"
+#include "types/device_interface.h"
+#include "types/system_tree_simple_branch.h"
 
 /// @brief Owner/Controller of all PCI devices in the system.
 ///

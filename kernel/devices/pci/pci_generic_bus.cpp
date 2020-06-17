@@ -4,12 +4,13 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
-#include "devices/pci/pci_functions.h"
-#include "devices/pci/pci_generic_bus.h"
-#include "devices/pci/generic_device/pci_generic_device.h"
-
 #include <stdio.h>
+
+#include "pci_functions.h"
+#include "pci_generic_bus.h"
+#include "generic_device/pci_generic_device.h"
+
+#include "kernel_all.h"
 
 /// @brief Standard constructor
 ///
@@ -36,20 +37,20 @@ pci_generic_bus::~pci_generic_bus()
 
 bool pci_generic_bus::start()
 {
-  set_device_status(DEV_STATUS::OK);
+  set_device_status(OPER_STATUS::OK);
   this->scan_bus();
   return true;
 }
 
 bool pci_generic_bus::stop()
 {
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
   return true;
 }
 
 bool pci_generic_bus::reset()
 {
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
   return true;
 }
 

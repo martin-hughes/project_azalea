@@ -3,10 +3,11 @@
 
 #pragma once
 
-#include "devices/device_interface.h"
-#include "acpi/acpi_if.h"
-#include "processor/timing/timing.h"
 #include <memory>
+
+#include "types/device_interface.h"
+#include "acpi_if.h"
+#include "timing.h"
 
 namespace timing
 {

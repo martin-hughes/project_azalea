@@ -15,11 +15,11 @@
 // It's a really bad idea to enable tracing in the live system!
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
-#include "processor/processor.h"
-#include "processor/processor-int.h"
-#include "devices/device_interface.h"
-#include "processor/timing/timing.h"
+#include "processor.h"
+#include "processor-int.h"
+#include "types/device_interface.h"
+#include "timing.h"
+#include "math_hacks.h"
 
 namespace
 {
@@ -63,7 +63,7 @@ void proc_config_interrupt_table()
     klib_list_initialize(&proc_interrupt_data_table[i].interrupt_handlers);
     proc_interrupt_data_table[i].reserved = false;
     proc_interrupt_data_table[i].is_irq = false;
-    klib_synch_spinlock_init(proc_interrupt_data_table[i].list_lock);
+    ipc_raw_spinlock_init(proc_interrupt_data_table[i].list_lock);
   }
 
   KL_TRC_EXIT;
@@ -93,7 +93,7 @@ void proc_register_interrupt_handler(uint8_t interrupt_number, IInterruptReceive
          (proc_interrupt_data_table[interrupt_number].is_irq == true));
 
 
-  klib_synch_spinlock_lock(proc_interrupt_data_table[interrupt_number].list_lock);
+  ipc_raw_spinlock_lock(proc_interrupt_data_table[interrupt_number].list_lock);
   klib_list_item<proc_interrupt_handler *> *new_item = new klib_list_item<proc_interrupt_handler *>;
   klib_list_item_initialize(new_item);
 
@@ -104,7 +104,7 @@ void proc_register_interrupt_handler(uint8_t interrupt_number, IInterruptReceive
   new_item->item = new_handler;
 
   klib_list_add_tail(&proc_interrupt_data_table[interrupt_number].interrupt_handlers, new_item);
-  klib_synch_spinlock_unlock(proc_interrupt_data_table[interrupt_number].list_lock);
+  ipc_raw_spinlock_unlock(proc_interrupt_data_table[interrupt_number].list_lock);
 
   KL_TRC_EXIT;
 }
@@ -128,7 +128,7 @@ void proc_unregister_interrupt_handler(uint8_t interrupt_number, IInterruptRecei
   ASSERT((proc_interrupt_data_table[interrupt_number].reserved == false) ||
          (proc_interrupt_data_table[interrupt_number].is_irq == true));
 
-  klib_synch_spinlock_lock(proc_interrupt_data_table[interrupt_number].list_lock);
+  ipc_raw_spinlock_lock(proc_interrupt_data_table[interrupt_number].list_lock);
   ASSERT(!klib_list_is_empty(&proc_interrupt_data_table[interrupt_number].interrupt_handlers));
 
   bool found_receiver = false;
@@ -158,7 +158,7 @@ void proc_unregister_interrupt_handler(uint8_t interrupt_number, IInterruptRecei
   }
 
   ASSERT(found_receiver);
-  klib_synch_spinlock_unlock(proc_interrupt_data_table[interrupt_number].list_lock);
+  ipc_raw_spinlock_unlock(proc_interrupt_data_table[interrupt_number].list_lock);
 
   KL_TRC_EXIT;
 }
@@ -332,7 +332,7 @@ void proc_interrupt_slowpath_thread()
   {
     for (uint32_t i = 0; i < PROC_NUM_INTERRUPTS; i++)
     {
-      klib_synch_spinlock_lock(proc_interrupt_data_table[i].list_lock);
+      ipc_raw_spinlock_lock(proc_interrupt_data_table[i].list_lock);
       cur_item = proc_interrupt_data_table[i].interrupt_handlers.head;
       interrupt_num = i;
 
@@ -353,7 +353,7 @@ void proc_interrupt_slowpath_thread()
 
         cur_item = cur_item->next;
       }
-      klib_synch_spinlock_unlock(proc_interrupt_data_table[i].list_lock);
+      ipc_raw_spinlock_unlock(proc_interrupt_data_table[i].list_lock);
     }
   }
 }

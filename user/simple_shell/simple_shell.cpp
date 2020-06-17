@@ -6,7 +6,7 @@
 #include <time.h>
 
 #define SC_DEBUG_MSG(string) \
-  syscall_debug_output((string), strlen((string)) )
+  az_debug_output((string), strlen((string)) )
 
 extern "C" int main (int argc, char **argv, char **env_p);
 
@@ -53,7 +53,7 @@ int main (int argc, char **argv, char **env_p)
     //timeinfo = localtime (&rawtime);
     //printf("%02u:%02u:%02u ", (unsigned int)timeinfo->tm_hour, (unsigned int)timeinfo->tm_min, (unsigned int)timeinfo->tm_sec);
 
-    result = syscall_get_system_clock(&t);
+    result = az_get_system_clock(&t);
     if (result == ERR_CODE::NO_ERROR)
     {
       printf("%02u:%02u:%02u ", (unsigned int)t.hours, (unsigned int)t.minutes, (unsigned int)t.seconds);
@@ -143,9 +143,9 @@ void execute_command(char *command)
         {
         case ERR_CODE::NO_ERROR:
           //SC_DEBUG_MSG("Program running\n");
-          syscall_wait_for_object(proc_handle, SC_MAX_WAIT);
+          az_wait_for_object(proc_handle, SC_MAX_WAIT);
 
-          if (syscall_get_object_properties(proc_handle, nullptr, 0, &props) == ERR_CODE::NO_ERROR)
+          if (az_get_object_properties(proc_handle, nullptr, 0, &props) == ERR_CODE::NO_ERROR)
           {
             printf("Exit code: %lu\n", props.additional_status);
           }
@@ -153,7 +153,7 @@ void execute_command(char *command)
           {
             printf("Didn't receive exit code\n");
           }
-          syscall_close_handle(proc_handle);
+          az_close_handle(proc_handle);
           break;
 
         case ERR_CODE::NOT_FOUND:

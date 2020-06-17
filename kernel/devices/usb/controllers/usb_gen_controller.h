@@ -5,8 +5,8 @@
 
 #include <string>
 
-#include "devices/device_interface.h"
-#include "devices/pci/generic_device/pci_generic_device.h"
+#include "types/device_interface.h"
+#include "../devices/pci/generic_device/pci_generic_device.h"
 
 /// @brief A generic USB controller.
 ///

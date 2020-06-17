@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include "devices/block/block_interface.h"
-#include "user_interfaces/error_codes.h"
+#include "../block_interface.h"
+#include "azalea/error_codes.h"
 
 /// @brief Proxies block device requests onto a parent block device, but with an offset.
 ///
@@ -29,7 +29,7 @@ public:
                                 uint64_t buffer_length) override;
 
   // Overrides of IDevice
-  virtual DEV_STATUS get_device_status() override;
+  virtual OPER_STATUS get_device_status() override;
 
   virtual bool start() override;
   virtual bool stop() override;

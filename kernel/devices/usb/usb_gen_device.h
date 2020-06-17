@@ -13,12 +13,11 @@
 #include <string>
 #include <memory>
 
-#include "devices/device_interface.h"
-#include "devices/usb/usb_gen_device_requests.h"
-#include "processor/work_queue.h"
-#include "processor/synch_objects.h"
+#include "types/device_interface.h"
+#include "usb_gen_device_requests.h"
+#include "work_queue.h"
 
-#include "klib/data_structures/lists.h"
+#include "types/list.h"
 
 namespace usb
 {
@@ -259,9 +258,9 @@ namespace usb
     virtual ~generic_device() = default;
 
     // Overrides of IDevice
-    virtual bool start() override { set_device_status(DEV_STATUS::OK); return true; };
-    virtual bool stop() override { set_device_status(DEV_STATUS::STOPPED); return true; };
-    virtual bool reset() override { set_device_status(DEV_STATUS::STOPPED); return true; };
+    virtual bool start() override { set_device_status(OPER_STATUS::OK); return true; };
+    virtual bool stop() override { set_device_status(OPER_STATUS::STOPPED); return true; };
+    virtual bool reset() override { set_device_status(OPER_STATUS::STOPPED); return true; };
     virtual void handle_private_msg(std::unique_ptr<msg::root_msg> &message) override;
 
     virtual void transfer_completed(normal_transfer *complete_transfer);

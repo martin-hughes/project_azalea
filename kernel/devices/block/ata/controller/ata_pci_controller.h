@@ -3,12 +3,12 @@
 
 #pragma once
 
-#include "klib/synch/kernel_locks.h"
-#include "klib/synch/kernel_mutexes.h"
-#include "devices/device_interface.h"
-#include "devices/pci/generic_device/pci_generic_device.h"
+#include "types/spinlock.h"
+#include "types/mutex.h"
+#include "types/device_interface.h"
+#include "../devices/pci/generic_device/pci_generic_device.h"
 #include "ata_controller.h"
-#include "devices/block/ata/ata_device.h"
+#include "../ata_device.h"
 
 #include <memory>
 
@@ -188,8 +188,8 @@ protected:
   uint16_t channel_irq_nums[MAX_CHANNEL]{14, 15}; ///< Which IRQs are connected to which channel.
   uint16_t bus_master_base_port{0}; ///< The base port of this controller's bus mastering registers.
 
-  kernel_spinlock cmd_spinlock; ///< Prevents getting our commands confused by serialising access to the drives.
-  klib_mutex dma_mutex; ///< Mutex to help queue DMA transfers, since only one can execute at a time.
+  ipc::raw_spinlock cmd_spinlock; ///< Prevents getting our commands confused by serialising access to the drives.
+  ipc::mutex dma_mutex{true}; ///< Mutex to help queue DMA transfers, since only one can execute at a time.
 
   static const uint16_t max_prd_table_entries = 31; ///< The maximum number of transfers that fit into the buffer above
   uint64_t buffer_phys_addr{0}; ///< Physical address of a memory buffer known to conform to DMA requirements.

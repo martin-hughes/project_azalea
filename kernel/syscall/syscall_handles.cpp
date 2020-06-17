@@ -4,18 +4,13 @@
 //#define ENABLE_TRACING
 
 #include <string>
-
-#include "user_interfaces/syscall.h"
-#include "syscall/syscall_kernel.h"
-#include "syscall/syscall_kernel-int.h"
-#include "klib/klib.h"
-#include "system_tree/system_tree.h"
-#include "system_tree/fs/fs_file_interface.h"
-#include "object_mgr/object_mgr.h"
-#include "processor/x64/processor-x64.h"
-
 #include <memory>
 #include <cstring>
+
+#include "kernel_all.h"
+#include "syscall_kernel-int.h"
+
+#include "../system_tree/fs/fs_file_interface.h"
 
 /// @brief Open a handle corresponding to a System Tree object.
 ///
@@ -32,7 +27,7 @@
 /// @param flags Set to H_CREATE_IF_NEW to create a new file if this one doesn't exist.
 ///
 /// @return A suitable ERR_CODE value.
-ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *handle, uint32_t flags)
+ERR_CODE az_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *handle, uint32_t flags)
 {
   ERR_CODE result;
   KL_TRC_ENTRY;
@@ -63,7 +58,7 @@ ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *ha
   else
   {
     object_data new_object;
-    std::shared_ptr<ISystemTreeLeaf> leaf;
+    std::shared_ptr<IHandledObject> leaf;
     GEN_HANDLE new_handle;
     std::unique_ptr<char[]> buf = std::make_unique<char[]>(path_len + 1);
     memcpy(buf.get(), path, path_len);
@@ -87,7 +82,7 @@ ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *ha
     else if ((result == ERR_CODE::NOT_FOUND) && ((flags & H_CREATE_IF_NEW) != 0))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Not found and asked to create\n");
-      result = syscall_create_obj_and_handle(path, path_len, handle);
+      result = az_create_obj_and_handle(path, path_len, handle);
     }
     else
     {
@@ -108,7 +103,7 @@ ERR_CODE syscall_open_handle(const char *path, uint64_t path_len, GEN_HANDLE *ha
 /// @param[in] handle The handle to close.
 ///
 /// @return A suitable ERR_CODE value.
-ERR_CODE syscall_close_handle(GEN_HANDLE handle)
+ERR_CODE az_close_handle(GEN_HANDLE handle)
 {
   KL_TRC_ENTRY;
 
@@ -161,10 +156,10 @@ ERR_CODE syscall_close_handle(GEN_HANDLE handle)
 /// @param[out] handle The handle of the newly created object. If an object isn't created, this is left untouched.
 ///
 /// @return A suitable error code.
-ERR_CODE syscall_create_obj_and_handle(const char *path, uint64_t path_len, GEN_HANDLE *handle)
+ERR_CODE az_create_obj_and_handle(const char *path, uint64_t path_len, GEN_HANDLE *handle)
 {
   ERR_CODE result = ERR_CODE::UNKNOWN;
-  std::shared_ptr<ISystemTreeLeaf> new_leaf;
+  std::shared_ptr<IHandledObject> new_leaf;
   std::shared_ptr<IHandledObject> new_leaf_ptr;
   std::string req_path(path, path_len);
   GEN_HANDLE new_handle;
@@ -218,7 +213,7 @@ ERR_CODE syscall_create_obj_and_handle(const char *path, uint64_t path_len, GEN_
 /// @param new_name_len The number of bytes in new_name.
 ///
 /// @return A suitable error code.
-ERR_CODE syscall_rename_object(const char *old_name,
+ERR_CODE az_rename_object(const char *old_name,
                                uint64_t old_name_len,
                                const char *new_name,
                                uint64_t new_name_len)
@@ -259,7 +254,7 @@ ERR_CODE syscall_rename_object(const char *old_name,
 /// @param path_len How many bytes are in the path string?
 ///
 /// @return A suitable error code.
-ERR_CODE syscall_delete_object(const char *path, uint64_t path_len)
+ERR_CODE az_delete_object(const char *path, uint64_t path_len)
 {
   ERR_CODE result{ERR_CODE::UNKNOWN};
 
@@ -298,14 +293,14 @@ ERR_CODE syscall_delete_object(const char *path, uint64_t path_len)
 /// @param[out] props Basic properties about this object.
 ///
 /// @return A suitable error code.
-ERR_CODE syscall_get_object_properties(GEN_HANDLE handle,
+ERR_CODE az_get_object_properties(GEN_HANDLE handle,
                                        const char *path,
                                        uint64_t path_length,
                                        object_properties *props)
 {
   ERR_CODE result{ERR_CODE::NO_ERROR};
   bool path_is_valid{false};
-  std::shared_ptr<ISystemTreeLeaf> leaf;
+  std::shared_ptr<IHandledObject> leaf;
   std::shared_ptr<IHandledObject> obj;
   task_thread *cur_thread = task_get_cur_thread();
   std::shared_ptr<task_process> proc;
@@ -337,7 +332,7 @@ ERR_CODE syscall_get_object_properties(GEN_HANDLE handle,
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieve object\n");
       obj = cur_thread->parent_process->proc_handles.retrieve_handled_object(handle);
-      leaf = std::dynamic_pointer_cast<ISystemTreeLeaf>(obj);
+      leaf = std::dynamic_pointer_cast<IHandledObject>(obj);
       proc = std::dynamic_pointer_cast<task_process>(obj);
       if ((leaf == nullptr) && (proc == nullptr))
       {
@@ -413,7 +408,7 @@ ERR_CODE syscall_get_object_properties(GEN_HANDLE handle,
 ///                    results.
 ///
 /// @return A suitable error code. If ERR_CODE::NOT_SUPPORTED, then the handle does not point to a system tree branch.
-ERR_CODE syscall_enum_children(GEN_HANDLE handle,
+ERR_CODE az_enum_children(GEN_HANDLE handle,
                                const char *start_from,
                                uint64_t start_from_len,
                                uint64_t max_count,

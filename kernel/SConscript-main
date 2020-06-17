@@ -1,0 +1,48 @@
+# Kernel platform independent part. This part is included in the unit tests.
+
+Import('env')
+
+files = [
+  "ipc/futexes.cpp",
+  "ipc/spinlocks.cpp",
+  "ipc/events.cpp",
+  "ipc/work_queue.cpp",
+
+  "mem/mapping.cpp",
+  "mem/mem_operators.cpp",
+  "mem/memory.cpp",
+  "mem/process.cpp",
+  "mem/virtual.cpp",
+
+  "misc/allocator_templates.cpp",
+  "misc/err_code_names.cpp",
+  "misc/math_hacks.cpp",
+  "misc/tracing.cpp",
+
+  Glob("object_mgr/*.cpp"),
+
+  "processor/processor.cpp",
+  "processor/task_manager.cpp",
+  "processor/task_process.cpp",
+  "processor/task_thread.cpp",
+
+  "syscall/syscall_futex.cpp",
+  "syscall/syscall_handles.cpp",
+  "syscall/syscall_mpi.cpp",
+  "syscall/syscall_proc.cpp",
+  "syscall/syscall_rw.cpp",
+  "syscall/syscall_synch.cpp",
+  "syscall/syscall_validation.cpp",
+
+  Glob("system_tree/*.cpp"),
+  Glob("system_tree/fs/fat/*.cpp"),
+  Glob("system_tree/fs/mem/*.cpp"),
+  Glob("system_tree/fs/pipe/*.cpp"),
+  Glob("system_tree/fs/proc/*.cpp"),
+]
+
+obj = [ ]
+for f in files:
+  obj = obj + [env.Object(f), ]
+
+Return ("obj")

@@ -13,11 +13,11 @@
 
 #include <string>
 
-#include "klib/klib.h"
-#include "processor/processor.h"
-#include "devices/generic/gen_keyboard.h"
-#include "devices/legacy/ps2/ps2_device.h"
-#include "devices/legacy/ps2/ps2_controller.h"
+#include "kernel_all.h"
+#include "processor.h"
+#include "../../generic/gen_keyboard.h"
+#include "ps2_device.h"
+#include "ps2_controller.h"
 
 extern const KEYS ps2_set_2_norm_scancode_map[256]; ///< Normal PS/2 scancode map.
 extern const KEYS ps2_set_2_spec_scancode_map[256]; ///< Scancode for 'special' keys on a PS/2 keyboard.
@@ -64,7 +64,7 @@ gen_ps2_device::~gen_ps2_device()
 /// @return True if this was a valid call to start. False otherwise.
 bool gen_ps2_device::start()
 {
-  set_device_status(DEV_STATUS::OK);
+  set_device_status(OPER_STATUS::OK);
   return true;
 }
 
@@ -73,7 +73,7 @@ bool gen_ps2_device::start()
 /// @return True if this was a valid call to start. False otherwise.
 bool gen_ps2_device::stop()
 {
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
   return true;
 }
 
@@ -82,7 +82,7 @@ bool gen_ps2_device::stop()
 /// @return True if this was a valid call to start. False otherwise.
 bool gen_ps2_device::reset()
 {
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
   return true;
 }
 
@@ -137,7 +137,7 @@ void gen_ps2_device::enable_irq()
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Parent device destroyed\n");
-    set_device_status(DEV_STATUS::FAILED);
+    set_device_status(OPER_STATUS::FAILED);
   }
 
   KL_TRC_EXIT;
@@ -183,7 +183,7 @@ void gen_ps2_device::disable_irq()
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Parent device destroyed\n");
-    set_device_status(DEV_STATUS::FAILED);
+    set_device_status(OPER_STATUS::FAILED);
   }
 
   KL_TRC_EXIT;
@@ -226,7 +226,7 @@ bool ps2_keyboard_device::start()
 
   KL_TRC_ENTRY;
 
-  set_device_status(DEV_STATUS::STARTING);
+  set_device_status(OPER_STATUS::STARTING);
 
   if (parent)
   {
@@ -240,13 +240,13 @@ bool ps2_keyboard_device::start()
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Parent not available\n");
     result = false;
-    set_device_status(DEV_STATUS::FAILED);
+    set_device_status(OPER_STATUS::FAILED);
   }
 
   if (result)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Successful start\n");
-    set_device_status(DEV_STATUS::OK);
+    set_device_status(OPER_STATUS::OK);
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");

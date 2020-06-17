@@ -3,16 +3,16 @@
 
 #pragma once
 
-#include "devices/usb/controllers/usb_gen_controller.h"
-#include "devices/usb/controllers/usb_xhci_register_types.h"
-#include "devices/usb/controllers/usb_xhci_trb_types.h"
-#include "devices/usb/controllers/usb_xhci_trb_ring.h"
-#include "devices/usb/controllers/usb_xhci_port.h"
-#include "devices/usb/controllers/usb_xhci_capabilities.h"
-#include "devices/usb/controllers/usb_xhci_contexts.h"
-#include "processor/work_queue.h"
-#include "klib/klib.h"
 #include <memory>
+
+#include "usb_gen_controller.h"
+#include "usb_xhci_register_types.h"
+#include "usb_xhci_trb_types.h"
+#include "usb_xhci_trb_ring.h"
+#include "usb_xhci_port.h"
+#include "usb_xhci_capabilities.h"
+#include "usb_xhci_contexts.h"
+#include "work_queue.h"
 
 namespace usb { namespace xhci
 {

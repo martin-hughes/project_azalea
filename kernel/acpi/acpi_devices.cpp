@@ -8,13 +8,12 @@
 
 #include <string>
 
-#include "klib/klib.h"
-#include "acpi_if.h"
+#include "kernel_all.h"
 
-#include "devices/pci/pci_int_link_device.h"
-#include "devices/legacy/rtc/rtc.h"
-#include "devices/legacy/serial/serial.h"
-#include "devices/device_monitor.h"
+#include "../devices/pci/pci_int_link_device.h"
+#include "../devices/legacy/rtc/rtc.h"
+#include "../devices/legacy/serial/serial.h"
+#include "device_monitor.h"
 
 namespace
 {

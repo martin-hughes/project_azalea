@@ -4,14 +4,16 @@
 //#define ENABLE_TRACING
 
 #include <string>
-#include "klib/klib.h"
-#include "system_tree/system_tree_simple_branch.h"
+#include "types/system_tree_simple_branch.h"
+#include "panic.h"
+#include "k_assert.h"
+#include "map_helpers.h"
 
 system_tree_simple_branch::system_tree_simple_branch()
 {
   KL_TRC_ENTRY;
 
-  klib_synch_spinlock_init(child_tree_lock);
+  ipc_raw_spinlock_init(child_tree_lock);
 
   KL_TRC_EXIT;
 }
@@ -24,7 +26,7 @@ system_tree_simple_branch::~system_tree_simple_branch()
 }
 
 ERR_CODE system_tree_simple_branch::get_child(const std::string &name,
-                                              std::shared_ptr<ISystemTreeLeaf> &child)
+                                              std::shared_ptr<IHandledObject> &child)
 {
   KL_TRC_ENTRY;
 
@@ -32,12 +34,12 @@ ERR_CODE system_tree_simple_branch::get_child(const std::string &name,
   std::string our_part;
   std::string child_part;
   std::shared_ptr<ISystemTreeBranch> branch;
-  std::shared_ptr<ISystemTreeLeaf> direct_child;
+  std::shared_ptr<IHandledObject> direct_child;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Looking for child with name ", name, "to store in ", &child, "\n");
 
   this->split_name(name, our_part, child_part);
-  klib_synch_spinlock_lock(child_tree_lock);
+  ipc_raw_spinlock_lock(child_tree_lock);
   if (map_contains(children, our_part))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieve direct child\n");
@@ -70,14 +72,14 @@ ERR_CODE system_tree_simple_branch::get_child(const std::string &name,
     KL_TRC_TRACE(TRC_LVL::FLOW, "Not a child of ours...\n");
     ret_code = ERR_CODE::NOT_FOUND;
   }
-  klib_synch_spinlock_unlock(child_tree_lock);
+  ipc_raw_spinlock_unlock(child_tree_lock);
 
   KL_TRC_EXIT;
 
   return ret_code;
 }
 
-ERR_CODE system_tree_simple_branch::add_child (const std::string &name, std::shared_ptr<ISystemTreeLeaf> child)
+ERR_CODE system_tree_simple_branch::add_child (const std::string &name, std::shared_ptr<IHandledObject> child)
 {
   KL_TRC_ENTRY;
   ERR_CODE rt = ERR_CODE::NO_ERROR;
@@ -89,7 +91,7 @@ ERR_CODE system_tree_simple_branch::add_child (const std::string &name, std::sha
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Adding leaf with name ", name, " and address ", child.get(), "\n");
   split_pos = name.find("\\");
 
-  klib_synch_spinlock_lock(child_tree_lock);
+  ipc_raw_spinlock_lock(child_tree_lock);
   if (child == nullptr)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Can't add null leaf\n");
@@ -136,7 +138,7 @@ ERR_CODE system_tree_simple_branch::add_child (const std::string &name, std::sha
   {
     this->children.insert({name, child});
   }
-  klib_synch_spinlock_unlock(child_tree_lock);
+  ipc_raw_spinlock_unlock(child_tree_lock);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", rt, "\n");
 
@@ -145,12 +147,12 @@ ERR_CODE system_tree_simple_branch::add_child (const std::string &name, std::sha
   return rt;
 }
 
-ERR_CODE system_tree_simple_branch::create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+ERR_CODE system_tree_simple_branch::create_child(const std::string &name, std::shared_ptr<IHandledObject> &child)
 {
   std::string first_part;
   std::string second_part;
   ERR_CODE result;
-  std::shared_ptr<ISystemTreeLeaf> direct_child;
+  std::shared_ptr<IHandledObject> direct_child;
   std::shared_ptr<ISystemTreeBranch> descendant;
 
   KL_TRC_ENTRY;
@@ -198,7 +200,7 @@ ERR_CODE system_tree_simple_branch::rename_child(const std::string &old_name, co
   KL_TRC_ENTRY;
   ERR_CODE rt = ERR_CODE::NO_ERROR;
   std::shared_ptr<ISystemTreeBranch> b;
-  std::shared_ptr<ISystemTreeLeaf> l;
+  std::shared_ptr<IHandledObject> l;
   uint64_t old_dir_split;
   uint64_t new_dir_split;
   std::string child_branch;
@@ -210,7 +212,7 @@ ERR_CODE system_tree_simple_branch::rename_child(const std::string &old_name, co
   old_dir_split = old_name.find("\\");
   new_dir_split = new_name.find("\\");
 
-  klib_synch_spinlock_lock(child_tree_lock);
+  ipc_raw_spinlock_lock(child_tree_lock);
   if ((old_dir_split != std::string::npos) && (old_dir_split == new_dir_split))
   {
     child_branch = old_name.substr(0, old_dir_split);
@@ -268,7 +270,7 @@ ERR_CODE system_tree_simple_branch::rename_child(const std::string &old_name, co
       rt = ERR_CODE::NOT_FOUND;
     }
   }
-  klib_synch_spinlock_unlock(child_tree_lock);
+  ipc_raw_spinlock_unlock(child_tree_lock);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", rt, "\n");
   KL_TRC_EXIT;
@@ -287,7 +289,7 @@ ERR_CODE system_tree_simple_branch::delete_child(const std::string &name)
 
   split_pos = name.find("\\");
 
-  klib_synch_spinlock_lock(child_tree_lock);
+  ipc_raw_spinlock_lock(child_tree_lock);
   if (split_pos == std::string::npos)
   {
     if (map_contains(children, name))
@@ -318,7 +320,7 @@ ERR_CODE system_tree_simple_branch::delete_child(const std::string &name)
       rt = ERR_CODE::NOT_FOUND;
     }
   }
-  klib_synch_spinlock_unlock(child_tree_lock);
+  ipc_raw_spinlock_unlock(child_tree_lock);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", rt, "\n");
   KL_TRC_EXIT;
@@ -326,7 +328,7 @@ ERR_CODE system_tree_simple_branch::delete_child(const std::string &name)
   return rt;
 }
 
-ERR_CODE system_tree_simple_branch::create_child_here(std::shared_ptr<ISystemTreeLeaf> &child)
+ERR_CODE system_tree_simple_branch::create_child_here(std::shared_ptr<IHandledObject> &child)
 {
   return ERR_CODE::INVALID_OP;
 }
@@ -334,7 +336,7 @@ ERR_CODE system_tree_simple_branch::create_child_here(std::shared_ptr<ISystemTre
 std::shared_ptr<ISystemTreeBranch> system_tree_simple_branch::get_child_branch(const std::string &name)
 {
   std::shared_ptr<ISystemTreeBranch> child;
-  std::shared_ptr<ISystemTreeLeaf> direct_child;
+  std::shared_ptr<IHandledObject> direct_child;
   KL_TRC_ENTRY;
 
   // Don't lock here. This function should only be called internally, and thus should be lock-aware already.
@@ -368,7 +370,7 @@ system_tree_simple_branch::enum_children(std::string start_from, uint64_t max_co
 
   KL_TRC_ENTRY;
 
-  klib_synch_spinlock_lock(child_tree_lock);
+  ipc_raw_spinlock_lock(child_tree_lock);
   auto it = children.begin();
   if (start_from != "")
   {
@@ -384,7 +386,7 @@ system_tree_simple_branch::enum_children(std::string start_from, uint64_t max_co
     cur_count++;
     it++;
   }
-  klib_synch_spinlock_unlock(child_tree_lock);
+  ipc_raw_spinlock_unlock(child_tree_lock);
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Error code: ", result, ". Number of children: ", child_list.size(), "\n");
   KL_TRC_EXIT;

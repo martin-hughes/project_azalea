@@ -10,9 +10,10 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
-#include "mem/mem.h"
-#include "mem/mem-int.h"
+#include <string.h>
+
+#include "mem.h"
+#include "mem-int.h"
 
 namespace
 {
@@ -30,7 +31,7 @@ namespace
   uint64_t free_pages;
 
   // Protects the bitmap from multi-threaded accesses.
-  kernel_spinlock bitmap_lock;
+  ipc::raw_spinlock bitmap_lock;
 }
 
 /// @brief Initialise the physical memory management subsystem.
@@ -72,7 +73,7 @@ void mem_init_gen_phys_sys(e820_pointer *e820_ptr)
     }
   }
 
-  klib_synch_spinlock_init(bitmap_lock);
+  ipc_raw_spinlock_init(bitmap_lock);
 
   ASSERT(free_pages > 0);
 
@@ -99,7 +100,7 @@ void *mem_allocate_physical_pages(uint32_t num_pages)
 
   // Spin through the list, looking for a free page. Upon finding one, mark it
   // as in use and return the relevant address.
-  klib_synch_spinlock_lock(bitmap_lock);
+  ipc_raw_spinlock_lock(bitmap_lock);
   for (uint64_t i = 0; i < MEM_MAX_SUPPORTED_PAGES / 64; i++)
   {
     mask = 0x8000000000000000;
@@ -117,14 +118,14 @@ void *mem_allocate_physical_pages(uint32_t num_pages)
         KL_TRC_TRACE(TRC_LVL::EXTRA, "Address found\n");
         KL_TRC_EXIT;
         KL_TRC_TRACE(TRC_LVL::FLOW, "Free pages -: ", free_pages, "\n");
-        klib_synch_spinlock_unlock(bitmap_lock);
+        ipc_raw_spinlock_unlock(bitmap_lock);
         return (void *)addr;
       }
       mask = mask >> 1;
     }
   }
 
-  klib_synch_spinlock_unlock(bitmap_lock);
+  ipc_raw_spinlock_unlock(bitmap_lock);
   KL_TRC_EXIT;
 
   panic("No free pages to allocate.");
@@ -144,14 +145,14 @@ void mem_deallocate_physical_pages(void *start, uint32_t num_pages)
 
   uint64_t start_num = (uint64_t)start;
 
-  klib_synch_spinlock_lock(bitmap_lock);
+  ipc_raw_spinlock_lock(bitmap_lock);
   ASSERT(num_pages == 1);
   ASSERT(start_num % SIZE_OF_PAGE == 0);
   ASSERT(!mem_is_bitmap_page_bit_set(start_num));
   mem_set_bitmap_page_bit(start_num, false);
   free_pages++;
   KL_TRC_TRACE(TRC_LVL::FLOW, "Free pages +: ", free_pages, "\n");
-  klib_synch_spinlock_unlock(bitmap_lock);
+  ipc_raw_spinlock_unlock(bitmap_lock);
 
   KL_TRC_EXIT;
 }

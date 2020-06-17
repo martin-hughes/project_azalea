@@ -6,10 +6,10 @@
 
 #pragma once
 
-#include "devices/device_interface.h"
-#include "user_interfaces/error_codes.h"
-#include "system_tree/fs/pipe/pipe_fs.h"
-#include "user_interfaces/terminals.h"
+#include "types/device_interface.h"
+#include "azalea/error_codes.h"
+#include "../system_tree/fs/pipe/pipe_fs.h"
+#include "azalea/terminals.h"
 
 #include <memory>
 

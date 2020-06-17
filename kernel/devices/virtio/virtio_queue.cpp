@@ -3,10 +3,10 @@
 
 //#define ENABLE_TRACING
 
-#include "virtio.h"
-#include "klib/klib.h"
-
 #include <mutex>
+
+#include "kernel_all.h"
+#include "virtio.h"
 
 namespace virtio
 {
@@ -151,7 +151,7 @@ bool virtqueue::send_buffers(std::unique_ptr<buffer_descriptor[]> &descriptors, 
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Valid number of descriptors.\n");
-    std::scoped_lock<kernel_spinlock_obj> guard(queue_lock);
+    std::scoped_lock<ipc::spinlock> guard(queue_lock);
     std::unique_ptr<uint16_t[]> indicies = std::unique_ptr<uint16_t[]>(new uint16_t[num_descriptors]);
     uint16_t found_so_far{0};
 
@@ -244,7 +244,7 @@ bool virtqueue::send_buffers(std::unique_ptr<buffer_descriptor[]> &descriptors, 
 ///
 void virtqueue::process_used_ring()
 {
-  std::scoped_lock<kernel_spinlock_obj> guard(queue_lock);
+  std::scoped_lock<ipc::spinlock> guard(queue_lock);
   uint32_t bytes_left;
   uint16_t descriptor_index;
   uint32_t bytes_this_buffer;

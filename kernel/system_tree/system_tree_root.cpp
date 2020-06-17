@@ -1,8 +1,9 @@
 /// @file
 /// @brief Implement `system_tree_root`, which handles the very root of the System Tree.
 
-#include "klib/klib.h"
-#include "system_tree/system_tree_root.h"
+#include "types/system_tree_root.h"
+#include "panic.h"
+#include "k_assert.h"
 
 uint32_t system_tree_root::number_of_instances = 0;
 
@@ -30,7 +31,7 @@ system_tree_root::~system_tree_root()
   KL_TRC_EXIT;
 }
 
-ERR_CODE system_tree_root::get_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+ERR_CODE system_tree_root::get_child(const std::string &name, std::shared_ptr<IHandledObject> &child)
 {
   ERR_CODE result;
   KL_TRC_ENTRY;
@@ -61,7 +62,7 @@ ERR_CODE system_tree_root::get_child(const std::string &name, std::shared_ptr<IS
   return result;
 }
 
-ERR_CODE system_tree_root::add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child)
+ERR_CODE system_tree_root::add_child(const std::string &name, std::shared_ptr<IHandledObject> child)
 {
   ERR_CODE result;
   KL_TRC_ENTRY;
@@ -84,7 +85,7 @@ ERR_CODE system_tree_root::add_child(const std::string &name, std::shared_ptr<IS
   return result;
 }
 
-ERR_CODE system_tree_root::create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+ERR_CODE system_tree_root::create_child(const std::string &name, std::shared_ptr<IHandledObject> &child)
 {
   ERR_CODE result;
   KL_TRC_ENTRY;

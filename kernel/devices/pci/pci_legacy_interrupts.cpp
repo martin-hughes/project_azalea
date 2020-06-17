@@ -16,11 +16,10 @@
 #include <string>
 #include <map>
 
-#include "acpi/acpi_if.h"
+#include "kernel_all.h"
 #include "pci.h"
 #include "pci_int_link_device.h"
 #include "generic_device/pci_generic_device.h"
-#include "klib/klib.h"
 
 extern bool is_bochs_machine;
 

@@ -1,7 +1,0 @@
-# Memory 'RAM FS' Library.
-
-Import('env')
-files = [ "mem_fs.cpp",
-        ]
-obj = env.Library("mem_fs", files)
-Return ("obj")

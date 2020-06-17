@@ -5,11 +5,11 @@
 #include <string.h>
 #include <stdio.h>
 
-/// @brief If enabled, output a string using syscall_debug_output.
+/// @brief If enabled, output a string using az_debug_output.
 ///
 #define SC_DEBUG_MSG(string)
 //#define SC_DEBUG_MSG(string) \
-//  syscall_debug_output((string), strlen((string)) )
+//  az_debug_output((string), strlen((string)) )
 
 /// @brief List of known ELF segment types.
 ///
@@ -144,14 +144,14 @@ ERR_CODE proc_read_elf_file_header(GEN_HANDLE proc_file, elf64_file_header *head
     return ERR_CODE::INVALID_PARAM;
   }
 
-  result = syscall_seek_handle(proc_file, 0, SEEK_OFFSET::FROM_START, nullptr);
+  result = az_seek_handle(proc_file, 0, SEEK_OFFSET::FROM_START, nullptr);
   if (result != ERR_CODE::NO_ERROR)
   {
     SC_DEBUG_MSG("Failed to seek to beginning\n");
     return result;
   }
 
-  result = syscall_read_handle(proc_file,
+  result = az_read_handle(proc_file,
                                0,
                                sizeof(elf64_file_header),
                                reinterpret_cast<unsigned char *>(header),
@@ -164,7 +164,7 @@ ERR_CODE proc_read_elf_file_header(GEN_HANDLE proc_file, elf64_file_header *head
     return ERR_CODE::UNRECOGNISED;
   }
 
-  result = syscall_get_handle_data_len(proc_file, &elf_file_size);
+  result = az_get_handle_data_len(proc_file, &elf_file_size);
   if (result != ERR_CODE::NO_ERROR)
   {
     SC_DEBUG_MSG("Failed to get file size\n");
@@ -220,14 +220,14 @@ ERR_CODE proc_read_elf_prog_header(GEN_HANDLE proc_file,
 
   uint64_t prog_header_offset = (file_header->prog_hdrs_off + (index * (file_header->prog_hdr_entry_size)));
 
-  result = syscall_seek_handle(proc_file, 0, SEEK_OFFSET::FROM_START, nullptr);
+  result = az_seek_handle(proc_file, 0, SEEK_OFFSET::FROM_START, nullptr);
   if (result != ERR_CODE::NO_ERROR)
   {
     SC_DEBUG_MSG("Failed to seek file\n");
     return result;
   }
 
-  result = syscall_read_handle(proc_file,
+  result = az_read_handle(proc_file,
                                prog_header_offset,
                                sizeof(elf64_program_header),
                                reinterpret_cast<unsigned char *>(prog_header),
@@ -281,7 +281,7 @@ ERR_CODE proc_load_elf_load_segment(GEN_HANDLE proc_file, GEN_HANDLE process, el
   offset = hdr.req_virt_addr % MEM_PAGE_SIZE;
 
   page_ptr = nullptr;
-  result = syscall_allocate_backing_memory(pages_reqd, &page_ptr);
+  result = az_allocate_backing_memory(pages_reqd, &page_ptr);
   if (result != ERR_CODE::NO_ERROR)
   {
     return result;
@@ -293,14 +293,14 @@ ERR_CODE proc_load_elf_load_segment(GEN_HANDLE proc_file, GEN_HANDLE process, el
 
   memset(write_ptr, 0, hdr.size_in_mem);
 
-  result = syscall_seek_handle(proc_file, 0, SEEK_OFFSET::FROM_START, nullptr);
+  result = az_seek_handle(proc_file, 0, SEEK_OFFSET::FROM_START, nullptr);
   if (result != ERR_CODE::NO_ERROR)
   {
     SC_DEBUG_MSG("Failed to seek file\n");
     return result;
   }
 
-  result = syscall_read_handle(proc_file,
+  result = az_read_handle(proc_file,
                                hdr.file_offset,
                                hdr.size_in_file,
                                reinterpret_cast<unsigned char *>(write_ptr),
@@ -318,7 +318,7 @@ ERR_CODE proc_load_elf_load_segment(GEN_HANDLE proc_file, GEN_HANDLE process, el
 
   SC_DEBUG_MSG(" - Section read\n");
 
-  result = syscall_map_memory(process,
+  result = az_map_memory(process,
                               reinterpret_cast<void *>(page_start_addr),
                               pages_reqd * MEM_PAGE_SIZE,
                               0,
@@ -328,7 +328,7 @@ ERR_CODE proc_load_elf_load_segment(GEN_HANDLE proc_file, GEN_HANDLE process, el
     return result;
   }
 
-  result = syscall_release_backing_memory(page_ptr);
+  result = az_release_backing_memory(page_ptr);
   if (result != ERR_CODE::NO_ERROR)
   {
     if (result == ERR_CODE::NOT_FOUND)

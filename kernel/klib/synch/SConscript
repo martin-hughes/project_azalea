@@ -1,7 +1,0 @@
-# Klib Synchronisation library - advanced synchronization part.
-
-Import('env')
-obj = env.Library("klib-synch-main", 
-                  [ "kernel_mutexes.cpp",
-                    "kernel_semaphores.cpp" ])
-Return ("obj") 

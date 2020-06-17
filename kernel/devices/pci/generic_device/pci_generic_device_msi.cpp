@@ -3,10 +3,9 @@
 
 //#define ENABLE_TRACING
 
-#include "devices/pci/generic_device/pci_generic_device.h"
-#include "processor/x64/processor-x64.h"
-
-#include "klib/klib.h"
+#include "kernel_all.h"
+#include "pci_generic_device.h"
+#include "../arch/x64/processor/processor-x64.h"
 
 /// @brief Configure MSI, but don't start using it yet.
 ///

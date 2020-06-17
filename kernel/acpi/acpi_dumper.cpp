@@ -9,8 +9,7 @@
 
 // @cond
 
-#include "klib/klib.h"
-#include "mem/mem.h"
+#include "mem.h"
 
 extern "C"
 {

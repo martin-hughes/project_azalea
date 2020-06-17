@@ -3,6 +3,10 @@
 
 #pragma once
 
+#include <stdint.h>
+
+#include "azalea/syscall.h"
+
 extern const void *syscall_pointers[];
 extern const uint64_t syscall_max_idx;
 

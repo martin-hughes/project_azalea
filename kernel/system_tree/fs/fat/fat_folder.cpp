@@ -16,12 +16,11 @@
 //#define ENABLE_TRACING
 
 #include <string>
-
-#include "klib/klib.h"
-#include "fat_fs.h"
-
 #include <stdio.h>
 #include <string.h>
+
+#include "fat_fs.h"
+#include "map_helpers.h"
 
 /// @brief Standard constructor.
 ///
@@ -199,7 +198,7 @@ fat_filesystem::fat_folder::~fat_folder()
 
 }
 
-ERR_CODE fat_filesystem::fat_folder::get_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+ERR_CODE fat_filesystem::fat_folder::get_child(const std::string &name, std::shared_ptr<IHandledObject> &child)
 {
   ERR_CODE ec;
   std::shared_ptr<fat_file> file_obj;
@@ -209,7 +208,7 @@ ERR_CODE fat_filesystem::fat_folder::get_child(const std::string &name, std::sha
   fat_dir_entry fde;
   std::string our_name_part;
   std::string child_name_part;
-  std::shared_ptr<ISystemTreeLeaf> direct_child;
+  std::shared_ptr<IHandledObject> direct_child;
   bool child_already_open{false};
 
   KL_TRC_ENTRY;
@@ -259,7 +258,7 @@ ERR_CODE fat_filesystem::fat_folder::get_child(const std::string &name, std::sha
         }
 
         // We may well be looking for a grandchild, but keep a hold of this folder so it can go in the cache.
-        child = std::dynamic_pointer_cast<ISystemTreeLeaf>(folder_obj);
+        child = std::dynamic_pointer_cast<IHandledObject>(folder_obj);
         direct_child = child;
         if (child_name_part != "")
         {
@@ -289,7 +288,7 @@ ERR_CODE fat_filesystem::fat_folder::get_child(const std::string &name, std::sha
         if (child_name_part == "")
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "Found child file\n");
-          child = std::dynamic_pointer_cast<ISystemTreeLeaf>(file_obj);
+          child = std::dynamic_pointer_cast<IHandledObject>(file_obj);
         }
         else
         {
@@ -319,7 +318,7 @@ ERR_CODE fat_filesystem::fat_folder::get_child(const std::string &name, std::sha
   return ec;
 }
 
-ERR_CODE fat_filesystem::fat_folder::add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child)
+ERR_CODE fat_filesystem::fat_folder::add_child(const std::string &name, std::shared_ptr<IHandledObject> child)
 {
   // add_child kind of represents hard-linking, and that is absolutely unsupported on a FAT filesystem.
   return ERR_CODE::INVALID_OP;
@@ -482,7 +481,7 @@ ERR_CODE fat_filesystem::fat_folder::delete_child(const std::string &name)
   return result;
 }
 
-ERR_CODE fat_filesystem::fat_folder::create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+ERR_CODE fat_filesystem::fat_folder::create_child(const std::string &name, std::shared_ptr<IHandledObject> &child)
 {
   ERR_CODE result = ERR_CODE::UNKNOWN;
   fat_dir_entry file_entries[21];

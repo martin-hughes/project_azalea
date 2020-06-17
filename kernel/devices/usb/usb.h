@@ -5,8 +5,8 @@
 
 #include <memory>
 
-#include "processor/work_queue.h"
-#include "devices/usb/usb_gen_device.h"
+#include "work_queue.h"
+#include "usb_gen_device.h"
 
 namespace usb
 {

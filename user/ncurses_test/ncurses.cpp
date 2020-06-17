@@ -7,7 +7,7 @@ extern "C" int main();
 
 
 #define SC_DEBUG_MSG(string) \
-  syscall_debug_output((string), strlen((string)) )
+  az_debug_output((string), strlen((string)) )
 
 int main()
 {

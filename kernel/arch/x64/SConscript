@@ -1,0 +1,21 @@
+# Kernel x64 architecture part.
+
+Import('env')
+
+files = [
+  Glob("entry/*.asm"),
+  Glob("mem/*.cpp"),
+  Glob("mem/*.asm"),
+  Glob("processor/*.asm"),
+  Glob("processor/*.cpp"),
+  Glob("processor/pic/*.cpp"),
+  Glob("processor/pic/*.asm"),
+  Glob("syscall/*.cpp"),
+  Glob("syscall/syscall_kernel_low-x64.asm"),
+]
+
+obj = [ ]
+for f in files:
+  obj = obj + [env.Object(f), ]
+
+Return ("obj")

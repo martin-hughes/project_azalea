@@ -7,7 +7,9 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
+#include "tracing.h"
+#include "panic.h"
+#include "k_assert.h"
 
 #ifndef DOXYGEN_BUILD
 #include "acpi_if.h"

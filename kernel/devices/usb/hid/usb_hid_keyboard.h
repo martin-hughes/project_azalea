@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "devices/generic/gen_keyboard.h"
+#include "../devices/generic/gen_keyboard.h"
 #include "usb_hid_specialisation.h"
 
 namespace usb { namespace hid {

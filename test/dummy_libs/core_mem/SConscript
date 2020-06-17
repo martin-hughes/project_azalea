@@ -1,5 +1,0 @@
-# Dummy core memory library.
-
-Import('env')
-obj = env.Library("test-dummy-mem", [ "mem.dummy.cpp" ])
-Return ("obj")

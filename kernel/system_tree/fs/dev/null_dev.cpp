@@ -3,8 +3,7 @@
 
 //#define ENABLE_TRACING
 
-#include "system_tree/fs/dev/dev_fs.h"
-#include "klib/klib.h"
+#include "dev_fs.h"
 
 ERR_CODE null_file::read_bytes(uint64_t start,
                                uint64_t length,

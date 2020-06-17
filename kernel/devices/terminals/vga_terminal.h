@@ -1,7 +1,7 @@
 /// @file
 /// @brief Declare a VGA text-mode terminal.
 
-#include "devices/generic/gen_vt.h"
+#include "../generic/gen_vt.h"
 
 namespace terms
 {

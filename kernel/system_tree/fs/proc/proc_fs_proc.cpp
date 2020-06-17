@@ -3,12 +3,11 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
-#include "system_tree/fs/proc/proc_fs.h"
-#include "system_tree/fs/mem/mem_fs.h"
-
 #include <string.h>
 #include <stdio.h>
+
+#include "proc_fs.h"
+#include "../mem/mem_fs.h"
 
 using namespace std;
 

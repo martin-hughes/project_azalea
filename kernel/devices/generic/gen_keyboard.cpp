@@ -8,11 +8,12 @@
 //#define ENABLE_TRACING
 
 #include <stdint.h>
-
-#include "klib/klib.h"
-#include "devices/generic/gen_keyboard.h"
-#include "keyboard_maps.h"
 #include <mutex>
+
+#include "gen_keyboard.h"
+#include "keyboard_maps.h"
+
+#include "kernel_all.h"
 
 /// @brief Retrieve the properties of the key that has been pressed.
 ///
@@ -92,7 +93,7 @@ void generic_keyboard::set_receiver(std::shared_ptr<work::message_receiver> &new
 {
   KL_TRC_ENTRY;
 
-  std::scoped_lock<kernel_spinlock_obj> guard(receiver_lock);
+  std::scoped_lock<ipc::spinlock> guard(receiver_lock);
   receiver = new_receiver;
 
   KL_TRC_EXIT;
@@ -108,7 +109,7 @@ void generic_keyboard::handle_key_down(KEYS key, special_keys specs)
   char printable_char;
   std::shared_ptr<work::message_receiver> recip;
   {
-    std::scoped_lock<kernel_spinlock_obj> guard(receiver_lock);
+    std::scoped_lock<ipc::spinlock> guard(receiver_lock);
     recip = this->receiver.lock();
   }
 
@@ -156,7 +157,7 @@ void generic_keyboard::handle_key_up(KEYS key, special_keys specs)
   char printable_char;
   std::shared_ptr<work::message_receiver> recip;
   {
-    std::scoped_lock<kernel_spinlock_obj> guard(receiver_lock);
+    std::scoped_lock<ipc::spinlock> guard(receiver_lock);
     recip = this->receiver.lock();
   }
 

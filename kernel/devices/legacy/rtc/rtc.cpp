@@ -5,9 +5,8 @@
 
 //#define ENABLE_TRACING
 
+#include "kernel_all.h"
 #include "rtc.h"
-#include "klib/klib.h"
-#include "processor/processor.h"
 
 using namespace timing;
 
@@ -44,7 +43,7 @@ rtc::rtc(ACPI_HANDLE obj_handle) : IDevice{"Real time clock", "rtc", true}
   buf.Length = ACPI_ALLOCATE_BUFFER;
   buf.Pointer = nullptr;
 
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
 
   // Iterate over all provided resources to find one which tells us the CMOS port. Probably it's 0x70...
   status = AcpiGetCurrentResources(obj_handle, &buf);
@@ -94,7 +93,7 @@ rtc::rtc(ACPI_HANDLE obj_handle) : IDevice{"Real time clock", "rtc", true}
       resource_ptr = reinterpret_cast<ACPI_RESOURCE *>(raw_ptr);
     }
 
-    set_device_status(DEV_STATUS::OK);
+    set_device_status(OPER_STATUS::OK);
     KL_TRC_TRACE(TRC_LVL::FLOW, "Using CMOS port: ", cmos_base_port, "\n");
 
     status_b = read_cmos_byte(CMOS_RTC_REGISTERS::STATUS_B);
@@ -104,7 +103,7 @@ rtc::rtc(ACPI_HANDLE obj_handle) : IDevice{"Real time clock", "rtc", true}
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to get resources\n");
-    set_device_status(DEV_STATUS::FAILED);
+    set_device_status(OPER_STATUS::FAILED);
   }
 
   if (buf.Pointer != nullptr)
@@ -118,19 +117,19 @@ rtc::rtc(ACPI_HANDLE obj_handle) : IDevice{"Real time clock", "rtc", true}
 
 bool rtc::start()
 {
-  set_device_status(DEV_STATUS::OK);
+  set_device_status(OPER_STATUS::OK);
   return true;
 }
 
 bool rtc::stop()
 {
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
   return true;
 }
 
 bool rtc::reset()
 {
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
   return true;
 }
 

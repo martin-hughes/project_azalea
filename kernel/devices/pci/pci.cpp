@@ -7,18 +7,17 @@
 
 #include <stdint.h>
 
-#include "klib/klib.h"
-#include "devices/pci/pci.h"
-#include "devices/pci/pci_constants.h"
-#include "devices/pci/pci_structures.h"
-#include "devices/pci/pci_functions.h"
-#include "devices/pci/pci_drivers.h"
-#include "processor/processor.h"
+#include "pci.h"
+#include "pci_constants.h"
+#include "pci_structures.h"
+#include "pci_functions.h"
+#include "pci_drivers.h"
+#include "processor.h"
 
-#include "devices/device_monitor.h"
-#include "devices/usb/usb.h"
-#include "devices/block/ata/controller/ata_pci_controller.h"
-#include "devices/virtio/virtio.h"
+#include "device_monitor.h"
+#include "../usb/usb.h"
+#include "../block/ata/controller/ata_pci_controller.h"
+#include "../virtio/virtio.h"
 
 /// @brief Read a 32-bit register from the PCI configuration space.
 ///

@@ -3,7 +3,7 @@
 #pragma once
 
 // Generic PCI devices
-#include "devices/pci/generic_device/pci_generic_device.h"
+#include "generic_device/pci_generic_device.h"
 
 // USB controllers
-#include "devices/usb/controllers/usb_xhci_controller.h"
+#include "../usb/controllers/usb_xhci_controller.h"

@@ -4,28 +4,20 @@
 #define ENABLE_TRACING
 
 #include <stdint.h>
-
-#include "klib/klib.h"
-#include "processor/processor.h"
-#include "processor/timing/timing.h"
-#include "mem/mem.h"
-#include "syscall/syscall_kernel.h"
-#include "acpi/acpi_if.h"
-#include "object_mgr/object_mgr.h"
-#include "system_tree/system_tree.h"
-#include "system_tree/process/process.h"
-
-#include "devices/generic/gen_terminal.h"
-#include "devices/generic/gen_keyboard.h"
-#include "system_tree/fs/fat/fat_fs.h"
-#include "system_tree/fs/pipe/pipe_fs.h"
-#include "system_tree/fs/mem/mem_fs.h"
-#include "system_tree/fs/dev/dev_fs.h"
-
-#include "entry/multiboot.h"
-
 #include <memory>
-#include <stdio.h>
+
+#include "../devices/generic/gen_terminal.h"
+#include "../devices/generic/gen_keyboard.h"
+#include "../system_tree/fs/fat/fat_fs.h"
+#include "../system_tree/fs/pipe/pipe_fs.h"
+#include "../system_tree/fs/mem/mem_fs.h"
+#include "../system_tree/fs/dev/dev_fs.h"
+
+#include "multiboot.h"
+
+#include "kernel_all.h"
+
+//#include <stdio.h>
 
 // Rough boot steps:
 //
@@ -66,7 +58,6 @@ std::shared_ptr<task_process> *kernel_start_process; ///< Process running the ke
 extern generic_keyboard *keyb_ptr;
 extern std::shared_ptr<terms::generic> *term_ptr;
 /// @endcond
-
 // Assumptions used throughout the kernel
 static_assert(sizeof(uint64_t) == sizeof(uintptr_t), "Code throughout assumes pointers are 64-bits long.");
 
@@ -145,10 +136,9 @@ void kernel_start() throw ()
                "Entered kernel start - thread: ",
                reinterpret_cast<uint64_t>(task_get_cur_thread()),
                "\n");
-
   std::shared_ptr<task_process> initial_proc;
   std::shared_ptr<task_process> com_port_proc;
-  std::shared_ptr<ISystemTreeLeaf> leaf;
+  std::shared_ptr<IHandledObject> leaf;
   char proc_ptr_buffer[34];
   const char hello_string[] = "Hello, world!";
   uint64_t br;
@@ -264,7 +254,7 @@ void kernel_start() throw ()
 
   // If (when!) the initial process exits, we want the system to shut down. But since we don't really do shutting down
   // at the moment, just crash instead.
-  initial_proc->wait_for_signal(WaitObject::MAX_WAIT);
+  initial_proc->wait();
 
   panic("System has 'shut down'");
 }

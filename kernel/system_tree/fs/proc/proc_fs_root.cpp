@@ -4,11 +4,10 @@
 //#define ENABLE_TRACING
 
 #include <string>
-
-#include "klib/klib.h"
-#include "system_tree/fs/proc/proc_fs.h"
-
 #include <stdio.h>
+
+#include "proc_fs.h"
+#include "map_helpers.h"
 
 using namespace std;
 
@@ -29,7 +28,7 @@ proc_fs_root_branch::~proc_fs_root_branch()
 //
 // System Tree Branch interface.
 //
-ERR_CODE proc_fs_root_branch::add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child)
+ERR_CODE proc_fs_root_branch::add_child(const std::string &name, std::shared_ptr<IHandledObject> child)
 {
   std::string first_part;
   std::string second_part;
@@ -156,7 +155,7 @@ ERR_CODE proc_fs_root_branch::remove_process(std::shared_ptr<task_process> old_p
   KL_TRC_ENTRY;
 
   ERR_CODE ec = ERR_CODE::NO_ERROR;
-  std::shared_ptr<ISystemTreeLeaf> i_branch;
+  std::shared_ptr<IHandledObject> i_branch;
   std::shared_ptr<proc_fs_proc_branch> true_branch;
   std::string branch_name;
   char name_buffer[22];

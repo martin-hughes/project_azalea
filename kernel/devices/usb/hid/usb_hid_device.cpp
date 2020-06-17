@@ -7,6 +7,7 @@
 
 //#define ENABLE_TRACING
 
+#include "kernel_all.h"
 #include "usb_hid_device.h"
 #include "hid_input_reports.h"
 #include "hid_usages.h"
@@ -14,9 +15,8 @@
 #include "usb_hid_mouse.h"
 #include "usb_hid_keyboard.h"
 
-#include "devices/device_monitor.h"
+#include "device_monitor.h"
 
-#include <klib/klib.h>
 
 namespace usb
 {
@@ -131,12 +131,12 @@ hid_device::hid_device(std::shared_ptr<generic_core> core, uint16_t interface_nu
   if (!success)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to start HID device\n");
-    set_device_status(DEV_STATUS::FAILED);
+    set_device_status(OPER_STATUS::FAILED);
   }
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Ready, stopped\n");
-    set_device_status(DEV_STATUS::STOPPED);
+    set_device_status(OPER_STATUS::STOPPED);
   }
 
   KL_TRC_EXIT;
@@ -149,7 +149,7 @@ bool hid_device::start()
 
   KL_TRC_ENTRY;
 
-  if (get_device_status() == DEV_STATUS::STOPPED)
+  if (get_device_status() == OPER_STATUS::STOPPED)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Set report mode, schedule a transfer (", report_packet_size, " bytes) and begin!\n");
 
@@ -165,12 +165,12 @@ bool hid_device::start()
   if (success)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Started device OK\n");
-    set_device_status(DEV_STATUS::OK);
+    set_device_status(OPER_STATUS::OK);
   }
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to start HID device.\n");
-    set_device_status(DEV_STATUS::FAILED);
+    set_device_status(OPER_STATUS::FAILED);
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");

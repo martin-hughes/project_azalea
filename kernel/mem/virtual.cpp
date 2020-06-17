@@ -23,10 +23,10 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
-#include "mem/mem.h"
-#include "mem/mem-int.h"
-#include "processor/processor.h"
+#include "mem.h"
+#include "mem-int.h"
+#include "processor.h"
+#include "math_hacks.h"
 
 /// Whether or not the Virtual Memory Manager is initialised.
 static bool vmm_initialized = false;
@@ -528,7 +528,7 @@ namespace
       root_item = root_item->next;
     }
 
-    klib_synch_spinlock_init(kernel_vmm_data.vmm_lock);
+    ipc_raw_spinlock_init(kernel_vmm_data.vmm_lock);
     kernel_vmm_data.vmm_user_thread_id = 0;
 
     ASSERT(free_pages > 5);
@@ -872,7 +872,7 @@ namespace
 
     if (proc_data_ptr->vmm_user_thread_id != task_get_cur_thread())
     {
-      klib_synch_spinlock_lock(proc_data_ptr->vmm_lock);
+      ipc_raw_spinlock_lock(proc_data_ptr->vmm_lock);
       proc_data_ptr->vmm_user_thread_id = task_get_cur_thread();
       return true;
     }
@@ -890,6 +890,6 @@ namespace
     ASSERT(proc_data_ptr != nullptr);
 
     proc_data_ptr->vmm_user_thread_id = 0;
-    klib_synch_spinlock_unlock(proc_data_ptr->vmm_lock);
+    ipc_raw_spinlock_unlock(proc_data_ptr->vmm_lock);
   }
 };

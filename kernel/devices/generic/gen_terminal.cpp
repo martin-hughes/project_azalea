@@ -10,11 +10,10 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
 #include "gen_terminal.h"
-#include "devices/terminals/vga_terminal.h"
-#include "system_tree/system_tree.h"
-#include "system_tree/fs/pipe/pipe_fs.h"
+#include "../terminals/vga_terminal.h"
+#include "system_tree.h"
+#include "../system_tree/fs/pipe/pipe_fs.h"
 
 /// @brief Construct a terminal.
 ///
@@ -46,7 +45,7 @@ bool terms::generic::start()
 
   KL_TRC_ENTRY;
 
-  set_device_status(DEV_STATUS::OK);
+  set_device_status(OPER_STATUS::OK);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
@@ -60,7 +59,7 @@ bool terms::generic::stop()
 
   KL_TRC_ENTRY;
 
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
@@ -74,12 +73,12 @@ bool terms::generic::reset()
 
   KL_TRC_ENTRY;
 
-  set_device_status(DEV_STATUS::RESET);
+  set_device_status(OPER_STATUS::RESET);
 
   // Reset terminal options to defaults.
   filters = terminal_opts();
 
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
@@ -135,7 +134,7 @@ void terms::generic::handle_character(char key)
 
   KL_TRC_ENTRY;
 
-  if (get_device_status() != DEV_STATUS::OK)
+  if (get_device_status() != OPER_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Ignore inputs when not running\n");
   }
@@ -276,7 +275,7 @@ void terms::generic::write_string(const char *out_string, uint16_t num_chars)
 {
   KL_TRC_ENTRY;
 
-  if (get_device_status() != DEV_STATUS::OK)
+  if (get_device_status() != OPER_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Ignore request while stopped\n");
   }

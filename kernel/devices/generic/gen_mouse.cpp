@@ -4,7 +4,6 @@
 //#define ENABLE_TRACING
 
 #include "gen_mouse.h"
-#include "klib/klib.h"
 
 /// @brief Move the mouse position by the specified amount.
 ///

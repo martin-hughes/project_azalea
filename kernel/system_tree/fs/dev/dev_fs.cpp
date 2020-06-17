@@ -6,24 +6,22 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
-#include "system_tree/fs/dev/dev_fs.h"
-#include "devices/device_monitor.h"
-#include "processor/timing/timing.h"
+#include "kernel_all.h"
 
-#include "acpi/acpi_if.h"
-#include "devices/pci/pci.h"
-#include "devices/legacy/ps2/ps2_controller.h"
-#include "devices/legacy/serial/serial.h"
-#include "devices/terminals/vga_terminal.h"
-#include "devices/terminals/serial_terminal.h"
+#include "dev_fs.h"
+
+#include "../devices/pci/pci.h"
+#include "../devices/legacy/ps2/ps2_controller.h"
+#include "../devices/legacy/serial/serial.h"
+#include "../devices/terminals/vga_terminal.h"
+#include "../devices/terminals/serial_terminal.h"
 
 // TEMP Assistance constructing a filesystem until the device monitor is more developed.
-#include "system_tree/fs/fat/fat_fs.h"
-#include "system_tree/system_tree.h"
-#include "devices/block/proxy/block_proxy.h"
-#include "devices/block/ata/ata_device.h"
-#include "devices/virtio/virtio_block.h"
+#include "../system_tree/fs/fat/fat_fs.h"
+#include "system_tree.h"
+#include "../devices/block/proxy/block_proxy.h"
+#include "../devices/block/ata/ata_device.h"
+#include "../devices/virtio/virtio_block.h"
 std::shared_ptr<fat_filesystem> setup_initial_fs(std::shared_ptr<ata::generic_device> first_hdd);
 
 /// @cond
@@ -92,7 +90,7 @@ void dev_root_branch::scan_for_devices()
 
   // See if the PS/2 controller has a keyboard attached, and if so get it to send its messages to the terminal.
   // Wait for the PS2 controller to be started first.
-  while (ps2->get_device_status() != DEV_STATUS::OK)
+  while (ps2->get_device_status() != OPER_STATUS::OK)
   {
 
   }
@@ -120,7 +118,7 @@ void dev_root_branch::scan_for_devices()
   uint64_t start_time = time_get_system_timer_count(true);
   uint64_t end_time = start_time + (10ULL * 1000 * 1000 * 1000); // i.e. max wait of 10 seconds.
 
-  std::shared_ptr<ISystemTreeLeaf> hdd_leaf;
+  std::shared_ptr<IHandledObject> hdd_leaf;
   std::shared_ptr<ata::generic_device> hdd_dev;
   bool ready{false};
 
@@ -135,13 +133,13 @@ void dev_root_branch::scan_for_devices()
       if (hdd_dev)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Got device object\n");
-        while ((hdd_dev->get_device_status() != DEV_STATUS::OK) &&
+        while ((hdd_dev->get_device_status() != OPER_STATUS::OK) &&
                (time_get_system_timer_count(true) < end_time))
         {
           // Just spin
         }
 
-        if (hdd_dev->get_device_status() == DEV_STATUS::OK)
+        if (hdd_dev->get_device_status() == OPER_STATUS::OK)
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "Started OK\n");
           ready = true;
@@ -166,13 +164,13 @@ void dev_root_branch::scan_for_devices()
       if (virt_dev)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Got device object\n");
-        while ((virt_dev->get_device_status() != DEV_STATUS::OK) &&
+        while ((virt_dev->get_device_status() != OPER_STATUS::OK) &&
                (time_get_system_timer_count(true) < end_time))
         {
           // Just spin
         }
 
-        if (virt_dev->get_device_status() == DEV_STATUS::OK)
+        if (virt_dev->get_device_status() == OPER_STATUS::OK)
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "Started virtdev OK\n");
           char buf[512];
@@ -194,7 +192,7 @@ void dev_root_branch::scan_for_devices()
 
 
 #ifdef INC_SERIAL_TERM
-  std::shared_ptr<ISystemTreeLeaf> leaf;
+  std::shared_ptr<IHandledObject> leaf;
   ASSERT(system_tree()->get_child("\\dev\\all\\COM2", leaf) == ERR_CODE::NO_ERROR);
   std::shared_ptr<serial_port> port = std::dynamic_pointer_cast<serial_port>(leaf);
   ASSERT(port);
@@ -258,7 +256,7 @@ std::shared_ptr<fat_filesystem> setup_initial_fs(std::shared_ptr<ata::generic_de
   kl_trc_trace(TRC_LVL::EXTRA, "First partition: ", (uint64_t)start_sector, " -> +", (uint64_t)sector_count, "\n");
   std::shared_ptr<block_proxy_device> pd;
   ASSERT(dev::create_new_device(pd, empty, first_hdd.get(), start_sector, sector_count));
-  while(pd->get_device_status() != DEV_STATUS::OK)
+  while(pd->get_device_status() != OPER_STATUS::OK)
   { };
 
   // Initialise the filesystem based on that information

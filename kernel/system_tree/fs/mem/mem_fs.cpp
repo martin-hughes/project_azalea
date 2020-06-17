@@ -8,12 +8,13 @@
 
 //#define ENABLE_TRACING
 
+#include <memory>
 #include <string.h>
 
-#include <klib/klib.h>
+#include "tracing.h"
+#include "panic.h"
+#include "k_assert.h"
 #include "mem_fs.h"
-
-#include <memory>
 
 using namespace std;
 
@@ -45,7 +46,7 @@ mem_fs_branch::~mem_fs_branch()
 /// @param[out] leaf Storage for the newly created leaf.
 ///
 /// @return A suitable error code.
-ERR_CODE mem_fs_branch::create_child_here(std::shared_ptr<ISystemTreeLeaf> &leaf)
+ERR_CODE mem_fs_branch::create_child_here(std::shared_ptr<IHandledObject> &leaf)
 {
   ERR_CODE result = ERR_CODE::NO_ERROR;
 
@@ -75,7 +76,7 @@ mem_fs_leaf::mem_fs_leaf(std::shared_ptr<mem_fs_branch> parent) :
 {
   KL_TRC_ENTRY;
 
-  klib_synch_spinlock_init(_lock);
+  ipc_raw_spinlock_init(_lock);
 
   KL_TRC_EXIT;
 }
@@ -105,7 +106,7 @@ ERR_CODE mem_fs_leaf::read_bytes(uint64_t start,
   {
     result = ERR_CODE::NO_ERROR;
 
-    klib_synch_spinlock_lock(this->_lock);
+    ipc_raw_spinlock_lock(this->_lock);
 
     if (start > _buffer_length)
     {
@@ -130,7 +131,7 @@ ERR_CODE mem_fs_leaf::read_bytes(uint64_t start,
       bytes_read = length;
     }
 
-    klib_synch_spinlock_unlock(this->_lock);
+    ipc_raw_spinlock_unlock(this->_lock);
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
@@ -149,7 +150,7 @@ ERR_CODE mem_fs_leaf::write_bytes(uint64_t start,
 
   ERR_CODE result = ERR_CODE::NO_ERROR;
 
-  klib_synch_spinlock_lock(this->_lock);
+  ipc_raw_spinlock_lock(this->_lock);
 
   if (buffer_length < length)
   {
@@ -168,7 +169,7 @@ ERR_CODE mem_fs_leaf::write_bytes(uint64_t start,
 
   bytes_written = length;
 
-  klib_synch_spinlock_unlock(this->_lock);
+  ipc_raw_spinlock_unlock(this->_lock);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
@@ -191,9 +192,9 @@ ERR_CODE mem_fs_leaf::set_file_size(uint64_t file_size)
 {
   KL_TRC_ENTRY;
 
-  klib_synch_spinlock_lock(this->_lock);
+  ipc_raw_spinlock_lock(this->_lock);
   this->_no_lock_set_file_size(file_size);
-  klib_synch_spinlock_unlock(this->_lock);
+  ipc_raw_spinlock_unlock(this->_lock);
 
   KL_TRC_EXIT;
   return ERR_CODE::NO_ERROR;

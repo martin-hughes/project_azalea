@@ -3,10 +3,9 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
 #include "processor.h"
 #include "processor-int.h"
-#include "object_mgr/object_mgr.h"
+#include "object_mgr.h"
 
 /// @brief Create a new thread.
 ///
@@ -49,7 +48,7 @@ task_thread::task_thread(ENTRY_PROC entry_point,
     klib_list_item_initialize(this->process_list_item);
     klib_list_item_initialize(this->synch_list_item);
 
-    klib_synch_spinlock_init(this->cycle_lock);
+    ipc_raw_spinlock_init(this->cycle_lock);
     task_thread_cycle_add(this);
   }
   else
@@ -119,7 +118,7 @@ void task_thread::destroy_thread()
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Destroying thread.\n");
     this->thread_destroyed = true;
-    this->trigger_all_threads();
+    this->signal_event();
 
     destroying_this_thread = (task_get_cur_thread() == this);
 
@@ -128,7 +127,7 @@ void task_thread::destroy_thread()
       // Stop the thread from running, then wait for it to be unscheduled.
       KL_TRC_TRACE(TRC_LVL::FLOW, "Destroy another thread...\n");
       this->stop_thread();
-      klib_synch_spinlock_lock(this->cycle_lock);
+      ipc_raw_spinlock_lock(this->cycle_lock);
       task_thread_cycle_remove(this);
     }
 

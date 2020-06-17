@@ -11,17 +11,17 @@
 /// Handles within OM are unique to a thread - attempting to use a handle in a thread other than the one it was
 /// correlated in will cause the object lookup to fail.
 
-#include "klib/klib.h"
 #include "handles.h"
 #include "object_mgr.h"
-#include "processor/processor.h"
+#include "processor.h"
+#include "map_helpers.h"
 
 /// @brief Initialise the object manager system
 object_manager::object_manager()
 {
   KL_TRC_ENTRY;
 
-  klib_synch_spinlock_init(om_main_lock);
+  ipc_raw_spinlock_init(om_main_lock);
 
   KL_TRC_EXIT;
 }
@@ -71,9 +71,9 @@ void object_manager::correlate_object(object_data &object, GEN_HANDLE handle)
   ASSERT(new_object->object_ptr);
   new_object->handle = handle;
 
-  klib_synch_spinlock_lock(om_main_lock);
+  ipc_raw_spinlock_lock(om_main_lock);
   object_store.insert({handle, new_object});
-  klib_synch_spinlock_unlock(om_main_lock);
+  ipc_raw_spinlock_unlock(om_main_lock);
 
   KL_TRC_EXIT;
 }
@@ -91,9 +91,9 @@ std::shared_ptr<object_data> object_manager::retrieve_object(GEN_HANDLE handle)
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Looking for handle ", handle, "\n");
 
-  klib_synch_spinlock_lock(om_main_lock);
+  ipc_raw_spinlock_lock(om_main_lock);
   found_object = this->int_retrieve_object(handle);
-  klib_synch_spinlock_unlock(om_main_lock);
+  ipc_raw_spinlock_unlock(om_main_lock);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Found object data: ", found_object, "\n");
   KL_TRC_EXIT;
@@ -160,10 +160,10 @@ void object_manager::decorrelate_object(GEN_HANDLE handle)
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Removing object with handle ", handle, "\n");
 
-  klib_synch_spinlock_lock(om_main_lock);
+  ipc_raw_spinlock_lock(om_main_lock);
   found_object = this->int_retrieve_object(handle);
   object_store.erase(handle);
-  klib_synch_spinlock_unlock(om_main_lock);
+  ipc_raw_spinlock_unlock(om_main_lock);
 
   KL_TRC_EXIT;
 }

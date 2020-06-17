@@ -6,7 +6,7 @@
 //#define ENABLE_TRACING
 
 #include "vga_terminal.h"
-#include "user_interfaces/keyboard.h"
+#include "azalea/keyboard.h"
 
 /// @brief Map of KEYS values to terminal keystrokes
 ///

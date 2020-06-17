@@ -7,9 +7,7 @@
 
 #include <string>
 
-#include "devices/usb/controllers/usb_gen_controller.h"
-
-#include "klib/klib.h"
+#include "usb_gen_controller.h"
 
 /// @brief Most simple constructor.
 ///

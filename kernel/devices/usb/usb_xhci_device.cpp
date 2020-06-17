@@ -7,8 +7,8 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
-#include "devices/usb/usb_xhci_device.h"
+#include "kernel_all.h"
+#include "usb_xhci_device.h"
 #include "usb.h"
 
 using namespace usb::xhci;
@@ -30,7 +30,7 @@ device_core::device_core(controller *parent, uint8_t port, root_port *parent_por
 {
   KL_TRC_ENTRY;
 
-  klib_synch_spinlock_init(current_transfers_lock);
+  ipc_raw_spinlock_init(current_transfers_lock);
 
   KL_TRC_EXIT;
 }
@@ -147,7 +147,7 @@ bool device_core::device_request(device_request_type request_type,
 
     status_trb.populate(0, false, false, false, true, true);
 
-    klib_synch_spinlock_lock(current_transfers_lock);
+    ipc_raw_spinlock_lock(current_transfers_lock);
     result = def_ctrl_endpoint_transfer_ring->queue_ctrl_transfer(&setup_trb,
                                                                   (requires_data_trb ? &data_trb : nullptr),
                                                                   &status_trb,
@@ -162,7 +162,7 @@ bool device_core::device_request(device_request_type request_type,
       current_transfers.insert({status_stage_phys_addr, transfer_item});
     }
 
-    klib_synch_spinlock_unlock(current_transfers_lock);
+    ipc_raw_spinlock_unlock(current_transfers_lock);
 
     // Wait for response.
     if (result)
@@ -277,7 +277,7 @@ void device_core::handle_transfer_event(transfer_event_trb &trb)
   // We don't have any way of dealing with failure at the moment.
   ASSERT(trb.completion_code == C_CODES::SUCCESS);
 
-  klib_synch_spinlock_lock(current_transfers_lock);
+  ipc_raw_spinlock_lock(current_transfers_lock);
   if (map_contains(current_transfers, trb.trb_pointer))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Response item waiting\n");
@@ -289,7 +289,7 @@ void device_core::handle_transfer_event(transfer_event_trb &trb)
     KL_TRC_TRACE(TRC_LVL::FLOW, "No response item!\n");
   }
 
-  klib_synch_spinlock_unlock(current_transfers_lock);
+  ipc_raw_spinlock_unlock(current_transfers_lock);
 
   if (response)
   {
@@ -511,7 +511,7 @@ bool device_core::queue_transfer(uint8_t endpoint_num,
     result = false;
   }
 
-  klib_synch_spinlock_lock(current_transfers_lock);
+  ipc_raw_spinlock_lock(current_transfers_lock);
 
   if(transfer_rings[endpoint_num][is_inwards ? 1 : 0])
   {
@@ -531,7 +531,7 @@ bool device_core::queue_transfer(uint8_t endpoint_num,
     current_transfers.insert({trb_phys_addr, transfer_item});
   }
 
-  klib_synch_spinlock_unlock(current_transfers_lock);
+  ipc_raw_spinlock_unlock(current_transfers_lock);
 
   // Ring doorbell of the relevant transfer ring.
   parent->ring_doorbell(this->slot_id, endpoint_id);

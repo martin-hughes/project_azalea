@@ -3,12 +3,12 @@
 
 #pragma once
 
-#include "devices/usb/controllers/usb_xhci_register_types.h"
-#include "devices/usb/controllers/usb_xhci_trb_types.h"
-
-#include "klib/synch/kernel_locks.h"
-
 #include <queue>
+
+#include "usb_xhci_register_types.h"
+#include "usb_xhci_trb_types.h"
+
+#include "types/spinlock.h"
 
 namespace usb { namespace xhci {
 
@@ -86,7 +86,7 @@ namespace usb { namespace xhci {
     /// This array allows us to, using the index of the TRB in the ring, look up what command generated that TRB. It
     /// assumes that commands are processed in order.
     std::unique_ptr<std::queue<xhci_command_data *>[]> command_queues;
-    kernel_spinlock queue_lock; ///< Lock controlling access to command_queues.
+    ipc::raw_spinlock queue_lock; ///< Lock controlling access to command_queues.
 
     uint32_t convert_phys_to_position(uint64_t phys_trb_addr);
   };

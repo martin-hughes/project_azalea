@@ -1,5 +1,0 @@
-# Kernel 64-bit entry point.
-
-Import('env')
-obj = env.Library("kernel-entry-64", [ "entry.cpp", "x64/entry-x64.asm", "x64/entry-x86.asm" ])
-Return ("obj") 

@@ -1,7 +1,7 @@
 /// @file
 /// @brief Defines scancode maps for PS/2 keyboards.
 
-#include "devices/generic/gen_keyboard.h"
+#include "../../generic/gen_keyboard.h"
 
 // Don't attempt to document all of these!
 /// @cond

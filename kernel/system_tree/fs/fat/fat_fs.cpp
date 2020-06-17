@@ -29,7 +29,7 @@ const uint64_t ASSUMED_SECTOR_SIZE = 512;
 ///
 /// @param parent_device The block device containing this filesystem.
 fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
-    _storage{parent_device}, _buffer{new uint8_t[ASSUMED_SECTOR_SIZE]}, _status{DEV_STATUS::OK}, fat_dirty{false}
+    _storage{parent_device}, _buffer{new uint8_t[ASSUMED_SECTOR_SIZE]}, _status{OPER_STATUS::OK}, fat_dirty{false}
 {
   fat32_bpb* temp_bpb;
   ERR_CODE r;
@@ -37,12 +37,12 @@ fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
   if ((this->_storage == nullptr)
       || (this->_storage->num_blocks() == 0))
   {
-    _status = DEV_STATUS::FAILED;
+    _status = OPER_STATUS::FAILED;
     return;
   }
 
-  klib_synch_spinlock_init(this->gen_lock);
-  klib_synch_spinlock_lock(this->gen_lock);
+  ipc_raw_spinlock_init(this->gen_lock);
+  ipc_raw_spinlock_lock(this->gen_lock);
 
   // Copy the FAT BPB into the general buffer, then process it according to the number of clusters (which, according to
   // the Microsoft spec, defines whether we're using FAT12, 16 or 32).
@@ -50,7 +50,7 @@ fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
   if (r != ERR_CODE::NO_ERROR)
   {
     KL_TRC_TRACE(TRC_LVL::ERROR, "Failed to read BPB\n");
-    this->_status = DEV_STATUS::FAILED;
+    this->_status = OPER_STATUS::FAILED;
   }
 
   temp_bpb = reinterpret_cast<fat32_bpb *>(_buffer.get());
@@ -85,7 +85,7 @@ fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
     if (r != ERR_CODE::NO_ERROR)
     {
       KL_TRC_TRACE(TRC_LVL::ERROR, "Failed to read FAT to RAM\n");
-      this->_status = DEV_STATUS::FAILED;
+      this->_status = OPER_STATUS::FAILED;
     }
 
     shared_bpb = &this->bpb_16.shared;
@@ -109,14 +109,14 @@ fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
     if (r != ERR_CODE::NO_ERROR)
     {
       KL_TRC_TRACE(TRC_LVL::ERROR, "Failed to read FAT to RAM\n");
-      this->_status = DEV_STATUS::FAILED;
+      this->_status = OPER_STATUS::FAILED;
     }
 
     first_data_sector = bpb_32.shared.rsvd_sec_cnt
                         + (bpb_32.shared.num_fats * bpb_32.fat_size_32);
   }
 
-  klib_synch_spinlock_unlock(this->gen_lock);
+  ipc_raw_spinlock_unlock(this->gen_lock);
 }
 
 /// @brief Create a new FAT filesystem root object.
@@ -138,7 +138,7 @@ fat_filesystem::~fat_filesystem()
   KL_TRC_EXIT;
 }
 
-ERR_CODE fat_filesystem::get_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+ERR_CODE fat_filesystem::get_child(const std::string &name, std::shared_ptr<IHandledObject> &child)
 {
   KL_TRC_ENTRY;
 
@@ -157,7 +157,7 @@ ERR_CODE fat_filesystem::get_child(const std::string &name, std::shared_ptr<ISys
   return ec;
 }
 
-ERR_CODE fat_filesystem::add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child)
+ERR_CODE fat_filesystem::add_child(const std::string &name, std::shared_ptr<IHandledObject> child)
 {
   return ERR_CODE::INVALID_OP;
 }
@@ -170,7 +170,7 @@ ERR_CODE fat_filesystem::rename_child(const std::string &old_name, const std::st
   std::string new_first_part;
   std::string new_last_part;
   std::shared_ptr<fat_folder> parent_folder;
-  std::shared_ptr<ISystemTreeLeaf> leaf;
+  std::shared_ptr<IHandledObject> leaf;
 
   KL_TRC_ENTRY;
 
@@ -239,7 +239,7 @@ ERR_CODE fat_filesystem::delete_child(const std::string &name)
   std::string first_part;
   std::string last_part;
   std::shared_ptr<fat_folder> parent_folder;
-  std::shared_ptr<ISystemTreeLeaf> leaf;
+  std::shared_ptr<IHandledObject> leaf;
 
   KL_TRC_ENTRY;
 
@@ -286,13 +286,13 @@ ERR_CODE fat_filesystem::delete_child(const std::string &name)
   return result;
 }
 
-ERR_CODE fat_filesystem::create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+ERR_CODE fat_filesystem::create_child(const std::string &name, std::shared_ptr<IHandledObject> &child)
 {
   ERR_CODE result;
   std::string first_part;
   std::string last_part;
   std::shared_ptr<fat_folder> create_spot;
-  std::shared_ptr<ISystemTreeLeaf> leaf;
+  std::shared_ptr<IHandledObject> leaf;
 
   KL_TRC_ENTRY;
 

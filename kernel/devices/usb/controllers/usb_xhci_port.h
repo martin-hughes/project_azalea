@@ -3,9 +3,9 @@
 
 #pragma once
 
-#include "devices/usb/controllers/usb_xhci_register_types.h"
-#include "devices/usb/controllers/usb_xhci_capabilities.h"
-#include "devices/usb/usb_gen_device.h"
+#include "usb_xhci_register_types.h"
+#include "usb_xhci_capabilities.h"
+#include "../devices/usb/usb_gen_device.h"
 
 namespace usb { namespace xhci
 {

@@ -5,13 +5,11 @@
 
 #include <string>
 
-#include "klib/klib.h"
-
-#include "system_tree/system_tree_leaf.h"
-#include "system_tree/system_tree_branch.h"
-#include "system_tree/fs/fs_file_interface.h"
-#include "system_tree/fs/mem/mem_fs.h"
-#include "processor/processor.h"
+#include "types/handled_obj.h"
+#include "types/system_tree_branch.h"
+#include "../fs_file_interface.h"
+#include "../mem/mem_fs.h"
+#include "processor.h"
 
 #include <memory>
 
@@ -25,7 +23,7 @@ public:
   proc_fs_root_branch();
   virtual ~proc_fs_root_branch();
 
-  virtual ERR_CODE add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
+  virtual ERR_CODE add_child(const std::string &name, std::shared_ptr<IHandledObject> child) override;
   virtual ERR_CODE rename_child(const std::string &old_name, const std::string &new_name) override;
   virtual ERR_CODE delete_child(const std::string &name) override;
 
@@ -67,11 +65,11 @@ protected:
     proc_fs_zero_proxy_branch(std::shared_ptr<proc_fs_root_branch> parent);
     virtual ~proc_fs_zero_proxy_branch();
 
-    virtual ERR_CODE get_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
-    virtual ERR_CODE add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child) override;
+    virtual ERR_CODE get_child(const std::string &name, std::shared_ptr<IHandledObject> &child) override;
+    virtual ERR_CODE add_child(const std::string &name, std::shared_ptr<IHandledObject> child) override;
     virtual ERR_CODE rename_child(const std::string &old_name, const std::string &new_name) override;
     virtual ERR_CODE delete_child(const std::string &name) override;
-    virtual ERR_CODE create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child) override;
+    virtual ERR_CODE create_child(const std::string &name, std::shared_ptr<IHandledObject> &child) override;
     virtual std::pair<ERR_CODE, uint64_t> num_children() override;
     virtual std::pair<ERR_CODE, std::vector<std::string>>
       enum_children(std::string start_from, uint64_t max_count) override;

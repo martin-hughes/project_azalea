@@ -3,9 +3,13 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
-#include "processor/timing/timing.h"
-#include "processor/timing/hpet.h"
+#include "timing.h"
+#include "hpet.h"
+#include "mem.h"
+
+#include "tracing.h"
+#include "k_assert.h"
+
 extern "C"
 {
 #ifndef DOXYGEN_BUILD

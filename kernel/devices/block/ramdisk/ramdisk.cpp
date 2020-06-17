@@ -5,7 +5,7 @@
 
 #include <string.h>
 
-#include "klib/klib.h"
+#include "kernel_all.h"
 #include "ramdisk.h"
 
 /// @brief Standard constructor.
@@ -24,12 +24,12 @@ ramdisk_device::ramdisk_device(uint64_t num_blocks, uint64_t block_size) :
   if ((this->_num_blocks == 0) || (this->_block_size == 0))
   {
     _ramdisk_storage = nullptr;
-    set_device_status(DEV_STATUS::FAILED);
+    set_device_status(OPER_STATUS::FAILED);
   }
   else
   {
     _ramdisk_storage = new char[num_blocks * block_size];
-    set_device_status(DEV_STATUS::STOPPED);
+    set_device_status(OPER_STATUS::STOPPED);
   }
 
   KL_TRC_EXIT;
@@ -52,9 +52,9 @@ bool ramdisk_device::start()
 {
   KL_TRC_ENTRY;
 
-  if (get_device_status() != DEV_STATUS::FAILED)
+  if (get_device_status() != OPER_STATUS::FAILED)
   {
-    set_device_status(DEV_STATUS::OK);
+    set_device_status(OPER_STATUS::OK);
   }
 
   KL_TRC_EXIT;
@@ -66,9 +66,9 @@ bool ramdisk_device::stop()
 {
   KL_TRC_ENTRY;
 
-  if (get_device_status() != DEV_STATUS::FAILED)
+  if (get_device_status() != OPER_STATUS::FAILED)
   {
-    set_device_status(DEV_STATUS::STOPPED);
+    set_device_status(OPER_STATUS::STOPPED);
   }
 
   KL_TRC_EXIT;
@@ -80,9 +80,9 @@ bool ramdisk_device::reset()
 {
   KL_TRC_ENTRY;
 
-  if (get_device_status() != DEV_STATUS::FAILED)
+  if (get_device_status() != OPER_STATUS::FAILED)
   {
-    set_device_status(DEV_STATUS::STOPPED);
+    set_device_status(OPER_STATUS::STOPPED);
   }
 
   KL_TRC_EXIT;
@@ -116,7 +116,7 @@ ERR_CODE ramdisk_device::read_blocks(uint64_t start_block,
   uint64_t read_start = start_block * this->_block_size;
   uint64_t read_length = num_blocks * this->_block_size;
 
-  if (get_device_status() != DEV_STATUS::OK)
+  if (get_device_status() != OPER_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Device not running\n");
     ret = ERR_CODE::DEVICE_FAILED;
@@ -158,7 +158,7 @@ ERR_CODE ramdisk_device::write_blocks(uint64_t start_block,
   uint64_t write_start = start_block * this->_block_size;
   uint64_t write_length = num_blocks * this->_block_size;
 
-  if (get_device_status() != DEV_STATUS::OK)
+  if (get_device_status() != OPER_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Device not running\n");
     ret = ERR_CODE::DEVICE_FAILED;

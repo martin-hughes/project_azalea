@@ -5,8 +5,8 @@
 
 #include <stdint.h>
 #include <string.h>
-
-#include "klib/klib.h"
+#include <stdio.h>
+#include <string>
 
 extern "C"
 {
@@ -14,14 +14,13 @@ extern "C"
 #include "acpi.h"
 #endif
 }
-#include "processor/processor.h"
-#include "processor/timing/timing.h"
-#include "processor/x64/processor-x64-int.h"
-#include "mem/mem.h"
-#include "devices/device_interface.h"
-#include "devices/pci/pci_functions.h"
 
-#include <stdio.h>
+#include "processor.h"
+#include "timing.h"
+#include "mem.h"
+#include "types/all_types.h"
+#include "../devices/pci/pci_functions.h"
+
 
 /// @brief Handle an IRQ as requested by ACPI.
 ///
@@ -121,8 +120,8 @@ ACPI_STATUS AcpiOsPhysicalTableOverride(ACPI_TABLE_HEADER *ExistingTable, ACPI_P
 ACPI_STATUS AcpiOsCreateLock(ACPI_SPINLOCK *OutHandle)
 {
   KL_TRC_ENTRY;
-  kernel_spinlock *lock = new kernel_spinlock;
-  klib_synch_spinlock_init(*lock);
+  ipc::raw_spinlock *lock = new ipc::raw_spinlock;
+  ipc_raw_spinlock_init(*lock);
   *OutHandle = (ACPI_SPINLOCK)lock;
   KL_TRC_EXIT;
 
@@ -132,7 +131,7 @@ ACPI_STATUS AcpiOsCreateLock(ACPI_SPINLOCK *OutHandle)
 void AcpiOsDeleteLock(ACPI_SPINLOCK Handle)
 {
   KL_TRC_ENTRY;
-  kernel_spinlock *lock = (kernel_spinlock *)Handle;
+  ipc::raw_spinlock *lock = (ipc::raw_spinlock *)Handle;
   ASSERT(lock != nullptr);
   delete lock;
   KL_TRC_EXIT;
@@ -143,9 +142,9 @@ ACPI_CPU_FLAGS AcpiOsAcquireLock(ACPI_SPINLOCK Handle)
 {
   KL_TRC_ENTRY;
   KL_TRC_TRACE(TRC_LVL::FLOW, "Acquire lock: ", Handle, "\n");
-  kernel_spinlock *lock = (kernel_spinlock *)Handle;
+  ipc::raw_spinlock *lock = (ipc::raw_spinlock *)Handle;
   ASSERT(lock != nullptr);
-  klib_synch_spinlock_lock(*lock);
+  ipc_raw_spinlock_lock(*lock);
   KL_TRC_EXIT;
 
   return 0;
@@ -155,9 +154,9 @@ void AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags)
 {
   KL_TRC_ENTRY;
   KL_TRC_TRACE(TRC_LVL::FLOW, "Release lock: ", Handle, "\n");
-  kernel_spinlock *lock = (kernel_spinlock *)Handle;
+  ipc::raw_spinlock *lock = (ipc::raw_spinlock *)Handle;
   ASSERT(lock != nullptr);
-  klib_synch_spinlock_unlock(*lock);
+  ipc_raw_spinlock_unlock(*lock);
   KL_TRC_EXIT;
 }
 
@@ -167,8 +166,7 @@ void AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags)
 ACPI_STATUS AcpiOsCreateSemaphore(UINT32 MaxUnits, UINT32 InitialUnits, ACPI_SEMAPHORE *OutHandle)
 {
   KL_TRC_ENTRY;
-  klib_semaphore *sp = new klib_semaphore;
-  klib_synch_semaphore_init(*sp, MaxUnits, InitialUnits);
+  ipc::semaphore *sp = new ipc::semaphore{MaxUnits, InitialUnits};
   *OutHandle = (ACPI_SEMAPHORE)sp;
 
   KL_TRC_EXIT;
@@ -179,7 +177,7 @@ ACPI_STATUS AcpiOsCreateSemaphore(UINT32 MaxUnits, UINT32 InitialUnits, ACPI_SEM
 ACPI_STATUS AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle)
 {
   KL_TRC_ENTRY;
-  klib_semaphore *sp = (klib_semaphore *)Handle;
+  ipc::semaphore *sp = (ipc::semaphore *)Handle;
   ASSERT(sp != nullptr);
   delete sp;
   KL_TRC_EXIT;
@@ -191,9 +189,8 @@ ACPI_STATUS AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Time
 {
   KL_TRC_ENTRY;
   uint64_t wait = Timeout;
-  SYNC_ACQ_RESULT res;
   ACPI_STATUS retval = AE_ERROR;
-  klib_semaphore *sp = (klib_semaphore *)Handle;
+  ipc::semaphore *sp = (ipc::semaphore *)Handle;
 
   if (sp == nullptr) return AE_BAD_PARAMETER;
   ASSERT(sp != nullptr);
@@ -201,25 +198,20 @@ ACPI_STATUS AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Time
 
   if (wait == 0xFFFF)
   {
-    wait = MUTEX_MAX_WAIT;
+    wait = ipc::MAX_WAIT;
   }
 
-  res = klib_synch_semaphore_wait(*sp, wait);
-
-  switch (res)
+  if(sp->timed_wait(wait))
   {
-    case SYNC_ACQ_ACQUIRED:
-      retval = AE_OK;
-      break;
-
-    case SYNC_ACQ_TIMEOUT:
-      retval = AE_TIME;
-      break;
-
-    default:
-      panic("Unknown semaphore result");
-
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Semaphore acquired\n");
+    retval = AE_OK;
   }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Semaphroe timed out\n");
+    retval = AE_TIME;
+  }
+
   KL_TRC_EXIT;
 
   return retval;
@@ -228,11 +220,11 @@ ACPI_STATUS AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Time
 ACPI_STATUS AcpiOsSignalSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units)
 {
   KL_TRC_ENTRY;
-  klib_semaphore *sp = (klib_semaphore *)Handle;
+  ipc::semaphore *sp = (ipc::semaphore *)Handle;
   ASSERT(sp != nullptr);
   ASSERT(Units == 1);
 
-  klib_synch_semaphore_clear(*sp);
+  sp->clear();
   KL_TRC_EXIT;
 
   return AE_OK;
@@ -245,8 +237,7 @@ ACPI_STATUS AcpiOsSignalSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units)
 ACPI_STATUS AcpiOsCreateMutex(ACPI_MUTEX *OutHandle)
 {
   KL_TRC_ENTRY;
-  klib_mutex *mutex = new klib_mutex;
-  klib_synch_mutex_init(*mutex);
+  ipc::mutex *mutex = new ipc::mutex;
   *OutHandle = (ACPI_MUTEX)mutex;
   KL_TRC_EXIT;
 
@@ -256,7 +247,7 @@ ACPI_STATUS AcpiOsCreateMutex(ACPI_MUTEX *OutHandle)
 void AcpiOsDeleteMutex(ACPI_MUTEX Handle)
 {
   KL_TRC_ENTRY;
-  klib_mutex *mutex = (klib_mutex *)Handle;
+  ipc::mutex *mutex = reinterpret_cast<ipc::mutex *>(Handle);
   ASSERT(mutex != nullptr);
   delete mutex;
   KL_TRC_EXIT;
@@ -265,10 +256,9 @@ void AcpiOsDeleteMutex(ACPI_MUTEX Handle)
 ACPI_STATUS AcpiOsAcquireMutex(ACPI_MUTEX Handle, UINT16 Timeout)
 {
   KL_TRC_ENTRY;
-  klib_mutex *mutex = (klib_mutex *)Handle;
+  ipc::mutex *mutex = reinterpret_cast<ipc::mutex *>(Handle);
   uint64_t wait = Timeout;
   ACPI_STATUS retval = AE_ERROR;
-  SYNC_ACQ_RESULT res;
   ASSERT(mutex != nullptr);
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Acquire mutex: ", mutex, ". Timeout: ", Timeout, "\n");
@@ -276,31 +266,21 @@ ACPI_STATUS AcpiOsAcquireMutex(ACPI_MUTEX Handle, UINT16 Timeout)
   if (wait == 0xFFFF)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Max wait\n");
-    wait = MUTEX_MAX_WAIT;
+    wait = ipc::MAX_WAIT;
   }
 
-  res = klib_synch_mutex_acquire(*mutex, wait);
-
-  switch (res)
+  if (mutex->timed_lock(wait))
   {
-    case SYNC_ACQ_ACQUIRED:
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Acquired\n");
-      retval = AE_OK;
-      break;
-
-    case SYNC_ACQ_TIMEOUT:
-      retval = AE_TIME;
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Timeout!\n");
-      break;
-
-    case SYNC_ACQ_ALREADY_OWNED:
-      retval = AE_OK;
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Already owned\n");
-
-    default:
-      panic("Unknown mutex result");
-
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Acquired mutex in time\n");
+    retval = AE_OK;
   }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to acquire mutex\n");
+    retval = AE_TIME;
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", retval, "\n");
   KL_TRC_EXIT;
 
   return retval;
@@ -309,11 +289,11 @@ ACPI_STATUS AcpiOsAcquireMutex(ACPI_MUTEX Handle, UINT16 Timeout)
 void AcpiOsReleaseMutex(ACPI_MUTEX Handle)
 {
   KL_TRC_ENTRY;
-  klib_mutex *mutex = (klib_mutex *)Handle;
+  ipc::mutex *mutex = reinterpret_cast<ipc::mutex *>(Handle);
   ASSERT(mutex != nullptr);
   KL_TRC_TRACE(TRC_LVL::FLOW, "Release mutex: ", Handle, "\n");
 
-  klib_synch_mutex_release(*mutex, false);
+  mutex->unlock();
   KL_TRC_EXIT;
 }
 

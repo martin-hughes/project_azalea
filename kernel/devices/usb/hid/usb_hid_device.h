@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "devices/usb/usb_gen_device.h"
+#include "../usb_gen_device.h"
 #include "hid_input_reports.h"
 #include "usb_hid_specialisation.h"
 

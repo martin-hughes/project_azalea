@@ -1,0 +1,37 @@
+# Kernel platform independent part. These files are not included in the unit tests.
+
+Import('env')
+
+files = [
+  Glob("acpi/*.cpp"),
+  Glob("entry/*.cpp"),
+
+  "ipc/mutexes.cpp",
+  "ipc/semaphores.cpp",
+
+  "mem/mem_helpers.cpp",
+  "mem/misc.cpp",
+  "mem/physical.cpp",
+
+  "misc/cpp_support.cpp",
+  "misc/panic.cpp",
+  "misc/process_elf.cpp",
+  "misc/process_gen.cpp",
+  "misc/strerror.cpp",
+
+  "processor/multi_processor.cpp",
+
+  Glob("processor/timing/*.cpp"),
+
+  "syscall/syscall_kernel.cpp",
+  "syscall/syscall_mem.cpp",
+  "syscall/syscall_timing.cpp",
+
+  Glob("system_tree/fs/dev/*.cpp"),
+]
+
+obj = [ ]
+for f in files:
+  obj = obj + [env.Object(f), ]
+
+Return ("obj")

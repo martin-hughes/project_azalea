@@ -8,8 +8,7 @@
 
 #include <string.h>
 
-#include "klib/klib.h"
-#include "system_tree/fs/fat/fat_fs.h"
+#include "fat_fs.h"
 
 /// @brief Constructs a new object representing a file on a FAT filesystem.
 ///

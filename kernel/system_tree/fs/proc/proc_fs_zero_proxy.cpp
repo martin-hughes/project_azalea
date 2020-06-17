@@ -6,12 +6,11 @@
 //#define ENABLE_TRACING
 
 #include <string>
-
-#include "klib/klib.h"
-#include "processor/processor.h"
-#include "system_tree/fs/proc/proc_fs.h"
-
 #include <stdio.h>
+
+#include "processor.h"
+#include "proc_fs.h"
+#include "map_helpers.h"
 
 /// @brief Standard constructor
 ///
@@ -28,13 +27,13 @@ proc_fs_root_branch::proc_fs_zero_proxy_branch::~proc_fs_zero_proxy_branch()
 }
 
 ERR_CODE proc_fs_root_branch::proc_fs_zero_proxy_branch::get_child(const std::string &name,
-                                                                   std::shared_ptr<ISystemTreeLeaf> &child)
+                                                                   std::shared_ptr<IHandledObject> &child)
 {
   return this->get_current_proc_branch()->get_child(name, child);
 }
 
 ERR_CODE proc_fs_root_branch::proc_fs_zero_proxy_branch::add_child(const std::string &name,
-                                                                   std::shared_ptr<ISystemTreeLeaf> child)
+                                                                   std::shared_ptr<IHandledObject> child)
 {
   return this->get_current_proc_branch()->add_child(name, child);
 }
@@ -55,7 +54,7 @@ ERR_CODE proc_fs_root_branch::proc_fs_zero_proxy_branch::delete_child(const std:
 /// @return The branch corresponding to the current process.
 std::shared_ptr<ISystemTreeBranch> proc_fs_root_branch::proc_fs_zero_proxy_branch::get_current_proc_branch()
 {
-  std::shared_ptr<ISystemTreeLeaf> leaf;
+  std::shared_ptr<IHandledObject> leaf;
   std::shared_ptr<ISystemTreeBranch> cur_proc_branch;
   std::shared_ptr<proc_fs_root_branch> parent_branch = _parent.lock();
   std::string branch_name;
@@ -87,7 +86,7 @@ std::shared_ptr<ISystemTreeBranch> proc_fs_root_branch::proc_fs_zero_proxy_branc
 }
 
 ERR_CODE proc_fs_root_branch::proc_fs_zero_proxy_branch::create_child(const std::string &name,
-                                                                      std::shared_ptr<ISystemTreeLeaf> &child)
+                                                                      std::shared_ptr<IHandledObject> &child)
 {
   return this->get_current_proc_branch()->create_child(name, child);
 }

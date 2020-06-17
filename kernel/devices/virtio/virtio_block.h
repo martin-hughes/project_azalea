@@ -4,7 +4,7 @@
 #pragma once
 
 #include "virtio.h"
-#include "devices/block/block_interface.h"
+#include "../block/block_interface.h"
 
 namespace virtio
 {

@@ -9,7 +9,9 @@ files = [
 
   "processes/elf.cpp",
   "processes/exec_file.cpp",
-        ]
+
+  "syscall_user_low-x64.asm",
+]
 
 obj = [ ]
 for f in files:

@@ -10,7 +10,7 @@ def main_build_script(linux_build, config_env):
 
     # API headers
     kernel_env = build_default_env(linux_build)
-    headers = kernel_env.File(Glob("kernel/user_interfaces/*"))
+    headers = kernel_env.File(Glob("kernel/interface/azalea/*"))
     user_headers = kernel_env.File(Glob("user/libs/libazalea/azalea/*.h"))
 
     ui_folder = os.path.join(paths.kernel_headers_folder, "azalea")
@@ -31,6 +31,7 @@ def main_build_script(linux_build, config_env):
       '-D __AZALEA__',
       '-D __AZ_KERNEL__',
       '-D KL_TRACE_BY_SERIAL_PORT',
+      '-Werror',
 
       # Uncomment this define to include a serial port based terminal as well as the normal VGA/keyboard one. This is
       # normally disabled as the locking in the kernel isn't great at the moment so it's a bit unstable.
@@ -47,28 +48,35 @@ def main_build_script(linux_build, config_env):
     kernel_env['CXXFLAGS'] = ' '.join(main_compile_flags + cxx_flags)
     kernel_env['CFLAGS'] = ' '.join(main_compile_flags)
     kernel_env['LINKFLAGS'] = "-T build_support/kernel_stage.ld --start-group "
-    kernel_env['LINK'] = 'ld -gc-sections -Map output/kernel_map.map --eh-frame-hdr'
+    kernel_env['LINK'] = 'ld -Map output/kernel_map.map --eh-frame-hdr' #-gc-sections
+    kernel_env.AppendENVPath('CPATH', '#/kernel/include')
+    kernel_env.AppendENVPath('CPATH', os.path.join(paths.libcxx_kernel_headers_folder, 'c++/v1'))
+    kernel_env.AppendENVPath('CPATH', paths.acpica_headers_folder)
+    kernel_env.AppendENVPath('CPATH', paths.libc_headers_folder)
+    kernel_env.AppendENVPath('CPATH', paths.kernel_headers_folder)
+    kernel_env.AppendENVPath('CPATH', paths.libunwind_kernel_headers_folder)
+
+    # Create a different environment for the architecture specific part, to avoid contaminating the include path for
+    # the core of the kernel and to help enforce a good separation between the core and architecture specific parts.
+    kernel_arch_env = kernel_env.Clone()
+    kernel_arch_env.PrependENVPath('CPATH', '#/kernel/arch/x64/include')
+    arch_lib = default_build_script(dependencies.x64_part, "x64-lib", kernel_arch_env, "x64-lib", False)
+
     kernel_env['LIBPATH'] = [paths.libcxx_kernel_lib_folder,
                              paths.acpica_lib_folder,
                              paths.libc_lib_folder,
                              paths.libunwind_kernel_lib_folder,
                              paths.libcxxabi_kernel_lib_folder,
                             ]
-    kernel_env['LIBS'] = [ 'acpica', 'azalea_libc_kernel', 'c++', 'thread_adapter', 'unwind', 'c++abi' ]
-    kernel_env.AppendENVPath('CPATH', '#/kernel')
-    kernel_env.AppendENVPath('CPATH', os.path.join(paths.libcxx_kernel_headers_folder, 'c++/v1'))
-    kernel_env.AppendENVPath('CPATH', paths.acpica_headers_folder)
-    kernel_env.AppendENVPath('CPATH', paths.libc_headers_folder)
-    kernel_env.AppendENVPath('CPATH', paths.kernel_headers_folder)
-    kernel_env.AppendENVPath('CPATH', paths.libunwind_kernel_headers_folder)
+    kernel_env['LIBS'] = [ arch_lib, 'acpica', 'azalea_libc_kernel', 'c++', 'thread_adapter', 'unwind', 'c++abi' ]
     kernel_obj = default_build_script(dependencies.kernel, "kernel64.sys", kernel_env, "kernel")
     kernel_install_obj = kernel_env.Install(paths.sys_image_root, kernel_obj)
     kernel_env.AddPostAction(kernel_obj, disasm_action)
 
     # User mode API and programs environment
     user_mode_env = build_default_env(linux_build)
-    user_mode_env['CXXFLAGS'] = '-Wall -nostdinc -nostdinc++ -nostdlib -mcmodel=large -std=c++17 -U _LINUX -U __linux__ -D __AZALEA__'
-    user_mode_env['CFLAGS'] = '-Wall -nostdinc -nostdlib -mcmodel=large -U _LINUX -U __linux__ -D __AZALEA__'
+    user_mode_env['CXXFLAGS'] = '-Wall -Werror -nostdinc -nostdinc++ -nostdlib -mcmodel=large -std=c++17 -U _LINUX -U __linux__ -D __AZALEA__'
+    user_mode_env['CFLAGS'] = '-Wall -Werror -nostdinc -nostdlib -mcmodel=large -U _LINUX -U __linux__ -D __AZALEA__'
     user_mode_env['LIBPATH'] = [paths.libc_lib_folder,
                                 # Uncomment to build ncurses test program.
                                 #os.path.join(paths.developer_root, "ncurses", "lib"),
@@ -173,7 +181,9 @@ def main_build_script(linux_build, config_env):
 
   test_script_env['CXXFLAGS'] = cxx_flags
   test_script_env.AppendENVPath(additional_include_tag, '#/external/googletest/googletest/include')
-  test_script_env.AppendENVPath(additional_include_tag, '#/kernel')
+  test_script_env.AppendENVPath(additional_include_tag, '#/test/unit')
+  test_script_env.AppendENVPath(additional_include_tag, '#/kernel/include')
+  test_script_env.AppendENVPath(additional_include_tag, '#/kernel/interface')
   test_script_env.AppendENVPath(additional_include_tag, '#/external/googletest/googletest/')
   tests_obj = default_build_script(dependencies.main_tests, exe_name, test_script_env, "main_tests")
   Default(tests_obj)

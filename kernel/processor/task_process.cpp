@@ -3,11 +3,10 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
 #include "processor.h"
 #include "processor-int.h"
-#include "system_tree/fs/proc/proc_fs.h"
-#include "system_tree/system_tree.h"
+#include "../system_tree/fs/proc/proc_fs.h"
+#include "system_tree.h"
 
 #include <stdio.h>
 
@@ -61,7 +60,7 @@ std::shared_ptr<task_process> task_process::create(ENTRY_PROC entry_point,
                                                    mem_process_info *mem_info)
 {
   std::shared_ptr<task_thread> first_thread;
-  std::shared_ptr<ISystemTreeLeaf> leaf_ptr;
+  std::shared_ptr<IHandledObject> leaf_ptr;
   char proc_path_ptr_buffer[34];
 
   KL_TRC_ENTRY;
@@ -71,7 +70,7 @@ std::shared_ptr<task_process> task_process::create(ENTRY_PROC entry_point,
     new task_process(entry_point, kernel_mode, mem_info));
 
   // Add it to the "proc" tree of processes.
-  std::shared_ptr<ISystemTreeLeaf> branch_ptr;
+  std::shared_ptr<IHandledObject> branch_ptr;
   std::shared_ptr<proc_fs_root_branch> proc_fs_root_ptr;
   system_tree()->get_child("\\proc", branch_ptr);
   proc_fs_root_ptr = std::dynamic_pointer_cast<proc_fs_root_branch>(branch_ptr);
@@ -152,9 +151,9 @@ void task_process::destroy_process(uint64_t exit_code)
       this->proc_status = OPER_STATUS::STOPPED;
     }
 
-    this->trigger_all_threads();
+    this->signal_event();
 
-    std::shared_ptr<ISystemTreeLeaf> branch_ptr;
+    std::shared_ptr<IHandledObject> branch_ptr;
     std::shared_ptr<proc_fs_root_branch> proc_fs_root_ptr;
     system_tree()->get_child("\\proc", branch_ptr);
     proc_fs_root_ptr = std::dynamic_pointer_cast<proc_fs_root_branch>(branch_ptr);
@@ -300,9 +299,9 @@ void task_process::handle_message(std::unique_ptr<msg::root_msg> &message)
     message.release();
     std::unique_ptr<msg::basic_msg> msg_u_ptr(msg_ptr);
 
-    klib_synch_spinlock_lock(this->messaging.message_lock);
+    ipc_raw_spinlock_lock(this->messaging.message_lock);
     this->messaging.message_queue.push(std::move(msg_u_ptr));
-    klib_synch_spinlock_unlock(this->messaging.message_lock);
+    ipc_raw_spinlock_unlock(this->messaging.message_lock);
   }
 
   KL_TRC_EXIT;

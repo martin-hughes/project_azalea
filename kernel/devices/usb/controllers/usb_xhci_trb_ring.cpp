@@ -8,10 +8,9 @@
 
 //#define ENABLE_TRACING
 
-#include "devices/usb/controllers/usb_xhci_controller.h"
-#include "processor/timing/timing.h"
-
-#include "klib/klib.h"
+#include "kernel_all.h"
+#include "usb_xhci_controller.h"
+#include "timing.h"
 
 using namespace usb::xhci;
 
@@ -345,7 +344,7 @@ trb_command_ring::trb_command_ring(uint16_t max_entries) : trb_generic_ring(max_
 {
   KL_TRC_ENTRY;
 
-  klib_synch_spinlock_init(this->queue_lock);
+  ipc_raw_spinlock_init(this->queue_lock);
   command_queues = std::unique_ptr<std::queue<xhci_command_data *>[]>(new std::queue<xhci_command_data*>[max_entries]);
 
   KL_TRC_EXIT;
@@ -368,7 +367,7 @@ bool trb_command_ring::queue_command(xhci_command_data *new_command)
 
   KL_TRC_ENTRY;
 
-  klib_synch_spinlock_lock(this->queue_lock);
+  ipc_raw_spinlock_lock(this->queue_lock);
 
   result = queue_trb(&new_command->generated_trb, queue_posn);
   if (result == true)
@@ -377,7 +376,7 @@ bool trb_command_ring::queue_command(xhci_command_data *new_command)
     command_queues[queue_posn].push(new_command);
   }
 
-  klib_synch_spinlock_unlock(this->queue_lock);
+  ipc_raw_spinlock_unlock(this->queue_lock);
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Result: ", result, "\n");
   KL_TRC_EXIT;
@@ -398,7 +397,7 @@ xhci_command_data *trb_command_ring::retrieve_command(command_completion_event_t
   xhci_command_data *result = nullptr;
   uint32_t position_in_segment;
 
-  klib_synch_spinlock_lock(this->queue_lock);
+  ipc_raw_spinlock_lock(this->queue_lock);
 
   position_in_segment = convert_phys_to_position(trb.command_trb_phys_addr);
   if ((position_in_segment != ~0) && (!command_queues[position_in_segment].empty()))
@@ -408,7 +407,7 @@ xhci_command_data *trb_command_ring::retrieve_command(command_completion_event_t
     command_queues[position_in_segment].pop();
   }
 
-  klib_synch_spinlock_unlock(this->queue_lock);
+  ipc_raw_spinlock_unlock(this->queue_lock);
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Result: ", result, "\n");
   KL_TRC_EXIT;

@@ -6,8 +6,8 @@
 #include <stdint.h>
 #include <memory>
 
-#include "devices/pci/pci_constants.h"
-#include "devices/pci/pci_structures.h"
+#include "pci_constants.h"
+#include "pci_structures.h"
 
 // Forward declare IDevice to avoid including the whole of the device interface header.
 class IDevice;

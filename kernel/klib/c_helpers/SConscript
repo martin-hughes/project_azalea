@@ -1,8 +1,0 @@
-# Klib C-environment helpers library.
-
-Import('env')
-obj = env.Library("klib-c-helpers", [
-                                      "allocator_templates.cpp",
-                                      "strerror.cpp",
-                                    ])
-Return ("obj")

@@ -12,17 +12,23 @@
 // - hm_next_handle is obviously pretty crap anyway, but it could be replaced by an atomic...?
 
 #include <stdint.h>
-#include "klib/klib.h"
+
+#include "tracing.h"
+#include "panic.h"
+#include "k_assert.h"
+
+#include "handles.h"
+#include "types/spinlock.h"
 
 static GEN_HANDLE hm_next_handle = 1; ///< The number of the next handle to allocate (see note at top of handles.cpp)
-static kernel_spinlock hm_lock; ///< Lock protecting hm_next_handle.
+static ipc::raw_spinlock hm_lock; ///< Lock protecting hm_next_handle.
 
 /// @brief Initialise the Handle Manager component
 void hm_gen_init()
 {
   KL_TRC_ENTRY;
 
-  klib_synch_spinlock_init(hm_lock);
+  ipc_raw_spinlock_init(hm_lock);
 
   KL_TRC_EXIT;
 }
@@ -36,7 +42,7 @@ GEN_HANDLE hm_get_handle()
 
   GEN_HANDLE return_handle;
 
-  klib_synch_spinlock_lock(hm_lock);
+  ipc_raw_spinlock_lock(hm_lock);
   return_handle = hm_next_handle++;
 
   if (hm_next_handle == ~((uint64_t)0))
@@ -44,7 +50,7 @@ GEN_HANDLE hm_get_handle()
     panic("Out of handles!");
   }
 
-  klib_synch_spinlock_unlock(hm_lock);
+  ipc_raw_spinlock_unlock(hm_lock);
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Returning handle: ", return_handle, "\n");
 
   KL_TRC_EXIT;

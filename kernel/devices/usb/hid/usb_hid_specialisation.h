@@ -7,10 +7,10 @@
 
 #pragma once
 
-#include "hid_input_reports.h"
-#include "devices/device_interface.h"
-
 #include <string>
+
+#include "hid_input_reports.h"
+#include "types/device_interface.h"
 
 namespace usb { namespace hid {
 
@@ -31,7 +31,7 @@ public:
   virtual ~hid_specialisation() = default; ///< Default destructor.
 
   // Overrides of IDevice
-  virtual bool start() override { set_device_status(DEV_STATUS::OK); return true; };
+  virtual bool start() override { set_device_status(OPER_STATUS::OK); return true; };
   virtual bool stop() override { return false; };
   virtual bool reset() override { return false; };
 

@@ -3,17 +3,15 @@
 
 #pragma once
 
-#include "klib/klib.h"
-
-#include "system_tree/system_tree_simple_branch.h"
-#include "system_tree/system_tree_leaf.h"
-#include "system_tree/fs/fs_file_interface.h"
+#include "types/system_tree_simple_branch.h"
+#include "types/handled_obj.h"
+#include "../fs_file_interface.h"
 
 #include <memory>
 
 /// @brief A file that ignores all writes and where reads return all zeros.
 ///
-class null_file : public ISystemTreeLeaf, public IReadable, public IWritable
+class null_file : public IHandledObject, public IReadable, public IWritable
 {
 public:
   virtual ~null_file() = default;

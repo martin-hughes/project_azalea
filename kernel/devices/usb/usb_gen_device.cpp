@@ -5,7 +5,7 @@
 
 #include <string>
 
-#include "devices/usb/usb_gen_device.h"
+#include "usb_gen_device.h"
 
 using namespace usb;
 
@@ -24,7 +24,7 @@ generic_device::generic_device(std::shared_ptr<generic_core> core, uint16_t inte
 {
   KL_TRC_ENTRY;
 
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
 
   ASSERT(core);
 

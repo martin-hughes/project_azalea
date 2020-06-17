@@ -12,10 +12,9 @@
 #include <string>
 #include <set>
 
-#include "klib/klib.h"
-#include "system_tree/fs/pipe/pipe_fs.h"
-#include "processor/processor.h"
-#include "processor/timing/timing.h"
+#include "pipe_fs.h"
+#include "processor.h"
+#include "timing.h"
 
 using namespace std;
 
@@ -29,14 +28,14 @@ namespace
 /// @brief Standard constructor
 ///
 /// New pipe branches should be created using the static create() function.
-pipe_branch::pipe_branch() : WaitObject(_pipe_lock), _buffer(new uint8_t[NORMAL_BUFFER_SIZE])
+pipe_branch::pipe_branch() : ipc::event(true, _pipe_lock), _buffer(new uint8_t[NORMAL_BUFFER_SIZE])
 {
   KL_TRC_ENTRY;
 
   _read_ptr = _buffer.get();
   _write_ptr = _read_ptr;
 
-  klib_synch_spinlock_init(this->_pipe_lock);
+  ipc_raw_spinlock_init(this->_pipe_lock);
 
   KL_TRC_EXIT;
 }
@@ -58,7 +57,7 @@ pipe_branch::~pipe_branch()
   KL_TRC_EXIT;
 }
 
-ERR_CODE pipe_branch::get_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+ERR_CODE pipe_branch::get_child(const std::string &name, std::shared_ptr<IHandledObject> &child)
 {
   ERR_CODE ret = ERR_CODE::NOT_FOUND;
   KL_TRC_ENTRY;
@@ -82,7 +81,7 @@ ERR_CODE pipe_branch::get_child(const std::string &name, std::shared_ptr<ISystem
   return ret;
 }
 
-ERR_CODE pipe_branch::add_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> child)
+ERR_CODE pipe_branch::add_child(const std::string &name, std::shared_ptr<IHandledObject> child)
 {
   KL_TRC_ENTRY;
   KL_TRC_EXIT;
@@ -202,7 +201,7 @@ ERR_CODE pipe_branch::pipe_read_leaf::read_bytes(uint64_t start,
       length = buffer_length;
     }
 
-    klib_synch_spinlock_lock(parent_branch->_pipe_lock);
+    ipc_raw_spinlock_lock(parent_branch->_pipe_lock);
 
     while (1)
     {
@@ -223,9 +222,9 @@ ERR_CODE pipe_branch::pipe_read_leaf::read_bytes(uint64_t start,
       if (this->block_on_read && (avail_length < length))
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Waiting for more bytes\n");
-        klib_synch_spinlock_unlock(parent_branch->_pipe_lock);
+        ipc_raw_spinlock_unlock(parent_branch->_pipe_lock);
         task_yield();
-        klib_synch_spinlock_lock(parent_branch->_pipe_lock);
+        ipc_raw_spinlock_lock(parent_branch->_pipe_lock);
       }
       else
       {
@@ -259,7 +258,7 @@ ERR_CODE pipe_branch::pipe_read_leaf::read_bytes(uint64_t start,
 
     ASSERT(read_length == bytes_read);
 
-    klib_synch_spinlock_unlock(parent_branch->_pipe_lock);
+    ipc_raw_spinlock_unlock(parent_branch->_pipe_lock);
 
     ret = ERR_CODE::NO_ERROR;
   }
@@ -283,7 +282,22 @@ void pipe_branch::pipe_read_leaf::set_block_on_read(bool block)
   KL_TRC_EXIT;
 }
 
-bool pipe_branch::pipe_read_leaf::wait_for_signal(uint64_t max_wait)
+void pipe_branch::pipe_read_leaf::wait()
+{
+  KL_TRC_ENTRY;
+
+  std::shared_ptr<pipe_branch> parent_branch = this->_parent.lock();
+  if (parent_branch)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Wait for signal\n");
+    parent_branch->wait();
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Done\n");
+  }
+
+  KL_TRC_EXIT;
+}
+
+bool pipe_branch::pipe_read_leaf::timed_wait(uint64_t max_wait)
 {
   bool result{false};
   KL_TRC_ENTRY;
@@ -292,46 +306,8 @@ bool pipe_branch::pipe_read_leaf::wait_for_signal(uint64_t max_wait)
   if (parent_branch)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Wait for signal\n");
-    result = parent_branch->wait_for_signal(max_wait);
+    result = parent_branch->timed_wait(max_wait);
     KL_TRC_TRACE(TRC_LVL::FLOW, "Done\n");
-  }
-
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
-  KL_TRC_EXIT;
-
-  return result;
-}
-
-bool pipe_branch::pipe_read_leaf::cancel_waiting_thread(task_thread *thread)
-{
-  bool result{false};
-
-  KL_TRC_ENTRY;
-
-  std::shared_ptr<pipe_branch> parent_branch = this->_parent.lock();
-  if (parent_branch)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Cancel thread\n");
-    result = parent_branch->cancel_waiting_thread(thread);
-  }
-
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
-  KL_TRC_EXIT;
-
-  return result;
-}
-
-uint64_t pipe_branch::pipe_read_leaf::threads_waiting()
-{
-  uint64_t result{0};
-
-  KL_TRC_ENTRY;
-
-  std::shared_ptr<pipe_branch> parent_branch = this->_parent.lock();
-  if (parent_branch)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Count threads");
-    result = parent_branch->threads_waiting();
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
@@ -383,7 +359,7 @@ ERR_CODE pipe_branch::pipe_write_leaf::write_bytes(uint64_t start,
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Try to write to the pipe\n");
-    klib_synch_spinlock_lock(parent_branch->_pipe_lock);
+    ipc_raw_spinlock_lock(parent_branch->_pipe_lock);
 
     rp = reinterpret_cast<uint64_t>(parent_branch->_read_ptr);
     wp = reinterpret_cast<uint64_t>(parent_branch->_write_ptr);
@@ -437,9 +413,9 @@ ERR_CODE pipe_branch::pipe_write_leaf::write_bytes(uint64_t start,
       work::queue_message(rcv, std::move(msg));
     }
 
-    klib_synch_spinlock_unlock(parent_branch->_pipe_lock);
+    ipc_raw_spinlock_unlock(parent_branch->_pipe_lock);
 
-    parent_branch->trigger_all_threads();
+    parent_branch->signal_event();
 
     ret = ERR_CODE::NO_ERROR;
   }
@@ -449,7 +425,7 @@ ERR_CODE pipe_branch::pipe_write_leaf::write_bytes(uint64_t start,
   return ret;
 }
 
-ERR_CODE pipe_branch::create_child(const std::string &name, std::shared_ptr<ISystemTreeLeaf> &child)
+ERR_CODE pipe_branch::create_child(const std::string &name, std::shared_ptr<IHandledObject> &child)
 {
   // You can't add extra children to a pipe branch.
   return ERR_CODE::INVALID_OP;

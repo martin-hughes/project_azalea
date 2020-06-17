@@ -5,8 +5,8 @@
 
 #include <string>
 
-#include "devices/device_interface.h"
-#include "user_interfaces/error_codes.h"
+#include "types/device_interface.h"
+#include "azalea/error_codes.h"
 
 /// @brief Interface common to all block devices.
 ///

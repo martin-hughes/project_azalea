@@ -1,10 +1,10 @@
 /// @file
 /// @brief Kernel's main timing system.
 
-#include "processor/timing/timing.h"
-#include "processor/timing/timing-int.h"
-#include "processor/processor.h"
-#include "klib/klib.h"
+#include "timing.h"
+#include "timing-int.h"
+#include "processor.h"
+
 #include <vector>
 
 namespace
@@ -14,7 +14,7 @@ namespace
   /// Ideally this would be implemented using std::set, but we don't have a complete kernel-mode C++ library yet.
   std::vector<std::shared_ptr<IGenericClock>> *clock_array{nullptr};
 
-  kernel_spinlock clock_array_lock; ///< Lock protecting clock_array.
+  ipc::raw_spinlock clock_array_lock; ///< Lock protecting clock_array.
 }
 
 /// @brief Initializes the kernel's timing systems.
@@ -36,7 +36,7 @@ void time_gen_init()
 
   clock_array = new std::vector<std::shared_ptr<IGenericClock>>();
 
-  klib_synch_spinlock_init(clock_array_lock);
+  ipc_raw_spinlock_init(clock_array_lock);
 
   ASSERT(time_hpet_exists());
 
@@ -136,7 +136,7 @@ bool time_register_clock_source(std::shared_ptr<IGenericClock> clock)
 
   if (clock_array != nullptr)
   {
-    klib_synch_spinlock_lock(clock_array_lock);
+    ipc_raw_spinlock_lock(clock_array_lock);
 
     for (auto e : *clock_array)
     {
@@ -154,7 +154,7 @@ bool time_register_clock_source(std::shared_ptr<IGenericClock> clock)
       clock_array->push_back(clock);
     }
 
-    klib_synch_spinlock_unlock(clock_array_lock);
+    ipc_raw_spinlock_unlock(clock_array_lock);
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
@@ -176,7 +176,7 @@ bool time_unregister_clock_source(std::shared_ptr<IGenericClock> clock)
 
   if (clock_array != nullptr)
   {
-    klib_synch_spinlock_lock(clock_array_lock);
+    ipc_raw_spinlock_lock(clock_array_lock);
     for (auto e = clock_array->begin(); e != clock_array->end(); e++)
     {
       if (*e == clock)
@@ -187,7 +187,7 @@ bool time_unregister_clock_source(std::shared_ptr<IGenericClock> clock)
         break;
       }
     }
-    klib_synch_spinlock_unlock(clock_array_lock);
+    ipc_raw_spinlock_unlock(clock_array_lock);
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");

@@ -3,10 +3,10 @@
 
 //#define ENABLE_TRACING
 
+#include "kernel_all.h"
 #include "serial_terminal.h"
-#include "klib/klib.h"
 
-#include "processor/x64/processor-x64-int.h"
+#include "../arch/x64/processor/processor-x64-int.h"
 
 /// @brief Create a new terminal that operates over a serial port.
 ///
@@ -106,7 +106,7 @@ void terms::serial::write_raw_string(const char *out_string, uint16_t num_chars)
 
   KL_TRC_ENTRY;
 
-  if (get_device_status() != DEV_STATUS::OK)
+  if (get_device_status() != OPER_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Ignore request while not running\n");
   }

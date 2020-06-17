@@ -4,7 +4,7 @@
 //#define ENABLE_TRACING
 
 #include "ata_controller.h"
-#include "klib/klib.h"
+#include "tracing.h"
 
 using namespace ata;
 

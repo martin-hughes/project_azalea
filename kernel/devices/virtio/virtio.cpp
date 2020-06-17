@@ -3,14 +3,12 @@
 
 //#define ENABLE_TRACING
 
-#include "devices/pci/pci_structures.h"
-#include "devices/pci/generic_device/pci_generic_device.h"
-#include "devices/device_monitor.h"
+#include "kernel_all.h"
+#include "../devices/pci/pci_structures.h"
+#include "../devices/pci/generic_device/pci_generic_device.h"
+#include "device_monitor.h"
 #include "virtio.h"
 #include "virtio_block.h"
-
-#include "klib/klib.h"
-
 
 namespace virtio
 {

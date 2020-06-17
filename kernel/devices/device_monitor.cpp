@@ -6,12 +6,11 @@
 //#define ENABLE_TRACING
 
 #include "device_monitor.h"
-#include "klib/klib.h"
 
-#include "devices/generic/gen_keyboard.h"
-#include "devices/generic/gen_terminal.h"
-#include "devices/block/block_interface.h"
-#include "system_tree/system_tree.h"
+#include "generic/gen_keyboard.h"
+#include "generic/gen_terminal.h"
+#include "block/block_interface.h"
+#include "system_tree.h"
 
 namespace
 {

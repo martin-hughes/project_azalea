@@ -17,11 +17,10 @@
 //#define ENABLE_TRACING
 
 #include "ata_pci_controller.h"
-#include "devices/block/ata/ata_structures.h"
-#include "processor/timing/timing.h"
-#include "klib/klib.h"
-#include "devices/device_monitor.h"
-#include "processor/processor.h"
+#include "../ata_structures.h"
+#include "timing.h"
+#include "device_monitor.h"
+#include "processor.h"
 
 using namespace ata;
 
@@ -33,7 +32,7 @@ pci_controller::pci_controller(pci_address address) :
 {
   KL_TRC_ENTRY;
 
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
 
   KL_TRC_EXIT;
 };
@@ -43,12 +42,11 @@ bool pci_controller::start()
   identify_cmd_output ident;
   std::shared_ptr<IDevice> self_ptr = this->self_weak_ptr.lock();
 
-  set_device_status(DEV_STATUS::STARTING);
+  set_device_status(OPER_STATUS::STARTING);
 
   ASSERT(self_ptr);
 
-  klib_synch_spinlock_init(cmd_spinlock);
-  klib_synch_mutex_init(dma_mutex);
+  ipc_raw_spinlock_init(cmd_spinlock);
 
   // Determine which I/O ports are in use.
   determine_ports();
@@ -75,20 +73,20 @@ bool pci_controller::start()
     proc_register_irq_handler(channel_irq_nums[1], this);
   }
 
-  set_device_status(DEV_STATUS::OK);
+  set_device_status(OPER_STATUS::OK);
 
   return true;
 }
 
 bool pci_controller::stop()
 {
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
   return true;
 }
 
 bool pci_controller::reset()
 {
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
   return true;
 }
 
@@ -195,7 +193,7 @@ bool pci_controller::issue_command(uint16_t drive_index,
       drive_select |= 0x40;
     }
 
-    klib_synch_spinlock_lock(cmd_spinlock);
+    ipc_raw_spinlock_lock(cmd_spinlock);
     interrupt_on_chan[drive.channel_number] = false;
 
     write_ata_cmd_port(drive_index, DRIVE_SELECT_PORT, drive_select);
@@ -270,10 +268,10 @@ bool pci_controller::issue_command(uint16_t drive_index,
     if (command_props.dma_command)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Release DMA mutex\n");
-      klib_synch_mutex_release(dma_mutex, false);
+      dma_mutex.unlock();
     }
 
-    klib_synch_spinlock_unlock(cmd_spinlock);
+    ipc_raw_spinlock_unlock(cmd_spinlock);
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
@@ -545,7 +543,6 @@ void pci_controller::handle_translated_interrupt_slow(uint8_t interrupt_offset,
 bool pci_controller::start_prepare_dma_transfer(bool is_read, uint16_t drive_index)
 {
   bool result = true;
-  SYNC_ACQ_RESULT mr;
 
   KL_TRC_ENTRY;
 
@@ -553,36 +550,26 @@ bool pci_controller::start_prepare_dma_transfer(bool is_read, uint16_t drive_ind
 
   // If acquired, this mutex is not released at the end of this function, because the owning thread needs to use it
   // when it calls queue_dma_transfer().
-  mr = klib_synch_mutex_acquire(dma_mutex, MUTEX_MAX_WAIT);
+  dma_mutex.lock();
 
   // Clear the interrupt flag.
   write_bus_master_reg(STATUS, drives_by_index_num[drive_index].channel_number, 0x04);
 
-  if (mr == SYNC_ACQ_ACQUIRED)
+  if (buffer_phys_addr == 0)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Acquired mutex\n");
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Initialise DMA transfer buffers\n");
+    ASSERT(buffer_virt_addr == 0);
 
-    if (buffer_phys_addr == 0)
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Initialise DMA transfer buffers\n");
-      ASSERT(buffer_virt_addr == 0);
+    prd_table = reinterpret_cast<prd_table_entry *>(kmalloc(MEM_PAGE_SIZE));
+    buffer_virt_addr = reinterpret_cast<uint64_t>(prd_table);
+    buffer_phys_addr = reinterpret_cast<uint64_t>(mem_get_phys_addr(prd_table));
+    ASSERT((buffer_phys_addr & 0xFFFFFFFF00000000) == 0);
 
-      prd_table = reinterpret_cast<prd_table_entry *>(kmalloc(MEM_PAGE_SIZE));
-      buffer_virt_addr = reinterpret_cast<uint64_t>(prd_table);
-      buffer_phys_addr = reinterpret_cast<uint64_t>(mem_get_phys_addr(prd_table));
-      ASSERT((buffer_phys_addr & 0xFFFFFFFF00000000) == 0);
-
-    }
-    dma_transfer_drive_idx = drive_index;
-    num_prd_table_entries = 0;
-    prd_table[0].end_of_table = 1;
-    dma_transfer_is_read = is_read;
   }
-  else
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to acquire DMA mutex\n");
-    result = false;
-  }
+  dma_transfer_drive_idx = drive_index;
+  num_prd_table_entries = 0;
+  prd_table[0].end_of_table = 1;
+  dma_transfer_is_read = is_read;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
@@ -774,32 +761,10 @@ uint8_t pci_controller::read_bus_master_reg(BUS_MASTER_PORTS port, uint16_t chan
 bool pci_controller::continue_with_dma_setup()
 {
   bool result = true;
-  SYNC_ACQ_RESULT mr;
 
   KL_TRC_ENTRY;
 
-  mr = klib_synch_mutex_acquire(dma_mutex, 0);
-
-  switch(mr)
-  {
-  case SYNC_ACQ_ACQUIRED:
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Acquired mutex, setup not started yet\n");
-    result = false;
-    klib_synch_mutex_release(dma_mutex, false);
-    break;
-
-  case SYNC_ACQ_TIMEOUT:
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Mutex owned by another thread\n");
-    result = false;
-    break;
-
-  case SYNC_ACQ_ALREADY_OWNED:
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Mutex owned by us already - can continue\n");
-    break;
-
-  default:
-    panic("Unknown response to acquiring mutex");
-  }
+  result = dma_mutex.am_owner();
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;

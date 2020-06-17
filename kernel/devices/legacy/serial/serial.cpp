@@ -7,10 +7,10 @@
 
 //#define ENABLE_TRACING
 
+#include "kernel_all.h"
 #include "serial.h"
-#include "klib/klib.h"
-#include "acpi/acpi_if.h"
-#include "processor/processor.h"
+#include "acpi_if.h"
+#include "processor.h"
 
 /// @brief Construct a new serial port object
 ///
@@ -28,7 +28,7 @@ ACPI_STATUS status;
   buf.Length = ACPI_ALLOCATE_BUFFER;
   buf.Pointer = nullptr;
 
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
 
   // Iterate over all provided resources to find one which tells us the CMOS port. Probably it's 0x70...
   status = AcpiGetCurrentResources(obj_handle, &buf);
@@ -54,7 +54,7 @@ ACPI_STATUS status;
         if (resource_ptr->Data.Irq.InterruptCount != 1)
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "Too many interrupts - unable to handle\n");
-          set_device_status(DEV_STATUS::FAILED);
+          set_device_status(OPER_STATUS::FAILED);
         }
         else
         {
@@ -69,7 +69,7 @@ ACPI_STATUS status;
         if (resource_ptr->Data.ExtendedIrq.InterruptCount != 1)
         {
           KL_TRC_TRACE(TRC_LVL::FLOW, "Too many interrupts - unable to handle\n");
-          set_device_status(DEV_STATUS::FAILED);
+          set_device_status(OPER_STATUS::FAILED);
         }
         else
         {
@@ -88,7 +88,7 @@ ACPI_STATUS status;
   else
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to get resources\n");
-    set_device_status(DEV_STATUS::FAILED);
+    set_device_status(OPER_STATUS::FAILED);
   }
 
   if (buf.Pointer != nullptr)
@@ -99,7 +99,7 @@ ACPI_STATUS status;
 
   // Construct a pipe for storing data transmitted to the UART ready for reading by other kernel objects.
   input_branch = pipe_branch::create();
-  std::shared_ptr<ISystemTreeLeaf> leaf;
+  std::shared_ptr<IHandledObject> leaf;
   ASSERT(input_branch->get_child("read", leaf) == ERR_CODE::NO_ERROR);
   pipe_read_leaf = std::dynamic_pointer_cast<pipe_branch::pipe_read_leaf>(leaf);
   ASSERT(pipe_read_leaf);
@@ -143,11 +143,11 @@ bool serial_port::start()
 {
   KL_TRC_ENTRY;
 
-  if (get_device_status() != DEV_STATUS::FAILED)
+  if (get_device_status() != OPER_STATUS::FAILED)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Startup\n");
 
-    set_device_status(DEV_STATUS::STARTING);
+    set_device_status(OPER_STATUS::STARTING);
 
     proc_write_port(com_base_port + 1, 0x00, 8); // Disable all interrupts
     proc_write_port(com_base_port + 3, 0x80, 8); // Enable DLAB (set baud rate divisor)
@@ -158,7 +158,7 @@ bool serial_port::start()
     proc_write_port(com_base_port + 4, 0x0B, 8); // IRQs enabled, RTS/DSR set
     proc_write_port(com_base_port + 1, 0x01, 8); // Enable receiver interrupt
 
-    set_device_status(DEV_STATUS::OK);
+    set_device_status(OPER_STATUS::OK);
   }
 
   KL_TRC_EXIT;
@@ -169,15 +169,15 @@ bool serial_port::stop()
 {
   KL_TRC_ENTRY;
 
-  if (get_device_status() != DEV_STATUS::FAILED)
+  if (get_device_status() != OPER_STATUS::FAILED)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Shutdown\n");
 
-    set_device_status(DEV_STATUS::STOPPING);
+    set_device_status(OPER_STATUS::STOPPING);
 
     proc_write_port(com_base_port + 1, 0x00, 8); // Disable all interrupts
 
-    set_device_status(DEV_STATUS::STOPPED);
+    set_device_status(OPER_STATUS::STOPPED);
   }
 
   KL_TRC_EXIT;
@@ -188,11 +188,11 @@ bool serial_port::reset()
 {
   KL_TRC_ENTRY;
 
-  if (get_device_status() != DEV_STATUS::FAILED)
+  if (get_device_status() != OPER_STATUS::FAILED)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Reset\n");
 
-    set_device_status(DEV_STATUS::RESET);
+    set_device_status(OPER_STATUS::RESET);
 
     proc_write_port(com_base_port + 1, 0x00, 8); // Disable all interrupts
     proc_write_port(com_base_port + 3, 0x80, 8); // Enable DLAB (set baud rate divisor)
@@ -201,7 +201,7 @@ bool serial_port::reset()
     proc_write_port(com_base_port + 3, 0x03, 8); // 8 bits, no parity, one stop bit
     proc_write_port(com_base_port + 2, 0xC7, 8); // Enable FIFO, clear them, with 14-byte threshold
 
-    set_device_status(DEV_STATUS::STOPPED);
+    set_device_status(OPER_STATUS::STOPPED);
   }
 
   KL_TRC_EXIT;
@@ -232,7 +232,7 @@ void serial_port::handle_interrupt_slow(uint8_t interrupt_number)
     if ((bytes_written != 1) || (ec != ERR_CODE::NO_ERROR))
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Pipe write failed\n");
-      set_device_status(DEV_STATUS::FAILED);
+      set_device_status(OPER_STATUS::FAILED);
     }
   }
 
@@ -262,7 +262,7 @@ ERR_CODE serial_port::read_bytes(uint64_t start,
   ERR_CODE result;
   KL_TRC_ENTRY;
 
-  if (get_device_status() == DEV_STATUS::OK)
+  if (get_device_status() == OPER_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Attempt read\n");
     result = pipe_read_leaf->read_bytes(start, length, buffer, buffer_length, bytes_read);

@@ -3,9 +3,9 @@
 
 #pragma once
 
-#include "devices/device_interface.h"
-#include "user_interfaces/error_codes.h"
-#include "devices/legacy/ps2/ps2_device.h"
+#include "types/device_interface.h"
+#include "azalea/error_codes.h"
+#include "ps2_device.h"
 
 const uint16_t PS2_DATA_PORT = 0x60; ///< Standard PS/2 data I/O port
 const uint16_t PS2_COMMAND_PORT = 0x64; ///< Standard PS/2 command I/O port

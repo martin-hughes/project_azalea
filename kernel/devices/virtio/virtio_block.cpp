@@ -6,13 +6,13 @@
 
 //#define ENABLE_TRACING
 
-#include "virtio.h"
-#include "virtio_block.h"
-#include "devices/pci/pci_structures.h"
-
 #include <atomic>
 
-#include "klib/klib.h"
+#include "virtio.h"
+#include "virtio_block.h"
+#include "../devices/pci/pci_structures.h"
+
+#include "kernel_all.h"
 
 namespace virtio
 {
@@ -32,7 +32,7 @@ block_device::block_device(pci_address address) : generic_device(address, "virti
   if (!negotiate_features(required_features, 0, 0, 0))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Feature negotiation failed");
-    set_device_status(DEV_STATUS::FAILED);
+    set_device_status(OPER_STATUS::FAILED);
   }
 
   device_cfg = reinterpret_cast<blk_config *>(device_cfg_void);
@@ -48,9 +48,9 @@ bool block_device::start()
 {
   KL_TRC_ENTRY;
 
-  set_device_status(DEV_STATUS::STARTING);
+  set_device_status(OPER_STATUS::STARTING);
   enable_queues();
-  set_device_status(DEV_STATUS::OK);
+  set_device_status(OPER_STATUS::OK);
 
   KL_TRC_EXIT;
 
@@ -61,9 +61,9 @@ bool block_device::stop()
 {
   KL_TRC_ENTRY;
 
-  set_device_status(DEV_STATUS::STOPPING);
+  set_device_status(OPER_STATUS::STOPPING);
   disable_queues();
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
 
   KL_TRC_EXIT;
 
@@ -74,13 +74,13 @@ bool block_device::reset()
 {
   KL_TRC_ENTRY;
 
-  set_device_status(DEV_STATUS::RESET);
+  set_device_status(OPER_STATUS::RESET);
   disable_queues();
   empty_avail_queue();
 
   // Should we do a device reset as well?
 
-  set_device_status(DEV_STATUS::STOPPED);
+  set_device_status(OPER_STATUS::STOPPED);
 
   KL_TRC_EXIT;
 
@@ -110,7 +110,7 @@ ERR_CODE block_device::read_blocks(uint64_t start_block, uint64_t num_blocks, vo
 
   KL_TRC_ENTRY;
 
-  if (get_device_status() != DEV_STATUS::OK)
+  if (get_device_status() != OPER_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Device not running\n");
     result = ERR_CODE::DEVICE_FAILED;

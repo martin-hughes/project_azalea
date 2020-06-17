@@ -23,15 +23,14 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
 #include "processor.h"
 #include "processor-int.h"
-#include "mem/mem.h"
-#include "object_mgr/object_mgr.h"
-#include "system_tree/system_tree.h"
-#include "system_tree/fs/proc/proc_fs.h"
-#include "processor/work_queue.h"
-#include "processor/timing/timing.h"
+#include "mem.h"
+#include "object_mgr.h"
+#include "system_tree.h"
+#include "../system_tree/fs/proc/proc_fs.h"
+#include "work_queue.h"
+#include "timing.h"
 
 #ifdef _MSVC_LANG
 #include <intrin.h>
@@ -42,7 +41,6 @@
 #endif
 
 //#define AZALEA_SCHED_TIME_DIAGS
-//#define AZALEA_SCHED_PERIODIC_DUMP
 
 #ifdef AZALEA_SCHED_TIME_DIAGS
 #include "timing/hpet.h"
@@ -68,7 +66,7 @@ namespace
   task_thread *start_of_thread_cycle = nullptr;
 
   // Protects the thread cycle from two threads making simultaneous changes.
-  kernel_spinlock thread_cycle_lock;
+  ipc::raw_spinlock thread_cycle_lock;
 
 #ifdef AZALEA_SCHED_TIME_DIAGS
   uint64_t *timing_buffer = nullptr;
@@ -76,16 +74,6 @@ namespace
   const uint64_t max_times_written = 10000;
 #endif
 
-#ifdef AZALEA_SCHED_PERIODIC_DUMP
-
-#ifndef AZALEA_SCHED_DUMP_PERIOD
-#define AZALEA_SCHED_DUMP_PERIOD 996
-#endif
-
-  const uint64_t max_dump_count{AZALEA_SCHED_DUMP_PERIOD};
-
-  uint64_t current_dump_count{0};
-#endif
 }
 
 /// @brief Initialise and start the task management subsystem
@@ -123,7 +111,7 @@ void task_gen_init()
 
   uint32_t number_of_procs = proc_mp_proc_count();
 
-  klib_synch_spinlock_init(thread_cycle_lock);
+  ipc_raw_spinlock_init(thread_cycle_lock);
 
   std::shared_ptr<proc_fs_root_branch> proc_fs_root_ptr;
   proc_fs_root_ptr = std::make_shared<proc_fs_root_branch>();
@@ -263,47 +251,6 @@ task_thread *task_get_next_thread()
   ASSERT(continue_this_thread != nullptr);
   ASSERT(current_threads != nullptr);
 
-#ifdef AZALEA_SCHED_PERIODIC_DUMP
-
-  if (proc_id == 0)
-  {
-    if (current_dump_count == max_dump_count)
-    {
-      kl_trc_trace(TRC_LVL::FLOW, "BEGIN TASK MANAGER DUMP\n");
-      for (uint16_t i = 0; i < proc_mp_proc_count(); i++)
-      {
-        kl_trc_trace(TRC_LVL::FLOW, "Proc: ", i,
-                                    ". Thr addr: ", current_threads[i],
-                                    ". RIP: ",
-                reinterpret_cast<task_x64_exec_context *>(current_threads[i]->execution_context)->saved_stack.proc_rip,
-                                    "\n");
-      }
-
-      task_thread *c{start_of_thread_cycle};
-      do
-      {
-        kl_trc_trace(TRC_LVL::FLOW, "Thread: ", c,
-                                    ". RIP: ",
-                                 reinterpret_cast<task_x64_exec_context *>(c->execution_context)->saved_stack.proc_rip,
-                                    ". Awake? ", c->permit_running,
-                                    "\n");
-
-        c = c->next_thread;
-      } while (c != start_of_thread_cycle);
-
-
-      kl_trc_trace(TRC_LVL::FLOW, "COMPLETE\n");
-
-      current_dump_count = 0;
-    }
-    else
-    {
-      ++current_dump_count;
-    }
-  }
-
-#endif
-
   if (continue_this_thread[proc_id])
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Requested to continue current thread\n");
@@ -354,7 +301,7 @@ task_thread *task_get_next_thread()
       if ((next_thread->permit_running) && (next_thread->cycle_lock != 1))
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Trying to lock for ourselves... ");
-        if (klib_synch_spinlock_try_lock(next_thread->cycle_lock))
+        if (ipc_raw_spinlock_try_lock(next_thread->cycle_lock))
         {
           // Having locked it, double check that it's still OK to run, otherwise release it and carry on.
           if (next_thread->permit_running)
@@ -366,7 +313,7 @@ task_thread *task_get_next_thread()
           else
           {
             KL_TRC_TRACE(TRC_LVL::FLOW, "Had to release it again\n");
-            klib_synch_spinlock_unlock(next_thread->cycle_lock);
+            ipc_raw_spinlock_unlock(next_thread->cycle_lock);
           }
         }
         else
@@ -385,7 +332,7 @@ task_thread *task_get_next_thread()
       if ((next_thread != current_threads[proc_id]) && (current_threads[proc_id] != nullptr))
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Unlocking old thread\n");
-        klib_synch_spinlock_unlock(current_threads[proc_id]->cycle_lock);
+        ipc_raw_spinlock_unlock(current_threads[proc_id]->cycle_lock);
       }
     }
     else
@@ -400,7 +347,7 @@ task_thread *task_get_next_thread()
         KL_TRC_TRACE(TRC_LVL::FLOW, "No thread found, switch to idle thread\n");
         if (current_threads[proc_id] != nullptr)
         {
-          klib_synch_spinlock_unlock(current_threads[proc_id]->cycle_lock);
+          ipc_raw_spinlock_unlock(current_threads[proc_id]->cycle_lock);
         }
         next_thread = idle_threads[proc_id];
       }
@@ -566,7 +513,7 @@ void task_thread_cycle_lock()
 {
   KL_TRC_ENTRY;
 
-  klib_synch_spinlock_lock(thread_cycle_lock);
+  ipc_raw_spinlock_lock(thread_cycle_lock);
 
   KL_TRC_EXIT;
 }
@@ -576,7 +523,7 @@ void task_thread_cycle_unlock()
 {
   KL_TRC_ENTRY;
 
-  klib_synch_spinlock_unlock(thread_cycle_lock);
+  ipc_raw_spinlock_unlock(thread_cycle_lock);
 
   KL_TRC_EXIT;
 }

@@ -5,6 +5,9 @@
 
 #include <stdint.h>
 
+#include "k_assert.h"
+#include "panic.h"
+
 #pragma pack ( push , 1 )
 
 /// @brief Fields of the FAT BPB that are generic to all sizes of FAT filesystem.
@@ -227,7 +230,7 @@ enum class FAT_TYPE
   FAT32, ///< FAT32
 };
 
-class ISystemTreeLeaf;
+class IHandledObject;
 
 /// @brief Structure for storing details of the children of FAT directories.
 ///
@@ -246,7 +249,7 @@ struct fat_object_details
   uint32_t fde_index;
 
   /// @brief Weak pointer to the child object.
-  std::weak_ptr<ISystemTreeLeaf> child_object;
+  std::weak_ptr<IHandledObject> child_object;
 
   /// @brief Copy of the basic directory entry for this child object.
   fat_dir_entry fde;

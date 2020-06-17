@@ -3,7 +3,7 @@
 
 //#define ENABLE_TRACING
 
-#include "klib/klib.h"
+#include "kernel_all.h"
 #include "syscall_kernel-int.h"
 
 /// @brief Is addr a user-mode address or not?

@@ -6,17 +6,13 @@
 
 //#define ENABLE_TRACING
 
-#include "user_interfaces/syscall.h"
-#include "syscall/syscall_kernel.h"
-#include "syscall/syscall_kernel-int.h"
-#include "klib/klib.h"
-#include "system_tree/system_tree.h"
-#include "system_tree/fs/fs_file_interface.h"
-#include "object_mgr/object_mgr.h"
-#include "processor/x64/processor-x64.h"
-
 #include <memory>
 #include <cstring>
+
+#include "kernel_all.h"
+#include "syscall_kernel-int.h"
+
+#include "../system_tree/fs/fs_file_interface.h"
 
 /// @brief Read data from the associated object
 ///
@@ -44,7 +40,7 @@
 /// @param[out] bytes_read The number of bytes actually read in this request.
 ///
 /// @return A suitable ERR_CODE value.
-ERR_CODE syscall_read_handle(GEN_HANDLE handle,
+ERR_CODE az_read_handle(GEN_HANDLE handle,
                              uint64_t start_offset,
                              uint64_t bytes_to_read,
                              unsigned char *buffer,
@@ -155,7 +151,7 @@ ERR_CODE syscall_read_handle(GEN_HANDLE handle,
 /// @param[out] bytes_written The number of bytes actually written in this request.
 ///
 /// @return A suitable ERR_CODE value.
-ERR_CODE syscall_write_handle(GEN_HANDLE handle,
+ERR_CODE az_write_handle(GEN_HANDLE handle,
                               uint64_t start_offset,
                               uint64_t bytes_to_write,
                               unsigned char *buffer,
@@ -239,14 +235,14 @@ ERR_CODE syscall_write_handle(GEN_HANDLE handle,
 /// The number of bytes that can be read depends on the handle type, but could be:
 /// - The number of bytes in a file,
 /// - The number of bytes waiting in a pipe,
-/// - Any other indication for the maximum number of bytes available to syscall_read_handle().
+/// - Any other indication for the maximum number of bytes available to az_read_handle().
 ///
 /// @param[in] handle The handle to assess the size of.
 ///
 /// @param[out] data_length The number of available bytes as described above.
 ///
 /// @return A suitable ERR_CODE value.
-ERR_CODE syscall_get_handle_data_len(GEN_HANDLE handle, uint64_t *data_length)
+ERR_CODE az_get_handle_data_len(GEN_HANDLE handle, uint64_t *data_length)
 {
   KL_TRC_ENTRY;
 
@@ -305,7 +301,7 @@ ERR_CODE syscall_get_handle_data_len(GEN_HANDLE handle, uint64_t *data_length)
 /// @param data_length The length of data area that should be associated with the handle.
 ///
 /// @return A suitable error code.
-ERR_CODE syscall_set_handle_data_len(GEN_HANDLE handle, uint64_t data_length)
+ERR_CODE az_set_handle_data_len(GEN_HANDLE handle, uint64_t data_length)
 {
   KL_TRC_ENTRY;
 
@@ -368,7 +364,7 @@ ERR_CODE syscall_set_handle_data_len(GEN_HANDLE handle, uint64_t data_length)
 ///             discarded.
 ///
 /// @return A suitable error code.
-ERR_CODE syscall_seek_handle(GEN_HANDLE handle, int64_t offset, SEEK_OFFSET dir, uint64_t *new_offset)
+ERR_CODE az_seek_handle(GEN_HANDLE handle, int64_t offset, SEEK_OFFSET dir, uint64_t *new_offset)
 {
   ERR_CODE result;
   task_thread *cur_thread = task_get_cur_thread();
