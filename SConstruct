@@ -26,16 +26,20 @@ def main_build_script(linux_build, config_env):
     kernel_env.Install(ui_folder, headers)
     kernel_env.Install(ui_folder, user_headers)
 
+    cxx_thread_header_folder = os.path.join(paths.libcxx_kernel_headers_folder, "c++", "v1")
+    cxx_thread_header = kernel_env.File("kernel/interface/libcxx/__external_threading")
+    kernel_env.Install(cxx_thread_header_folder, cxx_thread_header)
+
     # Main kernel part
 
     # Create a different environment for the architecture specific part, to avoid contaminating the include path for
     # the core of the kernel and to help enforce a good separation between the core and architecture specific parts.
     arch_lib = default_build_script(dependencies.x64_part, "x64-lib", kernel_arch_env, "x64-lib", None, paths.sys_image_root, True, False,  False)
 
-    kernel_env['LIBS'] = [ arch_lib, 'acpica', 'azalea_libc_kernel', 'c++', 'thread_adapter', 'unwind', 'c++abi' ]
+    kernel_env['LIBS'] = [ arch_lib, 'acpica', 'azalea_libc_kernel', 'c++', 'unwind', 'c++abi' ]
     kernel_obj = default_build_script(dependencies.kernel, "kernel64.sys", kernel_env, "kernel", "kernel", paths.sys_image_root, True, True)
     kernel_env.AddPostAction(kernel_obj, disasm_action)
-
+    Requires(kernel_obj, cxx_thread_header_folder)
 
     # User mode part of the API
     user_api_obj = default_build_script(dependencies.user_mode_api, "azalea", api_lib_env, "api_library", "api", paths.kernel_lib_folder, True, True, False)
@@ -74,6 +78,7 @@ def main_build_script(linux_build, config_env):
 
     # Target for installing headers.
     kernel_env.Alias('install-headers', ui_folder)
+    kernel_env.Alias('install-headers', cxx_thread_header_folder)
     Default('install-headers')
 
   # Unit test program

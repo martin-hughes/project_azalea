@@ -18,6 +18,7 @@ files = [
   "misc/process_elf.cpp",
   "misc/process_gen.cpp",
   "misc/strerror.cpp",
+  "misc/threading_adapter.cpp",
 
   "processor/multi_processor.cpp",
 
