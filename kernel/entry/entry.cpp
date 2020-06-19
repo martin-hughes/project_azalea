@@ -85,7 +85,7 @@ int main(uint32_t magic_number, multiboot_hdr *mb_header)
   }
   ASSERT(mb_header != nullptr);
   // Check that the memory map flag is set.
-  ASSERT((mb_header->flags && (1 << 6)) != 0);
+  ASSERT((mb_header->flags & (1 << 6)) != 0);
 
   // Gather details about the memory map in advance of giving them to the memory manager.
   uint64_t e820_map_addr = mb_header->mmap_addr;
