@@ -25,3 +25,9 @@ seems to be supported by the broadest cross section of tools and emulators.
   tool.
 
 Then copy the entire contents of the Azalea system image created by the build tools to this partition.
+
+## Creating a combined image.
+
+If you have qemu and VirtualBox installed on a Linux system, you could create a disk image containing both Grub and the
+kernel using create_disk_images.sh. Be aware that this script is not maintained - you will need to edit it to be up to
+date.

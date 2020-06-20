@@ -24,7 +24,7 @@ For example, here are some examples of things that can be accessed via the Syste
 (* Not all of these are in the initial version of System Tree. Largely because the system as a whole doesn't have much
 capability yet.)
 
-As you'd expect, it is possible to mount additions to the System Tree to extend its functionality. All of these 
+As you'd expect, it is possible to mount additions to the System Tree to extend its functionality. All of these
 additions have their code in subdirectories of system_tree/.
 
 Eventually System Tree will be secured using access control lists, but that is a project for the future.
@@ -35,14 +35,14 @@ The System Tree is implemented by classes that expose two interfaces (yes I know
 it to mean they inherit abstract classes):
 
 - ISystemTreeBranch - which roughly represents a directory in "normal" filesystem terms.
-- ISystemTreeLeaf - which roughly represents a file in "normal" filesystem terms.
+- IHandledObject - which roughly represents a file in "normal" filesystem terms.
 
 There are no restrictions on how classes implement these interfaces. This allows one instance of a class to be
 responsible for (for example) an entire filesystem on a disk - the choice is up to the developer. More details on these
 interfaces can be found in the documentation in this folder.
 
 The root of the tree is given the name "\" - like the root directory "/" in Linux, and is implemented by the class
-system_tree_root, which implments ISystemTreeBranch.
+system_tree_root, which implements ISystemTreeBranch.
 
 Developers only need to implement the interfaces to participate in the System Tree, but default classes are provided
 that, if inherited from, should simplify the task of the developer. Likewise, a variety of helper functions are
@@ -67,4 +67,3 @@ In its current iteration, there are some very boring restrictions that apply:
  - Needless to say, this set of permitted characters might change without warning!
 - There is no form of locking or control of when objects are added an deleted. In this iteration, it is important that
   users operate with extreme caution.
- 

@@ -17,6 +17,22 @@ There are several main components, and some more minor ones, all described below
 
 ## Main components
 
+### Architecture specific parts (arch)
+
+At present, Azalea only supports one architecture - x86_64. The directory structure of the architecture specific parts
+mirrors the main tree. All platform-specific code should be within either the arch folder, or if more appropriate,
+within the devices folder.
+
+The separation between core and platform specific code is still a bit of a work in progress, expect it to improve over
+time.
+
+### Device Drivers (devices)
+
+Contains the majority of device driver code. There is some legacy code still within the main tree (e.g. APIC and PIT
+handlers) but new drivers should be within this tree.
+
+So far as is reasonable, drivers should rely on the platform-independent code however pragmatic exceptions can be made.
+
 ### Memory manager (mem)
 
 The memory manager is responsible for controlling both the physical and virtual memory available to the kernel, and
@@ -45,17 +61,6 @@ requesting the Object Manager return it using the correct handle.
 
 A subcomponent of the Object Manager is the Handle Manager, which keeps track of the allocation and deallocation of
 handles, but doesn't do the actual correlation.
-
-### Kernel Support Library (klib)
-
-The Kernel Support Library (klib, for short) contains code that is universally useful throughout the kernel. For
-example:
-
-- Management of small memory allocations
-- Basic data structures
-- Synchronisation primitives
-- Kernel debug tracing
-- The all-important `panic()`
 
 ## Minor components
 
@@ -91,9 +96,16 @@ are preserved.
 ### ACPICA
 
 ACPICA is a standard library for dealing with ACPI-compliant systems. It provides a large range of functionality from
-managing the ACPI tables right through power management.
+managing the ACPI tables right through power management. Within Azalea the ACPICA component is provided by
+azalea_acpica, an Azalea-specific fork of the main code.
 
-More information can be found on their [website](https://www.acpica.org/)
+More information can be found on their [website](https://www.acpica.org/). The Azalea fork is on
+[Github](https://github.com/martin-hughes/azalea_acpica).
+
+### Azalea Libc
+
+This is an Azalea-specific fork of [musl](https://musl.libc.org/). It provides a C library for use both within the
+kernel and user mode applications. It can be found on [Github](https://github.com/martin-hughes/azalea_libc).
 
 ### Googletest
 
@@ -101,12 +113,15 @@ The Google Test Framework is used to manage the unit tests, which are contained 
 
 The homepage is hosted on [GitHub](https://github.com/google/googletest)
 
-### libcxxrt
+### Libc++
 
-This library is used to provide some C++ language functionality that isn't built in to the compiler. Project Azalea
-currently only uses the type information and dynamic casting parts of this library.
+Azalea uses LLVM's libc++ both within the kernel and as its default C++ library for user mode applications. An Azalea-
+specific build is made using the Azalea build script with no changes to the LLVM code, however the entire LLVM codebase
+is still a dependency of Azalea.
 
-It can be found [here](https://github.com/pathscale/libcxxrt)
+To support libc++ Azalea also make use of the LLVM components libcxxabi, compiler_rt and libunwind.
+
+Find the main LLVM code on [Github](https://github.com/llvm/llvm-project/).
 
 ### libtmt
 

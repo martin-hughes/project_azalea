@@ -8,3 +8,4 @@ kernel_disc_image.vdi
 *.md.html
 __pycache__
 variables.cache
+build_config.ini

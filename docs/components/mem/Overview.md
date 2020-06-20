@@ -33,18 +33,16 @@ spuriously freed. It is up to the user to behave themselves!
 ## Virtual Memory
 
 The Virtual Memory Manager's primary responsibility is tracking which parts of the virtual memory space are in use. It
-does this using a Buddy Allocation System, the priciple of which is well described on 
+does this using a Buddy Allocation System, the priciple of which is well described on
 [Wikipedia](https://en.wikipedia.org/wiki/Buddy_memory_allocation).
 
 Additionally, it is responsible for managing the mappings between physical and virtual memory, the mechanism for which
 is processor-specific.
 
-## KLib Interface
+## Heap Interface
 
-The Kernel Support Library provides heap functions to the rest of the kernel. Unless the kernel needs to do specific
-memory control operations, it should generally use the `new` and `delete` operators provided by KLib.
-
-A description of how KLib operates the heap is provided in the KLib documentation. 
+This component also provides heap functions to the rest of the kernel. Unless the kernel needs to do specific memory
+control operations, it should generally use the `new` and `delete` operators.
 
 ## Minor Functions
 
