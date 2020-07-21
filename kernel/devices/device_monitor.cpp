@@ -134,7 +134,7 @@ bool dev::monitor::register_device(std::shared_ptr<IDevice> &new_dev)
 /// @brief Handle device related messages.
 ///
 /// @param message Message to handle. Exact list TBD.
-void dev::monitor::handle_message(std::unique_ptr<msg::root_msg> &message)
+void dev::monitor::handle_message(std::unique_ptr<msg::root_msg> message)
 {
   KL_TRC_ENTRY;
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Process message ID: ", message->message_id, "\n");

@@ -239,7 +239,7 @@ namespace usb
     std::weak_ptr<generic_core> self_weak_ptr;
 
     // Override of work::message_receiver
-    virtual void handle_message(std::unique_ptr<msg::root_msg> &message) override;
+    virtual void handle_message(std::unique_ptr<msg::root_msg> message) override;
 
     virtual void handle_transfer_complete(transfer_complete_msg *message);
     virtual void got_device_descriptor();

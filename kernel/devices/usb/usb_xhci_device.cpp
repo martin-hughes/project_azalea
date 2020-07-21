@@ -542,7 +542,7 @@ bool device_core::queue_transfer(uint8_t endpoint_num,
   return result;
 }
 
-void device_core::handle_message(std::unique_ptr<msg::root_msg> &message)
+void device_core::handle_message(std::unique_ptr<msg::root_msg> message)
 {
   KL_TRC_ENTRY;
 
@@ -583,7 +583,7 @@ void device_core::handle_message(std::unique_ptr<msg::root_msg> &message)
 
   default:
     KL_TRC_TRACE(TRC_LVL::FLOW, "Pass message with ID ", message->message_id, " to parent\n");
-    generic_core::handle_message(message);
+    generic_core::handle_message(std::move(message));
     break;
   }
 

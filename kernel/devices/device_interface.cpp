@@ -65,7 +65,7 @@ IDevice::IDevice(const std::string human_name, const std::string short_name, boo
   KL_TRC_EXIT;
 }
 
-void IDevice::handle_message(std::unique_ptr<msg::root_msg> &message)
+void IDevice::handle_message(std::unique_ptr<msg::root_msg> message)
 {
   msg::basic_msg *bm;
   KL_TRC_ENTRY;

@@ -38,7 +38,7 @@ namespace usb { namespace xhci {
                                 std::shared_ptr<normal_transfer> transfer_item) override;
 
     // Override of work::message_receiver
-    virtual void handle_message(std::unique_ptr<msg::root_msg> &message) override;
+    virtual void handle_message(std::unique_ptr<msg::root_msg> message) override;
 
     // xHCI-specific functions.
     virtual void handle_slot_enabled(uint8_t slot_id, device_context *new_output_context);

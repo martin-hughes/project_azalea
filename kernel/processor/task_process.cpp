@@ -286,7 +286,7 @@ void task_process::thread_ending(task_thread *thread)
 /// Only "basic" messages can be sent to processes at the moment.
 ///
 /// @param message The message to be handled by the process.
-void task_process::handle_message(std::unique_ptr<msg::root_msg> &message)
+void task_process::handle_message(std::unique_ptr<msg::root_msg> message)
 {
   msg::basic_msg *msg_ptr;
 

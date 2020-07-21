@@ -14,7 +14,7 @@ public:
   basic_msg_receiver() { };
   virtual ~basic_msg_receiver() { };
 
-  virtual void handle_message(std::unique_ptr<msg::root_msg> &msg);
+  virtual void handle_message(std::unique_ptr<msg::root_msg> msg);
 
   bool handled{false};
 };
@@ -26,7 +26,7 @@ public:
   bool handled{false};
 };
 
-void basic_msg_receiver::handle_message(std::unique_ptr<msg::root_msg> &msg)
+void basic_msg_receiver::handle_message(std::unique_ptr<msg::root_msg> msg)
 {
 
 }

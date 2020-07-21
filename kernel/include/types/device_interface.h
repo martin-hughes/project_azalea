@@ -128,7 +128,7 @@ public:
   virtual OPER_STATUS get_device_status() { return current_dev_status; };
 
   // Override of the message_receiver base class.
-  virtual void handle_message(std::unique_ptr<msg::root_msg> &message) override;
+  virtual void handle_message(std::unique_ptr<msg::root_msg> message) override;
 
   /// @brief Populate a structure with the contents of a device-specific options-structure.
   ///

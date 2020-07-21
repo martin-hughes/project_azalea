@@ -31,7 +31,7 @@ namespace usb
     static void create_device(std::shared_ptr<generic_core> device_core,
                               CREATION_PHASE phase = CREATION_PHASE::NOT_STARTED);
 
-    virtual void handle_message(std::unique_ptr<msg::root_msg> &message) override;
+    virtual void handle_message(std::unique_ptr<msg::root_msg> message) override;
 
   protected:
 

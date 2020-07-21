@@ -51,7 +51,7 @@ namespace work
     /// This function will be called by process_next_message(), so should not be called externally.
     ///
     /// @param message The message to handle.
-    virtual void handle_message(std::unique_ptr<msg::root_msg> &message) = 0;
+    virtual void handle_message(std::unique_ptr<msg::root_msg> message) = 0;
 
   private:
     // ... the message queue storage and handling.

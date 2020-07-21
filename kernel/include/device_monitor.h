@@ -58,7 +58,7 @@ public:
   static bool register_device(std::shared_ptr<IDevice> &new_dev);
 
 protected:
-  virtual void handle_message(std::unique_ptr<msg::root_msg> &msg) override;
+  virtual void handle_message(std::unique_ptr<msg::root_msg> msg) override;
   virtual void handle_register(std::unique_ptr<dev_reg_msg> &msg);
 
   std::vector<std::shared_ptr<IDevice>> registered_devices; ///< All known devices in the system.

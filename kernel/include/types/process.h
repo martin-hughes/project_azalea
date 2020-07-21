@@ -35,7 +35,7 @@ public:
   void stop_process();
   void destroy_process(uint64_t exit_code);
 
-  virtual void handle_message(std::unique_ptr<msg::root_msg> &message) override;
+  virtual void handle_message(std::unique_ptr<msg::root_msg> message) override;
 
 protected:
   friend task_thread; ///< This is just a convenience really.

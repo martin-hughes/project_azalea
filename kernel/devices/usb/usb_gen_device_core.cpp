@@ -171,7 +171,7 @@ bool generic_core::read_config_descriptor(uint8_t index, device_config &config)
   return result;
 }
 
-void generic_core::handle_message(std::unique_ptr<msg::root_msg> &message)
+void generic_core::handle_message(std::unique_ptr<msg::root_msg> message)
 {
   KL_TRC_ENTRY;
 

@@ -226,7 +226,7 @@ bool message_receiver::process_next_message()
     // After this point, we should assume the message to be invalid, as certain conversions done by receivers can cause
     // the message to become invalid. (For example, the device manager releases the message pointer in order to cast it
     // to a different type.)
-    this->handle_message(msg_header);
+    this->handle_message(std::move(msg_header));
 
     if (completion_sem)
     {

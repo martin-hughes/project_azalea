@@ -79,7 +79,7 @@ void main_factory::create_device(std::shared_ptr<generic_core> device_core, CREA
 /// @brief Called to create a device asynchronously.
 ///
 /// @param message The queued work item - this must be a USB device creation request.
-void main_factory::handle_message(std::unique_ptr<msg::root_msg> &message)
+void main_factory::handle_message(std::unique_ptr<msg::root_msg> message)
 {
   KL_TRC_ENTRY;
 

@@ -21,7 +21,7 @@ public:
   basic_msg_receiver_mt() { };
   virtual ~basic_msg_receiver_mt() { };
 
-  virtual void handle_message(std::unique_ptr<msg::root_msg> &msg);
+  virtual void handle_message(std::unique_ptr<msg::root_msg> msg);
 
   bool handled{false};
 };
@@ -33,7 +33,7 @@ public:
   bool handled{false};
 };
 
-void basic_msg_receiver_mt::handle_message(std::unique_ptr<msg::root_msg> &msg)
+void basic_msg_receiver_mt::handle_message(std::unique_ptr<msg::root_msg> msg)
 {
   handled = true;
   short_msg *msg_ptr = reinterpret_cast<short_msg *>(msg.get());
