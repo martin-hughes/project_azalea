@@ -34,7 +34,7 @@ def start_demo(config_file):
                  "-device nec-usb-xhci",
                  "-kernel {root}/kernel64.sys",
                  "-vga std",
-                 "--accel tcg,thread=single",
+                 "-machine pc,accel=kvm:whpx:xen:hax:hvf:tcg",
                  #"-serial vc:80Cx24C"
 
                  #"-D /tmp/qemu.log",
