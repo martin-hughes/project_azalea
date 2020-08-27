@@ -22,8 +22,13 @@
 /// @param start_block When proxying, assume block 0 of this object refers to start_block on the parent.
 ///
 /// @param num_blocks How many blocks long is this proxy?
-block_proxy_device::block_proxy_device(IBlockDevice *parent, uint64_t start_block, uint64_t num_blocks) :
-    IDevice{"Generic block device", "proxy", true}, _parent(parent), _start_block(start_block), _num_blocks(num_blocks)
+block_proxy_device::block_proxy_device(std::shared_ptr<IBlockDevice> parent,
+                                       uint64_t start_block,
+                                       uint64_t num_blocks) :
+    IDevice{"Generic block device", "proxy", true},
+    _parent(parent),
+    _start_block(start_block),
+    _num_blocks(num_blocks)
 {
   KL_TRC_ENTRY;
 
@@ -132,68 +137,62 @@ uint64_t block_proxy_device::block_size()
   return block_size;
 }
 
-ERR_CODE block_proxy_device::read_blocks(uint64_t start_block,
-                                         uint64_t num_blocks,
-                                         void *buffer,
-                                         uint64_t buffer_length)
+// Notice that from the proxy's point of view, read and write requests are basically the same.
+
+void block_proxy_device::read(std::unique_ptr<msg::io_msg> msg)
 {
   KL_TRC_ENTRY;
 
-  ERR_CODE ret = ERR_CODE::NO_ERROR;
-
-  if (get_device_status() != OPER_STATUS::OK)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Device failed\n");
-    ret = ERR_CODE::DEVICE_FAILED;
-  }
-  else if ((start_block >= this->_num_blocks)
-           || (num_blocks > this->_num_blocks)
-           || ((start_block + num_blocks) > this->_num_blocks))
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Out of range\n");
-    ret = ERR_CODE::INVALID_PARAM;
-  }
-  else
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Pass up to parent\n");
-    ASSERT(this->_parent != nullptr);
-    ret = this->_parent->read_blocks(start_block + this->_start_block, num_blocks, buffer, buffer_length);
-  }
+  process_message(std::move(msg));
 
   KL_TRC_EXIT;
-
-  return ret;
 }
 
-ERR_CODE block_proxy_device::write_blocks(uint64_t start_block,
-                                          uint64_t num_blocks,
-                                          const void *buffer,
-                                          uint64_t buffer_length)
+void block_proxy_device::write(std::unique_ptr<msg::io_msg> msg)
 {
   KL_TRC_ENTRY;
 
-  ERR_CODE ret = ERR_CODE::NO_ERROR;
+  process_message(std::move(msg));
+
+  KL_TRC_EXIT;
+}
+
+void block_proxy_device::process_message(std::unique_ptr<msg::io_msg> msg)
+{
+  ERR_CODE ret{ERR_CODE::NO_ERROR};
+
+  KL_TRC_ENTRY;
 
   if (get_device_status() != OPER_STATUS::OK)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Device failed\n");
     ret = ERR_CODE::DEVICE_FAILED;
   }
-  else if ((start_block >= this->_num_blocks)
-           || (num_blocks > this->_num_blocks)
-           || ((start_block + num_blocks) > this->_num_blocks))
+  else if ((msg->start >= this->_num_blocks)
+           || (msg->blocks > this->_num_blocks)
+           || ((msg->start + msg->blocks) > this->_num_blocks))
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Out of range\n");
     ret = ERR_CODE::INVALID_PARAM;
   }
+
+  if (ret == ERR_CODE::NO_ERROR)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Pass on to parent\n");
+    // Note that while we update this message and send it on, we don't change the sender - the result can go directly
+    // back to the object that sent us the message.
+
+    ASSERT(this->_parent != nullptr);
+    msg->start += this->_start_block;
+
+    work::queue_message(this->_parent, std::move(msg));
+  }
   else
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Pass up to parent\n");
-    ASSERT(this->_parent != nullptr);
-    ret = this->_parent->write_blocks(start_block + this->_start_block, num_blocks, buffer, buffer_length);
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Request failed, send back.\n");
+    msg->response = ret;
+    complete_io_request(std::move(msg));
   }
 
   KL_TRC_EXIT;
-
-  return ret;
 }

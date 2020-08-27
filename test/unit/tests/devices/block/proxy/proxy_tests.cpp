@@ -2,6 +2,7 @@
 #include "gtest/gtest.h"
 #include "../devices/block/proxy/block_proxy.h"
 #include "../devices/block/ramdisk/ramdisk.h"
+#include "types/block_wrapper.h"
 
 #include <memory>
 
@@ -15,22 +16,24 @@ const unsigned long buffer_len = 20;
 TEST(BlockProxyTest, SimpleTests)
 {
   const char inbuffer[] = "12345678901234567890";
-  std::unique_ptr<ramdisk_device> device(new ramdisk_device(10, 2));
+  std::shared_ptr<ramdisk_device> raw_device(new ramdisk_device(10, 2));
+  std::shared_ptr<BlockWrapper> device = std::make_shared<BlockWrapper>(raw_device);
   std::unique_ptr<char[]> buffer(new char[buffer_len]);
 
-  ASSERT_TRUE(device->start());
+  ASSERT_TRUE(raw_device->start());
 
-  ASSERT_EQ(device->num_blocks(), 10);
-  ASSERT_EQ(device->block_size(), 2);
-  ASSERT_EQ(device->get_device_status(), OPER_STATUS::OK);
+  ASSERT_EQ(raw_device->num_blocks(), 10);
+  ASSERT_EQ(raw_device->block_size(), 2);
+  ASSERT_EQ(raw_device->get_device_status(), OPER_STATUS::OK);
 
   ASSERT_EQ(device->write_blocks(0, 10, (void * )inbuffer, 20), ERR_CODE::NO_ERROR);
 
-  std::unique_ptr<block_proxy_device> proxy(new block_proxy_device(device.get(), 2, 2));
+  std::shared_ptr<block_proxy_device> raw_proxy(new block_proxy_device(raw_device, 2, 2));
+  std::shared_ptr<BlockWrapper> proxy = std::make_shared<BlockWrapper>(raw_proxy);
 
-  ASSERT_TRUE(proxy->start());
+  ASSERT_TRUE(raw_proxy->start());
 
-  ASSERT_EQ(proxy->get_device_status(), OPER_STATUS::OK);
+  ASSERT_EQ(raw_proxy->get_device_status(), OPER_STATUS::OK);
 
   ASSERT_EQ(proxy->read_blocks(3, 1, buffer.get(), buffer_len), ERR_CODE::INVALID_PARAM);
   ASSERT_EQ(proxy->read_blocks(2, 1, buffer.get(), buffer_len), ERR_CODE::INVALID_PARAM);

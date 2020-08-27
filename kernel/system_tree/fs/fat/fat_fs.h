@@ -8,6 +8,7 @@
 #include <set>
 
 #include "types/system_tree_branch.h"
+#include "types/block_wrapper.h"
 #include "../devices/block/block_interface.h"
 #include "../fs_file_interface.h"
 #include "fat_structures.h"
@@ -16,7 +17,10 @@
 
 /// @brief Class representing the root directory of a FAT filesystem.
 ///
-class fat_filesystem: public ISystemTreeBranch, public std::enable_shared_from_this<fat_filesystem>
+class fat_filesystem :
+  public ISystemTreeBranch,
+  public std::enable_shared_from_this<fat_filesystem>,
+  public work::message_receiver
 {
 protected:
   fat_filesystem(std::shared_ptr<IBlockDevice> parent_device);
@@ -146,7 +150,7 @@ public:
   };
 
 protected:
-  std::shared_ptr<IBlockDevice> _storage; ///< The block device containing this filesystem.
+  std::shared_ptr<BlockWrapper> _storage; ///< Wrapper around the block device containing this filesystem.
   std::unique_ptr<uint8_t[]> _buffer; ///< A buffer to copy sectors in to for manipulation.
   OPER_STATUS _status; ///< Status of the filesystem.
   std::unique_ptr<uint8_t[]> _raw_fat; ///< A copy of the FAT of this filesystem.

@@ -104,87 +104,113 @@ uint64_t block_device::block_size()
   return 512;
 }
 
-ERR_CODE block_device::read_blocks(uint64_t start_block, uint64_t num_blocks, void *buffer, uint64_t buffer_length)
+void block_device::read(std::unique_ptr<msg::io_msg> msg)
 {
-  ERR_CODE result{ERR_CODE::UNKNOWN};
-
   KL_TRC_ENTRY;
 
-  if (get_device_status() != OPER_STATUS::OK)
+  ASSERT(msg);
+  kl_trc_trace(TRC_LVL::FLOW, "Read request: start: ", msg->start, ", blocks: ", msg->blocks, "\n");
+
+  std::shared_ptr<block_request_wrapper> req = std::make_shared<block_request_wrapper>(std::move(msg));
+
+  // These buffers are deleted in release_used_buffer.
+  virtio_blk_req *request_buf = new virtio_blk_req;
+  uint8_t *status_byte = new uint8_t;
+
+  request_buf->type = static_cast<uint32_t>(BLK_REQUESTS::IN);
+  request_buf->sector = req->msg->start; // + i;
+  *status_byte = 0;
+
+  std::unique_ptr<buffer_descriptor[]> descs = std::unique_ptr<buffer_descriptor[]>(new buffer_descriptor[3]);
+  descs[0].buffer = request_buf;
+  descs[0].buffer_length = sizeof(virtio_blk_req);
+  descs[0].device_writable = false;
+  descs[0].type = descriptor_type::REQUEST;
+
+  descs[1].buffer = req->msg->buffer;
+  descs[1].buffer_length =  512 * req->msg->blocks;
+  descs[1].device_writable = true;
+  descs[1].parent_request = req;
+  descs[1].request_index = 0; //i;
+  descs[1].type = descriptor_type::BUFFER;
+
+  descs[2].buffer = status_byte;
+  descs[2].buffer_length = 1;
+  descs[2].device_writable = true;
+  descs[2].type = descriptor_type::STATUS;
+
+
+  // Set this now. Any failures will overwrite it later.
+  req->msg->response = ERR_CODE::NO_ERROR;
+
+  if (!queues[0].send_buffers(std::move(descs), 3))
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Device not running\n");
-    result = ERR_CODE::DEVICE_FAILED;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to send buffers - device fault?\n");
+    INCOMPLETE_CODE("Virtio send buffer fault");
+
+    // This doesn't necessarily work, because req->msg might already have been sent by release_used_buffer()
+
+    req->msg->response = ERR_CODE::DEVICE_FAILED; // What about if it's just the queue is full?
+
+    complete_io_request(std::move(req->msg));
   }
-  else if (!buffer || (buffer_length < (512 * num_blocks)))
+
+  KL_TRC_EXIT;
+}
+
+void block_device::release_used_buffer(buffer_descriptor &desc, uint32_t bytes_written)
+{
+  KL_TRC_ENTRY;
+
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Release buffer ", desc.buffer, " with ", bytes_written, " bytes written to it\n");
+
+  if (desc.type == descriptor_type::BUFFER)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Buffer not suitable\n");
-    result = ERR_CODE::INVALID_PARAM;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Found parent request\n");
+    std::shared_ptr<block_request_wrapper> req = std::dynamic_pointer_cast<block_request_wrapper>(desc.parent_request);
+    ASSERT(req);
+
+    if (!desc.handled)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Device didn't handle buffer\n");
+
+      // If this is because the queue was full, the appropriate code is set in read() as part of the response to
+      // send_buffers() failing.
+      req->msg->response = ERR_CODE::DEVICE_FAILED;
+
+       // Some things still to consider here are:
+       // - How do we get the trailing status byte to be processed if the response has already been sent back?
+       // - What happens if insufficient data was written?
+      INCOMPLETE_CODE("Virtio failed");
+    }
+
+    --(req->blocks_left);
+    if (req->blocks_left == 0)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Request complete!\n");
+      ASSERT(req->msg);
+      req->msg->message_id = SM_IO_COMPLETE;
+      complete_io_request(std::move(req->msg));
+    }
   }
   else
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Attempt to read\n");
-    for (uint64_t i = 0; i < num_blocks; i++)
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Read sector ", start_block + i, "\n");
 
-      virtio_blk_req *request_buf = new virtio_blk_req;
-      request_buf->type = static_cast<uint32_t>(BLK_REQUESTS::IN);
-      request_buf->sector = start_block + i;
-
-      uint8_t *status_byte = new uint8_t;
-      *status_byte = 0;
-
-      uint8_t *read_buffer = new uint8_t[512];
-
-      std::unique_ptr<buffer_descriptor[]> descs = std::unique_ptr<buffer_descriptor[]>(new buffer_descriptor[3]);
-      descs[0].buffer = request_buf;
-      descs[0].buffer_length = sizeof(virtio_blk_req);
-      descs[0].device_writable = false;
-      descs[1].buffer = read_buffer;
-      descs[1].buffer_length = 512;
-      descs[1].device_writable = true;
-      descs[2].buffer = status_byte;
-      descs[2].buffer_length = 1;
-      descs[2].device_writable = true;
-
-      if (!queues[0].send_buffers(descs, 3))
-      {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to send buffers - device fault?\n");
-        result = ERR_CODE::DEVICE_FAILED; // What about if it's just the queue is full?
-      }
-      else
-      {
-        result = ERR_CODE::NO_ERROR;
-      }
-    }
+    // Delete any buffer that we created. Buffers are provided by the caller.
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Delete internal buffer\n");
+    delete reinterpret_cast<uint8_t *>(desc.buffer);
   }
 
-  INCOMPLETE_CODE("read_blocks");
-  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
-
-  return result;
 }
 
-ERR_CODE block_device::write_blocks(uint64_t start_block,
-                                   uint64_t num_blocks,
-                                   const void *buffer,
-                                   uint64_t buffer_length)
+block_request_wrapper::block_request_wrapper(std::unique_ptr<msg::io_msg> msg_req) : msg{std::move(msg_req)}
 {
-  INCOMPLETE_CODE("write_blocks");
-  return ERR_CODE::UNKNOWN;
-}
+  KL_TRC_ENTRY;
 
-void block_device::release_used_buffer(void *buffer, uint32_t bytes_written)
-{
-  KL_TRC_TRACE(TRC_LVL::FLOW, "Release buffer ", buffer, " with ", bytes_written, " bytes written to it\n");
+  blocks_left = 1; //msg->blocks;
 
-  if (bytes_written == 512)
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Buffer contents (end) ", reinterpret_cast<uint16_t *>(buffer)[255], "\n");
-
-  }
-  delete reinterpret_cast<uint8_t *>(buffer);
-}
+  KL_TRC_EXIT;
+};
 
 };

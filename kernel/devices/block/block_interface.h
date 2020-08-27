@@ -6,12 +6,13 @@
 #include <string>
 
 #include "types/device_interface.h"
+#include "types/io_object.h"
 #include "azalea/error_codes.h"
 
 /// @brief Interface common to all block devices.
 ///
 /// The most likely and common example of this type of device is a disk drive.
-class IBlockDevice
+class IBlockDevice : public virtual IIOObject
 {
 public:
   /// @brief Simple constructor
@@ -29,33 +30,4 @@ public:
   ///
   /// @return The size of a block, in bytes.
   virtual uint64_t block_size() = 0;
-
-  /// @brief Read blocks from this device.
-  ///
-  /// @param start_block The zero-based index of the first block to read.
-  ///
-  /// @param num_blocks The number of contiguous blocks to read.
-  ///
-  /// @param buffer A buffer to copy the results in to.
-  ///
-  /// @param buffer_length The number of bytes that the buffer can accept.
-  ///
-  /// @return A suitable error code.
-  virtual ERR_CODE read_blocks(uint64_t start_block, uint64_t num_blocks, void *buffer, uint64_t buffer_length) = 0;
-
-  /// @brief Write blocks to this device.
-  ///
-  /// @param start_block The zero-based index of the first block to write.
-  ///
-  /// @param num_blocks The number of contiguous blocks to write.
-  ///
-  /// @param buffer A buffer to write to the device.
-  ///
-  /// @param buffer_length The number of bytes in that buffer.
-  ///
-  /// @return A suitable error code.
-  virtual ERR_CODE write_blocks(uint64_t start_block,
-                                uint64_t num_blocks,
-                                const void *buffer,
-                                uint64_t buffer_length) = 0;
 };

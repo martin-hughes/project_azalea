@@ -35,11 +35,14 @@ def main_build_script(linux_build, config_env):
     # Create a different environment for the architecture specific part, to avoid contaminating the include path for
     # the core of the kernel and to help enforce a good separation between the core and architecture specific parts.
     arch_lib = default_build_script(dependencies.x64_part, "x64-lib", kernel_arch_env, "x64-lib", None, paths.sys_image_root, True, False,  False)
+    Requires(arch_lib, cxx_thread_header_folder)
+    Requires(arch_lib, ui_folder)
 
     kernel_env['LIBS'] = [ arch_lib, 'acpica', 'azalea_libc_kernel', 'c++', 'unwind', 'c++abi' ]
     kernel_obj = default_build_script(dependencies.kernel, "kernel64.sys", kernel_env, "kernel", "kernel", paths.sys_image_root, True, True)
     kernel_env.AddPostAction(kernel_obj, disasm_action)
     Requires(kernel_obj, cxx_thread_header_folder)
+    Requires(kernel_obj, ui_folder)
 
     # User mode part of the API
     user_api_obj = default_build_script(dependencies.user_mode_api, "azalea", api_lib_env, "api_library", "api", paths.kernel_lib_folder, True, True, False)
@@ -116,7 +119,7 @@ def main_build_script(linux_build, config_env):
   test_script_env.AppendENVPath(additional_include_tag, '#/kernel/interface')
   test_script_env.AppendENVPath(additional_include_tag, '#/external/googletest/googletest/')
   tests_obj = default_build_script(dependencies.main_tests, exe_name, test_script_env, "main_tests", "main_tests", True, False, None)
-  Default(tests_obj)
+  #Default(tests_obj)
 
   if not clang_build:
     # Remove the idb, pdb, map and ilk files when doing a clean.

@@ -7,6 +7,7 @@
 //#define ENABLE_TRACING
 
 #include "kernel_all.h"
+#include "types/block_wrapper.h"
 
 #include "dev_fs.h"
 
@@ -22,7 +23,7 @@
 #include "../devices/block/proxy/block_proxy.h"
 #include "../devices/block/ata/ata_device.h"
 #include "../devices/virtio/virtio_block.h"
-std::shared_ptr<fat_filesystem> setup_initial_fs(std::shared_ptr<ata::generic_device> first_hdd);
+std::shared_ptr<fat_filesystem> setup_initial_fs(std::shared_ptr<IBlockDevice> first_hdd);
 
 /// @cond
 // Temporary variables
@@ -119,17 +120,20 @@ void dev_root_branch::scan_for_devices()
   uint64_t end_time = start_time + (10ULL * 1000 * 1000 * 1000); // i.e. max wait of 10 seconds.
 
   std::shared_ptr<IHandledObject> hdd_leaf;
-  std::shared_ptr<ata::generic_device> hdd_dev;
+  //std::shared_ptr<ata::generic_device> hdd_dev;
+  std::shared_ptr<virtio::block_device> hdd_dev;
   bool ready{false};
 
   // Keep trying to get the first ATA device until it is ready or we run out of time.
   // There's an obvious assumption here that ATA1 is the desired HDD...
   while (time_get_system_timer_count(true) < end_time)
   {
-    if (system_tree()->get_child("\\dev\\all\\ata1", hdd_leaf) == ERR_CODE::NO_ERROR)
+    //if (system_tree()->get_child("\\dev\\all\\ata1", hdd_leaf) == ERR_CODE::NO_ERROR)
+    if (system_tree()->get_child("\\dev\\all\\virtio-blk1", hdd_leaf) == ERR_CODE::NO_ERROR)
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Got device leaf\n");
-      hdd_dev = std::dynamic_pointer_cast<ata::generic_device>(hdd_leaf);
+      kl_trc_trace(TRC_LVL::FLOW, "Got device leaf\n");
+      //hdd_dev = std::dynamic_pointer_cast<ata::generic_device>(hdd_leaf);
+      hdd_dev = std::dynamic_pointer_cast<virtio::block_device> (hdd_leaf);
       if (hdd_dev)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Got device object\n");
@@ -228,7 +232,7 @@ dev_root_branch::dev_sub_branch::~dev_sub_branch()
 /// @param first_hdd Pointer to the HDD with the filesystem to load.
 ///
 /// @return Pointer toa FAT filesystem presumed to exist on the first attached HDD.
-std::shared_ptr<fat_filesystem> setup_initial_fs(std::shared_ptr<ata::generic_device> first_hdd)
+std::shared_ptr<fat_filesystem> setup_initial_fs(std::shared_ptr<IBlockDevice> first_hdd)
 {
   KL_TRC_ENTRY;
   ASSERT(first_hdd.get() != nullptr); // new ata::generic_device(nullptr, 0);
@@ -236,7 +240,10 @@ std::shared_ptr<fat_filesystem> setup_initial_fs(std::shared_ptr<ata::generic_de
   std::shared_ptr<IDevice> empty;
 
   memset(sector_buffer.get(), 0, 512);
-  if (first_hdd->read_blocks(0, 1, sector_buffer.get(), 512) != ERR_CODE::NO_ERROR)
+
+  std::shared_ptr<BlockWrapper> wrapper = BlockWrapper::create(first_hdd);
+
+  if (wrapper->read_blocks(0, 1, sector_buffer.get(), 512) != ERR_CODE::NO_ERROR)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Disk read failed\n");
     panic("Disk read failed :(\n");
@@ -255,7 +262,7 @@ std::shared_ptr<fat_filesystem> setup_initial_fs(std::shared_ptr<ata::generic_de
 
   kl_trc_trace(TRC_LVL::EXTRA, "First partition: ", (uint64_t)start_sector, " -> +", (uint64_t)sector_count, "\n");
   std::shared_ptr<block_proxy_device> pd;
-  ASSERT(dev::create_new_device(pd, empty, first_hdd.get(), start_sector, sector_count));
+  ASSERT(dev::create_new_device(pd, empty, first_hdd, start_sector, sector_count));
   while(pd->get_device_status() != OPER_STATUS::OK)
   { };
 

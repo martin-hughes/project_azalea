@@ -17,7 +17,7 @@ public:
   virtual ~serial() { };
 
   // Overrides from terms::generic
-  virtual void handle_private_msg(std::unique_ptr<msg::root_msg> &message) override;
+  virtual void handle_pipe_new_data(std::unique_ptr<msg::root_msg> &message) override;
   virtual void write_raw_string(const char *out_string, uint16_t num_chars) override;
 
 protected:

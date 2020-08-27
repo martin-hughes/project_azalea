@@ -89,6 +89,7 @@ uint64_t generic_device::block_size()
   return SECTOR_LENGTH;
 }
 
+#if 0
 ERR_CODE generic_device::read_blocks(uint64_t start_block,
                                      uint64_t num_blocks,
                                      void *buffer,
@@ -210,6 +211,7 @@ ERR_CODE generic_device::write_blocks(uint64_t start_block,
   KL_TRC_EXIT;
   return result;
 }
+#endif
 
 /// @brief Calculate whether DMA is supported and configured on this device.
 ///

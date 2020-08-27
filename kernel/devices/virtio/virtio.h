@@ -171,12 +171,51 @@ struct used_ring_element
   uint32_t length_written; ///< The number of bytes written into the descriptor's buffers.
 };
 
+/// @brief Base type for virtio devices to use to store request information in.
+class generic_request
+{
+public:
+  virtual ~generic_request() = default;
+};
+
+/// @brief Known type of descriptor.
+///
+/// Virtio requests can broadly be split into 3 parts:
+///
+/// - The request part. This contains details like what the request is, and how long it is.
+/// - Optionally, a buffer to read or write from.
+/// - A status byte written by the device.
+///
+/// These values represent those parts.
+enum class descriptor_type
+{
+  REQUEST = 0, ///< This descriptor represents the request part.
+  BUFFER = 1, ///< This descriptor represents the buffer part.
+  STATUS = 2, ///< This descriptor represents the status part.
+};
+
 /// @brief Descriptor given to virtqueue::send_buffers() to describe the buffers being sent.
+///
+/// This is a kernel structure used for passing data around the driver, not a virtio structure.
 struct buffer_descriptor
 {
   void *buffer; ///< Address of the buffer.
   uint32_t buffer_length; ///< Length of this buffer.
   bool device_writable; ///< Is this buffer writable by the device.
+
+  /// Descriptors generally form part of a request. This value allows the caller to correlate returned descriptors to
+  /// their parent request. It is otherwise opaque to the queueing system or the rest of the driver.
+  std::shared_ptr<generic_request> parent_request;
+
+  /// An opaque value helping the caller to correlate responses to the request they are part of.
+  uint64_t request_index{0};
+
+  /// Was this buffer actually handled by the virtio device? This could be false if, e.g., the descriptor couldn't be
+  /// enqueued.
+  bool handled{false};
+
+  /// What type of descriptor is this?
+  descriptor_type type{descriptor_type::REQUEST};
 };
 
 std::shared_ptr<pci_generic_device> instantiate_virtio_device(std::shared_ptr<IDevice> parent,
@@ -195,8 +234,9 @@ public:
   virtqueue(virtqueue &&other);
   virtqueue() = delete;
   ~virtqueue();
+  virtqueue &operator=(const virtqueue &) = delete;
 
-  bool send_buffers(std::unique_ptr<buffer_descriptor[]> &descriptors, uint16_t num_descriptors);
+  bool send_buffers(std::unique_ptr<buffer_descriptor[]> descriptors, uint16_t num_descriptors);
   void process_used_ring();
 
   uint64_t descriptor_phys;
@@ -232,7 +272,8 @@ protected:
 
   uint16_t last_used_ring_idx{0}; ///< Where the device will write the next element in the used ring.
 
-  std::unique_ptr<void *[]> buffer_virtual_addresses; ///< Allows mapping from descriptor index to buffer address.
+  /// Allows mapping from descriptor index in the queue back to the descriptor provided by the surrounding driver.
+  std::vector<buffer_descriptor> buffer_descriptors;
 };
 
 /// @brief Generic virtio device.
@@ -242,7 +283,10 @@ class generic_device : public pci_generic_device
 {
 public:
   generic_device(pci_address address, std::string human_name, std::string dev_name);
+  generic_device(const generic_device &) = delete;
+  generic_device(generic_device &&) = delete;
   virtual ~generic_device();
+  generic_device &operator=(const generic_device &) = delete;
 
 protected:
   friend class virtqueue;
@@ -286,10 +330,11 @@ protected:
 
   /// @brief Called by a virtqueue to indicate buffers previously sent have been used and can be released.
   ///
-  /// @param buffer The buffer to release.
+  /// @param desc The descriptor containing the buffer to release. The descriptor itself is still owned by the queue
+  ///             and is destroyed later.
   ///
   /// @param bytes_written The number of bytes written to this buffer.
-  virtual void release_used_buffer(void *buffer, uint32_t bytes_written) = 0;
+  virtual void release_used_buffer(buffer_descriptor &desc, uint32_t bytes_written) = 0;
 
   // Overrides of pci_generic_device:
   virtual bool handle_translated_interrupt_fast(uint8_t interrupt_offset,

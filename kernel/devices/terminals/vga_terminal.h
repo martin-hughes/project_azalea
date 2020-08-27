@@ -14,7 +14,7 @@ public:
   vga(std::shared_ptr<IWritable> keyboard_pipe, void *display_area_virt);
   virtual ~vga() { };
 
-  virtual void handle_private_msg(std::unique_ptr<msg::root_msg> &message) override;
+  virtual void handle_key_msg_obj(std::unique_ptr<msg::root_msg> &message);
 
   virtual void tmt_callback(tmt_msg_t m, TMT *vt, const void *a) override;
 

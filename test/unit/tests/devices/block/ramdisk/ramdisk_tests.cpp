@@ -4,6 +4,7 @@
 
 #include <memory>
 
+#if 0
 class RamdiskTest : public ::testing::Test
 {
 protected:
@@ -47,3 +48,4 @@ TEST(RamdiskTest, ReadWrite)
 
   test_only_reset_name_counts();
 }
+#endif

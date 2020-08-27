@@ -30,7 +30,7 @@ public:
   // Overrides of IBlockDevice
   virtual uint64_t num_blocks() override;
   virtual uint64_t block_size() override;
-
+/*
   virtual ERR_CODE read_blocks(uint64_t start_block,
                                uint64_t num_blocks,
                                void *buffer,
@@ -39,6 +39,7 @@ public:
                                 uint64_t num_blocks,
                                 const void *buffer,
                                 uint64_t buffer_length) override;
+*/
 
 protected:
   std::shared_ptr<generic_controller> parent_controller; ///< The controller of this device.

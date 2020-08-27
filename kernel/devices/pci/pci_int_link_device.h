@@ -23,7 +23,7 @@ public:
   uint16_t get_interrupt();
 
 protected:
-  uint16_t chose_interrupt(uint16_t interrupt_count, void *choices, uint8_t bytes_per_int);
+  uint16_t choose_interrupt(uint16_t interrupt_count, void *choices, uint8_t bytes_per_int);
 
   uint16_t chosen_interrupt; ///< The interrupt that this device has chosen to use.
 };

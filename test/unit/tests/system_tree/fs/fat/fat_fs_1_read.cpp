@@ -10,6 +10,8 @@
 
 #include "dummy_libs/devices/virt_disk/virt_disk.h"
 
+#include "types/block_wrapper.h"
+
 #include "gtest/gtest.h"
 
 using namespace std;
@@ -45,7 +47,8 @@ const uint32_t block_size = 512;
 class FatFsReadTests : public ::testing::TestWithParam<std::tuple<test_file_details, const char *>>
 {
 protected:
-  shared_ptr<virtual_disk_dummy_device> backing_storage;
+  shared_ptr<virtual_disk_dummy_device> raw_backing_storage;
+  shared_ptr<BlockWrapper> backing_storage;
   shared_ptr<fat_filesystem> filesystem;
   shared_ptr<block_proxy_device> proxy;
 
@@ -55,13 +58,14 @@ protected:
   void SetUp() override
   {
     auto [test_details, disk_image_name] = GetParam();
-    this->backing_storage = make_shared<virtual_disk_dummy_device>(disk_image_name, block_size);
+    this->raw_backing_storage = make_shared<virtual_disk_dummy_device>(disk_image_name, block_size);
+    this->backing_storage = make_shared<BlockWrapper>(raw_backing_storage);
     std::unique_ptr<uint8_t[]> sector_buffer(new uint8_t[512]);
     uint32_t start_sector;
     uint32_t sector_count;
     uint32_t write_blocks;
 
-    ASSERT_TRUE(backing_storage->start());
+    ASSERT_TRUE(raw_backing_storage->start());
 
     memset(sector_buffer.get(), 0, 512);
     ASSERT_EQ(ERR_CODE::NO_ERROR, backing_storage->read_blocks(0, 1, sector_buffer.get(), 512)) << "Virt. disk failed";
@@ -74,7 +78,7 @@ protected:
     memcpy(&start_sector, sector_buffer.get() + 454, 4);
     memcpy(&sector_count, sector_buffer.get() + 458, 4);
 
-    proxy = make_shared<block_proxy_device>(backing_storage.get(), start_sector, sector_count);
+    proxy = make_shared<block_proxy_device>(backing_storage, start_sector, sector_count);
 
     ASSERT_TRUE(proxy->start());
 

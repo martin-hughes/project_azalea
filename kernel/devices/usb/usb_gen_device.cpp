@@ -24,6 +24,8 @@ generic_device::generic_device(std::shared_ptr<generic_core> core, uint16_t inte
 {
   KL_TRC_ENTRY;
 
+  register_handler(SM_USB_TRANSFER_COMPLETE,
+                   [this](std::unique_ptr<msg::root_msg> msg){ this->handle_transfer_complete_msg(msg); });
   set_device_status(OPER_STATUS::STOPPED);
 
   ASSERT(core);
@@ -31,7 +33,7 @@ generic_device::generic_device(std::shared_ptr<generic_core> core, uint16_t inte
   KL_TRC_EXIT;
 }
 
-void generic_device::handle_private_msg(std::unique_ptr<msg::root_msg> &message)
+void generic_device::handle_transfer_complete_msg(std::unique_ptr<msg::root_msg> &message)
 {
   KL_TRC_ENTRY;
 

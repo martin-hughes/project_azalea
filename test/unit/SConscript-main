@@ -11,6 +11,7 @@ files = [ "dummy_libs/processor/processor.dummy.cpp",
 
           "tests/devices/block/proxy/proxy_tests.cpp",
           "tests/devices/block/ramdisk/ramdisk_tests.cpp",
+          "tests/devices/block/ramdisk/ramdisk_tests_msg.cpp",
           "tests/devices/dev_monitor.cpp",
 
           "tests/misc/ds_1.cpp",

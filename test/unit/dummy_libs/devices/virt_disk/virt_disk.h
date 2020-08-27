@@ -18,14 +18,8 @@ public:
   virtual uint64_t num_blocks() override;
   virtual uint64_t block_size() override;
 
-  virtual ERR_CODE read_blocks(uint64_t start_block,
-                               uint64_t num_blocks,
-                               void *buffer,
-                               uint64_t buffer_length) override;
-  virtual ERR_CODE write_blocks(uint64_t start_block,
-                                uint64_t num_blocks,
-                                const void *buffer,
-                                uint64_t buffer_length) override;
+  virtual void read(std::unique_ptr<msg::io_msg> msg) override;
+  virtual void write(std::unique_ptr<msg::io_msg> msg) override;
 
   // Overrides of IDevice:
   bool start() override;
@@ -38,4 +32,13 @@ protected:
 
   uint64_t _block_size;
   uint64_t _num_blocks;
+
+  virtual ERR_CODE read_blocks(uint64_t start_block,
+                               uint64_t num_blocks,
+                               void *buffer,
+                               uint64_t buffer_length);
+  virtual ERR_CODE write_blocks(uint64_t start_block,
+                                uint64_t num_blocks,
+                                const void *buffer,
+                                uint64_t buffer_length);
 };

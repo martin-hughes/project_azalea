@@ -21,7 +21,11 @@
 terms::generic::generic(std::shared_ptr<IWritable> keyboard_pipe) :
   terms::generic{keyboard_pipe, "term"}
 {
+  KL_TRC_ENTRY;
 
+  register_handler(SM_PIPE_NEW_DATA, [this](std::unique_ptr<msg::root_msg> msg){ this->handle_pipe_new_data(msg); });
+
+  KL_TRC_EXIT;
 }
 
 /// @brief Construct a terminal.
@@ -86,7 +90,7 @@ bool terms::generic::reset()
   return result;
 }
 
-void terms::generic::handle_private_msg(std::unique_ptr<msg::root_msg> &message)
+void terms::generic::handle_pipe_new_data(std::unique_ptr<msg::root_msg> &message)
 {
   KL_TRC_ENTRY;
 

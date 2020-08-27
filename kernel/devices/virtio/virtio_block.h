@@ -76,6 +76,19 @@ struct virtio_blk_req
   uint64_t sector; ///< Sector this request should start at.
 };
 
+class block_request_wrapper : public generic_request
+{
+public:
+  block_request_wrapper(std::unique_ptr<msg::io_msg> msg_req);
+  virtual ~block_request_wrapper() = default;
+  block_request_wrapper(const block_request_wrapper &) = delete;
+  block_request_wrapper(block_request_wrapper &&) = delete;
+  block_request_wrapper &operator=(const block_request_wrapper &) = delete;
+
+  std::unique_ptr<msg::io_msg> msg;
+  uint64_t blocks_left;
+};
+
 static_assert(sizeof(virtio_blk_req) == 16, "Check size of virtio::virtio_blk_req");
 
 /// @brief virtio-based block device driver.
@@ -94,14 +107,12 @@ public:
   // Overrides of IBlockDevice:
   virtual uint64_t num_blocks() override;
   virtual uint64_t block_size() override;
-  virtual ERR_CODE read_blocks(uint64_t start_block, uint64_t num_blocks, void *buffer, uint64_t buffer_length) override;
-  virtual ERR_CODE write_blocks(uint64_t start_block,
-                                uint64_t num_blocks,
-                                const void *buffer,
-                                uint64_t buffer_length) override;
+
+  // Overrides of IIOObject via IBlockDevice
+  virtual void read(std::unique_ptr<msg::io_msg> msg) override;
 
   // Overrides from generic_device:
-  virtual void release_used_buffer(void *buffer, uint32_t bytes_written) override;
+  virtual void release_used_buffer(buffer_descriptor &desc, uint32_t bytes_written) override;
 
 protected:
   blk_config *device_cfg{nullptr}; ///< Device-specific configuration.

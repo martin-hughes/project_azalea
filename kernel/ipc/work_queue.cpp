@@ -5,6 +5,7 @@
 
 #include "work_queue.h"
 #include "processor.h"
+#include "map_helpers.h"
 
 #include <list>
 
@@ -150,6 +151,9 @@ void work::queue_message(std::shared_ptr<work::message_receiver> receiver, std::
 {
   KL_TRC_ENTRY;
 
+  ASSERT(receiver);
+  ASSERT(msg);
+
   ipc_raw_spinlock_lock(receiver->queue_lock);
 
   ASSERT(msg.get());
@@ -159,6 +163,7 @@ void work::queue_message(std::shared_ptr<work::message_receiver> receiver, std::
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Queue this object for later handling\n");
     ipc_raw_spinlock_lock(receiver_queue_lock);
+    ASSERT(receiver_queue);
     receiver_queue->push_back(receiver);
     receiver->is_in_receiver_queue = true;
     ipc_raw_spinlock_unlock(receiver_queue_lock);
@@ -263,4 +268,48 @@ void message_receiver::begin_processing_msgs()
   ipc_raw_spinlock_unlock(queue_lock);
 
   KL_TRC_EXIT;
+}
+
+void message_receiver::register_handler(uint64_t message_id, work::msg_handler<msg::root_msg> handler)
+{
+  KL_TRC_ENTRY;
+
+  msg_receivers.insert_or_assign(message_id, handler);
+
+  KL_TRC_EXIT;
+}
+
+void message_receiver::handle_message(std::unique_ptr<msg::root_msg> message)
+{
+  KL_TRC_ENTRY;
+
+  if (map_contains(msg_receivers, message->message_id))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Found item\n");
+    msg_handler<msg::root_msg> handler = msg_receivers[message->message_id];
+    handler(std::move(message));
+  }
+  else
+  {
+    // For now we ignore the message. In future, there might be a different action.
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Didn't find a handler\n");
+  }
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Does nothing with this message.
+///
+/// @param msg This message is ignored.
+void work::ignore(std::unique_ptr<msg::root_msg> msg)
+{
+
+}
+
+/// @brief Causes a panic.
+///
+/// @param msg This parameter is ignored.
+void work::bad_conversion(std::unique_ptr<msg::root_msg> msg)
+{
+  panic("Failed message type conversion");
 }

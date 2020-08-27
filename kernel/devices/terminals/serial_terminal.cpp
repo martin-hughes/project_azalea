@@ -25,7 +25,7 @@ terms::serial::serial(std::shared_ptr<IWritable> keyboard_pipe,
 
 }
 
-void terms::serial::handle_private_msg(std::unique_ptr<msg::root_msg> &message)
+void terms::serial::handle_pipe_new_data(std::unique_ptr<msg::root_msg> &message)
 {
   KL_TRC_ENTRY;
 

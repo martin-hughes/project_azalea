@@ -12,21 +12,16 @@
 class block_proxy_device: public IBlockDevice, public IDevice
 {
 public:
-  block_proxy_device(IBlockDevice *parent, uint64_t start_block, uint64_t num_blocks);
+  block_proxy_device(std::shared_ptr<IBlockDevice> parent, uint64_t start_block, uint64_t num_blocks);
   virtual ~block_proxy_device() override;
 
   // Overrides of IBlockDevice
   virtual uint64_t num_blocks() override;
   virtual uint64_t block_size() override;
 
-  virtual ERR_CODE read_blocks(uint64_t start_block,
-                               uint64_t num_blocks,
-                               void *buffer,
-                               uint64_t buffer_length) override;
-  virtual ERR_CODE write_blocks(uint64_t start_block,
-                                uint64_t num_blocks,
-                                const void *buffer,
-                                uint64_t buffer_length) override;
+  // Overrides of IIOObject via IBlockDevice
+  virtual void read(std::unique_ptr<msg::io_msg> msg) override;
+  virtual void write(std::unique_ptr<msg::io_msg> msg) override;
 
   // Overrides of IDevice
   virtual OPER_STATUS get_device_status() override;
@@ -36,8 +31,10 @@ public:
   virtual bool reset() override;
 
 protected:
-  IBlockDevice * const _parent; ///< The device this object is proxying.
+  std::shared_ptr<IBlockDevice> const _parent; ///< The device this object is proxying.
 
   const uint64_t _start_block; ///< Which block does this device offset from.
   const uint64_t _num_blocks; ///< How many blocks are in this proxy?
+
+  virtual void process_message(std::unique_ptr<msg::io_msg> msg);
 };

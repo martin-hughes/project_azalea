@@ -34,7 +34,7 @@ public:
   virtual bool stop() override;
   virtual bool reset() override;
 
-  virtual void handle_private_msg(std::unique_ptr<msg::root_msg> &message) override;
+  virtual void handle_pipe_new_data(std::unique_ptr<msg::root_msg> &message);
 
   // Overrides from IWritable
   virtual ERR_CODE write_bytes(uint64_t start,

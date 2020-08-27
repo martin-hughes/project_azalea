@@ -89,7 +89,7 @@ namespace dev
 /// IDevice inherits from work::message_receiver because all devices must be capable of receiving management messages.
 /// It inherits from system_tree_simple_branch to allow devices to have child devices associated with them. Childen of
 /// IDevice may choose to override the system_tree_simple_branch features to enable more complex functionality.
-class IDevice : public work::message_receiver, public system_tree_simple_branch
+class IDevice : public virtual work::message_receiver, public system_tree_simple_branch
 {
 public:
   /// @brief Standard constructor
@@ -126,9 +126,6 @@ public:
   ///
   /// @return One of OPER_STATUS, as appropriate.
   virtual OPER_STATUS get_device_status() { return current_dev_status; };
-
-  // Override of the message_receiver base class.
-  virtual void handle_message(std::unique_ptr<msg::root_msg> message) override;
 
   /// @brief Populate a structure with the contents of a device-specific options-structure.
   ///
@@ -184,14 +181,6 @@ protected:
   ///
   /// @param new_state The new state of the device.
   virtual void set_device_status(OPER_STATUS new_state) final;
-
-  /// @brief Handle messages that aren't handled by the IDevice top level object.
-  ///
-  /// This will include all messages defined by any child of the IDevice object. Users can override
-  /// IDevice::handle_message() if they wish, but they will then need to arrange calls to start/stop/etc.
-  ///
-  /// @param message The message header of the message to handle.
-  virtual void handle_private_msg(std::unique_ptr<msg::root_msg> &message) { };
 
   /// @brief Weak pointer to self.
   ///

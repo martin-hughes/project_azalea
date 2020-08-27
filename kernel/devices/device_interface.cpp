@@ -32,6 +32,24 @@ IDevice::IDevice(const std::string human_name, const std::string short_name, boo
 
   KL_TRC_ENTRY;
 
+  register_handler(SM_DEV_START, [this](std::unique_ptr<msg::root_msg> msg){ this->start(); });
+  register_handler(SM_DEV_STOP, [this](std::unique_ptr<msg::root_msg> msg){ this->stop(); });
+  register_handler(SM_DEV_RESET, [this](std::unique_ptr<msg::root_msg> msg){ this->reset(); });
+  register_handler(SM_GET_OPTIONS, [this](std::unique_ptr<msg::root_msg> msg)
+    {
+      this->get_options_struct(msg->output_buffer.get(), msg->output_buffer_len);
+    } );
+  register_handler(SM_GET_OPTIONS, [this](std::unique_ptr<msg::root_msg> msg)
+    {
+      msg::basic_msg *bm;
+      bm = dynamic_cast<msg::basic_msg *>(msg.get());
+      if (bm)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Basic message\n");
+        this->save_options_struct(bm->details.get(), bm->message_length);
+      }
+    });
+
   if (auto_inc_suffix)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Add automatic suffix number\n");
@@ -60,53 +78,6 @@ IDevice::IDevice(const std::string human_name, const std::string short_name, boo
     device_short_name = true_short_name;
 
     ipc_raw_spinlock_unlock(name_count_lock);
-  }
-
-  KL_TRC_EXIT;
-}
-
-void IDevice::handle_message(std::unique_ptr<msg::root_msg> message)
-{
-  msg::basic_msg *bm;
-  KL_TRC_ENTRY;
-
-
-  switch(message->message_id)
-  {
-  case SM_DEV_START:
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Start message\n");
-    this->start();
-    break;
-
-  case SM_DEV_STOP:
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Stop message\n");
-    this->stop();
-    break;
-
-  case SM_DEV_RESET:
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Reset message\n");
-    this->reset();
-    break;
-
-  case SM_GET_OPTIONS:
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Get options structure\n");
-    this->get_options_struct(message->output_buffer.get(), message->output_buffer_len);
-    break;
-
-  case SM_SET_OPTIONS:
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Save options structure\n");
-    bm = dynamic_cast<msg::basic_msg *>(message.get());
-    if (bm)
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Basic message\n");
-      this->save_options_struct(bm->details.get(), bm->message_length);
-    }
-    break;
-
-  default:
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Message ", message->message_id, " sent to subclass\n");
-    this->handle_private_msg(message);
-    break;
   }
 
   KL_TRC_EXIT;

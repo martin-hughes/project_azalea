@@ -66,7 +66,7 @@ virtqueue::virtqueue(generic_device *owner_dev, uint16_t size, uint16_t number) 
   avail_ring_phys = reinterpret_cast<uint64_t>(mem_get_phys_addr(avail_ring_flags));
   used_ring_phys = reinterpret_cast<uint64_t>(mem_get_phys_addr(used_ring_flags));
 
-  buffer_virtual_addresses = std::unique_ptr<void *[]>(new void *[queue_size]);
+  buffer_descriptors.reserve(queue_size);
 
   KL_TRC_EXIT;
 }
@@ -108,7 +108,7 @@ virtqueue::virtqueue(virtqueue &&other)
   avail_ring_phys = other.avail_ring_phys;
   used_ring_phys = other.used_ring_phys;
 
-  other.buffer_virtual_addresses.swap(buffer_virtual_addresses);
+  other.buffer_descriptors.swap(buffer_descriptors);
 
   KL_TRC_EXIT;
 }
@@ -128,15 +128,15 @@ virtqueue::~virtqueue()
 
 /// @brief Send a buffer to the device via the available ring.
 ///
-/// At this point, the virtqueue takes ownership of this buffer. It releases ownership back to the previous owner when
-/// the device has put it back on the used queue, or when this queue is destroyed.
+/// At this point, the virtqueue takes ownership of the buffer(s) given by descriptors[].buffer. It releases ownership
+/// back to the previous owner when the device has put it back on the used queue, or when this queue is destroyed.
 ///
 /// @param descriptors Set of buffers to send to the device
 ///
 /// @param num_descriptors Number of descriptors in 'descriptors'
 ///
 /// @return true if the buffer was successfully added to the avail queue. False if the avail queue is already full.
-bool virtqueue::send_buffers(std::unique_ptr<buffer_descriptor[]> &descriptors, uint16_t num_descriptors)
+bool virtqueue::send_buffers(std::unique_ptr<buffer_descriptor[]> descriptors, uint16_t num_descriptors)
 {
   bool result{true};
   uint16_t cur_ring_idx;
@@ -190,7 +190,7 @@ bool virtqueue::send_buffers(std::unique_ptr<buffer_descriptor[]> &descriptors, 
         descriptor_table[this_index].phys_addr = reinterpret_cast<uint64_t>(mem_get_phys_addr(descriptors[j].buffer));
         descriptor_table[this_index].flags = descriptors[j].device_writable ? Q_DESC_FLAGS::WRITE : 0;
 
-        buffer_virtual_addresses[this_index] = descriptors[j].buffer;
+        buffer_descriptors[this_index] = descriptors[j];
 
         if (j < (num_descriptors - 1))
         {
@@ -229,7 +229,13 @@ bool virtqueue::send_buffers(std::unique_ptr<buffer_descriptor[]> &descriptors, 
     }
     else
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Unable to find sufficient space\n");
+      kl_trc_trace(TRC_LVL::FLOW, "Unable to find sufficient space\n");
+
+      for(uint16_t i = 0; i < num_descriptors; i++)
+      {
+        owner->release_used_buffer(descriptors[i], 0);
+      }
+
       result = false;
     }
   }
@@ -279,7 +285,9 @@ void virtqueue::process_used_ring()
         bytes_this_buffer = 0;
       }
 
-      owner->release_used_buffer(buffer_virtual_addresses[descriptor_index], bytes_this_buffer);
+      buffer_descriptors[descriptor_index].handled = true;
+      owner->release_used_buffer(buffer_descriptors[descriptor_index], bytes_this_buffer);
+      buffer_descriptors[descriptor_index] = buffer_descriptor();
       descriptor_table[descriptor_index].phys_addr = 0;
 
       if (!(descriptor_table[descriptor_index].flags & Q_DESC_FLAGS::NEXT))

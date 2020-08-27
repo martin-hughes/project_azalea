@@ -29,7 +29,10 @@ const uint64_t ASSUMED_SECTOR_SIZE = 512;
 ///
 /// @param parent_device The block device containing this filesystem.
 fat_filesystem::fat_filesystem(std::shared_ptr<IBlockDevice> parent_device) :
-    _storage{parent_device}, _buffer{new uint8_t[ASSUMED_SECTOR_SIZE]}, _status{OPER_STATUS::OK}, fat_dirty{false}
+    _storage{BlockWrapper::create(parent_device)},
+    _buffer{new uint8_t[ASSUMED_SECTOR_SIZE]},
+    _status{OPER_STATUS::OK},
+    fat_dirty{false}
 {
   fat32_bpb* temp_bpb;
   ERR_CODE r;

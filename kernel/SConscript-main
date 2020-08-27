@@ -6,6 +6,7 @@ files = [
   "ipc/futexes.cpp",
   "ipc/spinlocks.cpp",
   "ipc/events.cpp",
+  "ipc/io_object.cpp",
   "ipc/work_queue.cpp",
 
   "mem/mapping.cpp",
@@ -15,6 +16,7 @@ files = [
   "mem/virtual.cpp",
 
   "misc/allocator_templates.cpp",
+  "misc/block_wrapper.cpp",
   "misc/err_code_names.cpp",
   "misc/math_hacks.cpp",
   "misc/tracing.cpp",

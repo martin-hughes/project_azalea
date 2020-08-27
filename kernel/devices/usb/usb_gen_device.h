@@ -261,7 +261,7 @@ namespace usb
     virtual bool start() override { set_device_status(OPER_STATUS::OK); return true; };
     virtual bool stop() override { set_device_status(OPER_STATUS::STOPPED); return true; };
     virtual bool reset() override { set_device_status(OPER_STATUS::STOPPED); return true; };
-    virtual void handle_private_msg(std::unique_ptr<msg::root_msg> &message) override;
+    virtual void handle_transfer_complete_msg(std::unique_ptr<msg::root_msg> &message);
 
     virtual void transfer_completed(normal_transfer *complete_transfer);
 

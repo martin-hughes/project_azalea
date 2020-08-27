@@ -1,5 +1,8 @@
 /// @file
 /// @brief Implements a VGA text-mode terminal.
+//
+// Known defects:
+// - handle_key_msg_obj could be removed by folding it into the lambdas in the constructor.
 
 //#define ENABLE_TRACING
 
@@ -16,6 +19,9 @@ terms::vga::vga(std::shared_ptr<IWritable> keyboard_pipe, void *display_area_vir
   display_ptr{reinterpret_cast<unsigned char *>(display_area_virt)}
 {
   KL_TRC_ENTRY;
+
+  register_handler(SM_KEYDOWN, [this](std::unique_ptr<msg::root_msg> msg){ this->handle_key_msg_obj(msg); });
+  register_handler(SM_KEYUP, [this](std::unique_ptr<msg::root_msg> msg){ this->handle_key_msg_obj(msg); });
 
   KL_TRC_EXIT;
 }
@@ -214,12 +220,12 @@ void terms::vga::set_cursor_pos(uint8_t x, uint8_t y)
   KL_TRC_EXIT;
 }
 
-/// @brief Override IDevice::handle_private_msg to deal with keyboard keypresses.
+/// @brief Deal with keyboard keypress messages by extracting the data and passing it to the true handler.
 ///
 /// Other messages will be discarded.
 ///
 /// @param message The message being handled.
-void terms::vga::handle_private_msg(std::unique_ptr<msg::root_msg> &message)
+void terms::vga::handle_key_msg_obj(std::unique_ptr<msg::root_msg> &message)
 {
   msg::basic_msg *b_msg;
   KL_TRC_ENTRY;
@@ -238,10 +244,6 @@ void terms::vga::handle_private_msg(std::unique_ptr<msg::root_msg> &message)
     ASSERT(k_msg != nullptr);
 
     this->handle_keyboard_msg(b_msg->message_id, *k_msg);
-  }
-  else
-  {
-    terms::generic::handle_private_msg(message);
   }
 
   KL_TRC_EXIT;

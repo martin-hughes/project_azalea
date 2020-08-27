@@ -22,6 +22,8 @@ static const uint64_t SM_SET_OPTIONS = 9; /**< Set options associated with the t
 static const uint64_t SM_GET_OPTIONS = 10; /**< Return options associated with the target */
 static const uint64_t SM_USB_TRANSFER_COMPLETE = 11; /**< Requested USB transfer is complete */
 static const uint64_t SM_XHCI_CMD_COMPLETE = 12; /**< XHCI controller command complete */
+static const uint64_t SM_IO_MSG = 13; /**< Standard IO request message */
+static const uint64_t SM_IO_COMPLETE = 14; /**< IO Request complete message */
 
 /* System message structures */
 

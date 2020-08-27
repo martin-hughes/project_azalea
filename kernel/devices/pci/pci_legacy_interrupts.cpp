@@ -115,8 +115,10 @@ pci_irq_link_device::pci_irq_link_device(ACPI_HANDLE dev_handle) : chosen_interr
   ACPI_BUFFER possible_resources;
   uint8_t *raw_ptr;
   ACPI_RESOURCE *resource_ptr;
-  bool found_irq = false;
+  bool found_irq{false};
+  bool extended_irq{false};
   uint16_t match;
+  ACPI_RESOURCE *saved_resource{nullptr};
 
   KL_TRC_ENTRY;
 
@@ -136,18 +138,19 @@ pci_irq_link_device::pci_irq_link_device(ACPI_HANDLE dev_handle) : chosen_interr
     {
     case ACPI_RESOURCE_TYPE_IRQ:
       KL_TRC_TRACE(TRC_LVL::FLOW, "Normal IRQ list\n");
-      match = chose_interrupt(resource_ptr->Data.Irq.InterruptCount, resource_ptr->Data.Irq.Interrupts, 1);
+      match = choose_interrupt(resource_ptr->Data.Irq.InterruptCount, resource_ptr->Data.Irq.Interrupts, 1);
       if (match != 0)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Found valid IRQ: ", match, "\n");
         chosen_interrupt = match;
         found_irq = true;
+        saved_resource = resource_ptr;
       }
       break;
 
     case ACPI_RESOURCE_TYPE_EXTENDED_IRQ:
       KL_TRC_TRACE(TRC_LVL::FLOW, "Extended IRQ list\n");
-      match = chose_interrupt(resource_ptr->Data.ExtendedIrq.InterruptCount,
+      match = choose_interrupt(resource_ptr->Data.ExtendedIrq.InterruptCount,
                               resource_ptr->Data.ExtendedIrq.Interrupts,
                               4);
       if (match != 0)
@@ -155,6 +158,8 @@ pci_irq_link_device::pci_irq_link_device(ACPI_HANDLE dev_handle) : chosen_interr
         KL_TRC_TRACE(TRC_LVL::FLOW, "Found valid IRQ: ", match, "\n");
         chosen_interrupt = match;
         found_irq = true;
+        extended_irq = true;
+        saved_resource = resource_ptr;
       }
       break;
 
@@ -164,6 +169,42 @@ pci_irq_link_device::pci_irq_link_device(ACPI_HANDLE dev_handle) : chosen_interr
 
     raw_ptr += resource_ptr->Length;
     resource_ptr = reinterpret_cast<ACPI_RESOURCE *>(raw_ptr);
+  }
+
+  AcpiOsFree(possible_resources.Pointer);
+  possible_resources.Pointer = nullptr;
+
+  if (found_irq)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Found interrupt, so now set as current value\n");
+    ACPI_RESOURCE in_buffer[2];
+    memset(in_buffer, 0, sizeof(in_buffer));
+
+    ASSERT(saved_resource);
+
+    memcpy(in_buffer, saved_resource, sizeof(ACPI_RESOURCE));
+
+    if (extended_irq)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Populate extended IRQ\n");
+      in_buffer[0].Data.ExtendedIrq.InterruptCount = 1;
+      in_buffer[0].Data.ExtendedIrq.Interrupts[0] = chosen_interrupt;
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Populate normal IRQ\n");
+      in_buffer[0].Data.Irq.InterruptCount = 1;
+      in_buffer[0].Data.Irq.Interrupts[0] = chosen_interrupt;
+    }
+
+    in_buffer[1].Length = 0;
+    in_buffer[1].Type = ACPI_RESOURCE_TYPE_END_TAG;
+
+    // Re-use the 'possible resources' buffer to send this back.
+    possible_resources.Length = sizeof(in_buffer);
+    possible_resources.Pointer = in_buffer;
+
+    ASSERT(AcpiSetCurrentResources(dev_handle, &possible_resources) == AE_OK);
   }
 
   KL_TRC_EXIT;
@@ -183,7 +224,7 @@ pci_irq_link_device::pci_irq_link_device(ACPI_HANDLE dev_handle) : chosen_interr
 /// @param bytes_per_int How many bytes long is each entry in choices.
 ///
 /// @return The chosen interrupt. Zero indicates an error.
-uint16_t pci_irq_link_device::chose_interrupt(uint16_t interrupt_count, void *choices, uint8_t bytes_per_int)
+uint16_t pci_irq_link_device::choose_interrupt(uint16_t interrupt_count, void *choices, uint8_t bytes_per_int)
 {
   uint16_t chosen = 0;
   uint16_t preferred_int_idx = 0;
@@ -283,7 +324,7 @@ uint16_t pci_irq_link_device::get_interrupt()
 uint16_t pci_generic_device::compute_irq_for_pin(uint8_t pin)
 {
   uint16_t result = 0;
-  acpi_pci_addr address;
+  acpi_pci_addr address = acpi_addr_from_pci_addr(_address);
 
   KL_TRC_ENTRY;
 
@@ -311,12 +352,13 @@ uint16_t pci_generic_device::compute_irq_for_pin(uint8_t pin)
     KL_TRC_TRACE(TRC_LVL::FLOW, "A: ", lnk_a_int, ", B:", lnk_b_int, ", C:", lnk_c_int, ", D:", lnk_d_int, "\n");
 
     uint16_t irq_table[4][4] = {
-      { lnk_a_int, lnk_b_int, lnk_c_int, lnk_d_int },
       { lnk_b_int, lnk_c_int, lnk_d_int, lnk_a_int },
       { lnk_c_int, lnk_d_int, lnk_a_int, lnk_b_int },
       { lnk_d_int, lnk_a_int, lnk_b_int, lnk_c_int },
+      { lnk_a_int, lnk_b_int, lnk_c_int, lnk_d_int },
     };
 
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Device: ", address.normal.Device, ", pin: ", pin, "\n");
     result = irq_table[address.normal.Device % 4][pin];
   }
   else
@@ -329,7 +371,6 @@ uint16_t pci_generic_device::compute_irq_for_pin(uint8_t pin)
       pci_init_int_map();
     }
 
-    address = acpi_addr_from_pci_addr(_address);
     address.normal.Function = 0xFFFF;
 
     KL_TRC_TRACE(TRC_LVL::FLOW, "Lookup address: ", address.raw, "\n");

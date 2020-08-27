@@ -48,14 +48,16 @@ The caller *must* not edit the message after it is queue. The transfer in owners
 
 ## Handling messages
 
-To become a message receiver, a class must derive from `work::message_receiver` and override the `handle_message()`
-function.
+To become a message receiver, a class must derive from `work::message_receiver` and either:
+- Register the message IDs it wants to handle using `register_handler()` (recommended) or,
+- override the `handle_message()` function (not recommended).
 
-While inside of `handle_message()` the object *must not* block for extended periods. (Short blocks, like waiting for
-the memory manager to allocate memory, are acceptable - waiting for a response from a network device is not)
+While inside of `handle_message()` or other registered handler functions the object *must not* block for extended
+periods. (Short blocks, like waiting for the memory manager to allocate memory, are acceptable - waiting for a response
+from a network device is not)
 
-Inside of `handle_message()` the recipient owns the message object. It is discarded by the caller after
-`handle_message()` completes, so it can be manipulated in any way desired.
+Inside of `handle_message()` or other handlers the recipient owns the message object. It is discarded by the caller
+after `handle_message()` completes, so it can be manipulated in any way desired.
 
 If base classes also handle messages, it may be desirable for the child class to call base class versions of
 `handle_message()` - this is not done automatically.
