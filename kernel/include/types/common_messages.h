@@ -104,7 +104,7 @@ namespace msg
     REQS request{REQS::INVALID};
     uint64_t start{0};
     uint64_t blocks{0};
-    void *buffer{nullptr}; // TODO: Use output_buffer?
+    std::shared_ptr<uint8_t> buffer; // TODO: Use output_buffer?
     ERR_CODE response{ERR_CODE::UNKNOWN};
     std::weak_ptr<work::message_receiver> sender;
   };

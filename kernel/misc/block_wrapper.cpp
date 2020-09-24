@@ -60,8 +60,10 @@ ERR_CODE BlockWrapper::read_blocks(uint64_t start_block, uint64_t num_blocks, vo
   ASSERT(num_blocks);
   ASSERT(buffer);
 
+  std::shared_ptr<uint8_t> buffer_shared{new uint8_t[buffer_length], std::default_delete<uint8_t[]>()};
+
   msg->blocks = num_blocks;
-  msg->buffer = buffer;
+  msg->buffer = buffer_shared;
   msg->request = msg::io_msg::REQS::READ;
   msg->start = start_block;
   msg->sender = self_weak_ptr;
@@ -80,6 +82,8 @@ ERR_CODE BlockWrapper::read_blocks(uint64_t start_block, uint64_t num_blocks, vo
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Semaphore cleared\n");
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result_store, "\n");
+
+  memcpy(buffer, buffer_shared.get(), buffer_length);
 
   KL_TRC_EXIT;
   return result_store;

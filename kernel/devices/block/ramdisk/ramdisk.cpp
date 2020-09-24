@@ -192,7 +192,7 @@ void ramdisk_device::read(std::unique_ptr<msg::io_msg> msg)
 {
   KL_TRC_ENTRY;
 
-  msg->response = read_blocks(msg->start, msg->blocks, msg->buffer, msg->blocks * _block_size);
+  msg->response = read_blocks(msg->start, msg->blocks, msg->buffer.get(), msg->blocks * _block_size);
   complete_io_request(std::move(msg));
 
   KL_TRC_EXIT;
@@ -202,7 +202,7 @@ void ramdisk_device::write(std::unique_ptr<msg::io_msg> msg)
 {
   KL_TRC_ENTRY;
 
-  msg->response = write_blocks(msg->start, msg->blocks, msg->buffer, msg->blocks * _block_size);
+  msg->response = write_blocks(msg->start, msg->blocks, msg->buffer.get(), msg->blocks * _block_size);
   complete_io_request(std::move(msg));
 
   KL_TRC_EXIT;

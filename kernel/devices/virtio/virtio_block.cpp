@@ -109,7 +109,7 @@ void block_device::read(std::unique_ptr<msg::io_msg> msg)
   KL_TRC_ENTRY;
 
   ASSERT(msg);
-  kl_trc_trace(TRC_LVL::FLOW, "Read request: start: ", msg->start, ", blocks: ", msg->blocks, "\n");
+  KL_TRC_TRACE(TRC_LVL::FLOW, "Read request: start: ", msg->start, ", blocks: ", msg->blocks, "\n");
 
   std::shared_ptr<block_request_wrapper> req = std::make_shared<block_request_wrapper>(std::move(msg));
 
@@ -127,7 +127,7 @@ void block_device::read(std::unique_ptr<msg::io_msg> msg)
   descs[0].device_writable = false;
   descs[0].type = descriptor_type::REQUEST;
 
-  descs[1].buffer = req->msg->buffer;
+  descs[1].buffer = req->msg->buffer.get();
   descs[1].buffer_length =  512 * req->msg->blocks;
   descs[1].device_writable = true;
   descs[1].parent_request = req;
