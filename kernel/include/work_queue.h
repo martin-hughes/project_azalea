@@ -7,13 +7,12 @@
 #include <memory>
 #include <queue>
 #include <functional>
+#include <list>
 #include "types/spinlock.h"
 #include "types/common_messages.h"
 
 namespace work
 {
-  void init_queue();
-
 #ifdef AZALEA_TEST_CODE
   void test_only_terminate_queue();
 #endif
@@ -22,9 +21,9 @@ namespace work
   [[noreturn]]
 #endif
   void work_queue_thread();
-  void work_queue_one_loop();
 
-  // Forward declarations necessary to create the queue_message function.
+  // Forward declarations necessary to create the queue_message function. This must be done here to allow it to be a
+  // friend later on.
   class message_receiver;
   struct message_header;
   void queue_message(std::shared_ptr<message_receiver> receiver, std::unique_ptr<msg::root_msg> msg);
@@ -98,8 +97,7 @@ namespace work
 
     virtual void register_handler(uint64_t message_id, msg_handler<msg::root_msg> handler);
 
-  private:
-    // ... the message queue storage and handling.
+  public:
 
     /// @cond
     // doxygen inexplicably wants to document this whole thing all over again...
@@ -117,4 +115,45 @@ namespace work
     /// Maps message IDs to functions that handle those messages.
     std::map<uint64_t, msg_handler<msg::root_msg>> msg_receivers;
   };
+
+  // Interface describing the work queue system
+  //
+  class IWorkQueue
+  {
+  public:
+    virtual ~IWorkQueue() = default;
+
+    virtual void queue_message(std::shared_ptr<message_receiver> receiver, std::unique_ptr<msg::root_msg> msg) = 0;
+    virtual void work_queue_one_loop() = 0;
+  };
+
+  //
+  class default_work_queue : public IWorkQueue
+  {
+  public:
+    default_work_queue() = default;
+    virtual ~default_work_queue() = default;
+
+    virtual void queue_message(std::shared_ptr<message_receiver> receiver, std::unique_ptr<msg::root_msg> msg) override;
+    virtual void work_queue_one_loop() override;
+
+  protected:
+    /// @brief A list of objects with messages pending.
+    std::list<std::weak_ptr<message_receiver>> receiver_queue;
+
+    /// @brief Lock for receiver_queue.
+    ipc::raw_spinlock receiver_queue_lock = 0;
+  };
+
+  extern IWorkQueue *system_queue;
+
+  /// @brief Initialise the system-wide work queue.
+  template <class wq = default_work_queue> void init_queue()
+  {
+    KL_TRC_ENTRY;
+
+    system_queue = new wq();
+
+    KL_TRC_EXIT;
+  }
 };

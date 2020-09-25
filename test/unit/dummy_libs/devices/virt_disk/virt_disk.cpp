@@ -137,3 +137,15 @@ ERR_CODE virtual_disk_dummy_device::write_blocks(uint64_t start_block,
 
   return return_val;
 }
+
+void virtual_disk_dummy_device::read(std::unique_ptr<msg::io_msg> msg)
+{
+  msg->response = read_blocks(msg->start, msg->blocks, msg->buffer.get(), msg->blocks * block_size());
+  complete_io_request(std::move(msg));
+}
+
+void virtual_disk_dummy_device::write(std::unique_ptr<msg::io_msg> msg)
+{
+  msg->response = write_blocks(msg->start, msg->blocks, msg->buffer.get(), msg->blocks * block_size());
+  complete_io_request(std::move(msg));
+}

@@ -3,6 +3,8 @@
 #include "../devices/block/proxy/block_proxy.h"
 #include "../devices/block/ramdisk/ramdisk.h"
 #include "types/block_wrapper.h"
+#include "dummy_libs/system/test_system.h"
+#include "dummy_libs/work_queue/work_queue.dummy.h"
 
 #include <memory>
 
@@ -13,12 +15,15 @@ protected:
 
 const unsigned long buffer_len = 20;
 
+using system_class = test_system_factory<non_queueing>;
+
 TEST(BlockProxyTest, SimpleTests)
 {
   const char inbuffer[] = "12345678901234567890";
   std::shared_ptr<ramdisk_device> raw_device(new ramdisk_device(10, 2));
-  std::shared_ptr<BlockWrapper> device = std::make_shared<BlockWrapper>(raw_device);
+  std::shared_ptr<BlockWrapper> device = BlockWrapper::create(raw_device);
   std::unique_ptr<char[]> buffer(new char[buffer_len]);
+  std::shared_ptr<system_class> test_system = std::make_shared<system_class>();
 
   ASSERT_TRUE(raw_device->start());
 
@@ -29,7 +34,7 @@ TEST(BlockProxyTest, SimpleTests)
   ASSERT_EQ(device->write_blocks(0, 10, (void * )inbuffer, 20), ERR_CODE::NO_ERROR);
 
   std::shared_ptr<block_proxy_device> raw_proxy(new block_proxy_device(raw_device, 2, 2));
-  std::shared_ptr<BlockWrapper> proxy = std::make_shared<BlockWrapper>(raw_proxy);
+  std::shared_ptr<BlockWrapper> proxy = BlockWrapper::create(raw_proxy);
 
   ASSERT_TRUE(raw_proxy->start());
 

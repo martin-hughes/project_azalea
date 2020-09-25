@@ -8,6 +8,8 @@
 #include "../devices/block/proxy/block_proxy.h"
 #include "../system_tree/fs/fat/fat_fs.h"
 
+#include "dummy_libs/system/test_system.h"
+#include "dummy_libs/work_queue/work_queue.dummy.h"
 #include "dummy_libs/devices/virt_disk/virt_disk.h"
 
 #include "types/block_wrapper.h"
@@ -44,6 +46,8 @@ namespace
 
 const uint32_t block_size = 512;
 
+using system_class = test_system_factory<non_queueing>;
+
 class FatFsReadTests : public ::testing::TestWithParam<std::tuple<test_file_details, const char *>>
 {
 protected:
@@ -51,15 +55,18 @@ protected:
   shared_ptr<BlockWrapper> backing_storage;
   shared_ptr<fat_filesystem> filesystem;
   shared_ptr<block_proxy_device> proxy;
+  shared_ptr<system_class> test_system;
 
   FatFsReadTests() = default;
   ~FatFsReadTests() = default;
 
   void SetUp() override
   {
+    test_system = std::make_shared<system_class>();
+
     auto [test_details, disk_image_name] = GetParam();
     this->raw_backing_storage = make_shared<virtual_disk_dummy_device>(disk_image_name, block_size);
-    this->backing_storage = make_shared<BlockWrapper>(raw_backing_storage);
+    this->backing_storage = BlockWrapper::create(raw_backing_storage);
     std::unique_ptr<uint8_t[]> sector_buffer(new uint8_t[512]);
     uint32_t start_sector;
     uint32_t sector_count;
@@ -78,7 +85,7 @@ protected:
     memcpy(&start_sector, sector_buffer.get() + 454, 4);
     memcpy(&sector_count, sector_buffer.get() + 458, 4);
 
-    proxy = make_shared<block_proxy_device>(backing_storage, start_sector, sector_count);
+    proxy = make_shared<block_proxy_device>(raw_backing_storage, start_sector, sector_count);
 
     ASSERT_TRUE(proxy->start());
 
@@ -91,6 +98,8 @@ protected:
   void TearDown() override
   {
     test_only_reset_name_counts();
+
+    test_system = nullptr;
   };
 };
 

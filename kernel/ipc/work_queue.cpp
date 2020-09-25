@@ -17,22 +17,12 @@ using namespace work;
 
 namespace
 {
-  /// @brief A list of objects with messages pending.
-  std::list<std::weak_ptr<message_receiver>> *receiver_queue = nullptr;
-
-  /// @brief Lock for receiver_queue.
-  ipc::raw_spinlock receiver_queue_lock = 0;
+  ipc::raw_spinlock queue_ptr_lock{0};
 }
 
-/// @brief Initialise the system-wide work queue.
-void work::init_queue()
+namespace work
 {
-  KL_TRC_ENTRY;
-
-  ASSERT(!receiver_queue);
-  receiver_queue = new std::list<std::weak_ptr<message_receiver>>();
-
-  KL_TRC_EXIT;
+  IWorkQueue *system_queue{nullptr};
 }
 
 #ifdef AZALEA_TEST_CODE
@@ -41,10 +31,10 @@ void work::test_only_terminate_queue()
 {
   KL_TRC_ENTRY;
 
-  ASSERT(receiver_queue != nullptr);
-  delete receiver_queue;
-  receiver_queue = nullptr;
-  receiver_queue_lock = 0;
+  ASSERT(system_queue != nullptr);
+  delete system_queue;
+  system_queue = nullptr;
+  queue_ptr_lock = 0;
 
   KL_TRC_EXIT;
 }
@@ -67,17 +57,18 @@ void work::work_queue_thread()
   // operations.
   task_get_cur_thread()->is_worker_thread = true;
 
+
   // Construct the queue of objects requiring servicing, it it doesn't exist.
-  ipc_raw_spinlock_lock(receiver_queue_lock);
-  if (receiver_queue == nullptr)
+  ipc_raw_spinlock_lock(queue_ptr_lock);
+  if (system_queue == nullptr)
   {
-    init_queue();
+    init_queue<work::default_work_queue>();
   }
-  ipc_raw_spinlock_unlock(receiver_queue_lock);
+  ipc_raw_spinlock_unlock(queue_ptr_lock);
 
   while(1)
   {
-    work_queue_one_loop();
+    system_queue->work_queue_one_loop();
 #ifdef AZALEA_TEST_CODE
     if (test_exit_work_queue)
     {
@@ -97,7 +88,7 @@ void work::work_queue_thread()
 /// - Handle any messages destined for that object.
 /// - Move to the next object.
 /// - If there are no messages, wait.
-void work::work_queue_one_loop()
+void work::default_work_queue::work_queue_one_loop()
 {
   std::weak_ptr<message_receiver> receiver_wk;
   std::shared_ptr<message_receiver> receiver_str;
@@ -106,11 +97,11 @@ void work::work_queue_one_loop()
 
   // Attempt to get an object to work on.
   ipc_raw_spinlock_lock(receiver_queue_lock);
-  if (receiver_queue->size() != 0)
+  if (receiver_queue.size() != 0)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieve front receiver\n");
-    receiver_wk = receiver_queue->front();
-    receiver_queue->pop_front();
+    receiver_wk = receiver_queue.front();
+    receiver_queue.pop_front();
     receiver_str = receiver_wk.lock();
     if (receiver_str)
     {
@@ -138,6 +129,16 @@ void work::work_queue_one_loop()
   KL_TRC_EXIT;
 }
 
+void work::queue_message(std::shared_ptr<work::message_receiver> receiver, std::unique_ptr<msg::root_msg> msg)
+{
+  KL_TRC_ENTRY;
+
+  ASSERT(system_queue);
+  system_queue->queue_message(receiver, std::move(msg));
+
+  KL_TRC_EXIT;
+}
+
 /// @brief Queue a message for later handling by this object.
 ///
 /// It is very unlikely that child classes need to override this function.
@@ -147,7 +148,8 @@ void work::work_queue_one_loop()
 /// @param receiver The object that should handle this message.
 ///
 /// @param msg The message being sent.
-void work::queue_message(std::shared_ptr<work::message_receiver> receiver, std::unique_ptr<msg::root_msg> msg)
+void work::default_work_queue::queue_message(std::shared_ptr<work::message_receiver> receiver,
+                                             std::unique_ptr<msg::root_msg> msg)
 {
   KL_TRC_ENTRY;
 
@@ -163,8 +165,7 @@ void work::queue_message(std::shared_ptr<work::message_receiver> receiver, std::
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Queue this object for later handling\n");
     ipc_raw_spinlock_lock(receiver_queue_lock);
-    ASSERT(receiver_queue);
-    receiver_queue->push_back(receiver);
+    receiver_queue.push_back(receiver);
     receiver->is_in_receiver_queue = true;
     ipc_raw_spinlock_unlock(receiver_queue_lock);
   }
@@ -257,10 +258,6 @@ bool message_receiver::process_next_message()
 void message_receiver::begin_processing_msgs()
 {
   KL_TRC_ENTRY;
-
-  // This doesn't guarantee that we're the thread owning the lock, but over time if there's a bug then we should hit
-  // this assert by statistics.
-  ASSERT(receiver_queue_lock != 0);
 
   ipc_raw_spinlock_lock(queue_lock);
   is_in_receiver_queue = false;

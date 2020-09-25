@@ -42,7 +42,7 @@ void basic_msg_receiver_mt::handle_message(std::unique_ptr<msg::root_msg> msg)
 
 extern bool test_exit_work_queue;
 
-TEST(WorkQueue2Tests, MultiThreadSimpleTest)
+TEST(WorkQueue3Tests, MultiThreadSimpleTest)
 {
   // Manual setup and teardown.
   work::init_queue();

@@ -27,8 +27,8 @@ TEST(RamdiskMsgTest, ReadWrite)
   const unsigned int block_size = 512;
   std::shared_ptr<ramdisk_device> device(new ramdisk_device(num_blocks, block_size));
   device->start();
-  std::unique_ptr<char[]> buffer_in(new char[num_blocks * block_size]);
-  std::unique_ptr<char[]> buffer_out(new char[num_blocks * block_size]);
+  std::shared_ptr<uint8_t> buffer_in(new uint8_t[num_blocks * block_size], std::default_delete<uint8_t[]>());
+  std::shared_ptr<uint8_t> buffer_out(new uint8_t[num_blocks * block_size], std::default_delete<uint8_t[]>());
   std::shared_ptr<MsgBuffer> sender_obj = std::make_shared<MsgBuffer>();
   std::unique_ptr<msg::io_msg> msg = std::make_unique<msg::io_msg>();
   std::unique_ptr<msg::root_msg> recv_msg;
@@ -38,14 +38,14 @@ TEST(RamdiskMsgTest, ReadWrite)
 
   for (unsigned int i = 0; i < (num_blocks * block_size); i++)
   {
-    buffer_in[i] = (i / 512);
+    buffer_in.get()[i] = (i / 512);
   }
 
   // Write buffer to device.
 
   msg->start = 0;
   msg->blocks = num_blocks;
-  msg->buffer = buffer_in.get();
+  msg->buffer = buffer_in;
   msg->sender = std::dynamic_pointer_cast<work::message_receiver>(sender_obj);
   msg->request = msg::io_msg::REQS::WRITE;
 
@@ -54,8 +54,8 @@ TEST(RamdiskMsgTest, ReadWrite)
 
   work::queue_message(device_recv, std::move(msg));
 
-  work::work_queue_one_loop(); // Message sent to ramdisk.
-  work::work_queue_one_loop(); // Reply message returned.
+  work::system_queue->work_queue_one_loop(); // Message sent to ramdisk.
+  work::system_queue->work_queue_one_loop(); // Reply message returned.
 
   ASSERT_EQ(sender_obj->messages.size(), 1);
   recv_msg = std::move(sender_obj->messages.front());
@@ -70,15 +70,15 @@ TEST(RamdiskMsgTest, ReadWrite)
   msg = std::make_unique<msg::io_msg>();
   msg->start = 0;
   msg->blocks = num_blocks;
-  msg->buffer = buffer_out.get();
+  msg->buffer = buffer_out;
   msg->sender = std::dynamic_pointer_cast<work::message_receiver>(sender_obj);
   msg->request = msg::io_msg::REQS::READ;
 
 
   work::queue_message(device_recv, std::move(msg));
 
-  work::work_queue_one_loop(); // Message sent to ramdisk.
-  work::work_queue_one_loop(); // Reply message returned.
+  work::system_queue->work_queue_one_loop(); // Message sent to ramdisk.
+  work::system_queue->work_queue_one_loop(); // Reply message returned.
 
   ASSERT_EQ(sender_obj->messages.size(), 1);
   recv_msg = std::move(sender_obj->messages.front());

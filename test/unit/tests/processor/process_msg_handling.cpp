@@ -89,8 +89,8 @@ TEST_F(IPCTests, InterprocessMessages1)
   ASSERT_EQ(res, ERR_CODE::NO_ERROR);
 
   // Make sure these messages are moved through the queue.
-  work::work_queue_one_loop();
-  work::work_queue_one_loop();
+  work::system_queue->work_queue_one_loop();
+  work::system_queue->work_queue_one_loop();
 
   // Receive the first message.
   test_only_set_cur_thread(thread_b.get());

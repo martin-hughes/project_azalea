@@ -9,6 +9,8 @@
 #include "../devices/block/proxy/block_proxy.h"
 #include "../system_tree/fs/fat/fat_fs.h"
 
+#include "dummy_libs/system/test_system.h"
+#include "dummy_libs/work_queue/work_queue.dummy.h"
 #include "dummy_libs/devices/virt_disk/virt_disk.h"
 
 #include "gtest/gtest.h"
@@ -42,12 +44,16 @@ namespace
 
 const uint32_t block_size = 512;
 
+using system_class = test_system_factory<non_queueing>;
+
 class FatFsDeleteTests : public ::testing::TestWithParam<std::tuple<test_file_details, const char *>>
 {
 protected:
-  shared_ptr<virtual_disk_dummy_device> backing_storage;
+  shared_ptr<virtual_disk_dummy_device> raw_backing_storage;
+  shared_ptr<BlockWrapper> backing_storage;
   shared_ptr<fat_filesystem> filesystem;
   shared_ptr<block_proxy_device> proxy;
+  shared_ptr<system_class> test_system;
 
   FatFsDeleteTests() = default;
   ~FatFsDeleteTests() = default;
@@ -56,6 +62,8 @@ protected:
 
   void SetUp() override
   {
+    test_system = std::make_shared<system_class>();
+
     auto [test_details, disk_image_name] = GetParam();
 
     // Firstly, make a copy of the image file in a temporary location.
@@ -63,14 +71,15 @@ protected:
 
     filesystem::copy(disk_image_name, image_temp_name);
 
-    this->backing_storage = make_shared<virtual_disk_dummy_device>(image_temp_name.c_str(), block_size);
+    this->raw_backing_storage = make_shared<virtual_disk_dummy_device>(image_temp_name.c_str(), block_size);
+    this->backing_storage = BlockWrapper::create(raw_backing_storage);
     std::unique_ptr<uint8_t[]> sector_buffer(new uint8_t[512]);
     uint32_t start_sector;
     uint32_t sector_count;
     uint32_t write_blocks;
 
     memset(sector_buffer.get(), 0, 512);
-    ASSERT_TRUE(backing_storage->start());
+    ASSERT_TRUE(raw_backing_storage->start());
     ASSERT_EQ(ERR_CODE::NO_ERROR, backing_storage->read_blocks(0, 1, sector_buffer.get(), 512)) << "Virt. disk failed";
 
     // Confirm that we've loaded a valid MBR
@@ -81,7 +90,7 @@ protected:
     memcpy(&start_sector, sector_buffer.get() + 454, 4);
     memcpy(&sector_count, sector_buffer.get() + 458, 4);
 
-    proxy = make_shared<block_proxy_device>(backing_storage.get(), start_sector, sector_count);
+    proxy = make_shared<block_proxy_device>(raw_backing_storage, start_sector, sector_count);
 
     ASSERT_TRUE(proxy->start());
     ASSERT_EQ(OPER_STATUS::OK, proxy->get_device_status());
@@ -102,6 +111,8 @@ protected:
       cout << "Not removing temporary file: " << image_temp_name << endl;
     }
     test_only_reset_name_counts();
+
+    test_system = nullptr;
   };
 };
 

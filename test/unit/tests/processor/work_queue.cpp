@@ -7,6 +7,10 @@
 #include "work_queue.h"
 
 #include <iostream>
+using namespace std;
+
+#include "../../dummy_libs/system/test_system.h"
+
 
 class basic_msg_receiver : public work::message_receiver
 {
@@ -31,11 +35,29 @@ void basic_msg_receiver::handle_message(std::unique_ptr<msg::root_msg> msg)
 
 }
 
-TEST(WorkQueue2Tests, SingleItemManualProcess)
-{
-  // Manual setup and teardown.
-  work::init_queue();
+using test_system = test_system_factory<work::default_work_queue>;
 
+class WorkQueue2Tests : public ::testing::Test
+{
+protected:
+  virtual void SetUp() override;
+  virtual void TearDown() override;
+
+  std::shared_ptr<test_system> system;
+};
+
+void WorkQueue2Tests::SetUp()
+{
+  system = std::make_shared<test_system>();
+}
+
+void WorkQueue2Tests::TearDown()
+{
+  system = nullptr;
+}
+
+TEST_F(WorkQueue2Tests, SingleItemManualProcess)
+{
   std::unique_ptr<handled_msg> msg_ptr = std::make_unique<handled_msg>();
 
   auto receiver = std::make_shared<basic_msg_receiver>();
@@ -43,30 +65,20 @@ TEST(WorkQueue2Tests, SingleItemManualProcess)
 
   bool complete = !receiver->process_next_message();
   ASSERT_TRUE(complete);
-
-  work::test_only_terminate_queue();
 }
 
-TEST(WorkQueue2Tests, SingleItemAutoProcess)
+TEST_F(WorkQueue2Tests, SingleItemAutoProcess)
 {
-  // Manual setup and teardown.
-  work::init_queue();
-
   std::unique_ptr<handled_msg> msg_ptr = std::make_unique<handled_msg>();
 
   auto receiver = std::make_shared<basic_msg_receiver>();
   work::queue_message(receiver, std::move(msg_ptr));
 
-  work::work_queue_one_loop();
-
-  work::test_only_terminate_queue();
+  work::system_queue->work_queue_one_loop();
 }
 
-TEST(WorkQueue2Tests, ThreeItemManualProcess)
+TEST_F(WorkQueue2Tests, ThreeItemManualProcess)
 {
-  // Manual setup and teardown.
-  work::init_queue();
-
   std::unique_ptr<handled_msg> msg_ptr_a = std::make_unique<handled_msg>();
   std::unique_ptr<handled_msg> msg_ptr_b = std::make_unique<handled_msg>();
   std::unique_ptr<handled_msg> msg_ptr_c = std::make_unique<handled_msg>();
@@ -86,15 +98,10 @@ TEST(WorkQueue2Tests, ThreeItemManualProcess)
   // Make sure processing a message while none is waiting does something sensible.
   complete = !receiver->process_next_message();
   ASSERT_TRUE(complete);
-
-  work::test_only_terminate_queue();
 }
 
-TEST(WorkQueue2Tests, ThreeItemAutoProcess)
+TEST_F(WorkQueue2Tests, ThreeItemAutoProcess)
 {
-  // Manual setup and teardown.
-  work::init_queue();
-
   std::unique_ptr<handled_msg> msg_ptr_a = std::make_unique<handled_msg>();
   std::unique_ptr<handled_msg> msg_ptr_b = std::make_unique<handled_msg>();
   std::unique_ptr<handled_msg> msg_ptr_c = std::make_unique<handled_msg>();
@@ -104,20 +111,15 @@ TEST(WorkQueue2Tests, ThreeItemAutoProcess)
   work::queue_message(receiver, std::move(msg_ptr_b));
   work::queue_message(receiver, std::move(msg_ptr_c));
 
-  work::work_queue_one_loop();
-  work::work_queue_one_loop();
-  work::work_queue_one_loop();
+  work::system_queue->work_queue_one_loop();
+  work::system_queue->work_queue_one_loop();
+  work::system_queue->work_queue_one_loop();
   // Make sure the single iteration function returns if no work to be done.
-  work::work_queue_one_loop();
-
-  work::test_only_terminate_queue();
+  work::system_queue->work_queue_one_loop();
 }
 
-TEST(WorkQueue2Tests, ReceiverDestroyed)
+TEST_F(WorkQueue2Tests, ReceiverDestroyed)
 {
-  // Manual setup and teardown.
-  work::init_queue();
-
   std::unique_ptr<handled_msg> msg_ptr = std::make_unique<handled_msg>();
 
   {
@@ -126,7 +128,5 @@ TEST(WorkQueue2Tests, ReceiverDestroyed)
   }
 
   // No messages should be handled.
-  work::work_queue_one_loop();
-
-  work::test_only_terminate_queue();
+  work::system_queue->work_queue_one_loop();
 }
