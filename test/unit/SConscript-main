@@ -14,15 +14,15 @@ files = [ "dummy_libs/processor/processor.dummy.cpp",
           "tests/devices/block/ramdisk/ramdisk_tests_msg.cpp",
           "tests/devices/dev_monitor.cpp",
 
-          "tests/misc/ds_1.cpp",
-
-          "tests/misc/maths_1.cpp",
+          "tests/ipc/synch_1.cpp",
+          "tests/ipc/synch_2_lock_wrapper.cpp",
 
           "tests/mem/memory_1.cpp",
           "tests/mem/memory_2.cpp",
 
-          "tests/ipc/synch_1.cpp",
-          "tests/ipc/synch_2_lock_wrapper.cpp",
+          "tests/misc/ds_1.cpp",
+          "tests/misc/maths_1.cpp",
+          "tests/misc/tracing_1.cpp",
 
           "tests/object_mgr/object_mgr_1.cpp",
           "tests/object_mgr/object_mgr_2.cpp",
@@ -34,6 +34,8 @@ files = [ "dummy_libs/processor/processor.dummy.cpp",
           "tests/processor/synch_objects.cpp",
           "tests/processor/work_queue.cpp",
           "tests/processor/work_queue_mt.cpp",
+
+          "tests/self_test/test_semaphores.cpp",
 
           "tests/system_tree/system_tree_1.cpp",
           "tests/system_tree/system_tree_2.cpp",
@@ -50,8 +52,6 @@ files = [ "dummy_libs/processor/processor.dummy.cpp",
 
           "tests/system_tree/fs/mem/mem_fs_1_basic.cpp",
           "tests/system_tree/fs/mem/mem_fs_2_syscall.cpp",
-
-          "tests/misc/tracing_1.cpp",
         ]
 
 for f in files:
