@@ -119,7 +119,7 @@ def main_build_script(linux_build, config_env):
   test_script_env.AppendENVPath(additional_include_tag, '#/kernel/interface')
   test_script_env.AppendENVPath(additional_include_tag, '#/external/googletest/googletest/')
   tests_obj = default_build_script(dependencies.main_tests, exe_name, test_script_env, "main_tests", "main_tests", True, False, None)
-  #Default(tests_obj)
+  Default(tests_obj)
 
   if not clang_build:
     # Remove the idb, pdb, map and ilk files when doing a clean.
