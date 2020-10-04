@@ -120,20 +120,17 @@ void dev_root_branch::scan_for_devices()
   uint64_t end_time = start_time + (10ULL * 1000 * 1000 * 1000); // i.e. max wait of 10 seconds.
 
   std::shared_ptr<IHandledObject> hdd_leaf;
-  //std::shared_ptr<ata::generic_device> hdd_dev;
-  std::shared_ptr<virtio::block_device> hdd_dev;
+  std::shared_ptr<ata::generic_device> hdd_dev;
   bool ready{false};
 
   // Keep trying to get the first ATA device until it is ready or we run out of time.
   // There's an obvious assumption here that ATA1 is the desired HDD...
   while (time_get_system_timer_count(true) < end_time)
   {
-    //if (system_tree()->get_child("\\dev\\all\\ata1", hdd_leaf) == ERR_CODE::NO_ERROR)
-    if (system_tree()->get_child("\\dev\\all\\virtio-blk1", hdd_leaf) == ERR_CODE::NO_ERROR)
+    if (system_tree()->get_child("\\dev\\all\\ata1", hdd_leaf) == ERR_CODE::NO_ERROR)
     {
       kl_trc_trace(TRC_LVL::FLOW, "Got device leaf\n");
-      //hdd_dev = std::dynamic_pointer_cast<ata::generic_device>(hdd_leaf);
-      hdd_dev = std::dynamic_pointer_cast<virtio::block_device> (hdd_leaf);
+      hdd_dev = std::dynamic_pointer_cast<ata::generic_device>(hdd_leaf);
       if (hdd_dev)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Got device object\n");

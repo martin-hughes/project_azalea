@@ -8,6 +8,7 @@
 #include "map_helpers.h"
 
 #include <list>
+#include <mutex>
 
 #ifdef AZALEA_TEST_CODE
 #include <thread>
@@ -95,30 +96,49 @@ void work::default_work_queue::work_queue_one_loop()
 
   KL_TRC_ENTRY;
 
-  // Attempt to get an object to work on.
-  ipc_raw_spinlock_lock(receiver_queue_lock);
-  if (receiver_queue.size() != 0)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieve front receiver\n");
-    receiver_wk = receiver_queue.front();
-    receiver_queue.pop_front();
-    receiver_str = receiver_wk.lock();
-    if (receiver_str)
+    std::unique_lock<ipc::spinlock> receiver_queue_guard(receiver_queue_lock);
+
+    // Attempt to get an object to work on.
+    if (receiver_queue.size() != 0)
     {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Got receiver\n");
-      receiver_str->begin_processing_msgs();
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieve front receiver\n");
+      receiver_wk = receiver_queue.front();
+      receiver_queue.pop_front();
+      receiver_str = receiver_wk.lock();
+      if (receiver_str)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "Valid receiver, flag removed from queue\n");
+        receiver_str->is_in_receiver_queue = false;
+      }
+    }
+    else
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "No more work objects\n");
     }
   }
-  else
-  {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "No more work objects\n");
-  }
-  ipc_raw_spinlock_unlock(receiver_queue_lock);
 
   if (receiver_str)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Work on ", receiver_str.get(), "\n");
-    while(receiver_str->process_next_message()) { };
+    bool should_continue{receiver_str->ready_to_receive};
+    while(should_continue)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "One more message\n");
+      should_continue = receiver_str->process_next_message() && receiver_str->ready_to_receive;
+    }
+
+    // Check if we need to queue this object again.
+    std::unique_lock<ipc::spinlock> queue_lock(receiver_str->queue_lock);
+    std::unique_lock<ipc::spinlock> receiver_queue_guard(receiver_queue_lock);
+
+    if (!receiver_str->is_in_receiver_queue && !receiver_str->message_queue.empty())
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Outstanding messages - requeue\n");
+
+      receiver_queue.push_back(receiver_str);
+      receiver_str->is_in_receiver_queue = true;
+    }
   }
   else
   {
@@ -156,21 +176,20 @@ void work::default_work_queue::queue_message(std::shared_ptr<work::message_recei
   ASSERT(receiver);
   ASSERT(msg);
 
-  ipc_raw_spinlock_lock(receiver->queue_lock);
+  std::unique_lock<ipc::spinlock> guard(receiver->queue_lock);
 
   ASSERT(msg.get());
 
   receiver->message_queue.push(std::move(msg));
-  if (!receiver->is_in_receiver_queue && !receiver->in_process_mode)
+
+  std::unique_lock<ipc::spinlock> receiver_queue_guard(receiver_queue_lock);
+
+  if (!receiver->is_in_receiver_queue)
   {
     KL_TRC_TRACE(TRC_LVL::FLOW, "Queue this object for later handling\n");
-    ipc_raw_spinlock_lock(receiver_queue_lock);
     receiver_queue.push_back(receiver);
     receiver->is_in_receiver_queue = true;
-    ipc_raw_spinlock_unlock(receiver_queue_lock);
   }
-
-  ipc_raw_spinlock_unlock(receiver->queue_lock);
 
   KL_TRC_EXIT;
 }
@@ -179,8 +198,6 @@ void work::default_work_queue::queue_message(std::shared_ptr<work::message_recei
 message_receiver::message_receiver()
 {
   KL_TRC_ENTRY;
-
-  ipc_raw_spinlock_init(queue_lock);
 
   KL_TRC_EXIT;
 }
@@ -206,22 +223,19 @@ bool message_receiver::process_next_message()
 
   KL_TRC_ENTRY;
 
-  ipc_raw_spinlock_lock(queue_lock);
+  queue_lock.lock();
+
+  more_msgs = (message_queue.size() > 1);
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Number of messages: ", message_queue.size(), "\n");
 
   if (!message_queue.empty())
   {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Queue not empty\n");
     msg_header = std::move(message_queue.front());
     ASSERT(msg_header.get());
     message_queue.pop();
 
-    if (message_queue.empty())
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "No more messages\n");
-      in_process_mode = false;
-      more_msgs = false;
-    }
-
-    ipc_raw_spinlock_unlock(queue_lock);
+    queue_lock.unlock();
 
     if (msg_header->auto_signal_semaphore && msg_header->completion_semaphore)
     {
@@ -242,29 +256,15 @@ bool message_receiver::process_next_message()
   }
   else
   {
-    KL_TRC_TRACE(TRC_LVL::IMPORTANT, "No messages waiting - function called in error\n");
-    more_msgs = false;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Actually, no more messages\n");
+    queue_lock.unlock();
+    ASSERT(!more_msgs)
   }
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", more_msgs, "\n");
   KL_TRC_EXIT;
 
   return more_msgs;
-}
-
-/// @brief This must be called by the work system before any messages are dispatched.
-///
-/// It must not be called otherwise.
-void message_receiver::begin_processing_msgs()
-{
-  KL_TRC_ENTRY;
-
-  ipc_raw_spinlock_lock(queue_lock);
-  is_in_receiver_queue = false;
-  in_process_mode = true;
-  ipc_raw_spinlock_unlock(queue_lock);
-
-  KL_TRC_EXIT;
 }
 
 void message_receiver::register_handler(uint64_t message_id, work::msg_handler<msg::root_msg> handler)
@@ -290,6 +290,9 @@ void message_receiver::handle_message(std::unique_ptr<msg::root_msg> message)
   {
     // For now we ignore the message. In future, there might be a different action.
     KL_TRC_TRACE(TRC_LVL::FLOW, "Didn't find a handler\n");
+#ifdef AZ_STRICT_MESSAGE_HANDLING
+    panic("Didn't find message handler");
+#endif
   }
 
   KL_TRC_EXIT;

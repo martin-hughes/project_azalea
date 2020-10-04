@@ -1,5 +1,9 @@
 /// @file
 /// @brief Implementation of parts of an ATA Host Controller that are not dependent on the controller's architecture.
+//
+// Known defects:
+// - cmd_identify doesn't do any explicit waiting for a response. It currently relies on the ATA version which works
+//   via PIO and thus always completes synchronously.
 
 //#define ENABLE_TRACING
 
@@ -42,7 +46,7 @@ bool generic_controller::cmd_identify(identify_cmd_output &identity, uint16_t dr
 
   KL_TRC_ENTRY;
 
-  result = issue_command(drive_index, COMMANDS::IDENTIFY, 0, 1, 0, &identity, sizeof(identity));
+  result = issue_command(drive_index, COMMANDS::IDENTIFY, 0, 1, 0, &identity);
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;

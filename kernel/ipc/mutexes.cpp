@@ -45,6 +45,17 @@ bool ipc::base_mutex::try_lock()
 void ipc::base_mutex::unlock()
 {
   KL_TRC_ENTRY;
+  ASSERT(owner_thread == task_get_cur_thread());
+  unlock_ignore_owner();
+  KL_TRC_EXIT;
+}
+
+/// @brief Unlock the mutex, ignoring whether or not this thread is currently the owner.
+///
+/// This should be used sparingly. Consider using semaphores instead.
+void ipc::base_mutex::unlock_ignore_owner()
+{
+  KL_TRC_ENTRY;
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Releasing mutex ", this, " from thread ", task_get_cur_thread(), "\n");
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Owner thread: ", owner_thread, "\n");
 
@@ -53,7 +64,6 @@ void ipc::base_mutex::unlock()
   klib_list_item<std::shared_ptr<task_thread>> *next_owner;
 
   ASSERT(lock_count > 0);
-  ASSERT(owner_thread == task_get_cur_thread());
 
   lock_count--;
 

@@ -33,6 +33,12 @@ namespace work
   void ignore(std::unique_ptr<msg::root_msg> msg);
   void bad_conversion(std::unique_ptr<msg::root_msg> msg);
 
+#ifdef AZ_STRICT_MESSAGE_HANDLING
+#define FAILED_CONV bad_conversion
+#else
+#define FAILED_CONV ignore
+#endif
+
   /// @brief A message handler that converts the message to the appropriate type and forwards it to a better handler.
   ///
   /// @param msg The message, as stored in the work queue.
@@ -41,10 +47,10 @@ namespace work
   ///                this type.
   ///
   /// @param failure_handler Called if the message cannot be converted to the appropriate type. The default is to
-  ///                        simply ignore the message.
+  ///                        panic.
   template <class T> void generic_conversion(std::unique_ptr<msg::root_msg> msg,
                                              msg_handler<T> handler,
-                                             msg_handler<msg::root_msg> failure_handler = ignore)
+                                             msg_handler<msg::root_msg> failure_handler = FAILED_CONV)
   {
     T *type_msg = dynamic_cast<T *>(msg.get());
 
@@ -79,7 +85,6 @@ namespace work
     virtual ~message_receiver() = 0;
 
     // Documentation in work_queue.cpp
-    virtual void begin_processing_msgs();
     virtual bool process_next_message();
 
   protected:
@@ -95,6 +100,14 @@ namespace work
     /// @param message The message to handle.
     virtual void handle_message(std::unique_ptr<msg::root_msg> message);
 
+    /// @brief Register a handler for a given message ID.
+    ///
+    /// This handler is stored in a map that is referenced by the default handle_message() function. If that function
+    /// is overridden then this handler may not be called.
+    ///
+    /// @param message_id The message ID to register a handler for.
+    ///
+    /// @param handler A function to call when processing a message with the ID message_id.
     virtual void register_handler(uint64_t message_id, msg_handler<msg::root_msg> handler);
 
   public:
@@ -105,15 +118,18 @@ namespace work
     void work::queue_message(std::shared_ptr<message_receiver> receiver, std::unique_ptr<msg::root_msg> message);
     /// @endcond
     std::queue<std::unique_ptr<msg::root_msg>> message_queue; ///< The queue of messages stored for this object.
-    ipc::raw_spinlock queue_lock; ///< A lock protecting message_queue
-    bool in_process_mode{false}; ///< Are we processing message already?
+    ipc::spinlock queue_lock; ///< A lock protecting message_queue
 
-    /// Has this object already been added to the list of objects awaiting message handling?
-    ///
+    /// Has this object already been added to the list of objects awaiting message handling? This is quicker and faster
+    /// than searching the queue each time to figure out. This should always be protected by queue_lock, above.
     bool is_in_receiver_queue{false};
 
     /// Maps message IDs to functions that handle those messages.
     std::map<uint64_t, msg_handler<msg::root_msg>> msg_receivers;
+
+    /// Is this handler ready to receive further messages? (For example, it might be waiting to for a device to finish
+    /// working before being able to process another request)
+    bool ready_to_receive{true};
   };
 
   // Interface describing the work queue system
@@ -142,7 +158,7 @@ namespace work
     std::list<std::weak_ptr<message_receiver>> receiver_queue;
 
     /// @brief Lock for receiver_queue.
-    ipc::raw_spinlock receiver_queue_lock = 0;
+    ipc::spinlock receiver_queue_lock;
   };
 
   extern IWorkQueue *system_queue;

@@ -22,6 +22,8 @@
 #include "device_monitor.h"
 #include "processor.h"
 
+#include <mutex>
+
 using namespace ata;
 
 /// @brief Normal constructor for PCI ATA Host Controllers
@@ -33,6 +35,7 @@ pci_controller::pci_controller(pci_address address) :
   KL_TRC_ENTRY;
 
   set_device_status(OPER_STATUS::STOPPED);
+  register_handler(SM_ATA_CMD, DEF_CONVERT_HANDLER(ata_queued_command, handle_ata_cmd));
 
   KL_TRC_EXIT;
 };
@@ -137,8 +140,7 @@ bool pci_controller::issue_command(uint16_t drive_index,
                                    uint16_t features,
                                    uint16_t count,
                                    uint64_t lba_addr,
-                                   void *buffer,
-                                   uint64_t buffer_len)
+                                   void *buffer)
 {
   bool result{true};
   uint8_t drive_select{0};
@@ -194,7 +196,6 @@ bool pci_controller::issue_command(uint16_t drive_index,
     }
 
     ipc_raw_spinlock_lock(cmd_spinlock);
-    interrupt_on_chan[drive.channel_number] = false;
 
     write_ata_cmd_port(drive_index, DRIVE_SELECT_PORT, drive_select);
     if (command_props.lba48_command)
@@ -221,9 +222,6 @@ bool pci_controller::issue_command(uint16_t drive_index,
         KL_TRC_TRACE(TRC_LVL::FLOW, "No device attached\n");
         result = false;
       }
-
-      // We don't get an interrupt when this command completes, for some reason, so fake it.
-      interrupt_on_chan[drive.channel_number] = true;
     }
 
     if (result && command_props.dma_command)
@@ -238,41 +236,47 @@ bool pci_controller::issue_command(uint16_t drive_index,
       KL_TRC_TRACE(TRC_LVL::FLOW, "Polling wait result: ", result, "\n");
     }
 
-    if (result && command_props.dma_command)
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "DMA command, await completion\n");
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Bus master status: ", read_bus_master_reg(STATUS, drive.channel_number), "\n");
-      stop_bus_master(drive.channel_number);
-    }
-
     if (result && command_props.reads_sectors)
     {
       // Read commands will have left data somewhere that needs to be copied to the requested target buffer.
-      if (dma_transfer_is_read)
-      {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "DMA read command, reading output\n");
-        dma_read_sectors_to_buffers();
-      }
-      else
+      if (!dma_transfer_is_read)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Non-DMA read command, reading output\n");
-        pio_read_sectors_to_buffer(drive_index, count, reinterpret_cast<unsigned char *>(buffer), buffer_len);
+        pio_read_sectors_to_buffer(drive_index, count, reinterpret_cast<unsigned char *>(buffer));
       }
     }
     else if (result && command_props.writes_sectors && !command_props.dma_command)
     {
       // Do the write.
-      result = pio_write_sectors_to_drive(drive_index, count, reinterpret_cast<uint8_t *>(buffer), buffer_len);
+      result = pio_write_sectors_to_drive(drive_index, count, reinterpret_cast<uint8_t *>(buffer));
     } // There's no DMA equivalent because the DMA has already done the copying.
-
-    if (command_props.dma_command)
-    {
-      KL_TRC_TRACE(TRC_LVL::FLOW, "Release DMA mutex\n");
-      dma_mutex.unlock();
-    }
 
     ipc_raw_spinlock_unlock(cmd_spinlock);
   }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+bool pci_controller::queue_command(uint16_t drive_index,
+                                   COMMANDS command,
+                                   uint16_t features,
+                                   std::unique_ptr<msg::io_msg> msg)
+{
+  bool result{true};
+
+  KL_TRC_ENTRY;
+
+  std::unique_ptr<ata_queued_command> cmd_msg = std::make_unique<ata_queued_command>();
+
+  cmd_msg->originator = std::move(msg);
+  cmd_msg->drive_index = drive_index;
+  cmd_msg->command = command;
+  cmd_msg->features = features;
+
+  work::queue_message(this->self_weak_ptr.lock(), std::move(cmd_msg));
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
@@ -327,8 +331,7 @@ uint8_t pci_controller::read_ata_cmd_port(uint16_t drive_index, ATA_PORTS port)
 
 /// @brief Wait until the most recently issued command has been completed.
 ///
-/// This means waiting for the device to interrupt that it is no longer busy and then confirming it using the status
-/// register.
+/// This simply means that the command has been executed by the controller. DMA transfers may still be in progress.
 ///
 /// @param drive_index The drive to wait for.
 ///
@@ -342,9 +345,6 @@ bool pci_controller::wait_for_cmd_completion(uint16_t drive_index)
 
   ASSERT(drive_index < MAX_DRIVE_IDX);
   channel = drives_by_index_num[drive_index].channel_number;
-
-  while (!interrupt_on_chan[channel]) { };
-  interrupt_on_chan[channel] = false;
 
   result = poll_wait_for_drive_not_busy(drive_index);
 
@@ -409,14 +409,12 @@ bool pci_controller::poll_wait_for_drive_not_busy(uint16_t drive_index)
 /// @param buffer_length The number of bytes in buffer.
 void pci_controller::pio_read_sectors_to_buffer(uint16_t drive_index,
                                                 uint16_t sectors,
-                                                unsigned char *buffer,
-                                                uint64_t buffer_length)
+                                                unsigned char *buffer)
 {
   KL_TRC_ENTRY;
 
   uint16_t *int_buffer = reinterpret_cast<uint16_t *>(buffer);
 
-  ASSERT(buffer_length >= SECTOR_LENGTH * sectors);
   ASSERT(drive_index < MAX_DRIVE_IDX);
 
   for (uint64_t i = 0; i < (SECTOR_LENGTH * sectors); i += 2)
@@ -526,20 +524,65 @@ void pci_controller::handle_translated_interrupt_slow(uint8_t interrupt_offset,
 {
   KL_TRC_ENTRY;
 
-  if (raw_interrupt_num == channel_irq_nums[0])
+  current_command_lock.lock();
+  if (current_command)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Primary interrupt\n");
-    interrupt_on_chan[0] = true;
+    drive_details &drive = drives_by_index_num[current_command->drive_index];
+    ASSERT(drive.channel_number < 2);
+    if (channel_irq_nums[drive.channel_number] == raw_interrupt_num)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "IRQ matches command\n");
+
+      bool dma_command = known_commands[static_cast<uint16_t>(current_command->command)].dma_command;
+      if (dma_command)
+      {
+        KL_TRC_TRACE(TRC_LVL::FLOW, "DMA command completed\n");
+        KL_TRC_TRACE(TRC_LVL::EXTRA, "Bus master status: ", read_bus_master_reg(STATUS, drive.channel_number), "\n");
+
+        stop_bus_master(drive.channel_number);
+
+        if (known_commands[static_cast<uint16_t>(current_command->command)].reads_sectors)
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "DMA read command, reading output\n");
+          dma_read_sectors_to_buffers();
+        }
+
+        current_command->message_id = SM_ATA_CMD_COMPLETE;
+        work::queue_message(drives_by_index_num[current_command->drive_index].child_ptr, std::move(current_command));
+
+        current_command.reset();
+        ready_to_receive = true;
+        dma_mutex.unlock_ignore_owner();
+      }
+    }
+    else
+    {
+      kl_trc_trace(TRC_LVL::IMPORTANT, "ATA controller received IRQ for a device that isn't being controlled.\n");
+    }
   }
-  else if (raw_interrupt_num == channel_irq_nums[1])
+  else
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Secondary interrupt\n");
-    interrupt_on_chan[1] = true;
+    KL_TRC_TRACE(TRC_LVL::FLOW, "No command being processed, ignore\n");
   }
+  current_command_lock.unlock();
 
   KL_TRC_EXIT;
 }
 
+/// @brief Begin preparing for a DMA transfer.
+///
+/// There are two parts to executing a DMA transfer on an ATA device. First, the controller needs to know the details
+/// of where the transfer is going to and from. Secondly, the ATA device needs to be commanded to begin the transfer.
+///
+/// This function advises the controller of an upcoming DMA transfer. If the controller can only process one DMA
+/// transfer at a time then it may choose to block until there is an opportunity to begin another DMA transfer.
+///
+/// @param is_read Is this a read from the device to RAM? If false, this is a write from RAM to device.
+///
+/// @param drive_index The drive this read or write is occuring on
+///
+/// @return True if the controller is now waiting for details of a DMA transfer to be given to it by
+///         queue_dma_transfer_block, false otherwise.
 bool pci_controller::start_prepare_dma_transfer(bool is_read, uint16_t drive_index)
 {
   bool result = true;
@@ -577,6 +620,17 @@ bool pci_controller::start_prepare_dma_transfer(bool is_read, uint16_t drive_ind
   return result;
 }
 
+/// @brief Program part of a DMA transfer into the controller.
+///
+/// DMA transfers can run in a scatter/gather mode, this function programs one element of the scattering or
+/// gathering.
+///
+/// @param buffer The buffer to read/write bytes to/from
+///
+/// @param bytes_this_block How many bytes to transfer from this buffer. If zero, 65536 bytes are transferred (as
+///                         per the ATA Host Controller specification).
+///
+/// @return True if this part of the transfer was queued successfully, false otherwise.
 bool pci_controller::queue_dma_transfer_block(void *buffer, uint16_t bytes_this_block)
 {
   bool result = true;
@@ -785,8 +839,7 @@ bool pci_controller::continue_with_dma_setup()
 /// @return True if the write succeeded, false if the drive failed.
 bool pci_controller::pio_write_sectors_to_drive(uint16_t drive_index,
                                                 uint16_t sectors,
-                                                uint8_t *buffer,
-                                                uint64_t buffer_length)
+                                                uint8_t *buffer)
 {
   bool result{true};
   uint16_t *buffer_16{reinterpret_cast<uint16_t *>(buffer)};
@@ -795,25 +848,17 @@ bool pci_controller::pio_write_sectors_to_drive(uint16_t drive_index,
 
   ASSERT(buffer_16 != nullptr);
 
-  if (buffer_length < (sectors * SECTOR_LENGTH))
+  for (uint16_t i = 0; i < sectors; i++)
   {
-    KL_TRC_TRACE(TRC_LVL::FLOW, "Insufficient data to write...\n");
-    result = false;
-  }
-  else
-  {
-    for (uint16_t i = 0; i < sectors; i++)
+    for (uint16_t j = 0; j < (SECTOR_LENGTH / 2); j++, buffer_16++)
     {
-      for (uint16_t j = 0; j < (SECTOR_LENGTH / 2); j++, buffer_16++)
-      {
-        proc_write_port(drives_by_index_num[drive_index].base_cmd_regs_port + DATA_PORT, *buffer_16, 16);
-      }
-      if (!poll_wait_for_drive_not_busy(drive_index))
-      {
-        KL_TRC_TRACE(TRC_LVL::FLOW, "Drive failed after ", i, " sectors\n");
-        result = false;
-        break;
-      }
+      proc_write_port(drives_by_index_num[drive_index].base_cmd_regs_port + DATA_PORT, *buffer_16, 16);
+    }
+    if (!poll_wait_for_drive_not_busy(drive_index))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Drive failed after ", i, " sectors\n");
+      result = false;
+      break;
     }
   }
 
@@ -823,6 +868,11 @@ bool pci_controller::pio_write_sectors_to_drive(uint16_t drive_index,
   return result;
 }
 
+/// @brief Finished programming DMA transfers in to the controller.
+///
+/// The controller can now write the PRD table pointer to the controller.
+///
+/// @return True.
 bool pci_controller::dma_transfer_blocks_queued()
 {
   bool result;
@@ -842,6 +892,151 @@ bool pci_controller::dma_transfer_blocks_queued()
   }
 
   KL_TRC_TRACE(TRC_LVL::FLOW, "Result: ", result, "\n");
+  KL_TRC_EXIT;
+
+  return result;
+}
+
+/// @brief Handle a queued ATA command.
+///
+/// ATA PCI controller uses the system work queue to dispatch it messages containing commands to execute, and this
+/// function executes them.
+void pci_controller::handle_ata_cmd(std::unique_ptr<ata_queued_command> msg)
+{
+  uint64_t blocks{0};
+  uint64_t start{0};
+  void *buffer{nullptr};
+  bool dma_command{false};
+  ERR_CODE result{ERR_CODE::NO_ERROR};
+
+  KL_TRC_ENTRY;
+
+  ASSERT(static_cast<uint16_t>(msg->command) < num_known_commands);
+
+  // We can only process one command at a time, so stop more messages being sent until we've dealt with this one.
+  // There's no need for thread synchronization on this variable because the queue system ensures only sends one
+  // message at a time. For PIO commands, this value has no effect, it only affects DMA commands where we return from
+  // this function before the DMA completes.
+  ready_to_receive = false;
+
+  current_command_lock.lock();
+  ASSERT(current_command == nullptr);
+  current_command.swap(msg);
+  current_command_lock.unlock();
+
+  if (current_command->originator)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Get some details from originator\n");
+    blocks = current_command->originator->blocks;
+    start = current_command->originator->start;
+    buffer = current_command->originator->buffer.get();
+    current_command->originator->response = ERR_CODE::NO_ERROR;
+  }
+
+  dma_command = known_commands[static_cast<uint16_t>(current_command->command)].dma_command;
+  if (dma_command)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "DMA command requested\n");
+    result = setup_dma_transfer(current_command->drive_index,
+                                known_commands[static_cast<uint16_t>(current_command->command)].reads_sectors,
+                                current_command->originator);
+    ASSERT(result == ERR_CODE::NO_ERROR);
+  }
+
+  if (!issue_command(current_command->drive_index,
+                     current_command->command,
+                     current_command->features,
+                     blocks,
+                     start,
+                     buffer))
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Immediate send failure\n");
+    if (current_command->originator)
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Send failure code\n");
+      current_command->originator->response = ERR_CODE::DEVICE_FAILED;
+    }
+  }
+
+  if (!dma_command)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Not a DMA command, clear current message. Also ready for next.\n");
+    current_command->message_id = SM_ATA_CMD_COMPLETE;
+    work::queue_message(drives_by_index_num[current_command->drive_index].child_ptr, std::move(current_command));
+
+    current_command_lock.lock();
+    current_command.reset(); // No check to see if this is still set because it might have been cleared by an interrupt.
+    current_command_lock.unlock();
+    ready_to_receive = true;
+  }
+
+  KL_TRC_EXIT;
+}
+
+/// @brief Given a request, set up the structures needed for the transfer and prepare the DMA controller
+///
+/// @param drive_index The index of the drive about to do a DMA transfer.
+///
+/// @param is_read Is this a read from the disk (true) or write to the disk (false)
+///
+/// @param msg The message triggering this request. (This contains the buffers, etc.)
+///
+/// @return A suitable error code.
+ERR_CODE pci_controller::setup_dma_transfer(uint16_t drive_index, bool is_read, std::unique_ptr<msg::io_msg> &msg)
+{
+  ASSERT(msg);
+
+  ERR_CODE result{ERR_CODE::NO_ERROR};
+  uint16_t blocks_this_part;
+  uint64_t blocks_left;
+  uint8_t *buffer_char_ptr;
+
+  KL_TRC_ENTRY;
+
+  if (!msg)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Request not provided\n");
+    result = ERR_CODE::INVALID_PARAM;
+  }
+  // This is the maximum number of 512-byte sectors our current host controller driver supports.
+  else if (msg->blocks > 3840)
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "Can only deal with slightly less than 2MB\n");
+    result = ERR_CODE::TRANSFER_TOO_LARGE;
+  }
+  else
+  {
+    KL_TRC_TRACE(TRC_LVL::FLOW, "No errors so far.\n");
+    if (!start_prepare_dma_transfer(is_read, drive_index))
+    {
+      KL_TRC_TRACE(TRC_LVL::FLOW, "Parent controller rejected DMA start attempt\n");
+      result = ERR_CODE::STORAGE_ERROR;
+    }
+    else
+    {
+      blocks_left = msg->blocks;
+      buffer_char_ptr = reinterpret_cast<uint8_t *>(msg->buffer.get());
+      // This block queues up as many 64kB transfer blocks as needed to complete the whole transfer.
+      while(blocks_left > 0)
+      {
+        // 128 is the number of 512-byte sectors in a 64kB transfer.
+        blocks_this_part = (blocks_left > 128) ? 128 : blocks_left;
+
+        if (!queue_dma_transfer_block(buffer_char_ptr, blocks_this_part * 512))
+        {
+          KL_TRC_TRACE(TRC_LVL::FLOW, "Failed to queue part of a DMA transfer\n");
+          break;
+        }
+
+        blocks_left -= blocks_this_part;
+        buffer_char_ptr += (blocks_this_part * 512);
+      }
+
+      dma_transfer_blocks_queued();
+    }
+  }
+
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Result: ", result, "\n");
   KL_TRC_EXIT;
 
   return result;

@@ -34,6 +34,7 @@ namespace ipc
     virtual void lock();
     virtual bool try_lock();
     virtual void unlock();
+    virtual void unlock_ignore_owner();
 
     virtual bool timed_lock(uint64_t wait_in_us);
     virtual bool am_owner();

@@ -24,6 +24,8 @@ static const uint64_t SM_USB_TRANSFER_COMPLETE = 11; /**< Requested USB transfer
 static const uint64_t SM_XHCI_CMD_COMPLETE = 12; /**< XHCI controller command complete */
 static const uint64_t SM_IO_MSG = 13; /**< Standard IO request message */
 static const uint64_t SM_IO_COMPLETE = 14; /**< IO Request complete message */
+static const uint64_t SM_ATA_CMD = 15; /**< ATA controller queued command */
+static const uint64_t SM_ATA_CMD_COMPLETE = 16; /**< ATA controller queued command response */
 
 /* System message structures */
 

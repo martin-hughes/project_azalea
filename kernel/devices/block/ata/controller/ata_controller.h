@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <memory>
+#include "types/common_messages.h"
 #include "../ata_structures.h"
 
 namespace ata
@@ -46,6 +48,25 @@ enum class COMMANDS : uint16_t
   /// @endcond
 };
 
+/// @brief Class to hold details of an ATA command.
+///
+/// This is then dispatched to the controller by the system work queue mechanism.
+class ata_queued_command : public msg::root_msg
+{
+public:
+  ata_queued_command() : root_msg{SM_ATA_CMD} { };
+  virtual ~ata_queued_command() = default;
+
+  ata_queued_command(const ata_queued_command &) = delete;
+  ata_queued_command(ata_queued_command &&) = delete;
+  ata_queued_command &operator=(const ata_queued_command &) = delete;
+
+  std::unique_ptr<msg::io_msg> originator; ///< The IO message responsible for causing this request.
+  uint16_t drive_index; ///< The drive index issuing this request.
+  COMMANDS command; ///< The command to execute.
+  uint16_t features; ///< Any features flags to apply.
+};
+
 const uint16_t SECTOR_LENGTH = 512; ///< The expected length of a single sector.
 
 /// @brief A Generic ATA Controller.
@@ -61,6 +82,21 @@ public:
 
   // Generic Commands Section:
 
+  virtual bool queue_command(uint16_t drive_index,
+                             COMMANDS command,
+                             uint16_t features,
+                             std::unique_ptr<msg::io_msg> msg) = 0;
+
+  /// @brief Does this controller support DMA-based transfers?
+  ///
+  /// @return True if the controller supports DMA based transfers, false otherwise. It is assumed that this state never
+  ///         changes.
+  virtual bool dma_transfer_supported() = 0;
+
+  // ATA Commands Section:
+  virtual bool cmd_identify(identify_cmd_output &identity, uint16_t drive_index);
+
+protected:
   /// @brief Issue a command to the device.
   ///
   /// @param drive_index Which drive to execute the command on.
@@ -75,61 +111,14 @@ public:
   ///
   /// @param buffer The buffer to write output to, or send inputs from.
   ///
-  /// @param buffer_len The number of bytes in buffer.
-  ///
   /// @return true if the command executed successfully, false otherwise.
   virtual bool issue_command(uint16_t drive_index,
                              COMMANDS command,
                              uint16_t features,
                              uint16_t count,
                              uint64_t lba_addr,
-                             void *buffer,
-                             uint64_t buffer_len) = 0;
+                             void *buffer) = 0;
 
-  /// @brief Does this controller support DMA-based transfers?
-  ///
-  /// @return True if the controller supports DMA based transfers, false otherwise. It is assumed that this state never
-  ///         changes.
-  virtual bool dma_transfer_supported() = 0;
-
-  /// @brief Begin preparing for a DMA transfer.
-  ///
-  /// There are two parts to executing a DMA transfer on an ATA device. First, the controller needs to know the details
-  /// of where the transfer is going to and from. Secondly, the ATA device needs to be commanded to begin the transfer.
-  ///
-  /// This function advises the controller of an upcoming DMA transfer. If the controller can only process one DMA
-  /// transfer at a time then it may choose to block until there is an opportunity to begin another DMA transfer.
-  ///
-  /// @param is_read Is this a read from the device to RAM? If false, this is a write from RAM to device.
-  ///
-  /// @param drive_index The drive this read or write is occuring on
-  ///
-  /// @return True if the controller is now waiting for details of a DMA transfer to be given to it by
-  ///         queue_dma_transfer_block, false otherwise.
-  virtual bool start_prepare_dma_transfer(bool is_read, uint16_t drive_index) = 0;
-
-  /// @brief Program part of a DMA transfer into the controller.
-  ///
-  /// DMA transfers can run in a scatter/gather mode, this function programs one element of the scattering or
-  /// gathering.
-  ///
-  /// @param buffer The buffer to read/write bytes to/from
-  ///
-  /// @param bytes_this_block How many bytes to transfer from this buffer. If zero, 65536 bytes are transferred (as
-  ///                         per the ATA Host Controller specification).
-  ///
-  /// @return True if this part of the transfer was queued successfully, false otherwise.
-  virtual bool queue_dma_transfer_block(void *buffer, uint16_t bytes_this_block) = 0;
-
-  /// @brief Finished programming DMA transfers in to the controller.
-  ///
-  /// The controller can now write the PRD table pointer to the controller.
-  ///
-  /// @return True.
-  virtual bool dma_transfer_blocks_queued() = 0;
-
-  // ATA Commands Section:
-  virtual bool cmd_identify(identify_cmd_output &identity, uint16_t drive_index);
 };
 
 }; // Namespace ata

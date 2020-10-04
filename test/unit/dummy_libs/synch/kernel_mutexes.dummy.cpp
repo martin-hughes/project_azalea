@@ -59,6 +59,17 @@ void ipc::base_mutex::unlock()
   KL_TRC_EXIT;
 }
 
+void ipc::base_mutex::unlock_ignore_owner()
+{
+  KL_TRC_ENTRY;
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Releasing mutex ", this, " from thread ", task_get_cur_thread(), "\n");
+  KL_TRC_TRACE(TRC_LVL::EXTRA, "Owner thread: ", owner_thread, "\n");
+
+  mutex_map[this]->unlock();
+
+  KL_TRC_EXIT;
+}
+
 /// @brief Attempt to lock the mutex, but with a timeout.
 ///
 /// @param wait_in_us The maximum number of microseconds to wait while trying to lock the mutex. If this is

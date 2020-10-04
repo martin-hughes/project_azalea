@@ -11,8 +11,8 @@ public:
                                std::unique_ptr<msg::root_msg> msg) override
     {
       ASSERT(receiver->message_queue.empty());
+      ASSERT(receiver->ready_to_receive); // We can't cope with asynchronous requests in this synchronous "queue".
       receiver->message_queue.push(std::move(msg));
-      receiver->begin_processing_msgs();
       receiver->process_next_message();
     };
 

@@ -170,6 +170,14 @@ public:
   bool stop() override;
   bool reset() override;
 
+  // Overrides of generic_controller:
+  virtual bool queue_command(uint16_t drive_index,
+                             COMMANDS command,
+                             uint16_t features,
+                             std::unique_ptr<msg::io_msg> msg) override;
+
+  virtual bool dma_transfer_supported() override;
+
 protected:
   static const uint16_t MAX_CHANNEL = 2; ///< How many channels are supported on this controller
   static const uint16_t DRIVES_PER_CHAN = 2; ///< How many drives are supported per channel?
@@ -198,44 +206,12 @@ protected:
   uint16_t num_prd_table_entries{0}; ///< Number of entries in PRD table for this transfer.
   bool dma_transfer_is_read{false}; ///< Is the next DMA operation a read (true) or write (false)?
   uint16_t dma_transfer_drive_idx{0}; ///< The index of the drive the DMA transfer will occur on.
-  volatile bool interrupt_on_chan[MAX_CHANNEL]{false, false}; ///< An interrupt has occurred on the given channel.
+
   /// Stores extra information about transfers.
-  ///
   dma_transfer_block_details transfer_block_details[max_prd_table_entries];
 
-public:
-  // Overrides of pci_generic_device:
-
-  // Overrides of generic_controller:
-  virtual bool start_prepare_dma_transfer(bool is_read, uint16_t drive_index) override;
-  virtual bool queue_dma_transfer_block(void *buffer, uint16_t bytes_this_block) override;
-  virtual bool dma_transfer_blocks_queued() override;
-  virtual bool issue_command(uint16_t drive_index,
-                             COMMANDS command,
-                             uint16_t features,
-                             uint16_t count,
-                             uint64_t lba_addr,
-                             void *buffer,
-                             uint64_t buffer_len) override;
-  virtual bool dma_transfer_supported() override;
-
-protected:
-  // Our own member functions.
-  void determine_ports();
-  void write_ata_cmd_port(uint16_t drive_index, ATA_PORTS port, uint8_t value);
-  uint8_t read_ata_cmd_port(uint16_t drive_index, ATA_PORTS port);
-  bool wait_for_cmd_completion(uint16_t drive_index);
-  bool poll_wait_for_drive_not_busy(uint16_t drive_index);
-  void pio_read_sectors_to_buffer(uint16_t drive_index,
-                                  uint16_t sectors,
-                                  unsigned char *buffer,
-                                  uint64_t buffer_length);
-  void dma_read_sectors_to_buffers();
-  bool pio_write_sectors_to_drive(uint16_t drive_index,
-                                  uint16_t sectors,
-                                  uint8_t *buffer,
-                                  uint64_t buffer_length);
-  bool continue_with_dma_setup();
+  ipc::spinlock current_command_lock; ///< Lock protecting changes to current_command, below.
+  std::unique_ptr<ata_queued_command> current_command{nullptr}; ///< The command the controller is currently working on.
 
   // Overrides of pci_generic_device:
   virtual bool handle_translated_interrupt_fast(uint8_t interrupt_offset,
@@ -243,14 +219,47 @@ protected:
   virtual void handle_translated_interrupt_slow(uint8_t interrupt_offset,
                                                 uint8_t raw_interrupt_num) override;
 
-  // Bus master control
+  // Overrides of generic_controller:
+  virtual bool issue_command(uint16_t drive_index,
+                             COMMANDS command,
+                             uint16_t features,
+                             uint16_t count,
+                             uint64_t lba_addr,
+                             void *buffer) override;
+
+  // Message handling:
+  virtual void handle_ata_cmd(std::unique_ptr<ata_queued_command> msg);
+
+  // Bus master control:
   void write_prd_table_addr(uint32_t address, uint16_t channel);
   void set_bus_master_direction(bool is_read, uint16_t channel);
   void start_bus_master(uint16_t channel);
   void stop_bus_master(uint16_t channel);
-
   void write_bus_master_reg(BUS_MASTER_PORTS port, uint16_t channel, uint8_t val);
   uint8_t read_bus_master_reg(BUS_MASTER_PORTS port, uint16_t channel);
+
+  // DMA procedures:
+  virtual ERR_CODE setup_dma_transfer(uint16_t drive_index, bool is_read, std::unique_ptr<msg::io_msg> &msg);
+  virtual bool start_prepare_dma_transfer(bool is_read, uint16_t drive_index);
+  virtual bool queue_dma_transfer_block(void *buffer, uint16_t bytes_this_block);
+  virtual bool dma_transfer_blocks_queued();
+  void dma_read_sectors_to_buffers();
+  bool continue_with_dma_setup();
+
+  // PIO procedures:
+  void pio_read_sectors_to_buffer(uint16_t drive_index,
+                                  uint16_t sectors,
+                                  unsigned char *buffer);
+  bool pio_write_sectors_to_drive(uint16_t drive_index,
+                                  uint16_t sectors,
+                                  uint8_t *buffer);
+
+  // Basic control functions:
+  void determine_ports();
+  void write_ata_cmd_port(uint16_t drive_index, ATA_PORTS port, uint8_t value);
+  uint8_t read_ata_cmd_port(uint16_t drive_index, ATA_PORTS port);
+  bool wait_for_cmd_completion(uint16_t drive_index);
+  bool poll_wait_for_drive_not_busy(uint16_t drive_index);
 };
 
 }; // Namespace ata

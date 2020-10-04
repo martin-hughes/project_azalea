@@ -30,16 +30,10 @@ public:
   // Overrides of IBlockDevice
   virtual uint64_t num_blocks() override;
   virtual uint64_t block_size() override;
-/*
-  virtual ERR_CODE read_blocks(uint64_t start_block,
-                               uint64_t num_blocks,
-                               void *buffer,
-                               uint64_t buffer_length) override;
-  virtual ERR_CODE write_blocks(uint64_t start_block,
-                                uint64_t num_blocks,
-                                const void *buffer,
-                                uint64_t buffer_length) override;
-*/
+
+  // Overrides of IIOObject via IBlockDevice
+  virtual void read(std::unique_ptr<msg::io_msg> msg) override;
+  virtual void write(std::unique_ptr<msg::io_msg> msg) override;
 
 protected:
   std::shared_ptr<generic_controller> parent_controller; ///< The controller of this device.
@@ -54,22 +48,14 @@ protected:
   bool calculate_dma_support();
 
   // Internal read & write helpers.
-  virtual ERR_CODE read_blocks_pio(uint64_t start_block,
-                                   uint64_t num_blocks,
-                                   void *buffer,
-                                   uint64_t buffer_length);
-  virtual ERR_CODE write_blocks_pio(uint64_t start_block,
-                                    uint64_t num_blocks,
-                                    const void *buffer,
-                                    uint64_t buffer_length);
-  virtual ERR_CODE read_blocks_dma(uint64_t start_block,
-                                   uint64_t num_blocks,
-                                   void *buffer,
-                                   uint64_t buffer_length);
-  virtual ERR_CODE write_blocks_dma(uint64_t start_block,
-                                    uint64_t num_blocks,
-                                    const void *buffer,
-                                    uint64_t buffer_length);
+  virtual void read_blocks_pio(std::unique_ptr<msg::io_msg> msg);
+  virtual void write_blocks_pio(std::unique_ptr<msg::io_msg> msg);
+  virtual void read_blocks_dma(std::unique_ptr<msg::io_msg> msg);
+  virtual void write_blocks_dma(std::unique_ptr<msg::io_msg> msg);
+
+  virtual ERR_CODE validate_request(std::unique_ptr<msg::io_msg> &msg);
+
+  virtual void handle_ata_cmd_response(std::unique_ptr<ata_queued_command> msg);
 };
 
 }; // Namespace ata

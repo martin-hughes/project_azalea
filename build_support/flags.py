@@ -13,6 +13,7 @@ kernel_compile_flags = [ # Flags for all C-like builds
   '-D __AZALEA__',
   '-D __AZ_KERNEL__',
   '-D KL_TRACE_BY_SERIAL_PORT',
+  '-D AZ_STRICT_MESSAGE_HANDLING',
   '-Wno-unused-command-line-argument',
   '-Werror',
 
