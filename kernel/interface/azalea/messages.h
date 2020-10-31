@@ -26,6 +26,9 @@ static const uint64_t SM_IO_MSG = 13; /**< Standard IO request message */
 static const uint64_t SM_IO_COMPLETE = 14; /**< IO Request complete message */
 static const uint64_t SM_ATA_CMD = 15; /**< ATA controller queued command */
 static const uint64_t SM_ATA_CMD_COMPLETE = 16; /**< ATA controller queued command response */
+static const uint64_t SM_FAT_READ_CHAIN = 17; /**< FAT filesystem read cluster chain request */
+static const uint64_t SM_FAT_WRITE_CHAIN = 18; /**< FAT filesystem write cluster chain request */
+static const uint64_t SM_FAT_CHANGE_CHAIN_LEN = 19; /**< FAT filesystem change cluster change length */
 
 /* System message structures */
 

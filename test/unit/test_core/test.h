@@ -17,6 +17,8 @@
 #include "tracing.h"
 #include "panic.h"
 
+#include "gtest/gtest.h"
+
 class assertion_failure
 {
 public:
@@ -42,5 +44,8 @@ void test_only_set_cur_thread(task_thread *thread);
 void dummy_thread_fn();
 void test_init_proc_interrupt_table();
 void test_set_system_timer_count(uint64_t count);
+
+#include "dummy_libs/system/test_system.h"
+#include "dummy_libs/work_queue/work_queue.dummy.h"
 
 #endif

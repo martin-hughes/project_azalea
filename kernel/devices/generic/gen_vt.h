@@ -16,8 +16,8 @@ namespace terms
 class vt : public generic
 {
 public:
-  vt(std::shared_ptr<IWritable> keyboard_pipe);
-  vt(std::shared_ptr<IWritable> keyboard_pipe, std::string root_name);
+  vt(std::shared_ptr<IWriteImmediate> keyboard_pipe);
+  vt(std::shared_ptr<IWriteImmediate> keyboard_pipe, std::string root_name);
   virtual ~vt();
 
   // Overrides from generic_terminal

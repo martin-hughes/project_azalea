@@ -11,7 +11,7 @@ namespace terms
 class vga : public vt
 {
 public:
-  vga(std::shared_ptr<IWritable> keyboard_pipe, void *display_area_virt);
+  vga(std::shared_ptr<IWriteImmediate> keyboard_pipe, void *display_area_virt);
   virtual ~vga() { };
 
   virtual void handle_key_msg_obj(std::unique_ptr<msg::root_msg> &message);

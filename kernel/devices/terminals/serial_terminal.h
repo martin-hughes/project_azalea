@@ -11,9 +11,9 @@ namespace terms
 class serial : public generic
 {
 public:
-  serial(std::shared_ptr<IWritable> keyboard_pipe,
-         std::shared_ptr<IWritable> output_port_s,
-         std::shared_ptr<IReadable> input_port_s);
+  serial(std::shared_ptr<IWriteImmediate> keyboard_pipe,
+         std::shared_ptr<IWriteImmediate> output_port_s,
+         std::shared_ptr<IReadImmediate> input_port_s);
   virtual ~serial() { };
 
   // Overrides from terms::generic
@@ -21,8 +21,8 @@ public:
   virtual void write_raw_string(const char *out_string, uint16_t num_chars) override;
 
 protected:
-  std::shared_ptr<IWritable> output_port; ///< Where to write data to send it towards the terminal.
-  std::shared_ptr<IReadable> input_port; ///< Where to read data from when it is sent by the terminal.
+  std::shared_ptr<IWriteImmediate> output_port; ///< Where to write data to send it towards the terminal.
+  std::shared_ptr<IReadImmediate> input_port; ///< Where to read data from when it is sent by the terminal.
 };
 
 }; // namespace terms.

@@ -8,7 +8,7 @@
 
 #include <memory>
 
-using system_class = test_system_factory<non_queueing>;
+using system_class = test_system_factory<non_queueing, false, false>;
 
 // Check that it is not possible to do any operations on an empty Ramdisk
 TEST(RamdiskTest, EmptyDevice)
@@ -25,8 +25,6 @@ TEST(RamdiskTest, EmptyDevice)
 
   ASSERT_EQ(wrapper->read_blocks(0, 5, buffer.get(), 10), ERR_CODE::DEVICE_FAILED);
   ASSERT_EQ(wrapper->write_blocks(0, 5, buffer.get(), 10), ERR_CODE::DEVICE_FAILED);
-
-  test_only_reset_name_counts();
 }
 
 TEST(RamdiskTest, ReadWrite)
@@ -49,6 +47,4 @@ TEST(RamdiskTest, ReadWrite)
   ASSERT_EQ(wrapper->read_blocks(0, num_blocks, buffer_out.get(), num_blocks * block_size), ERR_CODE::NO_ERROR);
 
   ASSERT_EQ(std::equal(buffer_in.get(), buffer_in.get() + (num_blocks * block_size), buffer_out.get()), true);
-
-  test_only_reset_name_counts();
 }

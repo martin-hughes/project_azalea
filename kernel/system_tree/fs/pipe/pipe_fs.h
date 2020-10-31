@@ -42,7 +42,7 @@ public:
 
   /// @brief The read-only output leaf of a pipe branch.
   ///
-  class pipe_read_leaf: public IReadable, public virtual IHandledObject, public virtual ipc::event
+  class pipe_read_leaf: public IReadImmediate, public virtual IHandledObject, public virtual ipc::event
   {
   public:
     pipe_read_leaf(std::shared_ptr<pipe_branch> parent);
@@ -67,7 +67,7 @@ public:
 
   /// @brief The write-only input leaf of a pipe branch.
   ///
-  class pipe_write_leaf: public IWritable, public IHandledObject
+  class pipe_write_leaf: public IWriteImmediate, public IHandledObject
   {
   public:
     pipe_write_leaf(std::shared_ptr<pipe_branch> parent);

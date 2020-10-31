@@ -81,7 +81,7 @@ ERR_CODE az_read_handle(GEN_HANDLE handle,
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Got an object...\n");
 
-      std::shared_ptr<IReadable> file = std::dynamic_pointer_cast<IReadable>(object->object_ptr);
+      std::shared_ptr<IReadImmediate> file = std::dynamic_pointer_cast<IReadImmediate>(object->object_ptr);
       KL_TRC_TRACE(TRC_LVL::FLOW, "Retrieved leaf ", file.get(), " from OM\n");
       if (file == nullptr)
       {
@@ -191,7 +191,7 @@ ERR_CODE az_write_handle(GEN_HANDLE handle,
     if (obj)
     {
       KL_TRC_TRACE(TRC_LVL::FLOW, "Found an object\n");
-      std::shared_ptr<IWritable> file = std::dynamic_pointer_cast<IWritable>(obj->object_ptr);
+      std::shared_ptr<IWriteImmediate> file = std::dynamic_pointer_cast<IWriteImmediate>(obj->object_ptr);
       if (file == nullptr)
       {
         KL_TRC_TRACE(TRC_LVL::FLOW, "Leaf is not writable.\n");

@@ -4,21 +4,16 @@
 #pragma once
 
 #include <stdint.h>
-#include <string.h>
 
 #include "k_assert.h"
 #include "panic.h"
-#include "tracing.h"
 
 #pragma pack ( push , 1 )
-
-namespace fat
-{
 
 /// @brief Fields of the FAT BPB that are generic to all sizes of FAT filesystem.
 ///
 /// Members are documented in the Microsoft FAT specification, so are not covered here.
-struct generic_bpb
+struct fat_generic_bpb
 {
 /// @cond
   char jmp_code[3];
@@ -38,14 +33,17 @@ struct generic_bpb
 /// @endcond
 };
 
-static_assert(sizeof(generic_bpb) == 36, "Size of FAT Generic BPB wrong.");
+static_assert(sizeof(fat_generic_bpb) == 36, "Size of FAT Generic BPB wrong.");
+
 
 /// @brief A FAT12 and FAT16 style BPB.
 //
 /// Members are documented in the Microsoft FAT specification, so are not covered here.
-struct fat16_part_bpb
+struct fat16_bpb
 {
 /// @cond
+  generic_bpb shared;
+
   uint8_t drive_number;
   uint8_t reserved;
   uint8_t boot_signature;
@@ -55,14 +53,16 @@ struct fat16_part_bpb
 /// @endcond
 };
 
-static_assert(sizeof(fat16_part_bpb) == 26, "Sizeof FAT12/16 BPB wrong.");
+static_assert(sizeof(fat16_bpb) == 62, "Sizeof FAT12/16 BPB wrong.");
 
 /// @brief A FAT32 style BPB.
 ///
 /// Members are documented in the Microsoft FAT specification, so are not covered here.
-struct fat32_part_bpb
+struct fat32_bpb
 {
 /// @cond
+  generic_bpb shared;
+
   uint32_t fat_size_32;
   uint16_t ext_flags;
   uint16_t fs_version;
@@ -79,19 +79,8 @@ struct fat32_part_bpb
 /// @endcond
 };
 
-static_assert(sizeof(fat32_part_bpb) == 54, "Sizeof FAT32 BPB wrong.");
+static_assert(sizeof(fat32_bpb) == 90, "Size of FAT32 BPB wrong.");
 
-struct fat_bpb
-{
-  generic_bpb shared;
-  union
-  {
-    fat16_part_bpb fat_16;
-    fat32_part_bpb fat_32;
-  };
-};
-
-static_assert(sizeof(fat_bpb) == 90, "Size of FAT32 BPB wrong.");
 /// @brief FAT style time storage structure.
 ///
 /// Members are documented in the Microsoft FAT specification, so are not covered here.
@@ -114,46 +103,6 @@ struct fat_date
   uint16_t month :4;
   uint16_t year :7;
 /// @endcond
-};
-
-struct fat_basic_filename_entry
-{
-  /// @cond
-  uint8_t name[11] = {0};
-  union
-  {
-    struct
-    {
-      uint8_t read_only :1;
-      uint8_t hidden :1;
-      uint8_t system :1;
-      uint8_t volume_id :1;
-      uint8_t directory :1;
-      uint8_t archive :1;
-      uint8_t reserved :2;
-    } attributes;
-    uint8_t attributes_raw{0};
-  };
-  uint8_t nt_use_only{0};
-  uint8_t create_time_tenths{0};
-  fat_time create_time{0};
-  fat_date create_date{0};
-  fat_date last_access_date{0};
-  uint16_t first_cluster_high{0};
-  fat_time write_time{0};
-  fat_date write_date{0};
-  uint16_t first_cluster_low{0};
-  uint32_t file_size{0};
-  /// @endcond
-
-  operator std::string();
-  uint8_t checksum();
-
-  fat_basic_filename_entry() : name{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, attributes_raw{0} { };
-  fat_basic_filename_entry(const char * name_part)
-  {
-    memcpy(name, name_part, 11);
-  };
 };
 
 /// @brief FAT long filename directory entry structure.
@@ -222,7 +171,36 @@ struct fat_dir_entry
   union
   {
     /// @brief 'Normal' FAT directory entry structure.
-    fat_basic_filename_entry short_fn;
+    struct
+    {
+      /// @cond
+      uint8_t name[11];
+      union
+      {
+        struct
+        {
+          uint8_t read_only :1;
+          uint8_t hidden :1;
+          uint8_t system :1;
+          uint8_t volume_id :1;
+          uint8_t directory :1;
+          uint8_t archive :1;
+          uint8_t reserved :2;
+        } attributes;
+        uint8_t attributes_raw;
+      };
+      uint8_t nt_use_only;
+      uint8_t create_time_tenths;
+      fat_time create_time;
+      fat_date create_date;
+      fat_date last_access_date;
+      uint16_t first_cluster_high;
+      fat_time write_time;
+      fat_date write_date;
+      uint16_t first_cluster_low;
+      uint32_t file_size;
+      /// @endcond
+    };
     fat_long_filename_entry long_fn; ///< Long filename version of the directory entry.
   };
 
@@ -231,28 +209,7 @@ struct fat_dir_entry
   /// @return True if a long name entry, false otherwise.
   bool is_long_fn_entry()
   {
-    return (this->short_fn.attributes_raw == 0x0F);
-  };
-
-  // Some initializers to help with testing in particular.
-  fat_dir_entry() { short_fn = fat_basic_filename_entry(); };
-  fat_dir_entry(bool is_long_fn, const char *name_part)
-  {
-    if (is_long_fn)
-    {
-      long_fn.populate();
-      for (uint8_t i = 0; i < 13; i++)
-      {
-        long_fn.lfn_char(i) = name_part[i];
-      }
-    }
-    else
-    {
-      for (uint8_t i = 0; i < 11; i++)
-      {
-        short_fn = fat_basic_filename_entry(name_part);
-      }
-    }
+    return (this->attributes_raw == 0x0F);
   };
 };
 static_assert(sizeof(fat_dir_entry) == 32, "Sizeof fat_dir_entry wrong.");
@@ -260,6 +217,9 @@ static_assert(sizeof(fat_long_filename_entry) == 32, "Sizeof fat long fn wrong."
 
 #pragma pack ( pop )
 
+static_assert(sizeof(fat_generic_bpb) == 36, "Sizeof BPB is wrong");
+static_assert(sizeof(fat16_bpb) == 62, "Sizeof FAT12/16 BPB is wrong");
+static_assert(sizeof(fat32_bpb) == 90, "Sizeof FAT32 BPB is wrong");
 static_assert(sizeof(fat_dir_entry) == 32, "Sizeof FAT entry is wrong");
 
 /// @brief Defines the types of FAT the kernel understands.
@@ -271,4 +231,27 @@ enum class FAT_TYPE
   FAT32, ///< FAT32
 };
 
-}
+class IHandledObject;
+
+/// @brief Structure for storing details of the children of FAT directories.
+///
+/// This is intended to avoid having to read them from disk every time they are needed.
+struct fat_object_details
+{
+  /// @brief Long filename of this child object.
+  ///
+  /// May be "" if there is no associated long name.
+  std::string long_fn;
+
+  /// @brief Short filename of this child object.
+  std::string short_fn;
+
+  /// @brief The index of the directory entry for this child within the directory's list.
+  uint32_t fde_index;
+
+  /// @brief Weak pointer to the child object.
+  std::weak_ptr<IHandledObject> child_object;
+
+  /// @brief Copy of the basic directory entry for this child object.
+  fat_dir_entry fde;
+};

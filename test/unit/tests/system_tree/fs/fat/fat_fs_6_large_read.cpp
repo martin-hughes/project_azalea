@@ -50,7 +50,7 @@ namespace
 
 const uint32_t block_size = 512;
 
-using system_class = test_system_factory<non_queueing>;
+using system_class = test_system_factory<non_queueing, false, false>;
 
 // This test suite takes a file that contains a set of uint64s that increment monotonically through the file, and
 // checks that they can be read properly in various combinations.
@@ -102,8 +102,6 @@ protected:
 
   void TearDown() override
   {
-    test_only_reset_name_counts();
-
     test_system = nullptr;
   };
 };

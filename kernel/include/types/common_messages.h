@@ -93,6 +93,7 @@ namespace msg
     io_msg(const io_msg &) = delete;
     io_msg(io_msg &&) = delete;
     io_msg &operator=(const io_msg &) = delete;
+    io_msg &operator=(io_msg &&) = delete;
 
     enum class REQS
     {
@@ -107,5 +108,6 @@ namespace msg
     std::shared_ptr<uint8_t> buffer; // TODO: Use output_buffer?
     ERR_CODE response{ERR_CODE::UNKNOWN};
     std::weak_ptr<work::message_receiver> sender;
+    std::unique_ptr<io_msg> parent_request;
   };
 };

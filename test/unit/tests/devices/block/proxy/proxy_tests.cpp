@@ -15,7 +15,7 @@ protected:
 
 const unsigned long buffer_len = 20;
 
-using system_class = test_system_factory<non_queueing>;
+using system_class = test_system_factory<non_queueing, false, false>;
 
 TEST(BlockProxyTest, SimpleTests)
 {

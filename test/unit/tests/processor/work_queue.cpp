@@ -35,7 +35,7 @@ void basic_msg_receiver::handle_message(std::unique_ptr<msg::root_msg> msg)
 
 }
 
-using test_system = test_system_factory<work::default_work_queue>;
+using test_system = test_system_factory<work::default_work_queue, false, false>;
 
 class WorkQueue2Tests : public ::testing::Test
 {

@@ -75,6 +75,13 @@ namespace work
       work::generic_conversion<type>(std::move(msg), [this](std::unique_ptr< type > msg) { this-> fn (std::move(msg)); } ); \
     } )
 
+#define HANDLER(fn) \
+    std::function<void(std::unique_ptr<msg::root_msg>)>( \
+    [this](std::unique_ptr<msg::root_msg> msg) \
+    { \
+      this-> fn (std::move(msg)); \
+    } )
+
 
   /// @brief A simple message-receiving class.
   ///

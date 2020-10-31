@@ -7,12 +7,14 @@
 #include "../devices/block/ramdisk/ramdisk.h"
 #include "../devices/block/proxy/block_proxy.h"
 #include "../system_tree/fs/fat/fat_fs.h"
+#include "../system_tree/fs/fs_file_interface.h"
 
 #include "dummy_libs/system/test_system.h"
 #include "dummy_libs/work_queue/work_queue.dummy.h"
 #include "dummy_libs/devices/virt_disk/virt_disk.h"
 
 #include "types/block_wrapper.h"
+#include "types/file_wrapper.h"
 
 #include "gtest/gtest.h"
 
@@ -46,14 +48,14 @@ namespace
 
 const uint32_t block_size = 512;
 
-using system_class = test_system_factory<non_queueing>;
+using system_class = test_system_factory<non_queueing, true, true>;
 
 class FatFsReadTests : public ::testing::TestWithParam<std::tuple<test_file_details, const char *>>
 {
 protected:
   shared_ptr<virtual_disk_dummy_device> raw_backing_storage;
   shared_ptr<BlockWrapper> backing_storage;
-  shared_ptr<fat_filesystem> filesystem;
+  shared_ptr<ISystemTreeBranch> filesystem;
   shared_ptr<block_proxy_device> proxy;
   shared_ptr<system_class> test_system;
 
@@ -92,13 +94,11 @@ protected:
     ASSERT_EQ(OPER_STATUS::OK, proxy->get_device_status());
 
     // Initialise the filesystem based on that information
-    filesystem = fat_filesystem::create(proxy);
+    filesystem = fat::create_fat_root(proxy);
   };
 
   void TearDown() override
   {
-    test_only_reset_name_counts();
-
     test_system = nullptr;
   };
 };
@@ -121,6 +121,7 @@ TEST_P(FatFsReadTests, BasicReading)
   uint64_t bytes_read;
   uint64_t actual_size;
   ERR_CODE result;
+  std::shared_ptr<FileWrapper> file_wrapper;
 
   result = filesystem->get_child(filename, basic_leaf);
 
@@ -135,8 +136,10 @@ TEST_P(FatFsReadTests, BasicReading)
     ASSERT_EQ(ERR_CODE::NO_ERROR, input_file->get_file_size(actual_size));
     ASSERT_EQ(expected_file_size, actual_size);
 
+    file_wrapper = FileWrapper::create(input_file);
+
     ASSERT_EQ(ERR_CODE::NO_ERROR,
-              input_file->read_bytes(0, expected_file_size, buffer.get(), expected_file_size + 1, bytes_read));
+              file_wrapper->read_bytes(0, expected_file_size, buffer.get(), expected_file_size + 1, bytes_read));
 
     ASSERT_EQ(0, strcmp(expected_text, (char *)buffer.get()));
 

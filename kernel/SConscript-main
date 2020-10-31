@@ -18,6 +18,7 @@ files = [
   "misc/allocator_templates.cpp",
   "misc/block_wrapper.cpp",
   "misc/err_code_names.cpp",
+  "misc/file_wrapper.cpp",
   "misc/math_hacks.cpp",
   "misc/tracing.cpp",
 
@@ -37,6 +38,7 @@ files = [
   "syscall/syscall_validation.cpp",
 
   Glob("system_tree/*.cpp"),
+  Glob("system_tree/fs/*.cpp"),
   Glob("system_tree/fs/fat/*.cpp"),
   Glob("system_tree/fs/mem/*.cpp"),
   Glob("system_tree/fs/pipe/*.cpp"),

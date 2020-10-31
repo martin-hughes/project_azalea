@@ -86,7 +86,7 @@ def main_build_script(linux_build, config_env):
 
   # Unit test program
 
-  additional_defines = ' -D AZALEA_TEST_CODE -D KL_TRACE_BY_STDOUT'
+  additional_defines = ' -D AZALEA_TEST_CODE -D KL_TRACE_BY_STDOUT -D AZ_STRICT_MESSAGE_HANDLING'
 
   if clang_build:
     test_script_env['LINKFLAGS'] = '-L/usr/lib/llvm-6.0/lib/clang/6.0.0/lib/linux -Wl,--start-group'

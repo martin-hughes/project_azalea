@@ -23,7 +23,7 @@
 #include "../devices/block/proxy/block_proxy.h"
 #include "../devices/block/ata/ata_device.h"
 #include "../devices/virtio/virtio_block.h"
-std::shared_ptr<fat_filesystem> setup_initial_fs(std::shared_ptr<IBlockDevice> first_hdd);
+std::shared_ptr<ISystemTreeBranch> setup_initial_fs(std::shared_ptr<IBlockDevice> first_hdd);
 
 /// @cond
 // Temporary variables
@@ -84,7 +84,7 @@ void dev_root_branch::scan_for_devices()
   display_ptr = reinterpret_cast<unsigned char *>(mem_allocate_virtual_range(1));
   mem_map_range(nullptr, display_ptr, 1);
   display_ptr += 0xB8000;
-  std::shared_ptr<IWritable> fake_stream;
+  std::shared_ptr<IWriteImmediate> fake_stream;
 
   std::shared_ptr<terms::vga> term;
   ASSERT(dev::create_new_device(term, empty, fake_stream, display_ptr));
@@ -183,9 +183,9 @@ void dev_root_branch::scan_for_devices()
   }
 #endif
 
-  std::shared_ptr<fat_filesystem> first_fs = setup_initial_fs(hdd_dev);
+  std::shared_ptr<ISystemTreeBranch> first_fs = setup_initial_fs(hdd_dev);
   ASSERT(first_fs != nullptr);
-  ASSERT(system_tree()->add_child("\\root", std::dynamic_pointer_cast<ISystemTreeBranch>(first_fs)) == ERR_CODE::NO_ERROR);
+  ASSERT(system_tree()->add_child("\\root", first_fs) == ERR_CODE::NO_ERROR);
 
   keyb_ptr = keyb.get();
   term_ptr = new std::shared_ptr<terms::generic>();
@@ -202,8 +202,8 @@ void dev_root_branch::scan_for_devices()
   ASSERT(dev::create_new_device(st,
          empty,
          fake_stream,
-         std::dynamic_pointer_cast<IWritable>(port),
-         std::dynamic_pointer_cast<IReadable>(port)));
+         std::dynamic_pointer_cast<IWriteImmediate>(port),
+         std::dynamic_pointer_cast<IReadImmediate>(port)));
 
   std::shared_ptr<work::message_receiver> mr = std::dynamic_pointer_cast<work::message_receiver>(st);
   port->set_msg_receiver(mr);
@@ -229,7 +229,7 @@ dev_root_branch::dev_sub_branch::~dev_sub_branch()
 /// @param first_hdd Pointer to the HDD with the filesystem to load.
 ///
 /// @return Pointer toa FAT filesystem presumed to exist on the first attached HDD.
-std::shared_ptr<fat_filesystem> setup_initial_fs(std::shared_ptr<IBlockDevice> first_hdd)
+std::shared_ptr<ISystemTreeBranch> setup_initial_fs(std::shared_ptr<IBlockDevice> first_hdd)
 {
   KL_TRC_ENTRY;
   ASSERT(first_hdd.get() != nullptr); // new ata::generic_device(nullptr, 0);
@@ -264,7 +264,7 @@ std::shared_ptr<fat_filesystem> setup_initial_fs(std::shared_ptr<IBlockDevice> f
   { };
 
   // Initialise the filesystem based on that information
-  std::shared_ptr<fat_filesystem> first_fs = fat_filesystem::create(pd);
+  std::shared_ptr<ISystemTreeBranch> first_fs = fat::create_fat_root(pd);
 
   KL_TRC_EXIT;
   return first_fs;

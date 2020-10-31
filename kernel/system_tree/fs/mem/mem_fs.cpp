@@ -86,6 +86,27 @@ mem_fs_leaf::~mem_fs_leaf()
   KL_TRC_ENTRY;
   KL_TRC_EXIT;
 }
+void mem_fs_leaf::read(std::unique_ptr<msg::io_msg> msg)
+{
+  KL_TRC_ENTRY;
+
+  uint64_t br;
+  msg->response = read_bytes(msg->start, msg->blocks, msg->buffer.get(), msg->blocks, br);
+  complete_io_request(std::move(msg));
+
+  KL_TRC_EXIT;
+}
+
+void mem_fs_leaf::write(std::unique_ptr<msg::io_msg> msg)
+{
+  KL_TRC_ENTRY;
+
+  uint64_t br;
+  msg->response = write_bytes(msg->start, msg->blocks, msg->buffer.get(), msg->blocks, br);
+  complete_io_request(std::move(msg));
+
+  KL_TRC_EXIT;
+}
 
 ERR_CODE mem_fs_leaf::read_bytes(uint64_t start,
                                  uint64_t length,

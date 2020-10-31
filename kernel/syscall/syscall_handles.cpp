@@ -353,8 +353,8 @@ ERR_CODE az_get_object_properties(GEN_HANDLE handle,
 /// @endcond
       props->is_file = CONV_TEST(leaf, IBasicFile);
       props->is_leaf = !CONV_TEST(leaf, ISystemTreeBranch);
-      props->readable = CONV_TEST(leaf, IReadable);
-      props->writable = CONV_TEST(leaf, IWritable);
+      props->readable = CONV_TEST(leaf, IReadImmediate);
+      props->writable = CONV_TEST(leaf, IWriteImmediate);
       props->oper_status = OPER_STATUS::UNKNOWN;
       if (proc)
       {

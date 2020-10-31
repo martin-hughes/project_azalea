@@ -21,9 +21,8 @@ proc_fs_root_branch::proc_fs_proc_branch::proc_fs_proc_branch(std::shared_ptr<ta
 {
   KL_TRC_ENTRY;
 
-  char id_buffer[22];
+  std::shared_ptr<uint8_t> id_buffer;
   ERR_CODE ec;
-  uint64_t br;
   uint64_t strl;
 
   ASSERT(related_proc != nullptr);
@@ -31,12 +30,18 @@ proc_fs_root_branch::proc_fs_proc_branch::proc_fs_proc_branch(std::shared_ptr<ta
   // Create a file containing the process ID number.
   ASSERT(_id_file != nullptr);
 
-  snprintf(id_buffer, 22, "%p", related_proc.get());
-  strl = strnlen(id_buffer, 22);
+  id_buffer = std::shared_ptr<uint8_t>(new uint8_t[22], std::default_delete<uint8_t[]>());
+  snprintf(reinterpret_cast<char *>(id_buffer.get()), 22, "%p", related_proc.get());
+  strl = strnlen(reinterpret_cast<char *>(id_buffer.get()), 22);
 
-  ec = _id_file->write_bytes(0, strl + 1, reinterpret_cast<const uint8_t *>(id_buffer), 22, br);
-  ASSERT(ec == ERR_CODE::NO_ERROR);
-  ASSERT(br == strl + 1);
+  std::unique_ptr<msg::io_msg> msg = std::make_unique<msg::io_msg>();
+  msg->blocks = strl + 1;
+  msg->start = 0;
+  msg->request = msg::io_msg::REQS::WRITE;
+  msg->buffer = id_buffer;
+
+  // Don't bother to collect the response
+  _id_file->write(std::move(msg));
   ec = system_tree_simple_branch::add_child("id", _id_file);
   ASSERT(ec == ERR_CODE::NO_ERROR);
 

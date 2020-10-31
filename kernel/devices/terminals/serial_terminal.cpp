@@ -15,9 +15,9 @@
 /// @param output_port_s Shared pointer to an object to write data to send it towards the terminal.
 ///
 /// @param input_port_s Shared pointer to an object to read data from when it is sent by the terminal.
-terms::serial::serial(std::shared_ptr<IWritable> keyboard_pipe,
-                      std::shared_ptr<IWritable> output_port_s,
-                      std::shared_ptr<IReadable> input_port_s) :
+terms::serial::serial(std::shared_ptr<IWriteImmediate> keyboard_pipe,
+                      std::shared_ptr<IWriteImmediate> output_port_s,
+                      std::shared_ptr<IReadImmediate> input_port_s) :
   terms::generic{keyboard_pipe},
   output_port{output_port_s},
   input_port{input_port_s}

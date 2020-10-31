@@ -279,7 +279,7 @@ ERR_CODE serial_port::read_bytes(uint64_t start,
   return result;
 }
 
-  // Overrides of IWritable
+  // Overrides of IWriteImmediate
 ERR_CODE serial_port::write_bytes(uint64_t start,
                                   uint64_t length,
                                   const uint8_t *buffer,

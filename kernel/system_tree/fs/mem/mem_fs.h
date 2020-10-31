@@ -28,28 +28,32 @@ protected:
 
 /// @brief A simple in-memory file.
 ///
-class mem_fs_leaf: public IBasicFile, public IHandledObject
+class mem_fs_leaf: public IBasicFile
 {
 public:
   mem_fs_leaf(std::shared_ptr<mem_fs_branch> parent);
   virtual ~mem_fs_leaf();
 
+  virtual ERR_CODE get_file_size(uint64_t &file_size) override;
+  virtual ERR_CODE set_file_size(uint64_t file_size) override;
+
+  // Overrides of IIOObject
+  virtual void read(std::unique_ptr<msg::io_msg> msg) override;
+  virtual void write(std::unique_ptr<msg::io_msg> msg) override;
+
+protected:
   virtual ERR_CODE read_bytes(uint64_t start,
                               uint64_t length,
                               uint8_t *buffer,
                               uint64_t buffer_length,
-                              uint64_t &bytes_read) override;
+                              uint64_t &bytes_read);
 
   virtual ERR_CODE write_bytes(uint64_t start,
                                 uint64_t length,
                                 const uint8_t *buffer,
                                 uint64_t buffer_length,
-                                uint64_t &bytes_written) override;
+                                uint64_t &bytes_written);
 
-  virtual ERR_CODE get_file_size(uint64_t &file_size) override;
-  virtual ERR_CODE set_file_size(uint64_t file_size) override;
-
-protected:
   std::weak_ptr<mem_fs_branch> _parent; ///< Pointer to the parent branch.
   std::unique_ptr<char[]> _buffer; ///< In-memory storage for the contents of this file.
   uint64_t _buffer_length; ///< The number of bytes in this file.

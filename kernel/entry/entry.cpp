@@ -140,8 +140,6 @@ void kernel_start() throw ()
   std::shared_ptr<task_process> com_port_proc;
   std::shared_ptr<IHandledObject> leaf;
   char proc_ptr_buffer[34];
-  const char hello_string[] = "Hello, world!";
-  uint64_t br;
   std::shared_ptr<pipe_branch::pipe_read_leaf> pipe_read_leaf;
 
   acpi_finish_init();
@@ -172,20 +170,12 @@ void kernel_start() throw ()
   std::shared_ptr<mem_fs_branch> ram_branch = mem_fs_branch::create();
   ASSERT(ram_branch != nullptr);
   ASSERT(system_tree()->add_child("\\temp", ram_branch) == ERR_CODE::NO_ERROR);
-  std::shared_ptr<mem_fs_leaf> ram_file = std::make_shared<mem_fs_leaf>(ram_branch);
-  ASSERT(ram_file != nullptr);
-  ASSERT(system_tree()->add_child("\\temp\\hello.txt", ram_file) == ERR_CODE::NO_ERROR);
-  ASSERT(ram_file->write_bytes(0,
-                               strnlen(hello_string, sizeof(hello_string)),
-                               reinterpret_cast<const uint8_t *>(hello_string),
-                               sizeof(hello_string), br) == ERR_CODE::NO_ERROR);
-  ASSERT(br == sizeof(hello_string) - 1);
 
   ASSERT(keyb_ptr != nullptr);
   ASSERT(term_ptr != nullptr);
 
   // Start a simple terminal process.
-  std::shared_ptr<IWritable> stdin_writer;
+  std::shared_ptr<IWriteImmediate> stdin_writer;
 
   std::shared_ptr<ISystemTreeBranch> pipes_br = std::make_shared<system_tree_simple_branch>();
   ASSERT(pipes_br != nullptr);
@@ -196,7 +186,7 @@ void kernel_start() throw ()
   // Set up an input pipe (which maps to stdin)
   ASSERT(pipes_br->add_child("terminal-input", pipe_branch::create()) == ERR_CODE::NO_ERROR);
   ASSERT(system_tree()->get_child("\\pipes\\terminal-input\\write", leaf) == ERR_CODE::NO_ERROR);
-  stdin_writer = std::dynamic_pointer_cast<IWritable>(leaf);
+  stdin_writer = std::dynamic_pointer_cast<IWriteImmediate>(leaf);
   ASSERT(stdin_writer != nullptr);
 
   (*term_ptr)->stdin_writer = stdin_writer;
@@ -245,7 +235,7 @@ void kernel_start() throw ()
   pipe_read_leaf->set_block_on_read(true);
 
   ASSERT(system_tree()->get_child("\\pipes\\serial-input\\write", leaf) == ERR_CODE::NO_ERROR);
-  term_ptr->stdin_writer = std::dynamic_pointer_cast<IWritable>(leaf);
+  term_ptr->stdin_writer = std::dynamic_pointer_cast<IWriteImmediate>(leaf);
   ASSERT(term_ptr->stdin_writer);
 
   // Process should be good to go!

@@ -11,7 +11,7 @@
 
 /// @brief A file that ignores all writes and where reads return all zeros.
 ///
-class null_file : public IHandledObject, public IReadable, public IWritable
+class null_file : public IHandledObject, public IReadImmediate, public IWriteImmediate
 {
 public:
   virtual ~null_file() = default;

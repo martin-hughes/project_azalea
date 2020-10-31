@@ -13,7 +13,7 @@
 ///
 /// At the moment, this is a standalone class. As the kernel expands, expect other serial drivers to be implemented,
 /// and for a generic base class to be formed.
-class serial_port : public IDevice, public IInterruptReceiver, public IReadable, public IWritable
+class serial_port : public IDevice, public IInterruptReceiver, public IReadImmediate, public IWriteImmediate
 {
 public:
   serial_port(ACPI_HANDLE obj_handle);
@@ -30,14 +30,14 @@ public:
   virtual bool handle_interrupt_fast(uint8_t interrupt_number) override;
   virtual void handle_interrupt_slow(uint8_t interrupt_number) override;
 
-  // Overrides of IReadable
+  // Overrides of IReadImmediate
   virtual ERR_CODE read_bytes(uint64_t start,
                               uint64_t length,
                               uint8_t *buffer,
                               uint64_t buffer_length,
                               uint64_t &bytes_read) override;
 
-  // Overrides of IWritable
+  // Overrides of IWriteImmediate
   virtual ERR_CODE write_bytes(uint64_t start,
                                uint64_t length,
                                const uint8_t *buffer,

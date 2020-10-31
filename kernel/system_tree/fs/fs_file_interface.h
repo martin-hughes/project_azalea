@@ -4,12 +4,13 @@
 #pragma once
 
 #include "azalea/error_codes.h"
+#include "types/io_object.h"
 
 /// @brief Interface for all objects that support arbitrarily sized reads.
-class IReadable
+class IReadImmediate
 {
 public:
-  virtual ~IReadable() { };
+  virtual ~IReadImmediate() { };
 
   /// @brief Read bytes from a readable object
   ///
@@ -41,10 +42,10 @@ public:
 };
 
 /// @brief Interface for objects that support arbitrarily sized writes
-class IWritable
+class IWriteImmediate
 {
 public:
-  virtual ~IWritable() { };
+  virtual ~IWriteImmediate() { };
 
   /// @brief Write bytes to a writable object
   ///
@@ -75,7 +76,7 @@ public:
 };
 
 /// @brief Interface for objects that act like files on a traditional file system.
-class IBasicFile: public IReadable, public IWritable
+class IBasicFile: public IIOObject, public IHandledObject
 {
 public:
   virtual ~IBasicFile() { };

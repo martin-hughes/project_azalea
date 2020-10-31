@@ -37,6 +37,9 @@ system_tree_root *system_tree()
 /// **This should never be called in production code!** It is for use within the test scripts only.
 void test_only_reset_system_tree()
 {
-  delete tree_root;
+  if (tree_root)
+  {
+    delete tree_root;
+  }
   tree_root = nullptr;
 }

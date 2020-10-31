@@ -22,11 +22,11 @@ namespace terms
 /// example, terms::vga uses a plugged in keyboard and VGA text terminal for I/O.
 ///
 /// There is scope for this to be *significantly* improved in future versions.
-class generic : public IDevice, public IWritable
+class generic : public IDevice, public IWriteImmediate
 {
 public:
-  generic(std::shared_ptr<IWritable> keyboard_pipe);
-  generic(std::shared_ptr<IWritable> keyboard_pipe, std::string root_name);
+  generic(std::shared_ptr<IWriteImmediate> keyboard_pipe);
+  generic(std::shared_ptr<IWriteImmediate> keyboard_pipe, std::string root_name);
   virtual ~generic() = default;
 
   // Overrides from IDevice.
@@ -36,7 +36,7 @@ public:
 
   virtual void handle_pipe_new_data(std::unique_ptr<msg::root_msg> &message);
 
-  // Overrides from IWritable
+  // Overrides from IWriteImmediate
   virtual ERR_CODE write_bytes(uint64_t start,
                                uint64_t length,
                                const uint8_t *buffer,
@@ -84,12 +84,12 @@ protected:
   uint16_t command_buffer_pos = 0; ///< How many bytes of command buffer are full?
 
 public:
-  std::shared_ptr<IWritable> stdin_writer; ///< The pipe to write stdin inputs to.
+  std::shared_ptr<IWriteImmediate> stdin_writer; ///< The pipe to write stdin inputs to.
 
   /// There are two ways to get data displayed on a terminal. Either via direct calls to write_string or via a pipe set
   /// in stdout_reader. If the pipe method is used, the terminal will read from the pipe when it receives a
   /// SM_PIPE_NEW_DATA message
-  std::shared_ptr<IReadable> stdout_reader;
+  std::shared_ptr<IReadImmediate> stdout_reader;
 };
 
 }; // namespace terms

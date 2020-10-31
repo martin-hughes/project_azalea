@@ -20,6 +20,7 @@
 #include "system_tree.h"
 #include "../system_tree/fs/fs_file_interface.h"
 #include "proc_loader.h"
+#include "types/file_wrapper.h"
 
 /// @brief Generic function pointer typedef.
 typedef void (*fn_ptr)();
@@ -47,11 +48,12 @@ std::shared_ptr<task_process> proc_load_binary_file(std::string binary_name)
   INCOMPLETE_CODE("Doesn't deal with allocating virtual address within the process");
 
   std::shared_ptr<IHandledObject> disk_prog;
-  std::shared_ptr<IBasicFile> new_prog_file;
+  std::shared_ptr<IBasicFile> raw_new_prog_file;
   uint64_t prog_size;
   uint64_t bytes_read;
   std::shared_ptr<task_process> new_proc;
   const uint64_t start_addr = 0x200000;
+  std::shared_ptr<FileWrapper> new_prog_file;
 
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Attempting to load binary ", binary_name, "\n");
 
@@ -59,8 +61,9 @@ std::shared_ptr<task_process> proc_load_binary_file(std::string binary_name)
 
   // Check the file will fit into a single page. This means we know the copy below has enough space.
   // There's no technical reason why it must fit in one page, but it makes it easier for the time being.
-  new_prog_file = std::dynamic_pointer_cast<IBasicFile>(disk_prog);
+  raw_new_prog_file = std::dynamic_pointer_cast<IBasicFile>(disk_prog);
   ASSERT(new_prog_file != nullptr);
+  new_prog_file = FileWrapper::create(raw_new_prog_file);
   new_prog_file->get_file_size(prog_size);
   KL_TRC_TRACE(TRC_LVL::EXTRA, "Binary file size ", prog_size, "\n");
   ASSERT(prog_size < MEM_PAGE_SIZE);

@@ -18,7 +18,7 @@
 
 using namespace std;
 
-using system_class = test_system_factory<non_queueing>;
+using system_class = test_system_factory<non_queueing, false, false>;
 
 namespace
 {
@@ -111,7 +111,6 @@ protected:
     {
       cout << "Not removing temporary file: " << image_temp_name << endl;
     }
-    test_only_reset_name_counts();
 
     test_system = nullptr;
   };

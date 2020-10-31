@@ -46,7 +46,7 @@ namespace
 
 const uint32_t block_size = 512;
 
-using system_class = test_system_factory<non_queueing>;
+using system_class = test_system_factory<non_queueing, false, false>;
 
 class FatFsRenameTests : public ::testing::TestWithParam<std::tuple<test_file_details, const char *>>
 {
@@ -112,7 +112,6 @@ protected:
     {
       cout << "Not removing temporary file: " << image_temp_name << endl;
     }
-    test_only_reset_name_counts();
 
     test_system = nullptr;
   };
