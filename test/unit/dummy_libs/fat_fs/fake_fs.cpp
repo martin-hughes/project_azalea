@@ -37,6 +37,11 @@ void fat::fake_fat_fs::change_chain_length(std::unique_ptr<chain_length_request>
 
 }
 
+bool fat::fake_fat_fs::is_regular_cluster_num(uint64_t num)
+{
+  return true;
+}
+
 std::shared_ptr<fat::pseudo_folder> fat::pseudo_folder::create(fat_dir_entry *entry_list, uint32_t num_entries)
 {
   std::shared_ptr<fat::pseudo_folder> result;

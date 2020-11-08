@@ -25,6 +25,8 @@ protected:
   virtual void handle_read(std::unique_ptr<chain_io_request> msg) override;
   virtual void handle_write(std::unique_ptr<chain_io_request> msg) override;
   virtual void change_chain_length(std::unique_ptr<chain_length_request> msg) override;
+
+  virtual bool is_regular_cluster_num(uint64_t num) override;
 };
 
 class pseudo_folder : public IBasicFile

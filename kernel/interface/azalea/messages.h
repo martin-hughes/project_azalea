@@ -29,6 +29,7 @@ static const uint64_t SM_ATA_CMD_COMPLETE = 16; /**< ATA controller queued comma
 static const uint64_t SM_FAT_READ_CHAIN = 17; /**< FAT filesystem read cluster chain request */
 static const uint64_t SM_FAT_WRITE_CHAIN = 18; /**< FAT filesystem write cluster chain request */
 static const uint64_t SM_FAT_CHANGE_CHAIN_LEN = 19; /**< FAT filesystem change cluster change length */
+static const uint64_t SM_FAT_CALC_NEXT_CLUSTER = 20; /**< Calculate the next cluster in a chain. */
 
 /* System message structures */
 

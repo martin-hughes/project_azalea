@@ -20,6 +20,7 @@ class folder;
 class file;
 class chain_io_request;
 class chain_length_request;
+class calc_next_cluster_request;
 
 /// @brief Controls interactions with a File Allocation Table.
 class fat_base : public work::message_receiver
@@ -35,11 +36,26 @@ public:
   fat_base &operator=(fat_base &&) = delete;
 
 protected:
+  // Message handlers
   virtual void handle_read(std::unique_ptr<chain_io_request> msg);
   virtual void handle_write(std::unique_ptr<chain_io_request> msg);
   virtual void change_chain_length(std::unique_ptr<chain_length_request> msg);
+  virtual void handle_next_cluster_request(std::unique_ptr<calc_next_cluster_request> msg);
+  virtual void handle_io_complete(std::unique_ptr<msg::io_msg> msg);
+
+  // Cluster read handling
+  virtual void read_this_cluster(std::unique_ptr<chain_io_request> msg);
+  virtual void cluster_read_complete(std::unique_ptr<chain_io_request> msg);
+  virtual uint16_t sectors_per_cluster();
+
+  // Misc
+  virtual bool is_regular_cluster_num(uint64_t num) = 0;
+  virtual ERR_CODE cluster_to_sector_num(uint64_t cluster_num, uint64_t &sector_num);
+
+  static void return_io_request(std::unique_ptr<chain_io_request> msg);
 
   std::shared_ptr<IBlockDevice> parent;
+  std::weak_ptr<fat::fat_base> self_weak_ptr;
 };
 
 class fat_12 : public fat_base
@@ -54,6 +70,9 @@ public:
   virtual ~fat_12();
   fat_12 &operator=(const fat_12 &) = delete;
   fat_12 &operator=(fat_12 &&) = delete;
+
+protected:
+  virtual bool is_regular_cluster_num(uint64_t num) override;
 };
 
 class fat_16 : public fat_base
@@ -68,6 +87,9 @@ public:
   virtual ~fat_16();
   fat_16 &operator=(const fat_16 &) = delete;
   fat_16 &operator=(fat_16 &&) = delete;
+
+protected:
+  virtual bool is_regular_cluster_num(uint64_t num) override;
 };
 
 class fat_32 : public fat_base
@@ -82,6 +104,9 @@ public:
   virtual ~fat_32();
   fat_32 &operator=(const fat_32 &) = delete;
   fat_32 &operator=(fat_32 &&) = delete;
+
+protected:
+  virtual bool is_regular_cluster_num(uint64_t num) override;
 };
 
 /// @brief Represents a single file on a FAT filesystem.
@@ -191,6 +216,19 @@ public:
   virtual ~chain_length_request() = default;
   chain_length_request &operator=(const chain_length_request &) = delete;
   chain_length_request &operator=(chain_length_request &&) = delete;
+};
+
+class calc_next_cluster_request : public msg::io_msg
+{
+public:
+  calc_next_cluster_request() : msg::io_msg{} { message_id = SM_FAT_CALC_NEXT_CLUSTER; };
+  calc_next_cluster_request(const calc_next_cluster_request &) = delete;
+  calc_next_cluster_request(calc_next_cluster_request &&) = delete;
+  virtual ~calc_next_cluster_request() = default;
+  calc_next_cluster_request &operator=(const calc_next_cluster_request &) = delete;
+  calc_next_cluster_request &operator=(calc_next_cluster_request &&) = delete;
+
+  std::unique_ptr<chain_io_request> parent_request;
 };
 
 }
